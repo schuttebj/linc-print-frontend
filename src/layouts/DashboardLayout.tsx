@@ -1,0 +1,241 @@
+/**
+ * Dashboard Layout for Madagascar Driver's License System
+ */
+
+import React, { useState } from 'react';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import {
+  Box,
+  AppBar,
+  Toolbar,
+  Typography,
+  IconButton,
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Avatar,
+  Menu,
+  MenuItem,
+  Divider,
+  useTheme,
+  useMediaQuery,
+} from '@mui/material';
+import {
+  Menu as MenuIcon,
+  Dashboard,
+  Person,
+  Logout,
+  AccountCircle,
+} from '@mui/icons-material';
+
+import { useAuth } from '../contexts/AuthContext';
+
+const DRAWER_WIDTH = 240;
+
+const DashboardLayout: React.FC = () => {
+  const { user, logout, hasPermission } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen);
+  };
+
+  const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleProfileMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleLogout = async () => {
+    handleProfileMenuClose();
+    await logout();
+    navigate('/login');
+  };
+
+  // Navigation items
+  const navigationItems = [
+    {
+      text: 'Dashboard',
+      icon: <Dashboard />,
+      path: '/dashboard',
+      permission: null,
+    },
+    {
+      text: 'Person Management',
+      icon: <Person />,
+      path: '/dashboard/persons/manage',
+      permission: 'persons.read',
+    },
+  ];
+
+  const drawer = (
+    <Box>
+      <Toolbar>
+        <Typography variant="h6" noWrap component="div">
+          Madagascar DLS
+        </Typography>
+      </Toolbar>
+      <Divider />
+      <List>
+        {navigationItems.map((item) => {
+          // Check permissions
+          if (item.permission && !hasPermission(item.permission)) {
+            return null;
+          }
+
+          const isActive = location.pathname === item.path;
+
+          return (
+            <ListItem key={item.text} disablePadding>
+              <ListItemButton
+                selected={isActive}
+                onClick={() => {
+                  navigate(item.path);
+                  if (isMobile) {
+                    setMobileOpen(false);
+                  }
+                }}
+              >
+                <ListItemIcon>{item.icon}</ListItemIcon>
+                <ListItemText primary={item.text} />
+              </ListItemButton>
+            </ListItem>
+          );
+        })}
+      </List>
+    </Box>
+  );
+
+  return (
+    <Box sx={{ display: 'flex' }}>
+      {/* App Bar */}
+      <AppBar
+        position="fixed"
+        sx={{
+          width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
+          ml: { md: `${DRAWER_WIDTH}px` },
+        }}
+      >
+        <Toolbar>
+          <IconButton
+            color="inherit"
+            aria-label="open drawer"
+            edge="start"
+            onClick={handleDrawerToggle}
+            sx={{ mr: 2, display: { md: 'none' } }}
+          >
+            <MenuIcon />
+          </IconButton>
+          
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+            Madagascar Driver's License System
+          </Typography>
+
+          {/* User Menu */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
+              {user?.username}
+            </Typography>
+            <IconButton
+              size="large"
+              aria-label="account of current user"
+              aria-controls="profile-menu"
+              aria-haspopup="true"
+              onClick={handleProfileMenuOpen}
+              color="inherit"
+            >
+              <Avatar sx={{ width: 32, height: 32 }}>
+                <AccountCircle />
+              </Avatar>
+            </IconButton>
+          </Box>
+        </Toolbar>
+      </AppBar>
+
+      {/* Profile Menu */}
+      <Menu
+        id="profile-menu"
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleProfileMenuClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+      >
+        <MenuItem onClick={handleProfileMenuClose}>
+          <AccountCircle sx={{ mr: 2 }} />
+          Profile
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={handleLogout}>
+          <Logout sx={{ mr: 2 }} />
+          Logout
+        </MenuItem>
+      </Menu>
+
+      {/* Navigation Drawer */}
+      <Box
+        component="nav"
+        sx={{ width: { md: DRAWER_WIDTH }, flexShrink: { md: 0 } }}
+      >
+        {/* Mobile drawer */}
+        <Drawer
+          variant="temporary"
+          open={mobileOpen}
+          onClose={handleDrawerToggle}
+          ModalProps={{
+            keepMounted: true, // Better open performance on mobile.
+          }}
+          sx={{
+            display: { xs: 'block', md: 'none' },
+            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: DRAWER_WIDTH },
+          }}
+        >
+          {drawer}
+        </Drawer>
+        
+        {/* Desktop drawer */}
+        <Drawer
+          variant="permanent"
+          sx={{
+            display: { xs: 'none', md: 'block' },
+            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: DRAWER_WIDTH },
+          }}
+          open
+        >
+          {drawer}
+        </Drawer>
+      </Box>
+
+      {/* Main content */}
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
+        }}
+      >
+        <Toolbar />
+        <Outlet />
+      </Box>
+    </Box>
+  );
+};
+
+export default DashboardLayout; 
