@@ -41,7 +41,12 @@ const PersonManagementPage: React.FC = () => {
             </Typography>
             <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
               {user?.roles?.map((role) => (
-                <Chip key={role.id} label={role.display_name} color="primary" size="small" />
+                <Chip 
+                  key={typeof role === 'string' ? role : role.id} 
+                  label={typeof role === 'string' ? role : role.display_name} 
+                  color="primary" 
+                  size="small" 
+                />
               ))}
             </Stack>
             <Typography variant="body2" color="text.secondary">

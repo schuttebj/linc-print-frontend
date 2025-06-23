@@ -134,9 +134,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
    */
   const initializeAuth = async () => {
     try {
+      console.log('🔄 Initializing authentication...');
       setAuthState(prev => ({ ...prev, isLoading: true }));
       const refreshSuccess = await refreshToken();
+      console.log('🔄 Refresh token result:', refreshSuccess);
       if (!refreshSuccess) {
+        console.log('❌ Refresh failed, clearing auth state');
         setAuthState({
           user: null,
           isAuthenticated: false,
@@ -145,7 +148,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
       }
     } catch (error) {
-      console.error('Auth initialization failed:', error);
+      console.error('❌ Auth initialization failed:', error);
       setAuthState({
         user: null,
         isAuthenticated: false,
@@ -261,11 +264,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       // Check if we've exceeded max retries
       if (refreshRetryCount >= maxRefreshRetries) {
-        console.warn('Max refresh retries exceeded, logging out');
+        console.warn('⚠️ Max refresh retries exceeded, logging out');
         await logout();
         return false;
       }
 
+      console.log('🔄 Attempting to refresh token...');
       const response = await fetch(`${API_ENDPOINTS.auth}/refresh`, {
         method: 'POST',
         headers: {
@@ -274,12 +278,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         credentials: 'include', // Include cookies for refresh token
       });
 
+      console.log('🔄 Refresh response status:', response.status);
       if (!response.ok) {
+        console.log('❌ Refresh failed with status:', response.status);
         // Increment retry count on failure
         setRefreshRetryCount(prev => prev + 1);
         
         // If unauthorized, clear session
         if (response.status === 401) {
+          console.log('🔒 Unauthorized, logging out');
           await logout();
         }
         return false;
