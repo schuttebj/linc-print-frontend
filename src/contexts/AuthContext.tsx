@@ -13,23 +13,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { API_ENDPOINTS, setAuthToken } from '../config/api';
 
-// Types
-interface User {
-  id: string;
-  username: string;
-  email?: string;
-  first_name?: string;
-  last_name?: string;
-  is_active: boolean;
-  is_superuser: boolean;
-  roles: string[];
-  permissions: string[];
-  location?: {
-    id: string;
-    name: string;
-    location_type: string;
-  };
-}
+// Import types from our main types file
+import { User } from '../types';
 
 interface AuthState {
   user: User | null;
@@ -69,6 +54,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [refreshRetryCount, setRefreshRetryCount] = useState(0);
   const maxRefreshRetries = 3;
 
+  // Activity tracking for 5-minute timeout
+  const [lastActivity, setLastActivity] = useState<number>(Date.now());
+  const [activityTimeout, setActivityTimeout] = useState<number | null>(null);
+  const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes in milliseconds
+
   // Initialize authentication on app start
   useEffect(() => {
     initializeAuth();
@@ -83,6 +73,60 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return () => clearInterval(refreshInterval);
     }
   }, [authState.isAuthenticated, authState.accessToken]);
+
+  // Set up activity tracking and inactivity timeout
+  useEffect(() => {
+    if (authState.isAuthenticated) {
+      // Clear existing timeout
+      if (activityTimeout) {
+        clearTimeout(activityTimeout);
+      }
+
+      // Set up new timeout
+      const timeoutId = setTimeout(() => {
+        console.log('User inactive for 5 minutes, logging out...');
+        logout();
+      }, INACTIVITY_TIMEOUT);
+
+      setActivityTimeout(timeoutId);
+
+      // Activity event listeners
+      const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+      
+      const handleActivity = () => {
+        const now = Date.now();
+        setLastActivity(now);
+        
+        // Clear existing timeout
+        if (activityTimeout) {
+          clearTimeout(activityTimeout);
+        }
+        
+        // Set new timeout
+        const newTimeoutId = setTimeout(() => {
+          console.log('User inactive for 5 minutes, logging out...');
+          logout();
+        }, INACTIVITY_TIMEOUT);
+        
+        setActivityTimeout(newTimeoutId);
+      };
+
+      // Add event listeners
+      activityEvents.forEach(event => {
+        document.addEventListener(event, handleActivity, true);
+      });
+
+      // Cleanup function
+      return () => {
+        if (activityTimeout) {
+          clearTimeout(activityTimeout);
+        }
+        activityEvents.forEach(event => {
+          document.removeEventListener(event, handleActivity, true);
+        });
+      };
+    }
+  }, [authState.isAuthenticated, activityTimeout]);
 
   /**
    * Initialize authentication state
@@ -198,6 +242,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Reset retry count
       setRefreshRetryCount(0);
 
+      // Clear activity timeout
+      if (activityTimeout) {
+        clearTimeout(activityTimeout);
+        setActivityTimeout(null);
+      }
+
       // Clear any other stored data
       localStorage.removeItem('user_preferences');
       sessionStorage.clear();
@@ -300,7 +350,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const hasRole = (role: string): boolean => {
     if (!authState.user) return false;
     if (authState.user.is_superuser) return true;
-    return authState.user.roles.includes(role);
+    return authState.user.roles.some(userRole => userRole.name === role || userRole.display_name === role);
   };
 
   /**
@@ -318,7 +368,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const hasAnyRole = (roles: string[]): boolean => {
     if (!authState.user) return false;
     if (authState.user.is_superuser) return true;
-    return roles.some(role => authState.user!.roles.includes(role));
+    return roles.some(role => authState.user!.roles.some(userRole => userRole.name === role || userRole.display_name === role));
   };
 
   const contextValue: AuthContextType = {

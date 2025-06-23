@@ -22,6 +22,14 @@ export interface Person {
   updated_by?: string;
 }
 
+// Role interface
+export interface Role {
+  id: string;
+  name: string;
+  display_name: string;
+  description: string;
+}
+
 // User and authentication types
 export interface User {
   id: string;
@@ -31,7 +39,7 @@ export interface User {
   last_name?: string;
   is_active: boolean;
   is_superuser: boolean;
-  roles: string[];
+  roles: Role[];
   permissions: string[];
   created_at: string;
 }
