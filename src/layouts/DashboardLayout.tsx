@@ -27,6 +27,7 @@ import {
   Menu as MenuIcon,
   Dashboard,
   Person,
+  Search,
   Logout,
   AccountCircle,
 } from '@mui/icons-material';
@@ -75,6 +76,12 @@ const DashboardLayout: React.FC = () => {
       text: 'Person Management',
       icon: <Person />,
       path: '/dashboard/persons/manage',
+      permission: 'persons.create',
+    },
+    {
+      text: 'Person Search',
+      icon: <Search />,
+      path: '/dashboard/persons/search',
       permission: 'persons.read',
     },
   ];

@@ -54,6 +54,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [refreshRetryCount, setRefreshRetryCount] = useState(0);
   const maxRefreshRetries = 3;
 
+  // Logout protection to prevent multiple simultaneous logout calls
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   // Activity tracking for 5-minute timeout
   const [lastActivity, setLastActivity] = useState<number>(Date.now());
   const [activityTimeout, setActivityTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
@@ -66,17 +69,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Set up automatic token refresh with exponential backoff
   useEffect(() => {
-    if (authState.isAuthenticated && authState.accessToken) {
+    if (authState.isAuthenticated && authState.accessToken && !isLoggingOut) {
       const refreshInterval = setInterval(() => {
         refreshToken();
       }, 14 * 60 * 1000); // Refresh every 14 minutes
       return () => clearInterval(refreshInterval);
     }
-  }, [authState.isAuthenticated, authState.accessToken]);
+  }, [authState.isAuthenticated, authState.accessToken, isLoggingOut]);
 
   // Set up activity tracking and inactivity timeout
   useEffect(() => {
-    if (authState.isAuthenticated) {
+    if (authState.isAuthenticated && !isLoggingOut) {
       // Clear existing timeout
       if (activityTimeout) {
         clearTimeout(activityTimeout);
@@ -96,6 +99,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const handleActivity = () => {
         const now = Date.now();
         setLastActivity(now);
+        
+        // Don't reset timeout if already logging out
+        if (isLoggingOut) return;
         
         // Clear existing timeout
         if (activityTimeout) {
@@ -126,7 +132,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
       };
     }
-  }, [authState.isAuthenticated, activityTimeout]);
+  }, [authState.isAuthenticated, activityTimeout, isLoggingOut]);
 
   /**
    * Initialize authentication state
@@ -187,6 +193,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       // Reset retry count on successful login
       setRefreshRetryCount(0);
+      setIsLoggingOut(false);
 
       setAuthState({
         user: {
@@ -199,42 +206,60 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         accessToken: access_token,
       });
 
+      console.log('✅ Login successful');
       return true;
     } catch (error) {
-      console.error('Login error:', error);
-      setAuthState(prev => ({
-        ...prev,
-        isLoading: false,
-        user: null,
-        isAuthenticated: false,
-        accessToken: null,
-      }));
+      console.error('❌ Login failed:', error);
+      setAuthState(prev => ({ ...prev, isLoading: false }));
       throw error;
     }
   };
 
   /**
-   * Logout user and clear session
+   * Logout user with protection against multiple simultaneous calls
    */
   const logout = async (): Promise<void> => {
+    // Prevent multiple simultaneous logout calls
+    if (isLoggingOut) {
+      console.log('🔄 Logout already in progress, skipping...');
+      return;
+    }
+
+    setIsLoggingOut(true);
+    console.log('🚪 Starting logout process...');
+
     try {
       // Call logout endpoint to invalidate server-side session
       if (authState.accessToken) {
-        await fetch(`${API_ENDPOINTS.auth}/logout`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${authState.accessToken}`,
-          },
-          credentials: 'include',
-        }).catch(() => {
-          // Ignore logout API errors - still clear local state
-        });
+        console.log('📡 Calling logout API...');
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+        
+        try {
+          await fetch(`${API_ENDPOINTS.auth}/logout`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${authState.accessToken}`,
+            },
+            credentials: 'include',
+            signal: controller.signal,
+          });
+          clearTimeout(timeoutId);
+          console.log('✅ Logout API call successful');
+        } catch (apiError) {
+          clearTimeout(timeoutId);
+          console.warn('⚠️ Logout API call failed, continuing with local cleanup:', apiError);
+          // Continue with local cleanup even if API call fails
+        }
       }
     } finally {
+      // Always clear local state regardless of API call result
+      console.log('🧹 Clearing local auth state...');
+      
       // Clear auth token from memory
       setAuthToken(null);
 
-      // Always clear local auth state
+      // Clear local auth state
       setAuthState({
         user: null,
         isAuthenticated: false,
@@ -254,6 +279,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Clear any other stored data
       localStorage.removeItem('user_preferences');
       sessionStorage.clear();
+
+      // Reset logout flag
+      setIsLoggingOut(false);
+      
+      console.log('✅ Logout process completed');
     }
   };
 
@@ -262,30 +292,45 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
    */
   const refreshToken = async (): Promise<boolean> => {
     try {
+      // Don't refresh if already logging out
+      if (isLoggingOut) {
+        console.log('🔄 Skipping refresh - logout in progress');
+        return false;
+      }
+
       // Check if we've exceeded max retries
       if (refreshRetryCount >= maxRefreshRetries) {
         console.warn('⚠️ Max refresh retries exceeded, logging out');
-        await logout();
+        if (!isLoggingOut) {
+          await logout();
+        }
         return false;
       }
 
       console.log('🔄 Attempting to refresh token...');
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
       const response = await fetch(`${API_ENDPOINTS.auth}/refresh`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include', // Include cookies for refresh token
+        signal: controller.signal,
       });
 
+      clearTimeout(timeoutId);
       console.log('🔄 Refresh response status:', response.status);
+      
       if (!response.ok) {
         console.log('❌ Refresh failed with status:', response.status);
         // Increment retry count on failure
         setRefreshRetryCount(prev => prev + 1);
         
-        // If unauthorized, clear session
-        if (response.status === 401) {
+        // If unauthorized, clear session (but avoid logout loops)
+        if (response.status === 401 && !isLoggingOut) {
           console.log('🔒 Unauthorized, logging out');
           await logout();
         }
@@ -296,14 +341,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const { access_token } = tokenData;
 
       // Get updated user info with new token
+      const userController = new AbortController();
+      const userTimeoutId = setTimeout(() => userController.abort(), 10000);
+      
       const userResponse = await fetch(`${API_ENDPOINTS.auth}/me`, {
         headers: {
           'Authorization': `Bearer ${access_token}`,
         },
         credentials: 'include',
+        signal: userController.signal,
       });
 
+      clearTimeout(userTimeoutId);
+
       if (!userResponse.ok) {
+        console.log('❌ Failed to get user info after refresh');
         setRefreshRetryCount(prev => prev + 1);
         return false;
       }
@@ -328,13 +380,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         accessToken: access_token,
       });
 
+      console.log('✅ Token refresh successful');
       return true;
     } catch (error) {
-      console.error('Token refresh error:', error);
+      console.error('❌ Token refresh error:', error);
       setRefreshRetryCount(prev => prev + 1);
       
-      // If we've hit max retries, logout
-      if (refreshRetryCount + 1 >= maxRefreshRetries) {
+      // If we've hit max retries, logout (but avoid loops)
+      if (refreshRetryCount + 1 >= maxRefreshRetries && !isLoggingOut) {
+        console.log('⚠️ Max refresh retries exceeded, logging out');
         await logout();
       }
       

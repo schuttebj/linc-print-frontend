@@ -12,6 +12,7 @@ import DashboardLayout from './layouts/DashboardLayout';
 import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
 import PersonManagementPage from './pages/persons/PersonManagementPage';
+import PersonSearchPage from './pages/persons/PersonSearchPage';
 
 function App() {
   return (
@@ -50,6 +51,14 @@ function App() {
                 element={
                   <ProtectedRoute requiredPermission="persons.create">
                     <PersonManagementPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="search" 
+                element={
+                  <ProtectedRoute requiredPermission="persons.read">
+                    <PersonSearchPage />
                   </ProtectedRoute>
                 } 
               />
