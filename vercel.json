@@ -13,7 +13,7 @@
       "VITE_API_BASE_URL": "https://linc-print-backend.onrender.com"
     }
   },
-  "functions": {},
+
   "headers": [
     {
       "source": "/api/(.*)",
