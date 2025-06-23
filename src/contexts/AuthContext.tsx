@@ -56,7 +56,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Activity tracking for 5-minute timeout
   const [lastActivity, setLastActivity] = useState<number>(Date.now());
-  const [activityTimeout, setActivityTimeout] = useState<number | null>(null);
+  const [activityTimeout, setActivityTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
   const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes in milliseconds
 
   // Initialize authentication on app start
