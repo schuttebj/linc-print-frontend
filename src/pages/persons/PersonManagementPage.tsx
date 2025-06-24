@@ -39,6 +39,7 @@ import {
   Edit as EditIcon,
   Clear as ClearIcon,
   Visibility as VisibilityIcon,
+  Warning as WarningIcon,
 } from '@mui/icons-material';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -240,6 +241,10 @@ const PersonManagementPage: React.FC = () => {
   const [stepValidation, setStepValidation] = useState<boolean[]>(new Array(steps.length).fill(false));
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [createdPerson, setCreatedPerson] = useState<any>(null);
+  const [duplicateCheckLoading, setDuplicateCheckLoading] = useState(false);
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+  const [potentialDuplicates, setPotentialDuplicates] = useState<any[]>([]);
+  const [duplicateThreshold] = useState(70.0);
   
   // Lookup form
   const lookupForm = useForm<PersonLookupForm>({
@@ -629,6 +634,70 @@ const PersonManagementPage: React.FC = () => {
       
       console.log('Transformed person payload:', personPayload);
       
+      // Perform duplicate check instead of direct creation
+      await checkForDuplicates(personPayload);
+      
+    } catch (error) {
+      console.error('Submit failed:', error);
+      alert(`Failed to create person: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
+  const checkForDuplicates = async (personPayload: any) => {
+    setDuplicateCheckLoading(true);
+    
+    try {
+      // First create a temporary person record to check for duplicates
+      const tempResponse = await fetch(`${API_BASE_URL}/api/v1/persons/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(personPayload),
+      });
+
+      if (!tempResponse.ok) {
+        throw new Error('Failed to create person for duplicate check');
+      }
+
+      const tempPerson = await tempResponse.json();
+      
+      // Now check for duplicates using the created person's ID
+      const duplicateResponse = await fetch(
+        `${API_BASE_URL}/api/v1/persons/${tempPerson.id}/duplicates?threshold=${duplicateThreshold}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (!duplicateResponse.ok) {
+        // If duplicate check fails, just proceed with the created person
+        console.warn('Duplicate check failed, proceeding with person creation');
+        setCreatedPerson(tempPerson);
+        setShowSuccessDialog(true);
+        return;
+      }
+
+      const duplicateData = await duplicateResponse.json();
+      
+      if (duplicateData.potential_duplicates && duplicateData.potential_duplicates.length > 0) {
+        // Found potential duplicates - show dialog
+        setPotentialDuplicates(duplicateData.potential_duplicates);
+        setCreatedPerson(tempPerson); // Store the created person for potential deletion
+        setShowDuplicateDialog(true);
+      } else {
+        // No duplicates found - proceed normally
+        setCreatedPerson(tempPerson);
+        setShowSuccessDialog(true);
+      }
+    } catch (error) {
+      console.error('Duplicate check failed:', error);
+      // If duplicate check fails, try to create person normally
       const response = await fetch(`${API_BASE_URL}/api/v1/persons/`, {
         method: 'POST',
         headers: {
@@ -639,20 +708,33 @@ const PersonManagementPage: React.FC = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('API Error Response:', errorData);
-        throw new Error(errorData.detail || `HTTP ${response.status}: Failed to create person`);
+        throw error;
       }
 
       const result = await response.json();
-      console.log('Person created successfully:', result);
       setCreatedPerson(result);
       setShowSuccessDialog(true);
-    } catch (error) {
-      console.error('Submit failed:', error);
-      alert(`Failed to create person: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
-      setSubmitLoading(false);
+      setDuplicateCheckLoading(false);
+    }
+  };
+
+  const handleKeepNewPerson = () => {
+    setShowDuplicateDialog(false);
+    setShowSuccessDialog(true);
+  };
+
+  const handleUpdateExistingPerson = (existingPersonId: string) => {
+    // Delete the newly created person and redirect to edit existing
+    if (createdPerson) {
+      // TODO: Implement delete API call to remove the temporary person
+      console.log('Would delete person:', createdPerson.id);
+      console.log('Would redirect to edit person:', existingPersonId);
+      
+      // For now, just show a message
+      alert(`Redirecting to edit existing person: ${existingPersonId}`);
+      setShowDuplicateDialog(false);
+      resetForm();
     }
   };
 
@@ -665,6 +747,8 @@ const PersonManagementPage: React.FC = () => {
     setStepValidation(new Array(steps.length).fill(false));
     setShowSuccessDialog(false);
     setCreatedPerson(null);
+    setShowDuplicateDialog(false);
+    setPotentialDuplicates([]);
     lookupForm.reset();
     personForm.reset();
   };
@@ -1701,15 +1785,118 @@ const PersonManagementPage: React.FC = () => {
               <Button
                 variant="contained"
                 onClick={handleSubmit}
-                disabled={submitLoading}
+                disabled={submitLoading || duplicateCheckLoading}
                 startIcon={<PersonAddIcon />}
               >
-                {submitLoading ? 'Submitting...' : 'Submit'}
+                {duplicateCheckLoading ? 'Checking for Duplicates...' : submitLoading ? 'Submitting...' : 'Submit'}
               </Button>
             )}
           </Box>
         </Box>
       </Paper>
+
+      {/* Duplicate Detection Dialog */}
+      <Dialog 
+        open={showDuplicateDialog} 
+        onClose={() => setShowDuplicateDialog(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ bgcolor: 'warning.main', color: 'white' }}>
+          <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <WarningIcon />
+            Potential Duplicate Records Found
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Alert severity="warning" sx={{ mb: 3 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+              We found {potentialDuplicates.length} potential duplicate record(s)
+            </Typography>
+            <Typography variant="body2">
+              Review the matches below to determine if this person already exists in the system.
+            </Typography>
+          </Alert>
+
+          {potentialDuplicates.map((duplicate, index) => (
+            <Paper key={index} sx={{ p: 2, mb: 2, border: '1px solid', borderColor: 'warning.light' }}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={8}>
+                  <Typography variant="h6" color="primary.main">
+                    {duplicate.first_name} {duplicate.surname}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Born: {duplicate.birth_date || 'Not specified'}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Document: {duplicate.primary_document || 'Not specified'}
+                  </Typography>
+                </Grid>
+                
+                <Grid item xs={12} sm={4}>
+                  <Box sx={{ textAlign: 'right' }}>
+                    <Chip 
+                      label={`${duplicate.similarity_score.toFixed(1)}% Match`}
+                      color={duplicate.similarity_score >= 90 ? 'error' : duplicate.similarity_score >= 80 ? 'warning' : 'info'}
+                      sx={{ fontWeight: 600 }}
+                    />
+                  </Box>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Match Details:
+                  </Typography>
+                  <Stack direction="row" spacing={1} flexWrap="wrap">
+                    {duplicate.match_criteria?.birth_date_match && (
+                      <Chip label="Birth Date Match" size="small" color="error" />
+                    )}
+                    {duplicate.match_criteria?.surname_match && (
+                      <Chip label="Surname Match" size="small" color="error" />
+                    )}
+                    {duplicate.match_criteria?.first_name_similar && (
+                      <Chip label="First Name Similar" size="small" color="warning" />
+                    )}
+                    {duplicate.match_criteria?.phone_match && (
+                      <Chip label="Phone Match" size="small" color="error" />
+                    )}
+                    {duplicate.match_criteria?.address_similar && (
+                      <Chip label="Address Similar" size="small" color="info" />
+                    )}
+                  </Stack>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<EditIcon />}
+                    onClick={() => handleUpdateExistingPerson(duplicate.id)}
+                    sx={{ mt: 1 }}
+                  >
+                    Update This Person Instead
+                  </Button>
+                </Grid>
+              </Grid>
+            </Paper>
+          ))}
+        </DialogContent>
+        <DialogActions sx={{ p: 3, gap: 1 }}>
+          <Button 
+            onClick={() => setShowDuplicateDialog(false)}
+            variant="outlined"
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleKeepNewPerson}
+            variant="contained"
+            color="warning"
+            startIcon={<PersonAddIcon />}
+          >
+            Keep New Person (Create Anyway)
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Success Dialog */}
       <Dialog 
