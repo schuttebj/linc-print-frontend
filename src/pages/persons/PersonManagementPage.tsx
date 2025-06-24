@@ -292,6 +292,26 @@ const PersonManagementPage: React.FC = () => {
 
   // Watch form values
   const watchedPersonNature = personForm.watch('person_nature');
+  
+  // Debug: Watch for unexpected field value changes
+  const watchedValues = personForm.watch(['surname', 'first_name', 'birth_date', 'email_address', 'work_phone', 'cell_phone']);
+  useEffect(() => {
+    const [surname, first_name, birth_date, email_address, work_phone, cell_phone] = watchedValues;
+    console.log('🔍 Form values changed:', {
+      surname, first_name, birth_date, email_address, work_phone, cell_phone
+    });
+    
+    // Check for suspicious cross-contamination
+    if (email_address && surname && email_address === surname) {
+      console.log('🚨 DETECTED: email_address has surname value!');
+    }
+    if (work_phone && first_name && work_phone === first_name) {
+      console.log('🚨 DETECTED: work_phone has first_name value!');
+    }
+    if (cell_phone && birth_date && cell_phone === birth_date) {
+      console.log('🚨 DETECTED: cell_phone has birth_date value!');
+    }
+  }, [watchedValues]);
 
   // Step 1: Document Lookup functionality
   const performLookup = async (data: PersonLookupForm) => {
@@ -690,6 +710,7 @@ const PersonManagementPage: React.FC = () => {
                   inputProps={{ maxLength: 50 }}
                   onChange={(e) => {
                     const value = e.target.value.toUpperCase();
+                    console.log('🔍 SURNAME onChange - Value:', value, 'Field name:', field.name);
                     field.onChange(value);
                   }}
                 />
@@ -711,6 +732,7 @@ const PersonManagementPage: React.FC = () => {
                   inputProps={{ maxLength: 50 }}
                   onChange={(e) => {
                     const value = e.target.value.toUpperCase();
+                    console.log('🔍 FIRST_NAME onChange - Value:', value, 'Field name:', field.name);
                     field.onChange(value);
                   }}
                 />
