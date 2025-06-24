@@ -23,7 +23,9 @@ import PersonFormWrapper from '../../components/PersonFormWrapper';
 const PersonFormTest: React.FC = () => {
   const [testMode, setTestMode] = useState<'standalone' | 'application' | 'search' | null>(null);
   const [completedPerson, setCompletedPerson] = useState<any>(null);
-  const [showCustomSuccess, setShowCustomSuccess] = useState(false);
+  const [showStandaloneSuccess, setShowStandaloneSuccess] = useState(false);
+  const [showApplicationSuccess, setShowApplicationSuccess] = useState(false);
+  const [showSearchSuccess, setShowSearchSuccess] = useState(false);
   const [successPerson, setSuccessPerson] = useState<any>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [testPersonId] = useState('123e4567-e89b-12d3-a456-426614174000'); // Mock person ID for testing
@@ -43,28 +45,44 @@ const PersonFormTest: React.FC = () => {
     console.log('PersonFormWrapper success with person:', person, 'isEdit:', isEdit);
     setSuccessPerson(person);
     setIsEditMode(isEdit);
-    setShowCustomSuccess(true);
+    
+    // Show different dialogs based on current mode
+    switch (testMode) {
+      case 'standalone':
+        setShowStandaloneSuccess(true);
+        break;
+      case 'application':
+        setShowApplicationSuccess(true);
+        break;
+      case 'search':
+        setShowSearchSuccess(true);
+        break;
+    }
   };
 
   const handleContinueEditing = () => {
-    setShowCustomSuccess(false);
+    setShowStandaloneSuccess(false);
+    setShowApplicationSuccess(false);
+    setShowSearchSuccess(false);
     // Form stays in current state
   };
 
   const handleCreateAnother = () => {
-    setShowCustomSuccess(false);
+    setShowStandaloneSuccess(false);
+    setShowApplicationSuccess(false);
+    setShowSearchSuccess(false);
     setTestMode(null); // This will cause the form to unmount and reset
   };
 
   const handleProceedToApplication = () => {
-    setShowCustomSuccess(false);
+    setShowApplicationSuccess(false);
     setCompletedPerson(successPerson);
     setTestMode(null);
     alert(`Proceeding to application with person: ${successPerson?.first_name} ${successPerson?.surname}`);
   };
 
   const handleReturnToSearch = () => {
-    setShowCustomSuccess(false);
+    setShowSearchSuccess(false);
     setCompletedPerson(successPerson);
     setTestMode(null);
     alert(`Returning to search after editing: ${successPerson?.first_name} ${successPerson?.surname}`);
@@ -91,72 +109,180 @@ const PersonFormTest: React.FC = () => {
           }
         />
 
-        {/* Custom Success Dialog */}
+        {/* Standalone Success Dialog - Traditional Green Style */}
         <Dialog
-          open={showCustomSuccess}
-          onClose={() => setShowCustomSuccess(false)}
+          open={showStandaloneSuccess}
+          onClose={() => setShowStandaloneSuccess(false)}
           maxWidth="sm"
           fullWidth
         >
-          <DialogTitle sx={{ bgcolor: 'success.main', color: 'white' }}>
+          <DialogTitle sx={{ bgcolor: 'success.main', color: 'white', textAlign: 'center' }}>
+            <Typography variant="h5" component="div" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+              <PersonAddIcon fontSize="large" />
+              Person Management Success
+            </Typography>
+          </DialogTitle>
+          <DialogContent sx={{ pt: 3, textAlign: 'center' }}>
+            {successPerson && (
+              <Box>
+                <Typography variant="h6" gutterBottom color="success.main">
+                  ✅ {successPerson.first_name} {successPerson.surname}
+                </Typography>
+                <Typography variant="body1" gutterBottom>
+                  has been successfully {isEditMode ? 'updated' : 'created'} in the system.
+                </Typography>
+
+                <Box sx={{ mt: 3, p: 2, bgcolor: 'success.50', borderRadius: 2, border: '1px solid', borderColor: 'success.main' }}>
+                  <Typography variant="subtitle2" color="success.dark">Person ID:</Typography>
+                  <Typography variant="body2" sx={{ fontFamily: 'monospace', mt: 0.5, fontWeight: 'bold' }}>
+                    {successPerson.id}
+                  </Typography>
+                </Box>
+
+                <Alert severity="success" sx={{ mt: 3 }}>
+                  <Typography variant="body1">
+                    🎉 The person record is now available for license applications and other system processes.
+                  </Typography>
+                </Alert>
+              </Box>
+            )}
+          </DialogContent>
+          <DialogActions sx={{ p: 3, gap: 2, justifyContent: 'center' }}>
+            <Button onClick={handleContinueEditing} variant="outlined" size="large" color="success">
+              Continue Editing This Person
+            </Button>
+            <Button onClick={handleCreateAnother} variant="contained" size="large" startIcon={<PersonAddIcon />} color="success">
+              Create Another Person
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Application Success Dialog - Blue Corporate Style */}
+        <Dialog
+          open={showApplicationSuccess}
+          onClose={() => setShowApplicationSuccess(false)}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white', py: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ 
+                bgcolor: 'primary.dark', 
+                p: 1.5, 
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <PersonAddIcon fontSize="large" />
+              </Box>
+              <Box>
+                <Typography variant="h5">
+                  Application Ready to Continue
+                </Typography>
+                <Typography variant="subtitle1" sx={{ opacity: 0.9 }}>
+                  Person {isEditMode ? 'updated' : 'registered'} successfully
+                </Typography>
+              </Box>
+            </Box>
+          </DialogTitle>
+          <DialogContent sx={{ pt: 4 }}>
+            {successPerson && (
+              <Box>
+                <Alert severity="info" sx={{ mb: 3 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    📋 Ready for Next Step
+                  </Typography>
+                  <Typography variant="body2">
+                    Person details have been saved. You can now proceed with document upload and application processing.
+                  </Typography>
+                </Alert>
+
+                <Box sx={{ display: 'flex', gap: 3, mb: 3 }}>
+                  <Box sx={{ flex: 1, p: 2, bgcolor: 'primary.50', borderRadius: 1 }}>
+                    <Typography variant="subtitle2" color="primary.dark">Applicant Name:</Typography>
+                    <Typography variant="h6">{successPerson.first_name} {successPerson.surname}</Typography>
+                  </Box>
+                  <Box sx={{ flex: 1, p: 2, bgcolor: 'primary.50', borderRadius: 1 }}>
+                    <Typography variant="subtitle2" color="primary.dark">Person ID:</Typography>
+                    <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 'bold' }}>
+                      {successPerson.id}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                <Box sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, borderLeft: '4px solid', borderColor: 'primary.main' }}>
+                  <Typography variant="body2" color="text.secondary">
+                    💡 <strong>Next Steps:</strong> Upload required documents, complete application forms, and submit for review.
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+          </DialogContent>
+          <DialogActions sx={{ p: 3, gap: 2 }}>
+            <Button onClick={handleCreateAnother} variant="outlined" color="primary">
+              Add Different Person
+            </Button>
+            <Button 
+              onClick={handleProceedToApplication} 
+              variant="contained" 
+              size="large" 
+              color="primary"
+              sx={{ px: 4 }}
+            >
+              Continue to Document Upload →
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Search Success Dialog - Orange Edit Style */}
+        <Dialog
+          open={showSearchSuccess}
+          onClose={() => setShowSearchSuccess(false)}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle sx={{ bgcolor: 'warning.main', color: 'white' }}>
             <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <PersonAddIcon />
-              {isEditMode ? 'Person Updated Successfully!' : 'Person Created Successfully!'}
+              Person Edit Complete
             </Typography>
           </DialogTitle>
           <DialogContent sx={{ pt: 3 }}>
             {successPerson && (
               <Box>
-                <Typography variant="body1" gutterBottom>
-                  <strong>{successPerson.first_name} {successPerson.surname}</strong> has been successfully {isEditMode ? 'updated' : 'created'}.
-                </Typography>
+                <Alert severity="warning" sx={{ mb: 3 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    ✏️ Edit Successful
+                  </Typography>
+                  <Typography variant="body2">
+                    Changes to {successPerson.first_name} {successPerson.surname} have been saved.
+                  </Typography>
+                </Alert>
 
-                <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                  <Typography variant="subtitle2" color="text.secondary">Person ID:</Typography>
-                  <Typography variant="body2" sx={{ fontFamily: 'monospace', mt: 0.5 }}>
-                    {successPerson.id}
+                <Box sx={{ p: 2, bgcolor: 'warning.50', borderRadius: 1, mb: 2 }}>
+                  <Typography variant="subtitle2" color="warning.dark">Modified Person:</Typography>
+                  <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                    {successPerson.first_name} {successPerson.surname}
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>
+                    ID: {successPerson.id}
                   </Typography>
                 </Box>
 
-                <Alert severity="success" sx={{ mt: 2 }}>
-                  {testMode === 'standalone' && 'The person record is now available for license applications.'}
-                  {testMode === 'application' && 'Ready to proceed with the application process.'}
-                  {testMode === 'search' && 'Person has been updated. You can return to search or continue editing.'}
-                </Alert>
+                <Typography variant="body2" color="text.secondary">
+                  You can continue editing this person or return to the search results to find other records.
+                </Typography>
               </Box>
             )}
           </DialogContent>
           <DialogActions sx={{ p: 3, gap: 1 }}>
-            {testMode === 'standalone' && (
-              <>
-                <Button onClick={handleContinueEditing} variant="outlined">
-                  Continue Editing
-                </Button>
-                <Button onClick={handleCreateAnother} variant="contained" startIcon={<PersonAddIcon />}>
-                  Create Another Person
-                </Button>
-              </>
-            )}
-            {testMode === 'application' && (
-              <>
-                <Button onClick={handleCreateAnother} variant="outlined">
-                  Create Another Person
-                </Button>
-                <Button onClick={handleProceedToApplication} variant="contained" color="primary">
-                  Continue to Application
-                </Button>
-              </>
-            )}
-            {testMode === 'search' && (
-              <>
-                <Button onClick={handleContinueEditing} variant="outlined">
-                  Continue Editing
-                </Button>
-                <Button onClick={handleReturnToSearch} variant="contained" color="primary">
-                  Return to Search
-                </Button>
-              </>
-            )}
+            <Button onClick={handleContinueEditing} variant="outlined" color="warning">
+              Keep Editing
+            </Button>
+            <Button onClick={handleReturnToSearch} variant="contained" color="warning">
+              ← Back to Search
+            </Button>
           </DialogActions>
         </Dialog>
       </>
@@ -248,21 +374,24 @@ const PersonFormTest: React.FC = () => {
         </Typography>
         <Typography variant="body2" component="div">
           <strong>🎉 NEW: External Success Dialog Control</strong>
-          <p>This test page demonstrates the new <code>onSuccess</code> prop that allows parent components to handle success dialogs with custom UI and logic.</p>
+          <p>This test page demonstrates the new <code>onSuccess</code> prop with <strong>three completely different dialogs</strong> to show the power of external control.</p>
           
           <ol>
-            <li><strong>Standalone Mode:</strong> Custom success dialog with "Continue Editing" and "Create Another Person" options</li>
-            <li><strong>Application Mode:</strong> Custom dialog with "Create Another Person" and "Continue to Application" options</li>
-            <li><strong>Search Edit Mode:</strong> Custom dialog with "Continue Editing" and "Return to Search" options</li>
+            <li><strong>Standalone Mode:</strong> 🟢 <strong>Green Traditional Dialog</strong> - Centered layout, success theme, person management focus</li>
+            <li><strong>Application Mode:</strong> 🔵 <strong>Blue Corporate Dialog</strong> - Professional layout, application workflow, next steps guidance</li>
+            <li><strong>Search Edit Mode:</strong> 🟠 <strong>Orange Edit Dialog</strong> - Compact layout, edit theme, search workflow focus</li>
           </ol>
 
-          <p><strong>Benefits:</strong></p>
+          <p><strong>Key Differences Demonstrated:</strong></p>
           <ul>
-            <li>✅ Custom success messages per context</li>
-            <li>✅ Custom button labels and actions</li>
-            <li>✅ Complete control over success flow</li>
-            <li>✅ Consistent branding across different uses</li>
+            <li>🎨 <strong>Different Colors:</strong> Green (success), Blue (primary), Orange (warning)</li>
+            <li>📐 <strong>Different Layouts:</strong> Centered, side-by-side, compact</li>
+            <li>📝 <strong>Different Content:</strong> Person management vs application workflow vs edit confirmation</li>
+            <li>🔘 <strong>Different Buttons:</strong> Custom labels, colors, and actions per context</li>
+            <li>📏 <strong>Different Sizes:</strong> Small (search), medium (standalone), large (application)</li>
           </ul>
+
+          <p><strong>This proves you can create completely custom experiences for each use case!</strong></p>
         </Typography>
       </Paper>
     </Box>
