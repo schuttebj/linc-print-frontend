@@ -860,6 +860,7 @@ const PersonManagementPage: React.FC = () => {
                   fullWidth
                   type="email"
                   label="Email Address"
+                  value={field.value || ''}
                   error={!!personForm.formState.errors.email_address}
                   helperText={personForm.formState.errors.email_address?.message || 'Email address (optional)'}
                   inputProps={{ maxLength: 100 }}
@@ -882,6 +883,7 @@ const PersonManagementPage: React.FC = () => {
                   {...field}
                   fullWidth
                   label="Work Phone"
+                  value={field.value || ''}
                   error={!!personForm.formState.errors.work_phone}
                   helperText={personForm.formState.errors.work_phone?.message || 'Work phone number (optional)'}
                   inputProps={{ 
@@ -891,6 +893,7 @@ const PersonManagementPage: React.FC = () => {
                   }}
                   onChange={(e) => {
                     const value = e.target.value.replace(/\D/g, '');
+                    console.log('🔍 WORK PHONE onChange - Value:', value, 'Field name:', field.name);
                     field.onChange(value);
                   }}
                 />
@@ -934,6 +937,7 @@ const PersonManagementPage: React.FC = () => {
                   fullWidth
                   label="Cell Phone Number"
                   placeholder="0AA BB BB BBB"
+                  value={field.value || ''}
                   error={!!personForm.formState.errors.cell_phone}
                   helperText={personForm.formState.errors.cell_phone?.message || 'Cell phone number (10 digits starting with 0)'}
                   inputProps={{ 
@@ -943,6 +947,7 @@ const PersonManagementPage: React.FC = () => {
                   }}
                   onChange={(e) => {
                     const value = e.target.value.replace(/\D/g, '');
+                    console.log('🔍 CELL PHONE onChange - Value:', value, 'Field name:', field.name);
                     field.onChange(value);
                   }}
                 />
