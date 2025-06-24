@@ -531,21 +531,69 @@ const PersonManagementPage: React.FC = () => {
     
     try {
       const formData = personForm.getValues();
-      console.log('Submitting person data:', formData);
+      console.log('Raw form data:', formData);
       
-      const { accessToken } = useAuth();
+      // Transform form data to match backend schema
+      const personPayload = {
+        // Basic person information
+        surname: formData.surname,
+        first_name: formData.first_name,
+        middle_name: formData.middle_name || undefined,
+        person_nature: formData.person_nature,
+        birth_date: formData.birth_date || undefined,
+        nationality_code: formData.nationality_code || 'MG',
+        preferred_language: formData.preferred_language || 'mg',
+        email_address: formData.email_address || undefined,
+        work_phone: formData.work_phone || undefined,
+        cell_phone_country_code: formData.cell_phone_country_code || '+261',
+        cell_phone: formData.cell_phone || undefined,
+        is_active: true,
+        
+        // Transform aliases to match backend schema
+        aliases: formData.aliases
+          .filter(alias => alias.document_number && alias.document_number.trim())
+          .map(alias => ({
+            document_type: alias.document_type,
+            document_number: alias.document_number,
+            country_of_issue: alias.country_of_issue || 'MG',
+            name_in_document: alias.name_in_document || undefined,
+            is_primary: alias.is_primary,
+            is_current: alias.is_current,
+            expiry_date: alias.expiry_date || undefined,
+          })),
+        
+        // Transform addresses to match backend schema
+        addresses: formData.addresses
+          .filter(address => address.locality && address.postal_code && address.town)
+          .map(address => ({
+            address_type: address.address_type,
+            is_primary: address.is_primary,
+            street_line1: address.street_line1 || undefined,
+            street_line2: address.street_line2 || undefined,
+            locality: address.locality,
+            postal_code: address.postal_code,
+            town: address.town,
+            country: address.country || 'MADAGASCAR',
+            province_code: address.province_code || undefined,
+            is_verified: false,
+          })),
+      };
+      
+      console.log('Transformed person payload:', personPayload);
+      
       const response = await fetch(`${API_BASE_URL}/api/v1/persons/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(personPayload),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to create person');
+        console.error('API Error Response:', errorData);
+        throw new Error(errorData.detail || `HTTP ${response.status}: Failed to create person`);
       }
 
       const result = await response.json();
