@@ -3,7 +3,7 @@
  * Search and browse existing person records with full CRUD capabilities
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -50,15 +50,12 @@ import {
   LocationOn as LocationIcon,
   Description as DocumentIcon,
   CalendarToday as CalendarIcon,
-  CheckCircle as CheckCircleIcon,
-  Assignment as AssignmentIcon,
 } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useAuth } from '../../contexts/AuthContext';
 import { API_BASE_URL } from '../../config/api';
-import PersonFormWrapper from '../../components/PersonFormWrapper';
 
 // Types for Madagascar person search
 interface PersonSearchForm {
@@ -132,6 +129,7 @@ const LANGUAGES = [
 const PersonSearchPage: React.FC = () => {
   const { hasPermission, accessToken } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   
   // State management
   const [searchResults, setSearchResults] = useState<PersonSearchResult[]>([]);
@@ -147,14 +145,33 @@ const PersonSearchPage: React.FC = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   
-  // Edit form states
-  const [showEditForm, setShowEditForm] = useState(false);
-  const [editingPersonId, setEditingPersonId] = useState<string | null>(null);
-  const [showEditSuccess, setShowEditSuccess] = useState(false);
-  const [editedPerson, setEditedPerson] = useState<any>(null);
+
   
   // Snackbar state
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+
+  // Restore search state from URL parameters when returning from edit
+  useEffect(() => {
+    const urlFilters = searchParams.get('filters');
+    const urlPage = searchParams.get('page');
+    const urlRowsPerPage = searchParams.get('rowsPerPage');
+    
+    if (urlFilters) {
+      try {
+        const filters = JSON.parse(decodeURIComponent(urlFilters));
+        searchForm.reset(filters);
+        
+        // Restore pagination
+        if (urlPage) setPage(parseInt(urlPage));
+        if (urlRowsPerPage) setRowsPerPage(parseInt(urlRowsPerPage));
+        
+        // Automatically perform search with restored filters
+        onSearch(filters);
+      } catch (error) {
+        console.warn('Failed to restore search state:', error);
+      }
+    }
+  }, [searchParams]);
 
   // Search form
   const searchForm = useForm<PersonSearchForm>({
@@ -273,38 +290,17 @@ const PersonSearchPage: React.FC = () => {
 
   // Edit person - navigate to PersonManagementPage
   const editPerson = (person: PersonSearchResult) => {
-    setEditingPersonId(person.id);
-    setSelectedPerson(person);
-    setShowEditForm(true);
-  };
-
-  const handleEditSuccess = (person: any, isEdit: boolean) => {
-    setEditedPerson(person);
-    setShowEditSuccess(true);
-    setShowEditForm(false);
+    // Encode current search state to preserve when returning
+    const currentFilters = searchForm.getValues();
+    const searchState = {
+      filters: encodeURIComponent(JSON.stringify(currentFilters)),
+      query: currentFilters.search_text || '',
+      page: page.toString(),
+      rowsPerPage: rowsPerPage.toString()
+    };
     
-    // Update the search results with the edited person
-    setSearchResults(prev => 
-      prev.map(p => p.id === person.id ? { ...p, ...person } : p)
-    );
-  };
-
-  const handleEditCancel = () => {
-    setShowEditForm(false);
-    setEditingPersonId(null);
-    setSelectedPerson(null);
-  };
-
-  const handleCreateApplication = () => {
-    setShowEditSuccess(false);
-    // Navigate to application creation with the person
-    navigate(`/dashboard/applications/create?personId=${editedPerson.id}`);
-  };
-
-  const handleReturnToSearch = () => {
-    setShowEditSuccess(false);
-    setEditedPerson(null);
-    // Stay on search page - form is already closed
+    const params = new URLSearchParams(searchState);
+    navigate(`/dashboard/persons/edit/${person.id}?returnTo=search&${params.toString()}`);
   };
 
   // Delete person
@@ -1017,110 +1013,7 @@ const PersonSearchPage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Edit Form Dialog */}
-      <Dialog 
-        open={showEditForm} 
-        onClose={handleEditCancel}
-        maxWidth="xl"
-        fullWidth
-        sx={{ 
-          '& .MuiDialog-paper': { 
-            height: '90vh',
-            maxHeight: '90vh',
-            margin: '5vh auto'
-          } 
-        }}
-      >
-        <PersonFormWrapper
-          mode="search"
-          onSuccess={handleEditSuccess}
-          onCancel={handleEditCancel}
-          initialPersonId={editingPersonId || undefined}
-          title={`Edit Person: ${selectedPerson?.first_name} ${selectedPerson?.surname}`}
-          subtitle="Update person information and return to search results."
-          showHeader={true}
-          skipFirstStep={true}
-        />
-      </Dialog>
 
-      {/* Edit Success Dialog - Blue Corporate Style */}
-      <Dialog
-        open={showEditSuccess}
-        onClose={() => setShowEditSuccess(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white', py: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Box sx={{ 
-              bgcolor: 'primary.dark', 
-              p: 1.5, 
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <CheckCircleIcon fontSize="large" />
-            </Box>
-            <Box>
-              <Typography variant="h5">
-                Person Updated Successfully
-              </Typography>
-              <Typography variant="subtitle1" sx={{ opacity: 0.9 }}>
-                Ready for next action
-              </Typography>
-            </Box>
-          </Box>
-        </DialogTitle>
-        <DialogContent sx={{ pt: 4 }}>
-          {editedPerson && (
-            <Box>
-              <Alert severity="success" sx={{ mb: 3 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                  ✅ Update Complete
-                </Typography>
-                <Typography variant="body2">
-                  Changes to {editedPerson.first_name} {editedPerson.surname} have been saved to the system.
-                </Typography>
-              </Alert>
-
-              <Box sx={{ display: 'flex', gap: 3, mb: 3 }}>
-                <Box sx={{ flex: 1, p: 2, bgcolor: 'primary.50', borderRadius: 1 }}>
-                  <Typography variant="subtitle2" color="primary.dark">Updated Person:</Typography>
-                  <Typography variant="h6">{editedPerson.first_name} {editedPerson.surname}</Typography>
-                </Box>
-                <Box sx={{ flex: 1, p: 2, bgcolor: 'primary.50', borderRadius: 1 }}>
-                  <Typography variant="subtitle2" color="primary.dark">Person ID:</Typography>
-                  <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 'bold' }}>
-                    {editedPerson.id}
-                  </Typography>
-                </Box>
-              </Box>
-
-              <Box sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, borderLeft: '4px solid', borderColor: 'primary.main' }}>
-                <Typography variant="body2" color="text.secondary">
-                  💡 <strong>Next Steps:</strong> You can create a new driver's license application for this person or continue searching for other records.
-                </Typography>
-              </Box>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ p: 3, gap: 2 }}>
-          <Button onClick={handleReturnToSearch} variant="outlined" color="primary">
-            Continue Searching
-          </Button>
-          <Button 
-            onClick={handleCreateApplication} 
-            variant="contained" 
-            size="large" 
-            color="primary"
-            startIcon={<AssignmentIcon />}
-            sx={{ px: 4 }}
-          >
-            Create Application →
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       {/* Snackbar for notifications */}
       <Snackbar
