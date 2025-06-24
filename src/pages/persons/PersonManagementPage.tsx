@@ -369,69 +369,105 @@ const PersonManagementPage: React.FC = () => {
   };
 
   const setupNewPersonForm = (lookupData: PersonLookupForm) => {
-    // Pre-populate with lookup data
-    const currentAliases = personForm.getValues('aliases');
-    currentAliases[0] = {
-      ...currentAliases[0],
-      document_type: lookupData.document_type,
-      document_number: lookupData.document_number,
-    };
-    personForm.setValue('aliases', currentAliases);
+    console.log('=== SETTING UP NEW PERSON FORM ===');
+    console.log('Lookup data:', lookupData);
+    
+    // Reset form completely first to prevent field value mixup
+    personForm.reset({
+      surname: '',
+      first_name: '',
+      middle_name: '',
+      person_nature: '',
+      birth_date: '',
+      nationality_code: 'MG',
+      preferred_language: 'mg',
+      email_address: '',
+      work_phone: '',
+      cell_phone_country_code: '+261', // Madagascar default
+      cell_phone: '',
+      aliases: [{
+        document_type: lookupData.document_type,
+        document_number: lookupData.document_number,
+        country_of_issue: 'MG',
+        name_in_document: '',
+        is_primary: true,
+        is_current: true,
+        expiry_date: '',
+      }],
+      addresses: [{
+        address_type: 'residential',
+        street_line1: '',
+        street_line2: '',
+        locality: '',
+        postal_code: '',
+        town: '',
+        country: 'MADAGASCAR',
+        province_code: '',
+        is_primary: true,
+      }],
+    });
+    
+    console.log('Form values after new person setup:', personForm.getValues());
+    console.log('=== NEW PERSON SETUP COMPLETE ===');
   };
 
   const populateFormWithExistingPerson = (existingPerson: ExistingPerson) => {
+    console.log('=== DEBUGGING FIELD POPULATION ===');
+    console.log('Full existing person data:', JSON.stringify(existingPerson, null, 2));
+    
     // Populate basic person information - fix field mapping
-    if (existingPerson.surname) personForm.setValue('surname', existingPerson.surname.toUpperCase());
-    if (existingPerson.first_name) personForm.setValue('first_name', existingPerson.first_name.toUpperCase());
-    if (existingPerson.middle_name) personForm.setValue('middle_name', existingPerson.middle_name.toUpperCase());
-    if (existingPerson.person_nature) personForm.setValue('person_nature', existingPerson.person_nature);
-    if (existingPerson.birth_date) personForm.setValue('birth_date', existingPerson.birth_date);
-    if (existingPerson.nationality_code) personForm.setValue('nationality_code', existingPerson.nationality_code);
+    if (existingPerson.surname) {
+      console.log('Setting surname to:', existingPerson.surname);
+      personForm.setValue('surname', existingPerson.surname.toUpperCase());
+    }
+    if (existingPerson.first_name) {
+      console.log('Setting first_name to:', existingPerson.first_name);
+      personForm.setValue('first_name', existingPerson.first_name.toUpperCase());
+    }
+    if (existingPerson.middle_name) {
+      console.log('Setting middle_name to:', existingPerson.middle_name);
+      personForm.setValue('middle_name', existingPerson.middle_name.toUpperCase());
+    }
+    if (existingPerson.person_nature) {
+      console.log('Setting person_nature to:', existingPerson.person_nature);
+      personForm.setValue('person_nature', existingPerson.person_nature);
+    }
+    if (existingPerson.birth_date) {
+      console.log('Setting birth_date to:', existingPerson.birth_date);
+      personForm.setValue('birth_date', existingPerson.birth_date);
+    }
+    if (existingPerson.nationality_code) {
+      console.log('Setting nationality_code to:', existingPerson.nationality_code);
+      personForm.setValue('nationality_code', existingPerson.nationality_code);
+    }
     
     // Fix contact field mapping - ensure correct fields are populated
     if (existingPerson.email_address) {
+      console.log('Setting email_address to:', existingPerson.email_address);
       personForm.setValue('email_address', existingPerson.email_address);
     }
     if (existingPerson.work_phone) {
+      console.log('Setting work_phone to:', existingPerson.work_phone);
       personForm.setValue('work_phone', existingPerson.work_phone);
     }
     if (existingPerson.cell_phone) {
+      console.log('Setting cell_phone to:', existingPerson.cell_phone);
       personForm.setValue('cell_phone', existingPerson.cell_phone);
+    }
+    if (existingPerson.cell_phone_country_code) {
+      console.log('Setting cell_phone_country_code to:', existingPerson.cell_phone_country_code);
+      personForm.setValue('cell_phone_country_code', existingPerson.cell_phone_country_code);
+    } else {
+      console.log('Setting default cell_phone_country_code to: +261');
+      personForm.setValue('cell_phone_country_code', '+261');
     }
     
     // Set defaults for Madagascar
+    console.log('Setting preferred_language to: mg');
     personForm.setValue('preferred_language', 'mg');
-    personForm.setValue('cell_phone_country_code', '+261');
     
-    // Populate aliases if available
-    if (existingPerson.aliases && existingPerson.aliases.length > 0) {
-      const formattedAliases = existingPerson.aliases.map(alias => ({
-        document_type: alias.document_type,
-        document_number: alias.document_number,
-        country_of_issue: 'MG', // Default for Madagascar
-        is_primary: alias.is_primary,
-        is_current: true,
-        name_in_document: '',
-        expiry_date: ''
-      }));
-      personForm.setValue('aliases', formattedAliases);
-    }
-    
-    // Populate addresses if available
-    if (existingPerson.addresses && existingPerson.addresses.length > 0) {
-      const formattedAddresses = existingPerson.addresses.map(address => ({
-        address_type: address.address_type,
-        locality: address.locality?.toUpperCase() || '',
-        postal_code: address.postal_code || '',
-        town: address.locality?.toUpperCase() || '', // Default town to locality
-        country: 'MADAGASCAR',
-        street_line1: '',
-        street_line2: '',
-        province_code: '',
-        is_primary: address.is_primary
-      }));
-      personForm.setValue('addresses', formattedAddresses);
-    }
+    console.log('Form values after population:', personForm.getValues());
+    console.log('=== POPULATION COMPLETE ===');
   };
 
   // Step validation
