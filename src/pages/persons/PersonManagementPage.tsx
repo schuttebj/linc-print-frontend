@@ -384,22 +384,24 @@ const PersonManagementPage: React.FC = () => {
   };
 
   const setupNewPersonForm = (lookupData: PersonLookupForm) => {
-    // Reset form completely first to prevent field value mixup
+    console.log('Setting up form for new person with lookup data:', lookupData);
+    
+    // Reset form with primary document from lookup - CAPITALIZED
     personForm.reset({
       surname: '',
       first_name: '',
       middle_name: '',
-      person_nature: '',
+      person_nature: '01', // Default to Male
       birth_date: '',
       nationality_code: 'MG',
       preferred_language: 'mg',
       email_address: '',
       work_phone: '',
-      cell_phone_country_code: '+261', // Madagascar default
+      cell_phone_country_code: '+261',
       cell_phone: '',
       aliases: [{
-        document_type: lookupData.document_type,
-        document_number: lookupData.document_number,
+        document_type: lookupData.document_type?.toUpperCase() || 'MG_ID',
+        document_number: lookupData.document_number?.toUpperCase() || '',
         country_of_issue: 'MG',
         name_in_document: '',
         is_primary: true,
@@ -407,7 +409,7 @@ const PersonManagementPage: React.FC = () => {
         expiry_date: '',
       }],
       addresses: [{
-        address_type: 'residential',
+        address_type: 'RESIDENTIAL',
         street_line1: '',
         street_line2: '',
         locality: '',
@@ -418,12 +420,16 @@ const PersonManagementPage: React.FC = () => {
         is_primary: true,
       }],
     });
+    
+    setIsNewPerson(true);
+    setIsEditMode(false);
+    setCurrentPersonId(null);
   };
 
   const populateFormWithExistingPerson = (existingPerson: ExistingPerson) => {
     console.log('Populating form with existing person:', existingPerson);
     
-    // Populate basic person information
+    // Populate basic person information - ALL CAPITALIZED
     if (existingPerson.surname) {
       personForm.setValue('surname', existingPerson.surname.toUpperCase());
     }
@@ -434,21 +440,21 @@ const PersonManagementPage: React.FC = () => {
       personForm.setValue('middle_name', existingPerson.middle_name.toUpperCase());
     }
     if (existingPerson.person_nature) {
-      personForm.setValue('person_nature', existingPerson.person_nature);
+      personForm.setValue('person_nature', existingPerson.person_nature.toUpperCase());
     }
     if (existingPerson.birth_date) {
       personForm.setValue('birth_date', existingPerson.birth_date);
     }
     if (existingPerson.nationality_code) {
-      personForm.setValue('nationality_code', existingPerson.nationality_code);
+      personForm.setValue('nationality_code', existingPerson.nationality_code.toUpperCase());
     }
     if (existingPerson.preferred_language) {
-      personForm.setValue('preferred_language', existingPerson.preferred_language);
+      personForm.setValue('preferred_language', existingPerson.preferred_language.toLowerCase()); // Language codes stay lowercase
     }
     
-    // Populate contact information
+    // Populate contact information - EMAIL CAPITALIZED
     if (existingPerson.email_address) {
-      personForm.setValue('email_address', existingPerson.email_address);
+      personForm.setValue('email_address', existingPerson.email_address.toUpperCase());
     }
     if (existingPerson.work_phone) {
       personForm.setValue('work_phone', existingPerson.work_phone);
@@ -462,14 +468,14 @@ const PersonManagementPage: React.FC = () => {
       personForm.setValue('cell_phone_country_code', '+261');
     }
     
-    // Populate aliases (ID documents) if they exist
+    // Populate aliases (ID documents) if they exist - ALL CAPITALIZED
     if (existingPerson.aliases && existingPerson.aliases.length > 0) {
       console.log('Populating aliases:', existingPerson.aliases);
       const transformedAliases = existingPerson.aliases.map(alias => ({
-        document_type: alias.document_type || 'MG_ID',
-        document_number: alias.document_number || '',
-        country_of_issue: alias.country_of_issue || 'MG',
-        name_in_document: alias.name_in_document || '',
+        document_type: alias.document_type?.toUpperCase() || 'MG_ID',
+        document_number: alias.document_number?.toUpperCase() || '',
+        country_of_issue: alias.country_of_issue?.toUpperCase() || 'MG',
+        name_in_document: alias.name_in_document?.toUpperCase() || '',
         is_primary: alias.is_primary || false,
         is_current: alias.is_current !== false, // default to true if undefined
         expiry_date: alias.expiry_date || '',
@@ -480,18 +486,18 @@ const PersonManagementPage: React.FC = () => {
       console.log('Aliases set to:', transformedAliases);
     }
     
-    // Populate addresses if they exist
+    // Populate addresses if they exist - ALL CAPITALIZED
     if (existingPerson.addresses && existingPerson.addresses.length > 0) {
       console.log('Populating addresses:', existingPerson.addresses);
       const transformedAddresses = existingPerson.addresses.map(address => ({
-        address_type: address.address_type || 'residential',
-        street_line1: address.street_line1 || '',
-        street_line2: address.street_line2 || '',
-        locality: address.locality || '',
+        address_type: address.address_type?.toUpperCase() || 'RESIDENTIAL',
+        street_line1: address.street_line1?.toUpperCase() || '',
+        street_line2: address.street_line2?.toUpperCase() || '',
+        locality: address.locality?.toUpperCase() || '',
         postal_code: address.postal_code || '',
-        town: address.town || '',
-        country: address.country || 'MADAGASCAR',
-        province_code: address.province_code || '',
+        town: address.town?.toUpperCase() || '',
+        country: address.country?.toUpperCase() || 'MADAGASCAR',
+        province_code: address.province_code?.toUpperCase() || '',
         is_primary: address.is_primary || false,
       }));
       
@@ -586,48 +592,48 @@ const PersonManagementPage: React.FC = () => {
       const formData = personForm.getValues();
       console.log('Raw form data:', formData);
       
-      // Transform form data to match backend schema
+      // Transform form data to match backend schema with FULL CAPITALIZATION
       const personPayload = {
-        // Basic person information
-        surname: formData.surname,
-        first_name: formData.first_name,
-        middle_name: formData.middle_name || undefined,
-        person_nature: formData.person_nature,
+        // Basic person information - ALL CAPITALIZED
+        surname: formData.surname?.toUpperCase() || '',
+        first_name: formData.first_name?.toUpperCase() || '',
+        middle_name: formData.middle_name?.toUpperCase() || undefined,
+        person_nature: formData.person_nature?.toUpperCase() || '',
         birth_date: formData.birth_date || undefined,
-        nationality_code: formData.nationality_code || 'MG',
-        preferred_language: formData.preferred_language || 'mg',
-        email_address: formData.email_address || undefined,
+        nationality_code: formData.nationality_code?.toUpperCase() || 'MG',
+        preferred_language: formData.preferred_language?.toLowerCase() || 'mg', // Language codes stay lowercase
+        email_address: formData.email_address?.toUpperCase() || undefined,
         work_phone: formData.work_phone || undefined,
         cell_phone_country_code: formData.cell_phone_country_code || '+261',
         cell_phone: formData.cell_phone || undefined,
         is_active: true,
         
-        // Transform aliases to match backend schema
+        // Transform aliases to match backend schema - ALL CAPITALIZED
         aliases: formData.aliases
           .filter(alias => alias.document_number && alias.document_number.trim())
           .map(alias => ({
-            document_type: alias.document_type,
-            document_number: alias.document_number,
-            country_of_issue: alias.country_of_issue || 'MG',
-            name_in_document: alias.name_in_document || undefined,
+            document_type: alias.document_type?.toUpperCase() || '',
+            document_number: alias.document_number?.toUpperCase() || '',
+            country_of_issue: alias.country_of_issue?.toUpperCase() || 'MG',
+            name_in_document: alias.name_in_document?.toUpperCase() || undefined,
             is_primary: alias.is_primary,
             is_current: alias.is_current,
             expiry_date: alias.expiry_date || undefined,
           })),
         
-        // Transform addresses to match backend schema
+        // Transform addresses to match backend schema - ALL CAPITALIZED
         addresses: formData.addresses
           .filter(address => address.locality && address.postal_code && address.town)
           .map(address => ({
-            address_type: address.address_type,
+            address_type: address.address_type?.toUpperCase() || '',
             is_primary: address.is_primary,
-            street_line1: address.street_line1 || undefined,
-            street_line2: address.street_line2 || undefined,
-            locality: address.locality,
-            postal_code: address.postal_code,
-            town: address.town,
-            country: address.country || 'MADAGASCAR',
-            province_code: address.province_code || undefined,
+            street_line1: address.street_line1?.toUpperCase() || undefined,
+            street_line2: address.street_line2?.toUpperCase() || undefined,
+            locality: address.locality?.toUpperCase() || '',
+            postal_code: address.postal_code || '',
+            town: address.town?.toUpperCase() || '',
+            country: address.country?.toUpperCase() || 'MADAGASCAR',
+            province_code: address.province_code?.toUpperCase() || undefined,
             is_verified: false,
           })),
       };
@@ -1045,25 +1051,24 @@ const PersonManagementPage: React.FC = () => {
         <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
             <Controller
-
               name="surname"
               control={personForm.control}
               render={({ field }) => (
-                              <TextField
-                id="person-surname"
-                name={field.name}
-                value={field.value || ''}
-                fullWidth
-                label="Surname *"
-                error={!!personForm.formState.errors.surname}
-                helperText={personForm.formState.errors.surname?.message || 'Family name'}
-                inputProps={{ maxLength: 50 }}
-                onChange={(e) => {
-                  const value = e.target.value.toUpperCase();
-                  field.onChange(value);
-                }}
-                onBlur={field.onBlur}
-              />
+                <TextField
+                  id="person-surname"
+                  name={field.name}
+                  value={field.value || ''}
+                  fullWidth
+                  label="Surname *"
+                  error={!!personForm.formState.errors.surname}
+                  helperText={personForm.formState.errors.surname?.message || 'Family name'}
+                  inputProps={{ maxLength: 50 }}
+                  onChange={(e) => {
+                    const value = e.target.value.toUpperCase();
+                    field.onChange(value);
+                  }}
+                  onBlur={field.onBlur}
+                />
               )}
             />
           </Grid>
@@ -1073,21 +1078,21 @@ const PersonManagementPage: React.FC = () => {
               name="first_name"
               control={personForm.control}
               render={({ field }) => (
-                              <TextField
-                id="person-first-name"
-                name={field.name}
-                value={field.value || ''}
-                fullWidth
-                label="First Name *"
-                error={!!personForm.formState.errors.first_name}
-                helperText={personForm.formState.errors.first_name?.message || 'Given name'}
-                inputProps={{ maxLength: 50 }}
-                onChange={(e) => {
-                  const value = e.target.value.toUpperCase();
-                  field.onChange(value);
-                }}
-                onBlur={field.onBlur}
-              />
+                <TextField
+                  id="person-first-name"
+                  name={field.name}
+                  value={field.value || ''}
+                  fullWidth
+                  label="First Name *"
+                  error={!!personForm.formState.errors.first_name}
+                  helperText={personForm.formState.errors.first_name?.message || 'Given name'}
+                  inputProps={{ maxLength: 50 }}
+                  onChange={(e) => {
+                    const value = e.target.value.toUpperCase();
+                    field.onChange(value);
+                  }}
+                  onBlur={field.onBlur}
+                />
               )}
             />
           </Grid>
@@ -1097,20 +1102,20 @@ const PersonManagementPage: React.FC = () => {
               name="middle_name"
               control={personForm.control}
               render={({ field }) => (
-                              <TextField
-                id="person-middle-name"
-                name={field.name}
-                value={field.value || ''}
-                fullWidth
-                label="Middle Name"
-                helperText="Middle name (optional)"
-                inputProps={{ maxLength: 50 }}
-                onChange={(e) => {
-                  const value = e.target.value.toUpperCase();
-                  field.onChange(value);
-                }}
-                onBlur={field.onBlur}
-              />
+                <TextField
+                  id="person-middle-name"
+                  name={field.name}
+                  value={field.value || ''}
+                  fullWidth
+                  label="Middle Name"
+                  helperText="Middle name (optional)"
+                  inputProps={{ maxLength: 50 }}
+                  onChange={(e) => {
+                    const value = e.target.value.toUpperCase();
+                    field.onChange(value);
+                  }}
+                  onBlur={field.onBlur}
+                />
               )}
             />
           </Grid>
@@ -1122,17 +1127,17 @@ const PersonManagementPage: React.FC = () => {
               render={({ field }) => (
                 <FormControl fullWidth error={!!personForm.formState.errors.person_nature}>
                   <InputLabel>Gender *</InputLabel>
-                                  <Select 
-                  id="person-nature-select"
-                  name={field.name}
-                  value={field.value || ''}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  label="Gender *"
-                  MenuProps={{
-                    id: "person-nature-menu"
-                  }}
-                >
+                  <Select
+                    id="person-nature-select"
+                    name={field.name}
+                    value={field.value || ''}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    label="Gender *"
+                    MenuProps={{
+                      id: "person-nature-menu"
+                    }}
+                  >
                     {PERSON_NATURES.map((option) => (
                       <MenuItem key={option.value} value={option.value}>
                         {option.label}
@@ -1152,22 +1157,22 @@ const PersonManagementPage: React.FC = () => {
               name="birth_date"
               control={personForm.control}
               render={({ field }) => (
-                              <TextField
-                id="person-birth-date"
-                name={field.name}
-                value={field.value || ''}
-                fullWidth
-                type="date"
-                label="Date of Birth"
-                InputLabelProps={{ shrink: true }}
-                helperText="Date of birth"
-                inputProps={{
-                  min: "1900-01-01",
-                  max: new Date().toISOString().split('T')[0]
-                }}
-                onChange={field.onChange}
-                onBlur={field.onBlur}
-              />
+                <TextField
+                  id="person-birth-date"
+                  name={field.name}
+                  value={field.value || ''}
+                  fullWidth
+                  type="date"
+                  label="Date of Birth"
+                  InputLabelProps={{ shrink: true }}
+                  helperText="Date of birth"
+                  inputProps={{
+                    min: "1900-01-01",
+                    max: new Date().toISOString().split('T')[0]
+                  }}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                />
               )}
             />
           </Grid>
@@ -1179,17 +1184,17 @@ const PersonManagementPage: React.FC = () => {
               render={({ field }) => (
                 <FormControl fullWidth>
                   <InputLabel>Nationality *</InputLabel>
-                                  <Select 
-                  id="nationality-code-select"
-                  name={field.name}
-                  value={field.value || 'MG'}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  label="Nationality *"
-                  MenuProps={{
-                    id: "nationality-menu"
-                  }}
-                >
+                  <Select
+                    id="nationality-code-select"
+                    name={field.name}
+                    value={field.value || 'MG'}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    label="Nationality *"
+                    MenuProps={{
+                      id: "nationality-menu"
+                    }}
+                  >
                     <MenuItem value="MG">Malagasy</MenuItem>
                     <MenuItem value="FR">French</MenuItem>
                     <MenuItem value="US">American</MenuItem>
@@ -1206,17 +1211,17 @@ const PersonManagementPage: React.FC = () => {
               render={({ field }) => (
                 <FormControl fullWidth error={!!personForm.formState.errors.preferred_language}>
                   <InputLabel>Preferred Language *</InputLabel>
-                                  <Select 
-                  id="preferred-language-select"
-                  name={field.name}
-                  value={field.value || 'mg'}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  label="Preferred Language *"
-                  MenuProps={{
-                    id: "preferred-language-menu"
-                  }}
-                >
+                  <Select
+                    id="preferred-language-select"
+                    name={field.name}
+                    value={field.value || 'mg'}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    label="Preferred Language *"
+                    MenuProps={{
+                      id: "preferred-language-menu"
+                    }}
+                  >
                     {LANGUAGES.map((option) => (
                       <MenuItem key={option.value} value={option.value}>
                         {option.label}
@@ -1248,22 +1253,22 @@ const PersonManagementPage: React.FC = () => {
               name="email_address"
               control={personForm.control}
               render={({ field }) => (
-                              <TextField
-                id="contact-email-address"
-                name={field.name}
-                value={field.value || ''}
-                fullWidth
-                type="email"
-                label="Email Address"
-                error={!!personForm.formState.errors.email_address}
-                helperText={personForm.formState.errors.email_address?.message || 'Email address (optional)'}
-                inputProps={{ maxLength: 100 }}
-                onChange={(e) => {
-                  const value = e.target.value.toUpperCase();
-                  field.onChange(value);
-                }}
-                onBlur={field.onBlur}
-              />
+                <TextField
+                  id="contact-email-address"
+                  name={field.name}
+                  value={field.value || ''}
+                  fullWidth
+                  type="email"
+                  label="Email Address"
+                  error={!!personForm.formState.errors.email_address}
+                  helperText={personForm.formState.errors.email_address?.message || 'Email address (optional)'}
+                  inputProps={{ maxLength: 100 }}
+                  onChange={(e) => {
+                    const value = e.target.value.toUpperCase();
+                    field.onChange(value);
+                  }}
+                  onBlur={field.onBlur}
+                />
               )}
             />
           </Grid>
@@ -1273,25 +1278,25 @@ const PersonManagementPage: React.FC = () => {
               name="work_phone"
               control={personForm.control}
               render={({ field }) => (
-                              <TextField
-                id="contact-work-phone"
-                name={field.name}
-                value={field.value || ''}
-                fullWidth
-                label="Work Phone"
-                error={!!personForm.formState.errors.work_phone}
-                helperText={personForm.formState.errors.work_phone?.message || 'Work phone number (optional)'}
-                inputProps={{ 
-                  maxLength: 20,
-                  pattern: '[0-9]*',
-                  inputMode: 'numeric'
-                }}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/\D/g, '');
-                  field.onChange(value);
-                }}
-                onBlur={field.onBlur}
-              />
+                <TextField
+                  id="contact-work-phone"
+                  name={field.name}
+                  value={field.value || ''}
+                  fullWidth
+                  label="Work Phone"
+                  error={!!personForm.formState.errors.work_phone}
+                  helperText={personForm.formState.errors.work_phone?.message || 'Work phone number (optional)'}
+                  inputProps={{
+                    maxLength: 20,
+                    pattern: '[0-9]*',
+                    inputMode: 'numeric'
+                  }}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '');
+                    field.onChange(value);
+                  }}
+                  onBlur={field.onBlur}
+                />
               )}
             />
           </Grid>
@@ -1309,17 +1314,17 @@ const PersonManagementPage: React.FC = () => {
               render={({ field }) => (
                 <FormControl fullWidth>
                   <InputLabel>Country Code *</InputLabel>
-                                  <Select 
-                  id="cell-phone-country-code-select"
-                  name={field.name}
-                  value={field.value || '+261'}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  label="Country Code *"
-                  MenuProps={{
-                    id: "country-code-menu"
-                  }}
-                >
+                  <Select
+                    id="cell-phone-country-code-select"
+                    name={field.name}
+                    value={field.value || '+261'}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    label="Country Code *"
+                    MenuProps={{
+                      id: "country-code-menu"
+                    }}
+                  >
                     <MenuItem value="+261">+261 (Madagascar)</MenuItem>
                     <MenuItem value="+27">+27 (South Africa)</MenuItem>
                     <MenuItem value="+33">+33 (France)</MenuItem>
@@ -1337,37 +1342,37 @@ const PersonManagementPage: React.FC = () => {
               name="cell_phone"
               control={personForm.control}
               render={({ field }) => (
-                              <TextField
-                id="contact-cell-phone"
-                name={field.name}
-                value={field.value || ''}
-                fullWidth
-                label="Cell Phone Number"
-                placeholder="Example: 0815598453"
-                error={!!personForm.formState.errors.cell_phone}
-                helperText={personForm.formState.errors.cell_phone?.message || 'Madagascar cell phone (10 digits, will auto-add 0 if missing)'}
-                inputProps={{ 
-                  maxLength: 10,
-                  pattern: '[0-9]*',
-                  inputMode: 'numeric',
-                }}
-                onChange={(e) => {
-                  let value = e.target.value.replace(/\D/g, '');
-                  
-                  // Ensure Madagascar format: must start with 0 and be exactly 10 digits
-                  if (value.length > 0 && !value.startsWith('0')) {
-                    value = '0' + value;
-                  }
-                  
-                  // Limit to 10 digits max
-                  if (value.length > 10) {
-                    value = value.substring(0, 10);
-                  }
-                  
-                  field.onChange(value);
-                }}
-                onBlur={field.onBlur}
-              />
+                <TextField
+                  id="contact-cell-phone"
+                  name={field.name}
+                  value={field.value || ''}
+                  fullWidth
+                  label="Cell Phone Number"
+                  placeholder="Example: 0815598453"
+                  error={!!personForm.formState.errors.cell_phone}
+                  helperText={personForm.formState.errors.cell_phone?.message || 'Madagascar cell phone (10 digits, will auto-add 0 if missing)'}
+                  inputProps={{
+                    maxLength: 10,
+                    pattern: '[0-9]*',
+                    inputMode: 'numeric',
+                  }}
+                  onChange={(e) => {
+                    let value = e.target.value.replace(/\D/g, '');
+                    
+                    // Ensure Madagascar format: must start with 0 and be exactly 10 digits
+                    if (value.length > 0 && !value.startsWith('0')) {
+                      value = '0' + value;
+                    }
+                    
+                    // Limit to 10 digits max
+                    if (value.length > 10) {
+                      value = value.substring(0, 10);
+                    }
+                    
+                    field.onChange(value);
+                  }}
+                  onBlur={field.onBlur}
+                />
               )}
             />
           </Grid>
@@ -1444,6 +1449,28 @@ const PersonManagementPage: React.FC = () => {
                       control={<Checkbox {...field} checked={field.value} />}
                       label="Current"
                       sx={{ mt: 2 }}
+                    />
+                  )}
+                />
+              </Grid>
+
+              {/* Name in Document field - CAPITALIZED */}
+              <Grid item xs={12} md={12}>
+                <Controller
+                  name={`aliases.${index}.name_in_document`}
+                  control={personForm.control}
+                  render={({ field }) => (
+                    <TextField
+                      name={field.name}
+                      value={field.value || ''}
+                      fullWidth
+                      label="Name in Document"
+                      helperText="Name as it appears in the document (will be capitalized)"
+                      onChange={(e) => {
+                        const value = e.target.value.toUpperCase();
+                        field.onChange(value);
+                      }}
+                      onBlur={field.onBlur}
                     />
                   )}
                 />
@@ -1556,8 +1583,8 @@ const PersonManagementPage: React.FC = () => {
                     <FormControl fullWidth>
                       <InputLabel>Address Type *</InputLabel>
                       <Select {...field} label="Address Type *">
-                        <MenuItem value="residential">Residential</MenuItem>
-                        <MenuItem value="postal">Postal</MenuItem>
+                        <MenuItem value="RESIDENTIAL">Residential</MenuItem>
+                        <MenuItem value="POSTAL">Postal</MenuItem>
                       </Select>
                     </FormControl>
                   )}
@@ -1648,7 +1675,7 @@ const PersonManagementPage: React.FC = () => {
                       placeholder="### (3 digits)"
                       error={!!personForm.formState.errors.addresses?.[index]?.postal_code}
                       helperText={personForm.formState.errors.addresses?.[index]?.postal_code?.message || 'Madagascar postal code (3 digits)'}
-                      inputProps={{ 
+                      inputProps={{
                         maxLength: 3,
                         pattern: '[0-9]*',
                         inputMode: 'numeric'
