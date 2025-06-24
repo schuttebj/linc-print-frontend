@@ -156,44 +156,39 @@ const PersonSearchPage: React.FC = () => {
     const urlPage = searchParams.get('page');
     const urlRowsPerPage = searchParams.get('rowsPerPage');
     
-    if (urlFilters) {
+    if (urlFilters && accessToken) {
       try {
         const filters = JSON.parse(decodeURIComponent(urlFilters));
+        const restoredPage = urlPage ? parseInt(urlPage) : 0;
+        const restoredRowsPerPage = urlRowsPerPage ? parseInt(urlRowsPerPage) : 10;
+        
+        // Restore form values
         searchForm.reset(filters);
         
-        // Restore pagination
-        if (urlPage) setPage(parseInt(urlPage));
-        if (urlRowsPerPage) setRowsPerPage(parseInt(urlRowsPerPage));
+        // Restore pagination state
+        setPage(restoredPage);
+        setRowsPerPage(restoredRowsPerPage);
         
-        // Automatically perform search with restored filters
-        onSearch(filters);
+        // Perform search with restored state - pass pagination parameters explicitly
+        performSearchWithPagination(filters, restoredPage, restoredRowsPerPage);
+        
+        // Clean up URL parameters after restoration
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
+        
       } catch (error) {
         console.warn('Failed to restore search state:', error);
       }
     }
-  }, [searchParams]);
+  }, [searchParams, accessToken]);
 
-  // Search form
-  const searchForm = useForm<PersonSearchForm>({
-    defaultValues: {
-      search_text: '',
-      document_number: '',
-      surname: '',
-      first_name: '',
-      locality: '',
-      phone_number: '',
-      document_type: '',
-      is_active: true,
-    },
-  });
-
-  // Perform search with API integration
-  const onSearch = async (data: PersonSearchForm) => {
+  // Helper function to perform search with explicit pagination
+  const performSearchWithPagination = async (data: PersonSearchForm, currentPage = page, currentRowsPerPage = rowsPerPage) => {
     setSearching(true);
     setHasSearched(true);
     
     try {
-      console.log('Searching for persons with:', data);
+      console.log('Searching for persons with:', data, 'Page:', currentPage, 'RowsPerPage:', currentRowsPerPage);
       
       // Build search parameters
       const searchParams = new URLSearchParams();
@@ -206,8 +201,8 @@ const PersonSearchPage: React.FC = () => {
       });
       
       // Add pagination and include details
-      searchParams.append('skip', String(page * rowsPerPage));
-      searchParams.append('limit', String(rowsPerPage));
+      searchParams.append('skip', String(currentPage * currentRowsPerPage));
+      searchParams.append('limit', String(currentRowsPerPage));
       searchParams.append('include_details', 'true');
       
       const response = await fetch(`${API_BASE_URL}/api/v1/persons/search?${searchParams}`, {
@@ -246,6 +241,25 @@ const PersonSearchPage: React.FC = () => {
     }
   };
 
+  // Search form
+  const searchForm = useForm<PersonSearchForm>({
+    defaultValues: {
+      search_text: '',
+      document_number: '',
+      surname: '',
+      first_name: '',
+      locality: '',
+      phone_number: '',
+      document_type: '',
+      is_active: true,
+    },
+  });
+
+  // Perform search with API integration
+  const onSearch = async (data: PersonSearchForm) => {
+    await performSearchWithPagination(data, page, rowsPerPage);
+  };
+
   // Clear search
   const clearSearch = () => {
     searchForm.reset({
@@ -269,16 +283,17 @@ const PersonSearchPage: React.FC = () => {
     setPage(newPage);
     // Re-run search with new page
     if (hasSearched) {
-      onSearch(searchForm.getValues());
+      performSearchWithPagination(searchForm.getValues(), newPage, rowsPerPage);
     }
   };
 
   const handleRowsPerPageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
+    const newRowsPerPage = parseInt(event.target.value, 10);
+    setRowsPerPage(newRowsPerPage);
     setPage(0);
     // Re-run search with new page size
     if (hasSearched) {
-      onSearch(searchForm.getValues());
+      performSearchWithPagination(searchForm.getValues(), 0, newRowsPerPage);
     }
   };
 
