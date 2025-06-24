@@ -465,19 +465,14 @@ const PersonManagementPage: React.FC = () => {
       } else {
         // Validate current step fields based on step
         const stepFields = getStepFields(currentStep);
-        console.log('🔍 Validating step:', currentStep, 'with fields:', stepFields);
-        console.log('🔍 Form values before trigger:', personForm.getValues());
         
         // Only trigger validation for specific fields if we have any to validate
         if (stepFields.length > 0) {
           const isValid = await personForm.trigger(stepFields as any);
-          console.log('🔍 Form values after trigger:', personForm.getValues());
-          console.log('🔍 Validation result:', isValid);
           markStepValid(currentStep, isValid);
           return isValid;
         } else {
           // For steps with no specific validation fields, just mark as valid
-          console.log('🔍 No fields to validate, marking step as valid');
           markStepValid(currentStep, true);
           return true;
         }
@@ -502,21 +497,14 @@ const PersonManagementPage: React.FC = () => {
   };
 
   const handleNext = async () => {
-    console.log('🔍 BEFORE validation - Current step:', currentStep);
-    console.log('🔍 BEFORE validation - Form values:', personForm.getValues());
-    
     const isValid = await validateCurrentStep();
-    
-    console.log('🔍 AFTER validation - Form values:', personForm.getValues());
     
     if (isValid) {
       if (currentStep === 0) {
         const lookupData = lookupForm.getValues();
         await performLookup(lookupData);
       } else if (currentStep < steps.length - 1) {
-        console.log('🔍 Moving to next step:', currentStep + 1);
         setCurrentStep(currentStep + 1);
-        console.log('🔍 AFTER step change - Form values:', personForm.getValues());
       }
     }
   };
@@ -750,7 +738,13 @@ const PersonManagementPage: React.FC = () => {
               render={({ field }) => (
                 <FormControl fullWidth error={!!personForm.formState.errors.person_nature}>
                   <InputLabel>Gender *</InputLabel>
-                  <Select {...field} label="Gender *">
+                  <Select 
+                    name={field.name}
+                    value={field.value || ''}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    label="Gender *"
+                  >
                     {PERSON_NATURES.map((option) => (
                       <MenuItem key={option.value} value={option.value}>
                         {option.label}
@@ -792,7 +786,13 @@ const PersonManagementPage: React.FC = () => {
               render={({ field }) => (
                 <FormControl fullWidth>
                   <InputLabel>Nationality *</InputLabel>
-                  <Select {...field} label="Nationality *">
+                  <Select 
+                    name={field.name}
+                    value={field.value || 'MG'}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    label="Nationality *"
+                  >
                     <MenuItem value="MG">Malagasy</MenuItem>
                     <MenuItem value="FR">French</MenuItem>
                     <MenuItem value="US">American</MenuItem>
@@ -809,7 +809,13 @@ const PersonManagementPage: React.FC = () => {
               render={({ field }) => (
                 <FormControl fullWidth error={!!personForm.formState.errors.preferred_language}>
                   <InputLabel>Preferred Language *</InputLabel>
-                  <Select {...field} label="Preferred Language *">
+                  <Select 
+                    name={field.name}
+                    value={field.value || 'mg'}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    label="Preferred Language *"
+                  >
                     {LANGUAGES.map((option) => (
                       <MenuItem key={option.value} value={option.value}>
                         {option.label}
@@ -897,7 +903,13 @@ const PersonManagementPage: React.FC = () => {
               render={({ field }) => (
                 <FormControl fullWidth>
                   <InputLabel>Country Code *</InputLabel>
-                  <Select {...field} label="Country Code *">
+                  <Select 
+                    name={field.name}
+                    value={field.value || '+261'}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    label="Country Code *"
+                  >
                     <MenuItem value="+261">+261 (Madagascar)</MenuItem>
                     <MenuItem value="+27">+27 (South Africa)</MenuItem>
                     <MenuItem value="+33">+33 (France)</MenuItem>
