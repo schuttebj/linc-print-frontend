@@ -28,6 +28,10 @@ import {
   InputAdornment,
   Chip,
   Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -113,6 +117,7 @@ interface ExistingPerson {
     document_type: string;
     document_number: string;
     country_of_issue?: string;
+    name_in_document?: string;
     is_primary: boolean;
     is_current?: boolean;
     expiry_date?: string;
@@ -126,6 +131,7 @@ interface ExistingPerson {
     postal_code?: string;
     town?: string;
     country?: string;
+    province_code?: string;
     is_primary: boolean;
   }>;
 }
@@ -232,6 +238,8 @@ const PersonManagementPage: React.FC = () => {
   const [lookupLoading, setLookupLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [stepValidation, setStepValidation] = useState<boolean[]>(new Array(steps.length).fill(false));
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [createdPerson, setCreatedPerson] = useState<any>(null);
   
   // Lookup form
   const lookupForm = useForm<PersonLookupForm>({
@@ -408,6 +416,8 @@ const PersonManagementPage: React.FC = () => {
   };
 
   const populateFormWithExistingPerson = (existingPerson: ExistingPerson) => {
+    console.log('Populating form with existing person:', existingPerson);
+    
     // Populate basic person information
     if (existingPerson.surname) {
       personForm.setValue('surname', existingPerson.surname.toUpperCase());
@@ -427,6 +437,9 @@ const PersonManagementPage: React.FC = () => {
     if (existingPerson.nationality_code) {
       personForm.setValue('nationality_code', existingPerson.nationality_code);
     }
+    if (existingPerson.preferred_language) {
+      personForm.setValue('preferred_language', existingPerson.preferred_language);
+    }
     
     // Populate contact information
     if (existingPerson.email_address) {
@@ -444,8 +457,43 @@ const PersonManagementPage: React.FC = () => {
       personForm.setValue('cell_phone_country_code', '+261');
     }
     
-    // Set defaults for Madagascar
-    personForm.setValue('preferred_language', 'mg');
+    // Populate aliases (ID documents) if they exist
+    if (existingPerson.aliases && existingPerson.aliases.length > 0) {
+      console.log('Populating aliases:', existingPerson.aliases);
+      const transformedAliases = existingPerson.aliases.map(alias => ({
+        document_type: alias.document_type || 'MG_ID',
+        document_number: alias.document_number || '',
+        country_of_issue: alias.country_of_issue || 'MG',
+        name_in_document: alias.name_in_document || '',
+        is_primary: alias.is_primary || false,
+        is_current: alias.is_current !== false, // default to true if undefined
+        expiry_date: alias.expiry_date || '',
+      }));
+      
+      // Clear existing aliases first, then set new ones
+      personForm.setValue('aliases', transformedAliases);
+      console.log('Aliases set to:', transformedAliases);
+    }
+    
+    // Populate addresses if they exist
+    if (existingPerson.addresses && existingPerson.addresses.length > 0) {
+      console.log('Populating addresses:', existingPerson.addresses);
+      const transformedAddresses = existingPerson.addresses.map(address => ({
+        address_type: address.address_type || 'residential',
+        street_line1: address.street_line1 || '',
+        street_line2: address.street_line2 || '',
+        locality: address.locality || '',
+        postal_code: address.postal_code || '',
+        town: address.town || '',
+        country: address.country || 'MADAGASCAR',
+        province_code: address.province_code || '',
+        is_primary: address.is_primary || false,
+      }));
+      
+      // Clear existing addresses first, then set new ones
+      personForm.setValue('addresses', transformedAddresses);
+      console.log('Addresses set to:', transformedAddresses);
+    }
   };
 
   // Step validation
@@ -598,8 +646,8 @@ const PersonManagementPage: React.FC = () => {
 
       const result = await response.json();
       console.log('Person created successfully:', result);
-      alert('Person created successfully!');
-      resetForm();
+      setCreatedPerson(result);
+      setShowSuccessDialog(true);
     } catch (error) {
       console.error('Submit failed:', error);
       alert(`Failed to create person: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -615,6 +663,8 @@ const PersonManagementPage: React.FC = () => {
     setIsNewPerson(false);
     setIsEditMode(false);
     setStepValidation(new Array(steps.length).fill(false));
+    setShowSuccessDialog(false);
+    setCreatedPerson(null);
     lookupForm.reset();
     personForm.reset();
   };
@@ -1660,6 +1710,62 @@ const PersonManagementPage: React.FC = () => {
           </Box>
         </Box>
       </Paper>
+
+      {/* Success Dialog */}
+      <Dialog 
+        open={showSuccessDialog} 
+        onClose={() => setShowSuccessDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ bgcolor: 'success.main', color: 'white' }}>
+          <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <PersonAddIcon />
+            Person Created Successfully!
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          {createdPerson && (
+            <Box>
+              <Typography variant="body1" gutterBottom>
+                <strong>{createdPerson.first_name} {createdPerson.surname}</strong> has been successfully created in the system.
+              </Typography>
+              
+              <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                <Typography variant="subtitle2" color="text.secondary">Person ID:</Typography>
+                <Typography variant="body2" sx={{ fontFamily: 'monospace', mt: 0.5 }}>
+                  {createdPerson.id}
+                </Typography>
+              </Box>
+
+              <Alert severity="success" sx={{ mt: 2 }}>
+                The person record is now available for license applications and other system processes.
+              </Alert>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 3, gap: 1 }}>
+          <Button 
+            onClick={() => {
+              setShowSuccessDialog(false);
+              // Don't reset form, let user choose
+            }}
+            variant="outlined"
+          >
+            Continue Editing
+          </Button>
+          <Button 
+            onClick={() => {
+              setShowSuccessDialog(false);
+              resetForm();
+            }}
+            variant="contained"
+            startIcon={<PersonAddIcon />}
+          >
+            Create Another Person
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
