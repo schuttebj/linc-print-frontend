@@ -465,11 +465,25 @@ const PersonManagementPage: React.FC = () => {
       } else {
         // Validate current step fields based on step
         const stepFields = getStepFields(currentStep);
-        const isValid = await personForm.trigger(stepFields as any);
-        markStepValid(currentStep, isValid);
-        return isValid;
+        console.log('🔍 Validating step:', currentStep, 'with fields:', stepFields);
+        console.log('🔍 Form values before trigger:', personForm.getValues());
+        
+        // Only trigger validation for specific fields if we have any to validate
+        if (stepFields.length > 0) {
+          const isValid = await personForm.trigger(stepFields as any);
+          console.log('🔍 Form values after trigger:', personForm.getValues());
+          console.log('🔍 Validation result:', isValid);
+          markStepValid(currentStep, isValid);
+          return isValid;
+        } else {
+          // For steps with no specific validation fields, just mark as valid
+          console.log('🔍 No fields to validate, marking step as valid');
+          markStepValid(currentStep, true);
+          return true;
+        }
       }
     } catch (error) {
+      console.error('Validation error:', error);
       markStepValid(currentStep, false);
       return false;
     }
@@ -478,24 +492,31 @@ const PersonManagementPage: React.FC = () => {
   const getStepFields = (step: number) => {
     const stepFieldMap = [
       [], // Lookup step
-      ['surname', 'first_name', 'person_nature', 'birth_date', 'nationality_code', 'preferred_language'],
-      ['email_address', 'work_phone', 'cell_phone_country_code', 'cell_phone'],
-      ['aliases'],
-      ['addresses'],
+      ['surname', 'first_name', 'person_nature', 'nationality_code', 'preferred_language'], // Only required fields for step 1
+      [], // Contact step - don't validate on transition, let user fill optional fields
+      [], // ID Documents step - complex validation handled separately
+      [], // Address step - complex validation handled separately  
       [], // Review step
     ];
     return stepFieldMap[step] || [];
   };
 
   const handleNext = async () => {
+    console.log('🔍 BEFORE validation - Current step:', currentStep);
+    console.log('🔍 BEFORE validation - Form values:', personForm.getValues());
+    
     const isValid = await validateCurrentStep();
+    
+    console.log('🔍 AFTER validation - Form values:', personForm.getValues());
     
     if (isValid) {
       if (currentStep === 0) {
         const lookupData = lookupForm.getValues();
         await performLookup(lookupData);
       } else if (currentStep < steps.length - 1) {
+        console.log('🔍 Moving to next step:', currentStep + 1);
         setCurrentStep(currentStep + 1);
+        console.log('🔍 AFTER step change - Form values:', personForm.getValues());
       }
     }
   };
