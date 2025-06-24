@@ -668,20 +668,21 @@ const PersonManagementPage: React.FC = () => {
               name="surname"
               control={personForm.control}
               render={({ field }) => (
-                <TextField
-                  name={field.name}
-                  value={field.value || ''}
-                  fullWidth
-                  label="Surname *"
-                  error={!!personForm.formState.errors.surname}
-                  helperText={personForm.formState.errors.surname?.message || 'Family name'}
-                  inputProps={{ maxLength: 50 }}
-                  onChange={(e) => {
-                    const value = e.target.value.toUpperCase();
-                    field.onChange(value);
-                  }}
-                  onBlur={field.onBlur}
-                />
+                              <TextField
+                id="person-surname"
+                name={field.name}
+                value={field.value || ''}
+                fullWidth
+                label="Surname *"
+                error={!!personForm.formState.errors.surname}
+                helperText={personForm.formState.errors.surname?.message || 'Family name'}
+                inputProps={{ maxLength: 50 }}
+                onChange={(e) => {
+                  const value = e.target.value.toUpperCase();
+                  field.onChange(value);
+                }}
+                onBlur={field.onBlur}
+              />
               )}
             />
           </Grid>
@@ -691,20 +692,21 @@ const PersonManagementPage: React.FC = () => {
               name="first_name"
               control={personForm.control}
               render={({ field }) => (
-                <TextField
-                  name={field.name}
-                  value={field.value || ''}
-                  fullWidth
-                  label="First Name *"
-                  error={!!personForm.formState.errors.first_name}
-                  helperText={personForm.formState.errors.first_name?.message || 'Given name'}
-                  inputProps={{ maxLength: 50 }}
-                  onChange={(e) => {
-                    const value = e.target.value.toUpperCase();
-                    field.onChange(value);
-                  }}
-                  onBlur={field.onBlur}
-                />
+                              <TextField
+                id="person-first-name"
+                name={field.name}
+                value={field.value || ''}
+                fullWidth
+                label="First Name *"
+                error={!!personForm.formState.errors.first_name}
+                helperText={personForm.formState.errors.first_name?.message || 'Given name'}
+                inputProps={{ maxLength: 50 }}
+                onChange={(e) => {
+                  const value = e.target.value.toUpperCase();
+                  field.onChange(value);
+                }}
+                onBlur={field.onBlur}
+              />
               )}
             />
           </Grid>
@@ -714,19 +716,20 @@ const PersonManagementPage: React.FC = () => {
               name="middle_name"
               control={personForm.control}
               render={({ field }) => (
-                <TextField
-                  name={field.name}
-                  value={field.value || ''}
-                  fullWidth
-                  label="Middle Name"
-                  helperText="Middle name (optional)"
-                  inputProps={{ maxLength: 50 }}
-                  onChange={(e) => {
-                    const value = e.target.value.toUpperCase();
-                    field.onChange(value);
-                  }}
-                  onBlur={field.onBlur}
-                />
+                              <TextField
+                id="person-middle-name"
+                name={field.name}
+                value={field.value || ''}
+                fullWidth
+                label="Middle Name"
+                helperText="Middle name (optional)"
+                inputProps={{ maxLength: 50 }}
+                onChange={(e) => {
+                  const value = e.target.value.toUpperCase();
+                  field.onChange(value);
+                }}
+                onBlur={field.onBlur}
+              />
               )}
             />
           </Grid>
@@ -738,13 +741,14 @@ const PersonManagementPage: React.FC = () => {
               render={({ field }) => (
                 <FormControl fullWidth error={!!personForm.formState.errors.person_nature}>
                   <InputLabel>Gender *</InputLabel>
-                  <Select 
-                    name={field.name}
-                    value={field.value || ''}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    label="Gender *"
-                  >
+                                  <Select 
+                  id="person-nature-select"
+                  name={field.name}
+                  value={field.value || ''}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  label="Gender *"
+                >
                     {PERSON_NATURES.map((option) => (
                       <MenuItem key={option.value} value={option.value}>
                         {option.label}
@@ -764,17 +768,18 @@ const PersonManagementPage: React.FC = () => {
               name="birth_date"
               control={personForm.control}
               render={({ field }) => (
-                <TextField
-                  name={field.name}
-                  value={field.value || ''}
-                  fullWidth
-                  type="date"
-                  label="Date of Birth"
-                  InputLabelProps={{ shrink: true }}
-                  helperText="Date of birth"
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                />
+                              <TextField
+                id="person-birth-date"
+                name={field.name}
+                value={field.value || ''}
+                fullWidth
+                type="date"
+                label="Date of Birth"
+                InputLabelProps={{ shrink: true }}
+                helperText="Date of birth"
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+              />
               )}
             />
           </Grid>
@@ -786,13 +791,14 @@ const PersonManagementPage: React.FC = () => {
               render={({ field }) => (
                 <FormControl fullWidth>
                   <InputLabel>Nationality *</InputLabel>
-                  <Select 
-                    name={field.name}
-                    value={field.value || 'MG'}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    label="Nationality *"
-                  >
+                                  <Select 
+                  id="nationality-code-select"
+                  name={field.name}
+                  value={field.value || 'MG'}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  label="Nationality *"
+                >
                     <MenuItem value="MG">Malagasy</MenuItem>
                     <MenuItem value="FR">French</MenuItem>
                     <MenuItem value="US">American</MenuItem>
@@ -809,13 +815,14 @@ const PersonManagementPage: React.FC = () => {
               render={({ field }) => (
                 <FormControl fullWidth error={!!personForm.formState.errors.preferred_language}>
                   <InputLabel>Preferred Language *</InputLabel>
-                  <Select 
-                    name={field.name}
-                    value={field.value || 'mg'}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    label="Preferred Language *"
-                  >
+                                  <Select 
+                  id="preferred-language-select"
+                  name={field.name}
+                  value={field.value || 'mg'}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  label="Preferred Language *"
+                >
                     {LANGUAGES.map((option) => (
                       <MenuItem key={option.value} value={option.value}>
                         {option.label}
@@ -847,18 +854,19 @@ const PersonManagementPage: React.FC = () => {
               name="email_address"
               control={personForm.control}
               render={({ field }) => (
-                <TextField
-                  name={field.name}
-                  value={field.value || ''}
-                  fullWidth
-                  type="email"
-                  label="Email Address"
-                  error={!!personForm.formState.errors.email_address}
-                  helperText={personForm.formState.errors.email_address?.message || 'Email address (optional)'}
-                  inputProps={{ maxLength: 100 }}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                />
+                              <TextField
+                id="contact-email-address"
+                name={field.name}
+                value={field.value || ''}
+                fullWidth
+                type="email"
+                label="Email Address"
+                error={!!personForm.formState.errors.email_address}
+                helperText={personForm.formState.errors.email_address?.message || 'Email address (optional)'}
+                inputProps={{ maxLength: 100 }}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+              />
               )}
             />
           </Grid>
@@ -868,24 +876,25 @@ const PersonManagementPage: React.FC = () => {
               name="work_phone"
               control={personForm.control}
               render={({ field }) => (
-                <TextField
-                  name={field.name}
-                  value={field.value || ''}
-                  fullWidth
-                  label="Work Phone"
-                  error={!!personForm.formState.errors.work_phone}
-                  helperText={personForm.formState.errors.work_phone?.message || 'Work phone number (optional)'}
-                  inputProps={{ 
-                    maxLength: 20,
-                    pattern: '[0-9]*',
-                    inputMode: 'numeric'
-                  }}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '');
-                    field.onChange(value);
-                  }}
-                  onBlur={field.onBlur}
-                />
+                              <TextField
+                id="contact-work-phone"
+                name={field.name}
+                value={field.value || ''}
+                fullWidth
+                label="Work Phone"
+                error={!!personForm.formState.errors.work_phone}
+                helperText={personForm.formState.errors.work_phone?.message || 'Work phone number (optional)'}
+                inputProps={{ 
+                  maxLength: 20,
+                  pattern: '[0-9]*',
+                  inputMode: 'numeric'
+                }}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '');
+                  field.onChange(value);
+                }}
+                onBlur={field.onBlur}
+              />
               )}
             />
           </Grid>
@@ -903,13 +912,14 @@ const PersonManagementPage: React.FC = () => {
               render={({ field }) => (
                 <FormControl fullWidth>
                   <InputLabel>Country Code *</InputLabel>
-                  <Select 
-                    name={field.name}
-                    value={field.value || '+261'}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    label="Country Code *"
-                  >
+                                  <Select 
+                  id="cell-phone-country-code-select"
+                  name={field.name}
+                  value={field.value || '+261'}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  label="Country Code *"
+                >
                     <MenuItem value="+261">+261 (Madagascar)</MenuItem>
                     <MenuItem value="+27">+27 (South Africa)</MenuItem>
                     <MenuItem value="+33">+33 (France)</MenuItem>
@@ -927,25 +937,26 @@ const PersonManagementPage: React.FC = () => {
               name="cell_phone"
               control={personForm.control}
               render={({ field }) => (
-                <TextField
-                  name={field.name}
-                  value={field.value || ''}
-                  fullWidth
-                  label="Cell Phone Number"
-                  placeholder="0AA BB BB BBB"
-                  error={!!personForm.formState.errors.cell_phone}
-                  helperText={personForm.formState.errors.cell_phone?.message || 'Cell phone number (10 digits starting with 0)'}
-                  inputProps={{ 
-                    maxLength: 10,
-                    pattern: '[0-9]*',
-                    inputMode: 'numeric',
-                  }}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '');
-                    field.onChange(value);
-                  }}
-                  onBlur={field.onBlur}
-                />
+                              <TextField
+                id="contact-cell-phone"
+                name={field.name}
+                value={field.value || ''}
+                fullWidth
+                label="Cell Phone Number"
+                placeholder="0AA BB BB BBB"
+                error={!!personForm.formState.errors.cell_phone}
+                helperText={personForm.formState.errors.cell_phone?.message || 'Cell phone number (10 digits starting with 0)'}
+                inputProps={{ 
+                  maxLength: 10,
+                  pattern: '[0-9]*',
+                  inputMode: 'numeric',
+                }}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '');
+                  field.onChange(value);
+                }}
+                onBlur={field.onBlur}
+              />
               )}
             />
           </Grid>
