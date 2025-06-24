@@ -152,11 +152,14 @@ const PersonSearchPage: React.FC = () => {
 
   // Restore search state from URL parameters when returning from edit
   useEffect(() => {
+    if (!accessToken) return;
+
+    // Check for encoded filters (from edit navigation)
     const urlFilters = searchParams.get('filters');
     const urlPage = searchParams.get('page');
     const urlRowsPerPage = searchParams.get('rowsPerPage');
     
-    if (urlFilters && accessToken) {
+    if (urlFilters) {
       try {
         const filters = JSON.parse(decodeURIComponent(urlFilters));
         const restoredPage = urlPage ? parseInt(urlPage) : 0;
@@ -178,6 +181,47 @@ const PersonSearchPage: React.FC = () => {
         
       } catch (error) {
         console.warn('Failed to restore search state:', error);
+      }
+    } 
+    // Check for direct URL parameters (from browser navigation or external links)
+    else {
+      const directParams: PersonSearchForm = {};
+      let hasParams = false;
+      
+      // Check each form field for direct URL parameters
+      const searchText = searchParams.get('search_text');
+      const documentNumber = searchParams.get('document_number');
+      const surname = searchParams.get('surname');
+      const firstName = searchParams.get('first_name');
+      const locality = searchParams.get('locality');
+      const phoneNumber = searchParams.get('phone_number');
+      const documentType = searchParams.get('document_type');
+      const isActive = searchParams.get('is_active');
+      
+      if (searchText) { directParams.search_text = searchText; hasParams = true; }
+      if (documentNumber) { directParams.document_number = documentNumber; hasParams = true; }
+      if (surname) { directParams.surname = surname; hasParams = true; }
+      if (firstName) { directParams.first_name = firstName; hasParams = true; }
+      if (locality) { directParams.locality = locality; hasParams = true; }
+      if (phoneNumber) { directParams.phone_number = phoneNumber; hasParams = true; }
+      if (documentType) { directParams.document_type = documentType; hasParams = true; }
+      if (isActive !== null) { 
+        directParams.is_active = isActive === 'true'; 
+        hasParams = true; 
+      }
+      
+      if (hasParams) {
+        console.log('Restoring search from direct URL parameters:', directParams);
+        
+        // Restore form values
+        searchForm.reset(directParams);
+        
+        // Perform search with direct parameters
+        performSearchWithPagination(directParams, 0, 10);
+        
+        // Clean up URL parameters after restoration
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
       }
     }
   }, [searchParams, accessToken]);
