@@ -41,6 +41,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 
 import { useAuth } from '../../contexts/AuthContext';
+import { API_BASE_URL } from '../../config/api';
 
 // Types for Madagascar-specific person management
 interface PersonLookupForm {
@@ -209,7 +210,7 @@ const steps = [
 
 const PersonManagementPage: React.FC = () => {
   // Auth
-  const { user, hasPermission } = useAuth();
+  const { user, hasPermission, accessToken } = useAuth();
   
   // State management
   const [currentStep, setCurrentStep] = useState(0);
@@ -286,20 +287,66 @@ const PersonManagementPage: React.FC = () => {
     setLookupLoading(true);
     
     try {
-      // TODO: Implement API call to check if person exists
       console.log('Looking up person with:', data);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Search for existing person using the document details
+      const searchParams = new URLSearchParams({
+        document_type: data.document_type,
+        document_number: data.document_number,
+        limit: '1'
+      });
       
-      // For demo purposes, assume person not found for new registration
+      const response = await fetch(`${API_BASE_URL}/api/v1/persons/search?${searchParams}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
+      
+      if (response.ok) {
+        const searchResult = await response.json();
+        console.log('Search result:', searchResult);
+        
+        if (searchResult.items && searchResult.items.length > 0) {
+          // Person found - show existing person details
+          const existingPerson = searchResult.items[0];
+          console.log('Person found:', existingPerson);
+          setPersonFound(existingPerson);
+          setCurrentPersonId(existingPerson.id);
+          setIsNewPerson(false);
+          setIsEditMode(true);
+          
+          // Populate form with existing person data
+          populateFormWithExistingPerson(existingPerson);
+        } else {
+          // No person found - setup for new person creation
+          console.log('No person found, creating new');
+          setPersonFound(null);
+          setCurrentPersonId(null);
+          setIsNewPerson(true);
+          setIsEditMode(false);
+          setupNewPersonForm(data);
+        }
+        
+        markStepValid(0, true);
+        setCurrentStep(1);
+      } else {
+        console.error('Search failed with status:', response.status);
+        // Fallback to new person creation on API failure
+        setPersonFound(null);
+        setIsNewPerson(true);
+        setupNewPersonForm(data);
+        markStepValid(0, true);
+        setCurrentStep(1);
+      }
+      
+    } catch (error) {
+      console.error('Lookup failed:', error);
+      // Fallback to new person creation on error
       setPersonFound(null);
       setIsNewPerson(true);
       setupNewPersonForm(data);
       markStepValid(0, true);
       setCurrentStep(1);
-    } catch (error) {
-      console.error('Lookup failed:', error);
     } finally {
       setLookupLoading(false);
     }
@@ -314,6 +361,52 @@ const PersonManagementPage: React.FC = () => {
       document_number: lookupData.document_number,
     };
     personForm.setValue('aliases', currentAliases);
+  };
+
+  const populateFormWithExistingPerson = (existingPerson: ExistingPerson) => {
+    // Populate basic person information
+    if (existingPerson.surname) personForm.setValue('surname', existingPerson.surname);
+    if (existingPerson.first_name) personForm.setValue('first_name', existingPerson.first_name);
+    if (existingPerson.middle_name) personForm.setValue('middle_name', existingPerson.middle_name);
+    if (existingPerson.person_nature) personForm.setValue('person_nature', existingPerson.person_nature);
+    if (existingPerson.birth_date) personForm.setValue('birth_date', existingPerson.birth_date);
+    if (existingPerson.nationality_code) personForm.setValue('nationality_code', existingPerson.nationality_code);
+    if (existingPerson.email_address) personForm.setValue('email_address', existingPerson.email_address);
+    if (existingPerson.cell_phone) personForm.setValue('cell_phone', existingPerson.cell_phone);
+    
+    // Set defaults for Madagascar
+    personForm.setValue('preferred_language', 'mg');
+    personForm.setValue('cell_phone_country_code', '+261');
+    
+    // Populate aliases if available
+    if (existingPerson.aliases && existingPerson.aliases.length > 0) {
+      const formattedAliases = existingPerson.aliases.map(alias => ({
+        document_type: alias.document_type,
+        document_number: alias.document_number,
+        country_of_issue: 'MG', // Default for Madagascar
+        is_primary: alias.is_primary,
+        is_current: true,
+        name_in_document: '',
+        expiry_date: ''
+      }));
+      personForm.setValue('aliases', formattedAliases);
+    }
+    
+    // Populate addresses if available
+    if (existingPerson.addresses && existingPerson.addresses.length > 0) {
+      const formattedAddresses = existingPerson.addresses.map(address => ({
+        address_type: address.address_type,
+        locality: address.locality,
+        postal_code: address.postal_code || '',
+        town: address.locality, // Default town to locality
+        country: 'MADAGASCAR',
+        street_line1: '',
+        street_line2: '',
+        province_code: '',
+        is_primary: address.is_primary
+      }));
+      personForm.setValue('addresses', formattedAddresses);
+    }
   };
 
   // Step validation
@@ -371,6 +464,17 @@ const PersonManagementPage: React.FC = () => {
   const handleBack = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const handleStepClick = (stepIndex: number) => {
+    // Allow navigation to previous steps or completed steps
+    if (stepIndex < currentStep || stepValidation[stepIndex]) {
+      setCurrentStep(stepIndex);
+    }
+    // For step 0 (lookup), always allow navigation if we're not in new person mode
+    if (stepIndex === 0 && !isNewPerson) {
+      setCurrentStep(stepIndex);
     }
   };
 
@@ -523,6 +627,10 @@ const PersonManagementPage: React.FC = () => {
                   error={!!personForm.formState.errors.surname}
                   helperText={personForm.formState.errors.surname?.message || 'Family name'}
                   inputProps={{ maxLength: 50 }}
+                  onChange={(e) => {
+                    const value = e.target.value.toUpperCase();
+                    field.onChange(value);
+                  }}
                 />
               )}
             />
@@ -540,6 +648,10 @@ const PersonManagementPage: React.FC = () => {
                   error={!!personForm.formState.errors.first_name}
                   helperText={personForm.formState.errors.first_name?.message || 'Given name'}
                   inputProps={{ maxLength: 50 }}
+                  onChange={(e) => {
+                    const value = e.target.value.toUpperCase();
+                    field.onChange(value);
+                  }}
                 />
               )}
             />
@@ -805,22 +917,44 @@ const PersonManagementPage: React.FC = () => {
               </Grid>
 
               {personForm.watch(`aliases.${index}.document_type`) === 'PASSPORT' && (
-                <Grid item xs={12} md={4}>
-                  <Controller
-                    name={`aliases.${index}.expiry_date`}
-                    control={personForm.control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        type="date"
-                        label="Expiry Date *"
-                        InputLabelProps={{ shrink: true }}
-                        helperText="Required for passports"
-                      />
-                    )}
-                  />
-                </Grid>
+                <>
+                  <Grid item xs={12} md={4}>
+                    <Controller
+                      name={`aliases.${index}.country_of_issue`}
+                      control={personForm.control}
+                      render={({ field }) => (
+                        <FormControl fullWidth>
+                          <InputLabel>Country of Issue *</InputLabel>
+                          <Select {...field} label="Country of Issue *">
+                            <MenuItem value="MG">Madagascar</MenuItem>
+                            <MenuItem value="FR">France</MenuItem>
+                            <MenuItem value="US">United States</MenuItem>
+                            <MenuItem value="GB">United Kingdom</MenuItem>
+                            <MenuItem value="ZA">South Africa</MenuItem>
+                            <MenuItem value="OTHER">Other</MenuItem>
+                          </Select>
+                          <FormHelperText>Country that issued the passport</FormHelperText>
+                        </FormControl>
+                      )}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Controller
+                      name={`aliases.${index}.expiry_date`}
+                      control={personForm.control}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          fullWidth
+                          type="date"
+                          label="Expiry Date *"
+                          InputLabelProps={{ shrink: true }}
+                          helperText="Required for passports"
+                        />
+                      )}
+                    />
+                  </Grid>
+                </>
               )}
 
               {index > 0 && (
@@ -1249,11 +1383,22 @@ const PersonManagementPage: React.FC = () => {
       {/* Stepper */}
       <Paper sx={{ p: 3, mb: 3 }}>
         <Stepper activeStep={currentStep} alternativeLabel>
-          {steps.map((label, index) => (
-            <Step key={label} completed={stepValidation[index]}>
-              <StepLabel>{label}</StepLabel>
-            </Step>
-          ))}
+          {steps.map((label, index) => {
+            const canNavigate = index < currentStep || stepValidation[index] || (index === 0 && !isNewPerson);
+            return (
+              <Step key={label} completed={stepValidation[index]}>
+                <StepLabel 
+                  onClick={() => canNavigate && handleStepClick(index)}
+                  sx={{ 
+                    cursor: canNavigate ? 'pointer' : 'default',
+                    '&:hover': canNavigate ? { opacity: 0.8 } : {},
+                  }}
+                >
+                  {label}
+                </StepLabel>
+              </Step>
+            );
+          })}
         </Stepper>
       </Paper>
 

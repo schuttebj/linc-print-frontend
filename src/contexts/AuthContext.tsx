@@ -67,11 +67,34 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     initializeAuth();
   }, []);
 
-  // Set up automatic token refresh with exponential backoff
+  // Set up automatic token refresh with better error handling
   useEffect(() => {
     if (authState.isAuthenticated && authState.accessToken && !isLoggingOut) {
-      const refreshInterval = setInterval(() => {
-        refreshToken();
+      const refreshInterval = setInterval(async () => {
+        try {
+          const success = await refreshToken();
+          if (!success) {
+            // Token refresh failed - logout silently
+            console.log('Token refresh failed, logging out');
+            setAuthToken(null);
+            setAuthState({
+              user: null,
+              isAuthenticated: false,
+              isLoading: false,
+              accessToken: null,
+            });
+          }
+        } catch (error) {
+          console.error('Token refresh error:', error);
+          // Silent logout on refresh failure
+          setAuthToken(null);
+          setAuthState({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+            accessToken: null,
+          });
+        }
       }, 14 * 60 * 1000); // Refresh every 14 minutes
       return () => clearInterval(refreshInterval);
     }
