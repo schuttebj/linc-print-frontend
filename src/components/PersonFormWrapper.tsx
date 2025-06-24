@@ -234,6 +234,7 @@ interface PersonFormWrapperProps {
     mode?: 'standalone' | 'application' | 'search';
     onComplete?: (person: any) => void;
     onCancel?: () => void;
+    onSuccess?: (person: any, isEdit: boolean) => void;
     initialPersonId?: string;
     title?: string;
     subtitle?: string;
@@ -244,6 +245,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     mode = 'standalone',
     onComplete,
     onCancel,
+    onSuccess,
     initialPersonId,
     title = "Person Management",
     subtitle = "Register new Madagascar citizens for driver's license applications.",
@@ -336,6 +338,13 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     const handleFormComplete = (person: any) => {
         setCreatedPerson(person);
         
+        // If onSuccess callback is provided, use it instead of internal logic
+        if (onSuccess) {
+            onSuccess(person, isEditMode);
+            return;
+        }
+        
+        // Fallback to original behavior
         switch (mode) {
             case 'standalone':
                 // Show success dialog with options
@@ -1046,6 +1055,17 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         setPendingPersonPayload(null);
         lookupForm.reset();
         personForm.reset();
+    };
+
+    // Expose functions for parent components to control the form
+    const continueEditing = () => {
+        // Keep current form state, don't reset
+        console.log('Continuing to edit current person');
+    };
+
+    const startNewPerson = () => {
+        resetForm();
+        console.log('Starting new person form');
     };
 
     // Render step content
