@@ -244,6 +244,7 @@ const PersonManagementPage: React.FC = () => {
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
   const [potentialDuplicates, setPotentialDuplicates] = useState<any[]>([]);
   const [duplicateThreshold] = useState(70.0);
+  const [pendingPersonPayload, setPendingPersonPayload] = useState<any>(null);
   
   // Lookup form
   const lookupForm = useForm<PersonLookupForm>({
@@ -633,12 +634,36 @@ const PersonManagementPage: React.FC = () => {
       
       console.log('Transformed person payload:', personPayload);
       
-      // Perform duplicate check instead of direct creation
-      await checkForDuplicates(personPayload);
+      if (isEditMode && currentPersonId) {
+        // Update existing person
+        console.log('Updating existing person:', currentPersonId);
+        const response = await fetch(`${API_BASE_URL}/api/v1/persons/${currentPersonId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify(personPayload),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error('API Error Response:', errorData);
+          throw new Error(errorData.detail || `HTTP ${response.status}: Failed to update person`);
+        }
+
+        const result = await response.json();
+        console.log('Person updated successfully:', result);
+        setCreatedPerson(result);
+        setShowSuccessDialog(true);
+      } else {
+        // Create new person (with duplicate check)
+        await checkForDuplicates(personPayload);
+      }
       
     } catch (error) {
       console.error('Submit failed:', error);
-      alert(`Failed to create person: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      alert(`Failed to ${isEditMode ? 'update' : 'create'} person: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setSubmitLoading(false);
     }
@@ -648,25 +673,21 @@ const PersonManagementPage: React.FC = () => {
     setDuplicateCheckLoading(true);
     
     try {
-      // First create a temporary person record to check for duplicates
-      const tempResponse = await fetch(`${API_BASE_URL}/api/v1/persons/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify(personPayload),
-      });
-
-      if (!tempResponse.ok) {
-        throw new Error('Failed to create person for duplicate check');
-      }
-
-      const tempPerson = await tempResponse.json();
+      // Store the payload for later use
+      setPendingPersonPayload(personPayload);
       
-      // Now check for duplicates using the created person's ID
+      // Search for potential duplicates using existing persons
+      const searchParams = new URLSearchParams({
+        surname: personPayload.surname || '',
+        first_name: personPayload.first_name || '',
+        birth_date: personPayload.birth_date || '',
+        phone_number: personPayload.cell_phone || '',
+        include_details: 'false',
+        limit: '10'
+      });
+      
       const duplicateResponse = await fetch(
-        `${API_BASE_URL}/api/v1/persons/${tempPerson.id}/duplicates?threshold=${duplicateThreshold}`,
+        `${API_BASE_URL}/api/v1/persons/search?${searchParams}`,
         {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
@@ -675,28 +696,48 @@ const PersonManagementPage: React.FC = () => {
       );
 
       if (!duplicateResponse.ok) {
-        // If duplicate check fails, just proceed with the created person
-        console.warn('Duplicate check failed, proceeding with person creation');
-        setCreatedPerson(tempPerson);
-        setShowSuccessDialog(true);
+        console.warn('Duplicate search failed, proceeding with person creation');
+        await createPersonDirectly(personPayload);
         return;
       }
 
-      const duplicateData = await duplicateResponse.json();
+      const searchResults = await duplicateResponse.json();
+      console.log('Duplicate search results:', searchResults);
       
-      if (duplicateData.potential_duplicates && duplicateData.potential_duplicates.length > 0) {
-        // Found potential duplicates - show dialog
-        setPotentialDuplicates(duplicateData.potential_duplicates);
-        setCreatedPerson(tempPerson); // Store the created person for potential deletion
-        setShowDuplicateDialog(true);
+      if (Array.isArray(searchResults) && searchResults.length > 0) {
+        // Calculate similarity scores manually for found persons
+        const potentialDuplicates = searchResults
+          .map(person => ({
+            ...person,
+            similarity_score: calculateSimilarityScore(personPayload, person),
+            match_criteria: getMatchCriteria(personPayload, person)
+          }))
+          .filter(person => person.similarity_score >= duplicateThreshold)
+          .sort((a, b) => b.similarity_score - a.similarity_score);
+        
+        if (potentialDuplicates.length > 0) {
+          // Found potential duplicates - show dialog
+          setPotentialDuplicates(potentialDuplicates);
+          setShowDuplicateDialog(true);
+        } else {
+          // No high-confidence duplicates found - create person
+          await createPersonDirectly(personPayload);
+        }
       } else {
-        // No duplicates found - proceed normally
-        setCreatedPerson(tempPerson);
-        setShowSuccessDialog(true);
+        // No matches found - create person
+        await createPersonDirectly(personPayload);
       }
     } catch (error) {
       console.error('Duplicate check failed:', error);
       // If duplicate check fails, try to create person normally
+      await createPersonDirectly(personPayload);
+    } finally {
+      setDuplicateCheckLoading(false);
+    }
+  };
+
+  const createPersonDirectly = async (personPayload: any) => {
+    try {
       const response = await fetch(`${API_BASE_URL}/api/v1/persons/`, {
         method: 'POST',
         headers: {
@@ -707,33 +748,170 @@ const PersonManagementPage: React.FC = () => {
       });
 
       if (!response.ok) {
-        throw error;
+        const errorData = await response.json();
+        throw new Error(errorData.detail || `HTTP ${response.status}: Failed to create person`);
       }
 
       const result = await response.json();
+      console.log('Person created successfully:', result);
       setCreatedPerson(result);
       setShowSuccessDialog(true);
-    } finally {
-      setDuplicateCheckLoading(false);
+    } catch (error) {
+      console.error('Failed to create person:', error);
+      throw error;
     }
   };
 
-  const handleKeepNewPerson = () => {
-    setShowDuplicateDialog(false);
-    setShowSuccessDialog(true);
+  const calculateSimilarityScore = (payload: any, existing: any): number => {
+    let score = 0;
+    let totalWeight = 0;
+
+    // Birth date match (30%)
+    if (payload.birth_date && existing.birth_date) {
+      if (payload.birth_date === existing.birth_date) score += 30;
+      totalWeight += 30;
+    }
+
+    // Surname similarity (25%)
+    if (payload.surname && existing.surname) {
+      const similarity = stringSimilarity(payload.surname.toLowerCase(), existing.surname.toLowerCase());
+      score += (similarity * 25);
+      totalWeight += 25;
+    }
+
+    // First name similarity (20%)
+    if (payload.first_name && existing.first_name) {
+      const similarity = stringSimilarity(payload.first_name.toLowerCase(), existing.first_name.toLowerCase());
+      score += (similarity * 20);
+      totalWeight += 20;
+    }
+
+    // Phone match (15%)
+    if (payload.cell_phone && existing.cell_phone) {
+      if (payload.cell_phone === existing.cell_phone) score += 15;
+      totalWeight += 15;
+    }
+
+    // Address locality match (10%)
+    if (payload.addresses?.[0]?.locality && existing.addresses?.[0]?.locality) {
+      if (payload.addresses[0].locality.toLowerCase() === existing.addresses[0].locality.toLowerCase()) {
+        score += 10;
+      }
+      totalWeight += 10;
+    }
+
+    return totalWeight > 0 ? (score / totalWeight) * 100 : 0;
   };
 
-  const handleUpdateExistingPerson = (existingPersonId: string) => {
-    // Delete the newly created person and redirect to edit existing
-    if (createdPerson) {
-      // TODO: Implement delete API call to remove the temporary person
-      console.log('Would delete person:', createdPerson.id);
-      console.log('Would redirect to edit person:', existingPersonId);
+  const getMatchCriteria = (payload: any, existing: any) => {
+    return {
+      birth_date_match: payload.birth_date === existing.birth_date,
+      surname_match: payload.surname?.toLowerCase() === existing.surname?.toLowerCase(),
+      first_name_similar: payload.first_name && existing.first_name ? 
+        stringSimilarity(payload.first_name.toLowerCase(), existing.first_name.toLowerCase()) > 0.8 : false,
+      phone_match: payload.cell_phone === existing.cell_phone,
+      address_similar: payload.addresses?.[0]?.locality?.toLowerCase() === existing.addresses?.[0]?.locality?.toLowerCase()
+    };
+  };
+
+  const stringSimilarity = (str1: string, str2: string): number => {
+    const longer = str1.length > str2.length ? str1 : str2;
+    const shorter = str1.length > str2.length ? str2 : str1;
+    
+    if (longer.length === 0) return 1.0;
+    
+    const editDistance = levenshteinDistance(longer, shorter);
+    return (longer.length - editDistance) / longer.length;
+  };
+
+  const levenshteinDistance = (str1: string, str2: string): number => {
+    const matrix = Array(str2.length + 1).fill(null).map(() => Array(str1.length + 1).fill(null));
+    
+    for (let i = 0; i <= str1.length; i++) matrix[0][i] = i;
+    for (let j = 0; j <= str2.length; j++) matrix[j][0] = j;
+    
+    for (let j = 1; j <= str2.length; j++) {
+      for (let i = 1; i <= str1.length; i++) {
+        const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
+        matrix[j][i] = Math.min(
+          matrix[j][i - 1] + 1,
+          matrix[j - 1][i] + 1,
+          matrix[j - 1][i - 1] + indicator
+        );
+      }
+    }
+    
+    return matrix[str2.length][str1.length];
+  };
+
+  const handleKeepNewPerson = async () => {
+    if (pendingPersonPayload) {
+      try {
+        setDuplicateCheckLoading(true);
+        await createPersonDirectly(pendingPersonPayload);
+      } catch (error) {
+        console.error('Failed to create person:', error);
+        alert(`Failed to create person: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      } finally {
+        setDuplicateCheckLoading(false);
+      }
+    }
+    setShowDuplicateDialog(false);
+  };
+
+  const handleUpdateExistingPerson = async (existingPersonId: string) => {
+    try {
+      setDuplicateCheckLoading(true);
       
-      // For now, just show a message
-      alert(`Redirecting to edit existing person: ${existingPersonId}`);
+      // Fetch the existing person's full data
+      console.log('Fetching existing person data:', existingPersonId);
+      const response = await fetch(`${API_BASE_URL}/api/v1/persons/${existingPersonId}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch existing person data');
+      }
+
+      const existingPersonData = await response.json();
+      console.log('Fetched existing person data:', existingPersonData);
+      
+      // Reset form state
       setShowDuplicateDialog(false);
-      resetForm();
+      setCreatedPerson(null);
+      setPotentialDuplicates([]);
+      setPendingPersonPayload(null);
+      setPersonFound(existingPersonData);
+      setCurrentPersonId(existingPersonData.id);
+      setIsNewPerson(false);
+      setIsEditMode(true);
+      
+      // Populate the form with existing person data
+      populateFormWithExistingPerson(existingPersonData);
+      
+      // Also populate the lookup form with the primary document for edit mode
+      if (existingPersonData.aliases && existingPersonData.aliases.length > 0) {
+        const primaryAlias = existingPersonData.aliases.find(alias => alias.is_primary) || existingPersonData.aliases[0];
+        lookupForm.setValue('document_type', primaryAlias.document_type);
+        lookupForm.setValue('document_number', primaryAlias.document_number);
+        console.log('Populated lookup form with primary document:', primaryAlias);
+      }
+      
+      // Set all steps as valid since we have existing data
+      setStepValidation(new Array(steps.length).fill(true));
+      
+      // Navigate to personal information step so user can review/edit everything
+      setCurrentStep(1);
+      
+      console.log('Successfully switched to edit mode for person:', existingPersonId);
+      
+    } catch (error) {
+      console.error('Failed to switch to edit mode:', error);
+      alert(`Failed to load existing person data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setDuplicateCheckLoading(false);
     }
   };
 
@@ -748,6 +926,7 @@ const PersonManagementPage: React.FC = () => {
     setCreatedPerson(null);
     setShowDuplicateDialog(false);
     setPotentialDuplicates([]);
+    setPendingPersonPayload(null);
     lookupForm.reset();
     personForm.reset();
   };
@@ -1798,7 +1977,7 @@ const PersonManagementPage: React.FC = () => {
                 disabled={submitLoading || duplicateCheckLoading}
                 startIcon={<PersonAddIcon />}
               >
-                {duplicateCheckLoading ? 'Checking for Duplicates...' : submitLoading ? 'Submitting...' : 'Submit'}
+                {duplicateCheckLoading ? 'Checking for Duplicates...' : submitLoading ? (isEditMode ? 'Updating...' : 'Submitting...') : (isEditMode ? 'Update Person' : 'Submit')}
               </Button>
             )}
           </Box>
@@ -1918,14 +2097,14 @@ const PersonManagementPage: React.FC = () => {
         <DialogTitle sx={{ bgcolor: 'success.main', color: 'white' }}>
           <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <PersonAddIcon />
-            Person Created Successfully!
+            {isEditMode ? 'Person Updated Successfully!' : 'Person Created Successfully!'}
           </Typography>
         </DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
           {createdPerson && (
             <Box>
               <Typography variant="body1" gutterBottom>
-                <strong>{createdPerson.first_name} {createdPerson.surname}</strong> has been successfully created in the system.
+                <strong>{createdPerson.first_name} {createdPerson.surname}</strong> has been successfully {isEditMode ? 'updated' : 'created'} in the system.
               </Typography>
               
               <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
