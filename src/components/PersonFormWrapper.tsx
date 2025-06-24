@@ -239,6 +239,7 @@ interface PersonFormWrapperProps {
     title?: string;
     subtitle?: string;
     showHeader?: boolean;
+    skipFirstStep?: boolean;
 }
 
 const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
@@ -250,6 +251,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     title = "Person Management",
     subtitle = "Register new Madagascar citizens for driver's license applications.",
     showHeader = true,
+    skipFirstStep = false,
 }) => {
     // Auth
     const { user, hasPermission, accessToken } = useAuth();
@@ -258,7 +260,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     const [searchParams] = useSearchParams();
 
     // State management
-    const [currentStep, setCurrentStep] = useState(0);
+    const [currentStep, setCurrentStep] = useState(skipFirstStep ? 1 : 0);
     const [personFound, setPersonFound] = useState<ExistingPerson | null>(null);
     const [currentPersonId, setCurrentPersonId] = useState<string | null>(null);
     const [isNewPerson, setIsNewPerson] = useState(false);
@@ -690,12 +692,18 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     };
 
     const handleBack = () => {
-        if (currentStep > 0) {
+        const minStep = skipFirstStep ? 1 : 0;
+        if (currentStep > minStep) {
             setCurrentStep(currentStep - 1);
         }
     };
 
     const handleStepClick = (stepIndex: number) => {
+        // Prevent navigation to step 0 if skipFirstStep is true
+        if (skipFirstStep && stepIndex === 0) {
+            return;
+        }
+        
         // Allow navigation to previous steps or completed steps
         if (stepIndex < currentStep || stepValidation[stepIndex]) {
             setCurrentStep(stepIndex);
@@ -2117,14 +2125,16 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             <Paper sx={{ p: 3, mb: 3 }}>
                 <Stepper activeStep={currentStep} alternativeLabel>
                     {steps.map((label, index) => {
-                        const canNavigate = index < currentStep || stepValidation[index] || (index === 0 && !isNewPerson);
+                        const canNavigate = (index < currentStep || stepValidation[index] || (index === 0 && !isNewPerson)) && !(skipFirstStep && index === 0);
+                        const isDisabled = skipFirstStep && index === 0;
                         return (
-                            <Step key={label} completed={stepValidation[index]}>
+                            <Step key={label} completed={stepValidation[index]} disabled={isDisabled}>
                                 <StepLabel
                                     onClick={() => canNavigate && handleStepClick(index)}
                                     sx={{
                                         cursor: canNavigate ? 'pointer' : 'default',
                                         '&:hover': canNavigate ? { opacity: 0.8 } : {},
+                                        opacity: isDisabled ? 0.4 : 1,
                                     }}
                                 >
                                     {label}
@@ -2144,7 +2154,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             <Paper sx={{ p: 3 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                     <Button
-                        disabled={currentStep === 0}
+                        disabled={currentStep === (skipFirstStep ? 1 : 0)}
                         onClick={handleBack}
                     >
                         Back

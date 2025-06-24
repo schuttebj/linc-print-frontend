@@ -1021,9 +1021,15 @@ const PersonSearchPage: React.FC = () => {
       <Dialog 
         open={showEditForm} 
         onClose={handleEditCancel}
-        maxWidth="lg"
+        maxWidth="xl"
         fullWidth
-        fullScreen
+        sx={{ 
+          '& .MuiDialog-paper': { 
+            height: '90vh',
+            maxHeight: '90vh',
+            margin: '5vh auto'
+          } 
+        }}
       >
         <PersonFormWrapper
           mode="search"
@@ -1033,6 +1039,7 @@ const PersonSearchPage: React.FC = () => {
           title={`Edit Person: ${selectedPerson?.first_name} ${selectedPerson?.surname}`}
           subtitle="Update person information and return to search results."
           showHeader={true}
+          skipFirstStep={true}
         />
       </Dialog>
 
