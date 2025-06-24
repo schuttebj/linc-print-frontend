@@ -44,6 +44,7 @@ import {
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { useSearchParams } from 'react-router-dom';
 
 import { useAuth } from '../../contexts/AuthContext';
 import { API_BASE_URL } from '../../config/api';
@@ -229,6 +230,9 @@ const PersonManagementPage: React.FC = () => {
   // Auth
   const { user, hasPermission, accessToken } = useAuth();
   
+  // URL parameters for editing
+  const [searchParams] = useSearchParams();
+  
   // State management
   const [currentStep, setCurrentStep] = useState(0);
   const [personFound, setPersonFound] = useState<ExistingPerson | null>(null);
@@ -305,8 +309,55 @@ const PersonManagementPage: React.FC = () => {
 
   // Watch form values
   const watchedPersonNature = personForm.watch('person_nature');
-  
 
+  // Handle URL parameters for editing
+  useEffect(() => {
+    const editPersonId = searchParams.get('edit');
+    if (editPersonId && accessToken) {
+      fetchPersonForEditing(editPersonId);
+    }
+  }, [searchParams, accessToken]);
+
+  // Fetch existing person for editing
+  const fetchPersonForEditing = async (personId: string) => {
+    setLookupLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/persons/${personId}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch person: ${response.statusText}`);
+      }
+      
+      const existingPerson = await response.json();
+      console.log('Fetched person for editing:', existingPerson);
+      
+      // Set up form for editing
+      setPersonFound(existingPerson);
+      setCurrentPersonId(personId);
+      setIsEditMode(true);
+      setIsNewPerson(false);
+      
+      // Populate form with existing data
+      populateFormWithExistingPerson(existingPerson);
+      
+      // Mark all steps as valid since we have existing data
+      setStepValidation(new Array(steps.length).fill(true));
+      
+      // Skip to personal information step
+      setCurrentStep(1);
+      
+    } catch (error) {
+      console.error('Failed to fetch person for editing:', error);
+      alert(`Failed to load person for editing: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setLookupLoading(false);
+    }
+  };
 
   // Step 1: Document Lookup functionality
   const performLookup = async (data: PersonLookupForm) => {
@@ -316,14 +367,14 @@ const PersonManagementPage: React.FC = () => {
       console.log('Looking up person with:', data);
       
       // Search for existing person using the document details
-      const searchParams = new URLSearchParams({
+      const searchQuery = new URLSearchParams({
         document_type: data.document_type,
         document_number: data.document_number,
         include_details: 'true',
         limit: '1'
       });
       
-      const response = await fetch(`${API_BASE_URL}/api/v1/persons/search?${searchParams}`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/persons/search?${searchQuery}`, {
         headers: {
           'Authorization': `Bearer ${accessToken}`
         }
@@ -682,18 +733,17 @@ const PersonManagementPage: React.FC = () => {
       // Store the payload for later use
       setPendingPersonPayload(personPayload);
       
-      // Search for potential duplicates using existing persons
-      const searchParams = new URLSearchParams({
+      // Search for potential duplicates using similar data
+      const duplicateQuery = new URLSearchParams({
         surname: personPayload.surname || '',
         first_name: personPayload.first_name || '',
         birth_date: personPayload.birth_date || '',
-        phone_number: personPayload.cell_phone || '',
-        include_details: 'false',
-        limit: '10'
+        include_details: 'true',
+        limit: '20'
       });
-      
+
       const duplicateResponse = await fetch(
-        `${API_BASE_URL}/api/v1/persons/search?${searchParams}`,
+        `${API_BASE_URL}/api/v1/persons/search?${duplicateQuery}`,
         {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
