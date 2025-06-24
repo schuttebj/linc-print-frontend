@@ -5,6 +5,10 @@
 
 // Environment-based API configuration
 const getApiBaseUrl = (): string => {
+  // TEMPORARY: Force local development for testing
+  // TODO: Revert this after testing lookup endpoints
+  return 'http://localhost:8000';
+  
   // Check for environment variable first
   if ((import.meta as any).env?.VITE_API_BASE_URL) {
     return (import.meta as any).env.VITE_API_BASE_URL;
@@ -97,6 +101,8 @@ export const apiRequest = async <T>(
   options: RequestInit = {}
 ): Promise<T> => {
   try {
+    console.log('🔍 API Request:', { url, method: options.method || 'GET' });
+    
     const response = await fetch(url, {
       ...options,
       headers: {
@@ -105,11 +111,19 @@ export const apiRequest = async <T>(
       },
     });
 
+    console.log('📡 API Response:', { 
+      status: response.status, 
+      statusText: response.statusText,
+      contentType: response.headers.get('content-type'),
+      url: response.url 
+    });
+
     // Handle non-JSON responses (like HTML error pages)
     const contentType = response.headers.get('content-type');
     if (!contentType?.includes('application/json')) {
       const text = await response.text();
-      console.error('Non-JSON response received:', text.substring(0, 200));
+      console.error('❌ Non-JSON response received:', text.substring(0, 200));
+      console.error('🔗 Response URL:', response.url);
       throw new Error(`API returned non-JSON response. Status: ${response.status}`);
     }
 
