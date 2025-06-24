@@ -442,9 +442,17 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             personForm.setValue('addresses.0.address_type', defaultAddressType);
             personForm.setValue('addresses.0.province_code', defaultProvinceCode);
 
-            console.log('✅ Form defaults updated with first enum values');
+            // Also update lookup form default
+            lookupForm.setValue('document_type', defaultDocumentType);
+
+            console.log('✅ Form defaults updated with first enum values', {
+                defaultDocumentType,
+                defaultPersonNature,
+                defaultNationality,
+                defaultLanguage
+            });
         }
-    }, [lookupsLoading, documentTypes, personNatures, languages, nationalities, phoneCountryCodes, countries, provinces, addressTypes, isEditMode, personFound, personForm]);
+    }, [lookupsLoading, documentTypes, personNatures, languages, nationalities, phoneCountryCodes, countries, provinces, addressTypes, isEditMode, personFound, personForm, lookupForm]);
 
     // Handle URL parameters for editing and initialPersonId prop
     useEffect(() => {
@@ -669,7 +677,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         if (existingPerson.aliases && existingPerson.aliases.length > 0) {
             console.log('Populating aliases:', existingPerson.aliases);
             const transformedAliases = existingPerson.aliases.map(alias => ({
-                document_type: alias.document_type?.toUpperCase() || 'MG_ID',
+                document_type: alias.document_type?.toUpperCase() || 'MADAGASCAR_ID',
                 document_number: alias.document_number?.toUpperCase() || '',
                 country_of_issue: alias.country_of_issue?.toUpperCase() || 'MG',
                 name_in_document: alias.name_in_document?.toUpperCase() || '',
