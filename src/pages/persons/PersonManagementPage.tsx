@@ -139,28 +139,28 @@ interface ExistingPerson {
 
 // Madagascar-specific lookup data
 const DOCUMENT_TYPES = [
-  { value: 'MG_ID', label: 'Madagascar ID (CIN/CNI)', requiresExpiry: false },
-  { value: 'PASSPORT', label: 'Passport', requiresExpiry: true },
+  { value: 'MG_ID', label: 'MADAGASCAR ID (CIN/CNI)', requiresExpiry: false },
+  { value: 'PASSPORT', label: 'PASSPORT', requiresExpiry: true },
 ];
 
 const PERSON_NATURES = [
-  { value: '01', label: 'Male (Lehilahy)', disabled: false },
-  { value: '02', label: 'Female (Vehivavy)', disabled: false },
+  { value: '01', label: 'MALE (LEHILAHY)', disabled: false },
+  { value: '02', label: 'FEMALE (VEHIVAVY)', disabled: false },
 ];
 
 const LANGUAGES = [
-  { value: 'mg', label: 'Malagasy' },
-  { value: 'fr', label: 'Français' },
-  { value: 'en', label: 'English' },
+  { value: 'mg', label: 'MALAGASY' },
+  { value: 'fr', label: 'FRANÇAIS' },
+  { value: 'en', label: 'ENGLISH' },
 ];
 
 const MADAGASCAR_PROVINCES = [
-  { code: 'AN', name: 'Antananarivo' },
-  { code: 'FI', name: 'Fianarantsoa' },
-  { code: 'TO', name: 'Toamasina' },
-  { code: 'MA', name: 'Mahajanga' },
-  { code: 'TU', name: 'Toliara' },
-  { code: 'DI', name: 'Antsiranana (Diego Suarez)' },
+  { code: 'AN', name: 'ANTANANARIVO' },
+  { code: 'FI', name: 'FIANARANTSOA' },
+  { code: 'TO', name: 'TOAMASINA' },
+  { code: 'MA', name: 'MAHAJANGA' },
+  { code: 'TU', name: 'TOLIARA' },
+  { code: 'DI', name: 'ANTSIRANANA (DIEGO SUAREZ)' },
 ];
 
 // Validation schemas
@@ -280,7 +280,7 @@ const PersonManagementPage: React.FC = () => {
         expiry_date: '',
       }],
       addresses: [{
-        address_type: 'residential',
+        address_type: 'RESIDENTIAL',
         street_line1: '',
         street_line2: '',
         locality: '',
@@ -1195,9 +1195,9 @@ const PersonManagementPage: React.FC = () => {
                       id: "nationality-menu"
                     }}
                   >
-                    <MenuItem value="MG">Malagasy</MenuItem>
-                    <MenuItem value="FR">French</MenuItem>
-                    <MenuItem value="US">American</MenuItem>
+                    <MenuItem value="MG">MALAGASY</MenuItem>
+                    <MenuItem value="FR">FRENCH</MenuItem>
+                    <MenuItem value="US">AMERICAN</MenuItem>
                   </Select>
                 </FormControl>
               )}
@@ -1325,9 +1325,9 @@ const PersonManagementPage: React.FC = () => {
                       id: "country-code-menu"
                     }}
                   >
-                    <MenuItem value="+261">+261 (Madagascar)</MenuItem>
-                    <MenuItem value="+27">+27 (South Africa)</MenuItem>
-                    <MenuItem value="+33">+33 (France)</MenuItem>
+                    <MenuItem value="+261">+261 (MADAGASCAR)</MenuItem>
+                    <MenuItem value="+27">+27 (SOUTH AFRICA)</MenuItem>
+                    <MenuItem value="+33">+33 (FRANCE)</MenuItem>
                     <MenuItem value="+1">+1 (USA)</MenuItem>
                     <MenuItem value="+44">+44 (UK)</MenuItem>
                   </Select>
@@ -1764,7 +1764,7 @@ const PersonManagementPage: React.FC = () => {
         <Button
           variant="outlined"
           onClick={() => appendAddress({
-            address_type: 'postal',
+            address_type: 'POSTAL',
             street_line1: '',
             street_line2: '',
             locality: '',
@@ -1811,13 +1811,28 @@ const PersonManagementPage: React.FC = () => {
               <Grid item xs={12} md={3}>
                 <Typography variant="subtitle2" color="text.secondary">Gender</Typography>
                 <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                  {PERSON_NATURES.find(n => n.value === formData.person_nature)?.label || 'Not specified'}
+                  {PERSON_NATURES.find(n => n.value === formData.person_nature)?.label || 'NOT SPECIFIED'}
                 </Typography>
               </Grid>
               <Grid item xs={12} md={3}>
                 <Typography variant="subtitle2" color="text.secondary">Language</Typography>
                 <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                  {LANGUAGES.find(l => l.value === formData.preferred_language)?.label || 'Not specified'}
+                  {LANGUAGES.find(l => l.value === formData.preferred_language)?.label || 'NOT SPECIFIED'}
+                </Typography>
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <Typography variant="subtitle2" color="text.secondary">Birth Date</Typography>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  {formData.birth_date || 'NOT PROVIDED'}
+                </Typography>
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <Typography variant="subtitle2" color="text.secondary">Nationality</Typography>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  {formData.nationality_code === 'MG' ? 'MALAGASY' : 
+                   formData.nationality_code === 'FR' ? 'FRENCH' : 
+                   formData.nationality_code === 'US' ? 'AMERICAN' : 
+                   formData.nationality_code?.toUpperCase() || 'NOT SPECIFIED'}
                 </Typography>
               </Grid>
             </Grid>
@@ -1871,8 +1886,8 @@ const PersonManagementPage: React.FC = () => {
                 <Grid item xs={12} md={4}>
                   <Typography variant="subtitle2" color="text.secondary">Status</Typography>
                   <Stack direction="row" spacing={1}>
-                    {alias.is_primary && <Chip label="Primary" size="small" color="primary" />}
-                    {alias.is_current && <Chip label="Current" size="small" color="success" />}
+                    {alias.is_primary && <Chip label="PRIMARY" size="small" color="primary" />}
+                    {alias.is_current && <Chip label="CURRENT" size="small" color="success" />}
                   </Stack>
                 </Grid>
               </Grid>
@@ -1888,8 +1903,8 @@ const PersonManagementPage: React.FC = () => {
               <Grid container spacing={2}>
                 <Grid item xs={12}>
                   <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'primary.main' }}>
-                    {address.address_type === 'residential' ? 'Residential Address' : 'Postal Address'}
-                    {address.is_primary && <Chip label="Primary" size="small" color="primary" sx={{ ml: 1 }} />}
+                    {address.address_type === 'RESIDENTIAL' ? 'RESIDENTIAL ADDRESS' : 'POSTAL ADDRESS'}
+                    {address.is_primary && <Chip label="PRIMARY" size="small" color="primary" sx={{ ml: 1 }} />}
                   </Typography>
                 </Grid>
                 <Grid item xs={12}>
