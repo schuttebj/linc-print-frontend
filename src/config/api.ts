@@ -5,10 +5,6 @@
 
 // Environment-based API configuration
 const getApiBaseUrl = (): string => {
-  // TEMPORARY: Force local development for testing
-  // TODO: Revert this after testing lookup endpoints
-  return 'http://localhost:8000';
-  
   // Check for environment variable first
   if ((import.meta as any).env?.VITE_API_BASE_URL) {
     return (import.meta as any).env.VITE_API_BASE_URL;
@@ -58,6 +54,19 @@ export const API_ENDPOINTS = {
   
   // Health check
   health: `${API_BASE_URL}/health`,
+  
+  // Lookup endpoints
+  lookups: {
+    documentTypes: `${API_BASE_URL}/api/${API_VERSION}/lookups/document-types`,
+    personNatures: `${API_BASE_URL}/api/${API_VERSION}/lookups/person-natures`,
+    addressTypes: `${API_BASE_URL}/api/${API_VERSION}/lookups/address-types`,
+    languages: `${API_BASE_URL}/api/${API_VERSION}/lookups/languages`,
+    nationalities: `${API_BASE_URL}/api/${API_VERSION}/lookups/nationalities`,
+    phoneCountryCodes: `${API_BASE_URL}/api/${API_VERSION}/lookups/phone-country-codes`,
+    countries: `${API_BASE_URL}/api/${API_VERSION}/lookups/countries`,
+    provinces: `${API_BASE_URL}/api/${API_VERSION}/lookups/provinces`,
+    all: `${API_BASE_URL}/api/${API_VERSION}/lookups/all`,
+  },
 } as const;
 
 /**

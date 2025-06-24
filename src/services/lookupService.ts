@@ -3,7 +3,7 @@
  * Fetches dropdown data from backend enums
  */
 
-import { api } from '../config/api';
+import { api, API_ENDPOINTS } from '../config/api';
 
 // Types for lookup data
 export interface DocumentType {
@@ -103,7 +103,7 @@ class LookupService {
     }
 
     try {
-      const data = await api.get<DocumentType[]>('/api/v1/lookups/document-types');
+      const data = await api.get<DocumentType[]>(API_ENDPOINTS.lookups.documentTypes);
       this.setCache(cacheKey, data);
       return data;
     } catch (error) {
@@ -128,7 +128,7 @@ class LookupService {
     }
 
     try {
-      const data = await api.get<PersonNature[]>('/api/v1/lookups/person-natures');
+      const data = await api.get<PersonNature[]>(API_ENDPOINTS.lookups.personNatures);
       this.setCache(cacheKey, data);
       return data;
     } catch (error) {
@@ -152,7 +152,7 @@ class LookupService {
     }
 
     try {
-      const data = await api.get<AddressType[]>('/api/v1/lookups/address-types');
+      const data = await api.get<AddressType[]>(API_ENDPOINTS.lookups.addressTypes);
       this.setCache(cacheKey, data);
       return data;
     } catch (error) {
@@ -176,7 +176,7 @@ class LookupService {
     }
 
     try {
-      const data = await api.get<Language[]>('/api/v1/lookups/languages');
+      const data = await api.get<Language[]>(API_ENDPOINTS.lookups.languages);
       this.setCache(cacheKey, data);
       return data;
     } catch (error) {
@@ -201,7 +201,7 @@ class LookupService {
     }
 
     try {
-      const data = await api.get<Nationality[]>('/api/v1/lookups/nationalities');
+      const data = await api.get<Nationality[]>(API_ENDPOINTS.lookups.nationalities);
       this.setCache(cacheKey, data);
       return data;
     } catch (error) {
@@ -228,7 +228,7 @@ class LookupService {
     }
 
     try {
-      const data = await api.get<PhoneCountryCode[]>('/api/v1/lookups/phone-country-codes');
+      const data = await api.get<PhoneCountryCode[]>(API_ENDPOINTS.lookups.phoneCountryCodes);
       this.setCache(cacheKey, data);
       return data;
     } catch (error) {
@@ -255,7 +255,7 @@ class LookupService {
     }
 
     try {
-      const data = await api.get<Country[]>('/api/v1/lookups/countries');
+      const data = await api.get<Country[]>(API_ENDPOINTS.lookups.countries);
       this.setCache(cacheKey, data);
       return data;
     } catch (error) {
@@ -283,7 +283,7 @@ class LookupService {
     }
 
     try {
-      const data = await api.get<Province[]>('/api/v1/lookups/provinces');
+      const data = await api.get<Province[]>(API_ENDPOINTS.lookups.provinces);
       this.setCache(cacheKey, data);
       return data;
     } catch (error) {
@@ -311,7 +311,7 @@ class LookupService {
     }
 
     try {
-      const data = await api.get<AllLookupData>('/api/v1/lookups/all');
+      const data = await api.get<AllLookupData>(API_ENDPOINTS.lookups.all);
       this.setCache(cacheKey, data);
       return data;
     } catch (error) {
