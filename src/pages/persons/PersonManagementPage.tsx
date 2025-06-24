@@ -183,9 +183,8 @@ const personSchema = yup.object({
   work_phone: yup.string().max(20),
   cell_phone_country_code: yup.string().required('Country code required if cell phone provided'),
   cell_phone: yup.string()
-    .max(15)
     .matches(/^[0-9]*$/, 'Cell phone must contain only digits')
-    .test('madagascar-format', 'Invalid Madagascar cell phone format', function(value) {
+    .test('madagascar-format', 'Madagascar cell phone must be exactly 10 digits starting with 0 (e.g., 0815598453)', function(value) {
       if (!value) return true;
       // Madagascar cell phone: 10 digits starting with 0AA BB BB BBB
       return /^0\d{9}$/.test(value);
@@ -1120,7 +1119,7 @@ const PersonManagementPage: React.FC = () => {
 
           <Grid item xs={12}>
             <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 500, mt: 2 }}>
-              Cell Phone (Madagascar Format: 0AA BB BB BBB)
+              Cell Phone (Must be 10 digits starting with 0, e.g., 0815598453)
             </Typography>
           </Grid>
 
@@ -1165,16 +1164,27 @@ const PersonManagementPage: React.FC = () => {
                 value={field.value || ''}
                 fullWidth
                 label="Cell Phone Number"
-                placeholder="0AA BB BB BBB"
+                placeholder="Example: 0815598453"
                 error={!!personForm.formState.errors.cell_phone}
-                helperText={personForm.formState.errors.cell_phone?.message || 'Cell phone number (10 digits starting with 0)'}
+                helperText={personForm.formState.errors.cell_phone?.message || 'Madagascar cell phone (10 digits, will auto-add 0 if missing)'}
                 inputProps={{ 
                   maxLength: 10,
                   pattern: '[0-9]*',
                   inputMode: 'numeric',
                 }}
                 onChange={(e) => {
-                  const value = e.target.value.replace(/\D/g, '');
+                  let value = e.target.value.replace(/\D/g, '');
+                  
+                  // Ensure Madagascar format: must start with 0 and be exactly 10 digits
+                  if (value.length > 0 && !value.startsWith('0')) {
+                    value = '0' + value;
+                  }
+                  
+                  // Limit to 10 digits max
+                  if (value.length > 10) {
+                    value = value.substring(0, 10);
+                  }
+                  
                   field.onChange(value);
                 }}
                 onBlur={field.onBlur}
