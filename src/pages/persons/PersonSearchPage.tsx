@@ -265,7 +265,7 @@ const PersonSearchPage: React.FC = () => {
   // Edit person - navigate to PersonManagementPage
   const editPerson = (person: PersonSearchResult) => {
     // Navigate to PersonManagementPage with person ID for editing
-    navigate(`/persons/manage?edit=${person.id}`);
+    navigate(`/dashboard/persons/manage?edit=${person.id}`);
   };
 
   // Delete person
@@ -366,7 +366,7 @@ const PersonSearchPage: React.FC = () => {
         {hasPermission('persons.create') && (
           <Button
             variant="contained"
-            onClick={() => navigate('/persons/manage')}
+            onClick={() => navigate('/dashboard/persons/manage')}
             startIcon={<PersonIcon />}
           >
             Add New Person
