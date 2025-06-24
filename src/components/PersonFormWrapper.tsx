@@ -408,6 +408,44 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         loadLookupData();
     }, []);
 
+    // Update form defaults after lookup data is loaded
+    useEffect(() => {
+        if (!lookupsLoading && 
+            documentTypes.length > 0 && 
+            personNatures.length > 0 && 
+            languages.length > 0 && 
+            nationalities.length > 0 && 
+            phoneCountryCodes.length > 0 && 
+            countries.length > 0 && 
+            provinces.length > 0 && 
+            addressTypes.length > 0 &&
+            !isEditMode && // Only set defaults for new forms, not when editing
+            !personFound // Only for new persons, not when person is found
+        ) {
+            // Get first option from each enum
+            const defaultPersonNature = personNatures[0].value;
+            const defaultNationality = nationalities[0].value;
+            const defaultLanguage = languages[0].value;
+            const defaultPhoneCountryCode = phoneCountryCodes[0].value;
+            const defaultDocumentType = documentTypes[0].value;
+            const defaultCountry = countries[0].value;
+            const defaultAddressType = addressTypes[0].value;
+            const defaultProvinceCode = provinces[0].code;
+
+            // Update form with first enum values
+            personForm.setValue('person_nature', defaultPersonNature);
+            personForm.setValue('nationality_code', defaultNationality);
+            personForm.setValue('preferred_language', defaultLanguage);
+            personForm.setValue('cell_phone_country_code', defaultPhoneCountryCode);
+            personForm.setValue('aliases.0.document_type', defaultDocumentType);
+            personForm.setValue('aliases.0.country_of_issue', defaultCountry);
+            personForm.setValue('addresses.0.address_type', defaultAddressType);
+            personForm.setValue('addresses.0.province_code', defaultProvinceCode);
+
+            console.log('✅ Form defaults updated with first enum values');
+        }
+    }, [lookupsLoading, documentTypes, personNatures, languages, nationalities, phoneCountryCodes, countries, provinces, addressTypes, isEditMode, personFound, personForm]);
+
     // Handle URL parameters for editing and initialPersonId prop
     useEffect(() => {
         const editPersonId = searchParams.get('edit') || initialPersonId;
@@ -535,37 +573,47 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     const setupNewPersonForm = (lookupData: PersonLookupForm) => {
         console.log('Setting up form for new person with lookup data:', lookupData);
 
+        // Get first option from each enum, with fallbacks
+        const defaultPersonNature = personNatures.length > 0 ? personNatures[0].value : '01';
+        const defaultNationality = nationalities.length > 0 ? nationalities[0].value : 'MG';
+        const defaultLanguage = languages.length > 0 ? languages[0].value : 'mg';
+        const defaultPhoneCountryCode = phoneCountryCodes.length > 0 ? phoneCountryCodes[0].value : '+261';
+        const defaultDocumentType = documentTypes.length > 0 ? documentTypes[0].value : 'MADAGASCAR_ID';
+        const defaultCountry = countries.length > 0 ? countries[0].value : 'MG';
+        const defaultAddressType = addressTypes.length > 0 ? addressTypes[0].value : 'RESIDENTIAL';
+        const defaultProvinceCode = provinces.length > 0 ? provinces[0].code : 'T';
+
         // Reset form with primary document from lookup - CAPITALIZED
         personForm.reset({
             surname: '',
             first_name: '',
             middle_name: '',
-            person_nature: '01', // Default to Male
+            person_nature: defaultPersonNature,
             birth_date: '',
-            nationality_code: 'MG',
-            preferred_language: 'mg',
+            nationality_code: defaultNationality,
+            preferred_language: defaultLanguage,
             email_address: '',
             work_phone: '',
-            cell_phone_country_code: '+261',
+            cell_phone_country_code: defaultPhoneCountryCode,
             cell_phone: '',
             aliases: [{
-                document_type: lookupData.document_type?.toUpperCase() || 'MG_ID',
+                document_type: lookupData.document_type?.toUpperCase() || defaultDocumentType,
                 document_number: lookupData.document_number?.toUpperCase() || '',
-                country_of_issue: 'MG',
+                country_of_issue: defaultCountry,
                 name_in_document: '',
                 is_primary: true,
                 is_current: true,
                 expiry_date: '',
             }],
             addresses: [{
-                address_type: 'RESIDENTIAL',
+                address_type: defaultAddressType,
                 street_line1: '',
                 street_line2: '',
                 locality: '',
                 postal_code: '',
                 town: '',
                 country: 'MADAGASCAR',
-                province_code: '',
+                province_code: defaultProvinceCode,
                 is_primary: true,
             }],
         });
