@@ -304,6 +304,7 @@ const PersonManagementPage: React.FC = () => {
       const searchParams = new URLSearchParams({
         document_type: data.document_type,
         document_number: data.document_number,
+        include_details: 'true',
         limit: '1'
       });
       
@@ -319,35 +320,17 @@ const PersonManagementPage: React.FC = () => {
         console.log('Search result structure:', JSON.stringify(searchResult, null, 2));
         
         if (Array.isArray(searchResult) && searchResult.length > 0) {
-          // Person found - fetch full details
-          const personSummary = searchResult[0];
-          console.log('Person summary found:', personSummary);
+          // Person found with full details (includes aliases and addresses)
+          const existingPerson = searchResult[0];
+          console.log('Person found with full details:', existingPerson);
+          console.log('Person fields:', Object.keys(existingPerson));
+          setPersonFound(existingPerson);
+          setCurrentPersonId(existingPerson.id);
+          setIsNewPerson(false);
+          setIsEditMode(true);
           
-          // Fetch full person details including aliases and addresses
-          const detailsResponse = await fetch(`${API_BASE_URL}/api/v1/persons/${personSummary.id}`, {
-            headers: {
-              'Authorization': `Bearer ${accessToken}`
-            }
-          });
-          
-          if (detailsResponse.ok) {
-            const existingPerson = await detailsResponse.json();
-            console.log('Full person details:', existingPerson);
-            console.log('Person fields:', Object.keys(existingPerson));
-            setPersonFound(existingPerson);
-            setCurrentPersonId(existingPerson.id);
-            setIsNewPerson(false);
-            setIsEditMode(true);
-            
-            // Populate form with existing person data
-            populateFormWithExistingPerson(existingPerson);
-          } else {
-            console.error('Failed to fetch person details');
-            // Fallback to new person creation
-            setPersonFound(null);
-            setIsNewPerson(true);
-            setupNewPersonForm(data);
-          }
+          // Populate form with existing person data
+          populateFormWithExistingPerson(existingPerson);
         } else {
           // No person found - setup for new person creation
           console.log('No person found, creating new');
