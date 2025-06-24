@@ -841,6 +841,11 @@ const PersonManagementPage: React.FC = () => {
                   error={!!personForm.formState.errors.email_address}
                   helperText={personForm.formState.errors.email_address?.message || 'Email address (optional)'}
                   inputProps={{ maxLength: 100 }}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    console.log('🔍 EMAIL onChange - Value:', value, 'Field name:', field.name);
+                    field.onChange(value);
+                  }}
                 />
               )}
             />
