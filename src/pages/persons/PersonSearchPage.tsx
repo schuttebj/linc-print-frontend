@@ -367,10 +367,22 @@ const PersonSearchPage: React.FC = () => {
                   render={({ field }) => (
                     <FormControl fullWidth>
                       <InputLabel>Status</InputLabel>
-                      <Select {...field} label="Status">
-                        <MenuItem value={true}>Active Only</MenuItem>
-                        <MenuItem value={false}>Inactive Only</MenuItem>
-                        <MenuItem value={undefined}>All Statuses</MenuItem>
+                      <Select 
+                        {...field} 
+                        label="Status"
+                        value={field.value === undefined ? "" : String(field.value)}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (value === "") {
+                            field.onChange(undefined);
+                          } else {
+                            field.onChange(value === "true");
+                          }
+                        }}
+                      >
+                        <MenuItem value="">All Statuses</MenuItem>
+                        <MenuItem value="true">Active Only</MenuItem>
+                        <MenuItem value="false">Inactive Only</MenuItem>
                       </Select>
                     </FormControl>
                   )}
