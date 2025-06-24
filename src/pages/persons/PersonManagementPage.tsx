@@ -533,14 +533,28 @@ const PersonManagementPage: React.FC = () => {
       const formData = personForm.getValues();
       console.log('Submitting person data:', formData);
       
-      // TODO: Implement API call to create/update person
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      alert('Person saved successfully!');
+      const { accessToken } = useAuth();
+      const response = await fetch(`${API_BASE_URL}/api/v1/persons/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to create person');
+      }
+
+      const result = await response.json();
+      console.log('Person created successfully:', result);
+      alert('Person created successfully!');
       resetForm();
     } catch (error) {
       console.error('Submit failed:', error);
-      alert('Failed to save person. Please try again.');
+      alert(`Failed to create person: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setSubmitLoading(false);
     }
@@ -618,11 +632,17 @@ const PersonManagementPage: React.FC = () => {
                 control={lookupForm.control}
                 render={({ field }) => (
                   <TextField
-                    {...field}
+                    name={field.name}
+                    value={field.value || ''}
                     fullWidth
                     label="Document Number *"
                     error={!!lookupForm.formState.errors.document_number}
-                    helperText={lookupForm.formState.errors.document_number?.message || 'Enter document number'}
+                    helperText={lookupForm.formState.errors.document_number?.message || 'Enter document number (numbers only)'}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '');
+                      field.onChange(value);
+                    }}
+                    onBlur={field.onBlur}
                     InputProps={{
                       endAdornment: field.value && (
                         <InputAdornment position="end">
@@ -665,7 +685,7 @@ const PersonManagementPage: React.FC = () => {
         <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
             <Controller
-              key="surname-field"
+
               name="surname"
               control={personForm.control}
               render={({ field }) => (
@@ -690,7 +710,6 @@ const PersonManagementPage: React.FC = () => {
 
           <Grid item xs={12} md={6}>
             <Controller
-              key="first-name-field"
               name="first_name"
               control={personForm.control}
               render={({ field }) => (
@@ -715,7 +734,6 @@ const PersonManagementPage: React.FC = () => {
 
           <Grid item xs={12} md={6}>
             <Controller
-              key="middle-name-field"
               name="middle_name"
               control={personForm.control}
               render={({ field }) => (
@@ -739,7 +757,6 @@ const PersonManagementPage: React.FC = () => {
 
           <Grid item xs={12} md={6}>
             <Controller
-              key="person-nature-field"
               name="person_nature"
               control={personForm.control}
               render={({ field }) => (
@@ -772,7 +789,6 @@ const PersonManagementPage: React.FC = () => {
 
           <Grid item xs={12} md={4}>
             <Controller
-              key="birth-date-field"
               name="birth_date"
               control={personForm.control}
               render={({ field }) => (
@@ -785,6 +801,10 @@ const PersonManagementPage: React.FC = () => {
                 label="Date of Birth"
                 InputLabelProps={{ shrink: true }}
                 helperText="Date of birth"
+                inputProps={{
+                  min: "1900-01-01",
+                  max: new Date().toISOString().split('T')[0]
+                }}
                 onChange={field.onChange}
                 onBlur={field.onBlur}
               />
@@ -794,7 +814,6 @@ const PersonManagementPage: React.FC = () => {
 
           <Grid item xs={12} md={4}>
             <Controller
-              key="nationality-field"
               name="nationality_code"
               control={personForm.control}
               render={({ field }) => (
@@ -822,7 +841,6 @@ const PersonManagementPage: React.FC = () => {
 
           <Grid item xs={12} md={4}>
             <Controller
-              key="language-field"
               name="preferred_language"
               control={personForm.control}
               render={({ field }) => (
@@ -867,7 +885,6 @@ const PersonManagementPage: React.FC = () => {
         <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
             <Controller
-              key="email-field"
               name="email_address"
               control={personForm.control}
               render={({ field }) => (
@@ -881,7 +898,10 @@ const PersonManagementPage: React.FC = () => {
                 error={!!personForm.formState.errors.email_address}
                 helperText={personForm.formState.errors.email_address?.message || 'Email address (optional)'}
                 inputProps={{ maxLength: 100 }}
-                onChange={field.onChange}
+                onChange={(e) => {
+                  const value = e.target.value.toUpperCase();
+                  field.onChange(value);
+                }}
                 onBlur={field.onBlur}
               />
               )}
@@ -890,7 +910,6 @@ const PersonManagementPage: React.FC = () => {
 
           <Grid item xs={12} md={6}>
             <Controller
-              key="work-phone-field"
               name="work_phone"
               control={personForm.control}
               render={({ field }) => (
@@ -925,7 +944,6 @@ const PersonManagementPage: React.FC = () => {
 
           <Grid item xs={12} md={3}>
             <Controller
-              key="country-code-field"
               name="cell_phone_country_code"
               control={personForm.control}
               render={({ field }) => (
@@ -956,7 +974,6 @@ const PersonManagementPage: React.FC = () => {
 
           <Grid item xs={12} md={9}>
             <Controller
-              key="cell-phone-field"
               name="cell_phone"
               control={personForm.control}
               render={({ field }) => (
@@ -1030,16 +1047,18 @@ const PersonManagementPage: React.FC = () => {
                   control={personForm.control}
                   render={({ field }) => (
                     <TextField
-                      {...field}
+                      name={field.name}
+                      value={field.value || ''}
                       fullWidth
                       label="Document Number"
                       disabled={index === 0}
-                      helperText={index === 0 ? 'From lookup step' : 'Additional document number'}
+                      helperText={index === 0 ? 'From lookup step' : 'Additional document number (numbers only)'}
                       onChange={(e) => {
                         // Allow only numbers for document numbers
                         const value = e.target.value.replace(/\D/g, '');
                         field.onChange(value);
                       }}
+                      onBlur={field.onBlur}
                     />
                   )}
                 />
@@ -1087,12 +1106,19 @@ const PersonManagementPage: React.FC = () => {
                       control={personForm.control}
                       render={({ field }) => (
                         <TextField
-                          {...field}
+                          name={field.name}
+                          value={field.value || ''}
                           fullWidth
                           type="date"
                           label="Expiry Date *"
                           InputLabelProps={{ shrink: true }}
                           helperText="Required for passports"
+                          inputProps={{
+                            min: new Date().toISOString().split('T')[0],
+                            max: "2050-12-31"
+                          }}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
                         />
                       )}
                     />
@@ -1580,7 +1606,7 @@ const PersonManagementPage: React.FC = () => {
                 disabled={submitLoading}
                 startIcon={<PersonAddIcon />}
               >
-                {submitLoading ? 'Creating Person...' : 'Create Person'}
+                {submitLoading ? 'Submitting...' : 'Submit'}
               </Button>
             )}
           </Box>
