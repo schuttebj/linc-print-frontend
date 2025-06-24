@@ -113,16 +113,19 @@ const PersonFormTest: React.FC = () => {
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             Edit existing person from search page. Loads person data and returns to search on completion.
           </Typography>
+          <Alert severity="info" sx={{ mb: 2 }}>
+            <Typography variant="body2">
+              <strong>Expected Behavior:</strong> This will try to load person ID {testPersonId} and show a 404 error.
+              This is <strong>normal</strong> - in real usage, the search page would pass a valid person ID.
+            </Typography>
+          </Alert>
           <Button
             variant="contained"
             onClick={() => setTestMode('search')}
             fullWidth
           >
-            Test Search Edit Mode
+            Test Search Edit Mode (Will Show 404)
           </Button>
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-            Note: This will try to load person ID: {testPersonId}
-          </Typography>
         </Paper>
       </Stack>
 

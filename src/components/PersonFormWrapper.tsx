@@ -41,6 +41,8 @@ import {
     Clear as ClearIcon,
     Visibility as VisibilityIcon,
     Warning as WarningIcon,
+    ArrowForward as ArrowForwardIcon,
+    ArrowBack as ArrowBackIcon,
 } from '@mui/icons-material';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -2288,25 +2290,51 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     )}
                 </DialogContent>
                 <DialogActions sx={{ p: 3, gap: 1 }}>
-                    <Button
-                        onClick={() => {
-                            setShowSuccessDialog(false);
-                            // Don't reset form, let user choose
-                        }}
-                        variant="outlined"
-                    >
-                        Continue Editing
-                    </Button>
-                    <Button
-                        onClick={() => {
-                            setShowSuccessDialog(false);
-                            resetForm();
-                        }}
-                        variant="contained"
-                        startIcon={<PersonAddIcon />}
-                    >
-                        Create Another Person
-                    </Button>
+                    {mode === 'standalone' ? (
+                        <>
+                            <Button
+                                onClick={() => {
+                                    setShowSuccessDialog(false);
+                                    // Don't reset form, let user choose
+                                }}
+                                variant="outlined"
+                            >
+                                Continue Editing
+                            </Button>
+                            <Button
+                                onClick={() => {
+                                    setShowSuccessDialog(false);
+                                    resetForm();
+                                }}
+                                variant="contained"
+                                startIcon={<PersonAddIcon />}
+                            >
+                                Create Another Person
+                            </Button>
+                        </>
+                    ) : (
+                        <>
+                            <Button
+                                onClick={() => {
+                                    setShowSuccessDialog(false);
+                                    resetForm();
+                                }}
+                                variant="outlined"
+                            >
+                                Create Another Person
+                            </Button>
+                            <Button
+                                onClick={() => {
+                                    setShowSuccessDialog(false);
+                                    handleFormComplete(createdPerson);
+                                }}
+                                variant="contained"
+                                startIcon={mode === 'application' ? <ArrowForwardIcon /> : <ArrowBackIcon />}
+                            >
+                                {mode === 'application' ? 'Continue to Application' : 'Return to Search'}
+                            </Button>
+                        </>
+                    )}
                 </DialogActions>
             </Dialog>
         </Box>
