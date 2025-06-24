@@ -656,7 +656,7 @@ const PersonManagementPage: React.FC = () => {
   );
 
   const renderPersonalInformationStep = () => (
-    <Card>
+    <Card key="personal-info-step">
       <CardContent>
         <Typography variant="h6" gutterBottom>
           Personal Information
@@ -665,6 +665,7 @@ const PersonManagementPage: React.FC = () => {
         <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
             <Controller
+              key="surname-field"
               name="surname"
               control={personForm.control}
               render={({ field }) => (
@@ -689,6 +690,7 @@ const PersonManagementPage: React.FC = () => {
 
           <Grid item xs={12} md={6}>
             <Controller
+              key="first-name-field"
               name="first_name"
               control={personForm.control}
               render={({ field }) => (
@@ -713,6 +715,7 @@ const PersonManagementPage: React.FC = () => {
 
           <Grid item xs={12} md={6}>
             <Controller
+              key="middle-name-field"
               name="middle_name"
               control={personForm.control}
               render={({ field }) => (
@@ -736,6 +739,7 @@ const PersonManagementPage: React.FC = () => {
 
           <Grid item xs={12} md={6}>
             <Controller
+              key="person-nature-field"
               name="person_nature"
               control={personForm.control}
               render={({ field }) => (
@@ -748,6 +752,9 @@ const PersonManagementPage: React.FC = () => {
                   onChange={field.onChange}
                   onBlur={field.onBlur}
                   label="Gender *"
+                  MenuProps={{
+                    id: "person-nature-menu"
+                  }}
                 >
                     {PERSON_NATURES.map((option) => (
                       <MenuItem key={option.value} value={option.value}>
@@ -765,6 +772,7 @@ const PersonManagementPage: React.FC = () => {
 
           <Grid item xs={12} md={4}>
             <Controller
+              key="birth-date-field"
               name="birth_date"
               control={personForm.control}
               render={({ field }) => (
@@ -786,6 +794,7 @@ const PersonManagementPage: React.FC = () => {
 
           <Grid item xs={12} md={4}>
             <Controller
+              key="nationality-field"
               name="nationality_code"
               control={personForm.control}
               render={({ field }) => (
@@ -798,6 +807,9 @@ const PersonManagementPage: React.FC = () => {
                   onChange={field.onChange}
                   onBlur={field.onBlur}
                   label="Nationality *"
+                  MenuProps={{
+                    id: "nationality-menu"
+                  }}
                 >
                     <MenuItem value="MG">Malagasy</MenuItem>
                     <MenuItem value="FR">French</MenuItem>
@@ -810,6 +822,7 @@ const PersonManagementPage: React.FC = () => {
 
           <Grid item xs={12} md={4}>
             <Controller
+              key="language-field"
               name="preferred_language"
               control={personForm.control}
               render={({ field }) => (
@@ -822,6 +835,9 @@ const PersonManagementPage: React.FC = () => {
                   onChange={field.onChange}
                   onBlur={field.onBlur}
                   label="Preferred Language *"
+                  MenuProps={{
+                    id: "preferred-language-menu"
+                  }}
                 >
                     {LANGUAGES.map((option) => (
                       <MenuItem key={option.value} value={option.value}>
@@ -842,7 +858,7 @@ const PersonManagementPage: React.FC = () => {
   );
 
   const renderContactDetailsStep = () => (
-    <Card>
+    <Card key="contact-details-step">
       <CardContent>
         <Typography variant="h6" gutterBottom>
           Contact Information
@@ -851,6 +867,7 @@ const PersonManagementPage: React.FC = () => {
         <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
             <Controller
+              key="email-field"
               name="email_address"
               control={personForm.control}
               render={({ field }) => (
@@ -873,6 +890,7 @@ const PersonManagementPage: React.FC = () => {
 
           <Grid item xs={12} md={6}>
             <Controller
+              key="work-phone-field"
               name="work_phone"
               control={personForm.control}
               render={({ field }) => (
@@ -907,6 +925,7 @@ const PersonManagementPage: React.FC = () => {
 
           <Grid item xs={12} md={3}>
             <Controller
+              key="country-code-field"
               name="cell_phone_country_code"
               control={personForm.control}
               render={({ field }) => (
@@ -919,6 +938,9 @@ const PersonManagementPage: React.FC = () => {
                   onChange={field.onChange}
                   onBlur={field.onBlur}
                   label="Country Code *"
+                  MenuProps={{
+                    id: "country-code-menu"
+                  }}
                 >
                     <MenuItem value="+261">+261 (Madagascar)</MenuItem>
                     <MenuItem value="+27">+27 (South Africa)</MenuItem>
@@ -934,6 +956,7 @@ const PersonManagementPage: React.FC = () => {
 
           <Grid item xs={12} md={9}>
             <Controller
+              key="cell-phone-field"
               name="cell_phone"
               control={personForm.control}
               render={({ field }) => (
