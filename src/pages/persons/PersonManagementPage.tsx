@@ -98,23 +98,34 @@ interface ExistingPerson {
   person_nature: string;
   birth_date?: string;
   nationality_code?: string;
+  preferred_language?: string;
   email_address?: string;
+  work_phone?: string;
+  cell_phone_country_code?: string;
   cell_phone?: string;
   is_active: boolean;
   created_at?: string;
+  updated_at?: string;
   primary_document?: string;
   primary_document_type?: string;
   aliases?: Array<{
     id: string;
     document_type: string;
     document_number: string;
+    country_of_issue?: string;
     is_primary: boolean;
+    is_current?: boolean;
+    expiry_date?: string;
   }>;
   addresses?: Array<{
     id: string;
     address_type: string;
+    street_line1?: string;
+    street_line2?: string;
     locality: string;
     postal_code?: string;
+    town?: string;
+    country?: string;
     is_primary: boolean;
   }>;
 }
@@ -305,11 +316,13 @@ const PersonManagementPage: React.FC = () => {
       if (response.ok) {
         const searchResult = await response.json();
         console.log('Search result:', searchResult);
+        console.log('Search result structure:', JSON.stringify(searchResult, null, 2));
         
         if (searchResult.items && searchResult.items.length > 0) {
           // Person found - show existing person details
           const existingPerson = searchResult.items[0];
           console.log('Person found:', existingPerson);
+          console.log('Person fields:', Object.keys(existingPerson));
           setPersonFound(existingPerson);
           setCurrentPersonId(existingPerson.id);
           setIsNewPerson(false);
@@ -331,6 +344,8 @@ const PersonManagementPage: React.FC = () => {
         setCurrentStep(1);
       } else {
         console.error('Search failed with status:', response.status);
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
         // Fallback to new person creation on API failure
         setPersonFound(null);
         setIsNewPerson(true);
@@ -364,15 +379,24 @@ const PersonManagementPage: React.FC = () => {
   };
 
   const populateFormWithExistingPerson = (existingPerson: ExistingPerson) => {
-    // Populate basic person information
-    if (existingPerson.surname) personForm.setValue('surname', existingPerson.surname);
-    if (existingPerson.first_name) personForm.setValue('first_name', existingPerson.first_name);
-    if (existingPerson.middle_name) personForm.setValue('middle_name', existingPerson.middle_name);
+    // Populate basic person information - fix field mapping
+    if (existingPerson.surname) personForm.setValue('surname', existingPerson.surname.toUpperCase());
+    if (existingPerson.first_name) personForm.setValue('first_name', existingPerson.first_name.toUpperCase());
+    if (existingPerson.middle_name) personForm.setValue('middle_name', existingPerson.middle_name.toUpperCase());
     if (existingPerson.person_nature) personForm.setValue('person_nature', existingPerson.person_nature);
     if (existingPerson.birth_date) personForm.setValue('birth_date', existingPerson.birth_date);
     if (existingPerson.nationality_code) personForm.setValue('nationality_code', existingPerson.nationality_code);
-    if (existingPerson.email_address) personForm.setValue('email_address', existingPerson.email_address);
-    if (existingPerson.cell_phone) personForm.setValue('cell_phone', existingPerson.cell_phone);
+    
+    // Fix contact field mapping - ensure correct fields are populated
+    if (existingPerson.email_address) {
+      personForm.setValue('email_address', existingPerson.email_address);
+    }
+    if (existingPerson.work_phone) {
+      personForm.setValue('work_phone', existingPerson.work_phone);
+    }
+    if (existingPerson.cell_phone) {
+      personForm.setValue('cell_phone', existingPerson.cell_phone);
+    }
     
     // Set defaults for Madagascar
     personForm.setValue('preferred_language', 'mg');
@@ -396,9 +420,9 @@ const PersonManagementPage: React.FC = () => {
     if (existingPerson.addresses && existingPerson.addresses.length > 0) {
       const formattedAddresses = existingPerson.addresses.map(address => ({
         address_type: address.address_type,
-        locality: address.locality,
+        locality: address.locality?.toUpperCase() || '',
         postal_code: address.postal_code || '',
-        town: address.locality, // Default town to locality
+        town: address.locality?.toUpperCase() || '', // Default town to locality
         country: 'MADAGASCAR',
         street_line1: '',
         street_line2: '',
@@ -668,6 +692,10 @@ const PersonManagementPage: React.FC = () => {
                   label="Middle Name"
                   helperText="Middle name (optional)"
                   inputProps={{ maxLength: 50 }}
+                  onChange={(e) => {
+                    const value = e.target.value.toUpperCase();
+                    field.onChange(value);
+                  }}
                 />
               )}
             />
@@ -792,7 +820,15 @@ const PersonManagementPage: React.FC = () => {
                   label="Work Phone"
                   error={!!personForm.formState.errors.work_phone}
                   helperText={personForm.formState.errors.work_phone?.message || 'Work phone number (optional)'}
-                  inputProps={{ maxLength: 20 }}
+                  inputProps={{ 
+                    maxLength: 20,
+                    pattern: '[0-9]*',
+                    inputMode: 'numeric'
+                  }}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '');
+                    field.onChange(value);
+                  }}
                 />
               )}
             />
@@ -809,13 +845,17 @@ const PersonManagementPage: React.FC = () => {
               name="cell_phone_country_code"
               control={personForm.control}
               render={({ field }) => (
-                <TextField
-                  {...field}
-                  fullWidth
-                  label="Country Code"
-                  disabled
-                  helperText="Madagascar country code"
-                />
+                <FormControl fullWidth>
+                  <InputLabel>Country Code *</InputLabel>
+                  <Select {...field} label="Country Code *">
+                    <MenuItem value="+261">+261 (Madagascar)</MenuItem>
+                    <MenuItem value="+27">+27 (South Africa)</MenuItem>
+                    <MenuItem value="+33">+33 (France)</MenuItem>
+                    <MenuItem value="+1">+1 (USA)</MenuItem>
+                    <MenuItem value="+44">+44 (UK)</MenuItem>
+                  </Select>
+                  <FormHelperText>Select country code</FormHelperText>
+                </FormControl>
               )}
             />
           </Grid>
@@ -897,6 +937,11 @@ const PersonManagementPage: React.FC = () => {
                       label="Document Number"
                       disabled={index === 0}
                       helperText={index === 0 ? 'From lookup step' : 'Additional document number'}
+                      onChange={(e) => {
+                        // Allow only numbers for document numbers
+                        const value = e.target.value.replace(/\D/g, '');
+                        field.onChange(value);
+                      }}
                     />
                   )}
                 />
@@ -1047,8 +1092,11 @@ const PersonManagementPage: React.FC = () => {
                       {...field}
                       fullWidth
                       label="Street Line 1"
-                      helperText="Lot/parcel details or P.O. Box"
-                      inputProps={{ maxLength: 100 }}
+                      helperText="Street address line 1"
+                      onChange={(e) => {
+                        const value = e.target.value.toUpperCase();
+                        field.onChange(value);
+                      }}
                     />
                   )}
                 />
@@ -1063,8 +1111,11 @@ const PersonManagementPage: React.FC = () => {
                       {...field}
                       fullWidth
                       label="Street Line 2"
-                      helperText="Additional street detail or neighborhood"
-                      inputProps={{ maxLength: 100 }}
+                      helperText="Street address line 2 (optional)"
+                      onChange={(e) => {
+                        const value = e.target.value.toUpperCase();
+                        field.onChange(value);
+                      }}
                     />
                   )}
                 />
@@ -1080,17 +1131,17 @@ const PersonManagementPage: React.FC = () => {
                       fullWidth
                       label="Locality *"
                       error={!!personForm.formState.errors.addresses?.[index]?.locality}
-                      helperText={
-                        personForm.formState.errors.addresses?.[index]?.locality?.message || 
-                        "Village, quartier, city"
-                      }
-                      inputProps={{ maxLength: 100 }}
+                      helperText={personForm.formState.errors.addresses?.[index]?.locality?.message || 'Village, quartier, or city'}
+                      onChange={(e) => {
+                        const value = e.target.value.toUpperCase();
+                        field.onChange(value);
+                      }}
                     />
                   )}
                 />
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={3}>
                 <Controller
                   name={`addresses.${index}.postal_code`}
                   control={personForm.control}
@@ -1099,15 +1150,13 @@ const PersonManagementPage: React.FC = () => {
                       {...field}
                       fullWidth
                       label="Postal Code *"
+                      placeholder="### (3 digits)"
                       error={!!personForm.formState.errors.addresses?.[index]?.postal_code}
-                      helperText={
-                        personForm.formState.errors.addresses?.[index]?.postal_code?.message || 
-                        "3-digit Madagascar postal code"
-                      }
+                      helperText={personForm.formState.errors.addresses?.[index]?.postal_code?.message || 'Madagascar postal code (3 digits)'}
                       inputProps={{ 
                         maxLength: 3,
                         pattern: '[0-9]*',
-                        inputMode: 'numeric',
+                        inputMode: 'numeric'
                       }}
                       onChange={(e) => {
                         const value = e.target.value.replace(/\D/g, '');
@@ -1118,7 +1167,7 @@ const PersonManagementPage: React.FC = () => {
                 />
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={3}>
                 <Controller
                   name={`addresses.${index}.town`}
                   control={personForm.control}
@@ -1128,11 +1177,11 @@ const PersonManagementPage: React.FC = () => {
                       fullWidth
                       label="Town *"
                       error={!!personForm.formState.errors.addresses?.[index]?.town}
-                      helperText={
-                        personForm.formState.errors.addresses?.[index]?.town?.message || 
-                        "Town/city for postal delivery"
-                      }
-                      inputProps={{ maxLength: 100 }}
+                      helperText={personForm.formState.errors.addresses?.[index]?.town?.message || 'Town or city'}
+                      onChange={(e) => {
+                        const value = e.target.value.toUpperCase();
+                        field.onChange(value);
+                      }}
                     />
                   )}
                 />
