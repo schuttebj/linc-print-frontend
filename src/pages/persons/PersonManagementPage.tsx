@@ -293,25 +293,7 @@ const PersonManagementPage: React.FC = () => {
   // Watch form values
   const watchedPersonNature = personForm.watch('person_nature');
   
-  // Debug: Watch for unexpected field value changes
-  const watchedValues = personForm.watch(['surname', 'first_name', 'birth_date', 'email_address', 'work_phone', 'cell_phone']);
-  useEffect(() => {
-    const [surname, first_name, birth_date, email_address, work_phone, cell_phone] = watchedValues;
-    console.log('🔍 Form values changed:', {
-      surname, first_name, birth_date, email_address, work_phone, cell_phone
-    });
-    
-    // Check for suspicious cross-contamination
-    if (email_address && surname && email_address === surname) {
-      console.log('🚨 DETECTED: email_address has surname value!');
-    }
-    if (work_phone && first_name && work_phone === first_name) {
-      console.log('🚨 DETECTED: work_phone has first_name value!');
-    }
-    if (cell_phone && birth_date && cell_phone === birth_date) {
-      console.log('🚨 DETECTED: cell_phone has birth_date value!');
-    }
-  }, [watchedValues]);
+
 
   // Step 1: Document Lookup functionality
   const performLookup = async (data: PersonLookupForm) => {
@@ -389,9 +371,6 @@ const PersonManagementPage: React.FC = () => {
   };
 
   const setupNewPersonForm = (lookupData: PersonLookupForm) => {
-    console.log('=== SETTING UP NEW PERSON FORM ===');
-    console.log('Lookup data:', lookupData);
-    
     // Reset form completely first to prevent field value mixup
     personForm.reset({
       surname: '',
@@ -426,68 +405,47 @@ const PersonManagementPage: React.FC = () => {
         is_primary: true,
       }],
     });
-    
-    console.log('Form values after new person setup:', personForm.getValues());
-    console.log('=== NEW PERSON SETUP COMPLETE ===');
   };
 
   const populateFormWithExistingPerson = (existingPerson: ExistingPerson) => {
-    console.log('=== DEBUGGING FIELD POPULATION ===');
-    console.log('Full existing person data:', JSON.stringify(existingPerson, null, 2));
-    
-    // Populate basic person information - fix field mapping
+    // Populate basic person information
     if (existingPerson.surname) {
-      console.log('Setting surname to:', existingPerson.surname);
       personForm.setValue('surname', existingPerson.surname.toUpperCase());
     }
     if (existingPerson.first_name) {
-      console.log('Setting first_name to:', existingPerson.first_name);
       personForm.setValue('first_name', existingPerson.first_name.toUpperCase());
     }
     if (existingPerson.middle_name) {
-      console.log('Setting middle_name to:', existingPerson.middle_name);
       personForm.setValue('middle_name', existingPerson.middle_name.toUpperCase());
     }
     if (existingPerson.person_nature) {
-      console.log('Setting person_nature to:', existingPerson.person_nature);
       personForm.setValue('person_nature', existingPerson.person_nature);
     }
     if (existingPerson.birth_date) {
-      console.log('Setting birth_date to:', existingPerson.birth_date);
       personForm.setValue('birth_date', existingPerson.birth_date);
     }
     if (existingPerson.nationality_code) {
-      console.log('Setting nationality_code to:', existingPerson.nationality_code);
       personForm.setValue('nationality_code', existingPerson.nationality_code);
     }
     
-    // Fix contact field mapping - ensure correct fields are populated
+    // Populate contact information
     if (existingPerson.email_address) {
-      console.log('Setting email_address to:', existingPerson.email_address);
       personForm.setValue('email_address', existingPerson.email_address);
     }
     if (existingPerson.work_phone) {
-      console.log('Setting work_phone to:', existingPerson.work_phone);
       personForm.setValue('work_phone', existingPerson.work_phone);
     }
     if (existingPerson.cell_phone) {
-      console.log('Setting cell_phone to:', existingPerson.cell_phone);
       personForm.setValue('cell_phone', existingPerson.cell_phone);
     }
     if (existingPerson.cell_phone_country_code) {
-      console.log('Setting cell_phone_country_code to:', existingPerson.cell_phone_country_code);
       personForm.setValue('cell_phone_country_code', existingPerson.cell_phone_country_code);
     } else {
-      console.log('Setting default cell_phone_country_code to: +261');
       personForm.setValue('cell_phone_country_code', '+261');
     }
     
     // Set defaults for Madagascar
-    console.log('Setting preferred_language to: mg');
     personForm.setValue('preferred_language', 'mg');
-    
-    console.log('Form values after population:', personForm.getValues());
-    console.log('=== POPULATION COMPLETE ===');
   };
 
   // Step validation
@@ -702,7 +660,8 @@ const PersonManagementPage: React.FC = () => {
               control={personForm.control}
               render={({ field }) => (
                 <TextField
-                  {...field}
+                  name={field.name}
+                  value={field.value || ''}
                   fullWidth
                   label="Surname *"
                   error={!!personForm.formState.errors.surname}
@@ -710,9 +669,9 @@ const PersonManagementPage: React.FC = () => {
                   inputProps={{ maxLength: 50 }}
                   onChange={(e) => {
                     const value = e.target.value.toUpperCase();
-                    console.log('🔍 SURNAME onChange - Value:', value, 'Field name:', field.name);
                     field.onChange(value);
                   }}
+                  onBlur={field.onBlur}
                 />
               )}
             />
@@ -724,7 +683,8 @@ const PersonManagementPage: React.FC = () => {
               control={personForm.control}
               render={({ field }) => (
                 <TextField
-                  {...field}
+                  name={field.name}
+                  value={field.value || ''}
                   fullWidth
                   label="First Name *"
                   error={!!personForm.formState.errors.first_name}
@@ -732,9 +692,9 @@ const PersonManagementPage: React.FC = () => {
                   inputProps={{ maxLength: 50 }}
                   onChange={(e) => {
                     const value = e.target.value.toUpperCase();
-                    console.log('🔍 FIRST_NAME onChange - Value:', value, 'Field name:', field.name);
                     field.onChange(value);
                   }}
+                  onBlur={field.onBlur}
                 />
               )}
             />
@@ -746,7 +706,8 @@ const PersonManagementPage: React.FC = () => {
               control={personForm.control}
               render={({ field }) => (
                 <TextField
-                  {...field}
+                  name={field.name}
+                  value={field.value || ''}
                   fullWidth
                   label="Middle Name"
                   helperText="Middle name (optional)"
@@ -755,6 +716,7 @@ const PersonManagementPage: React.FC = () => {
                     const value = e.target.value.toUpperCase();
                     field.onChange(value);
                   }}
+                  onBlur={field.onBlur}
                 />
               )}
             />
@@ -788,12 +750,15 @@ const PersonManagementPage: React.FC = () => {
               control={personForm.control}
               render={({ field }) => (
                 <TextField
-                  {...field}
+                  name={field.name}
+                  value={field.value || ''}
                   fullWidth
                   type="date"
                   label="Date of Birth"
                   InputLabelProps={{ shrink: true }}
                   helperText="Date of birth"
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
                 />
               )}
             />
@@ -856,19 +821,16 @@ const PersonManagementPage: React.FC = () => {
               control={personForm.control}
               render={({ field }) => (
                 <TextField
-                  {...field}
+                  name={field.name}
+                  value={field.value || ''}
                   fullWidth
                   type="email"
                   label="Email Address"
-                  value={field.value || ''}
                   error={!!personForm.formState.errors.email_address}
                   helperText={personForm.formState.errors.email_address?.message || 'Email address (optional)'}
                   inputProps={{ maxLength: 100 }}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    console.log('🔍 EMAIL onChange - Value:', value, 'Field name:', field.name);
-                    field.onChange(value);
-                  }}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
                 />
               )}
             />
@@ -880,10 +842,10 @@ const PersonManagementPage: React.FC = () => {
               control={personForm.control}
               render={({ field }) => (
                 <TextField
-                  {...field}
+                  name={field.name}
+                  value={field.value || ''}
                   fullWidth
                   label="Work Phone"
-                  value={field.value || ''}
                   error={!!personForm.formState.errors.work_phone}
                   helperText={personForm.formState.errors.work_phone?.message || 'Work phone number (optional)'}
                   inputProps={{ 
@@ -893,9 +855,9 @@ const PersonManagementPage: React.FC = () => {
                   }}
                   onChange={(e) => {
                     const value = e.target.value.replace(/\D/g, '');
-                    console.log('🔍 WORK PHONE onChange - Value:', value, 'Field name:', field.name);
                     field.onChange(value);
                   }}
+                  onBlur={field.onBlur}
                 />
               )}
             />
@@ -933,11 +895,11 @@ const PersonManagementPage: React.FC = () => {
               control={personForm.control}
               render={({ field }) => (
                 <TextField
-                  {...field}
+                  name={field.name}
+                  value={field.value || ''}
                   fullWidth
                   label="Cell Phone Number"
                   placeholder="0AA BB BB BBB"
-                  value={field.value || ''}
                   error={!!personForm.formState.errors.cell_phone}
                   helperText={personForm.formState.errors.cell_phone?.message || 'Cell phone number (10 digits starting with 0)'}
                   inputProps={{ 
@@ -947,9 +909,9 @@ const PersonManagementPage: React.FC = () => {
                   }}
                   onChange={(e) => {
                     const value = e.target.value.replace(/\D/g, '');
-                    console.log('🔍 CELL PHONE onChange - Value:', value, 'Field name:', field.name);
                     field.onChange(value);
                   }}
+                  onBlur={field.onBlur}
                 />
               )}
             />
