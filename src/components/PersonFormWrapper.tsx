@@ -51,6 +51,16 @@ import { useSearchParams } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
 import { API_BASE_URL } from '../config/api';
+import lookupService, { 
+    DocumentType, 
+    PersonNature, 
+    Language, 
+    Nationality, 
+    PhoneCountryCode, 
+    Country, 
+    Province, 
+    AddressType 
+} from '../services/lookupService';
 
 // Types for Madagascar-specific person management
 interface PersonLookupForm {
@@ -141,31 +151,8 @@ interface ExistingPerson {
     }>;
 }
 
-// Madagascar-specific lookup data
-const DOCUMENT_TYPES = [
-    { value: 'MG_ID', label: 'MADAGASCAR ID (CIN/CNI)', requiresExpiry: false },
-    { value: 'PASSPORT', label: 'PASSPORT', requiresExpiry: true },
-];
-
-const PERSON_NATURES = [
-    { value: '01', label: 'MALE (LEHILAHY)', disabled: false },
-    { value: '02', label: 'FEMALE (VEHIVAVY)', disabled: false },
-];
-
-const LANGUAGES = [
-    { value: 'mg', label: 'MALAGASY' },
-    { value: 'fr', label: 'FRANÇAIS' },
-    { value: 'en', label: 'ENGLISH' },
-];
-
-const MADAGASCAR_PROVINCES = [
-    { code: 'AN', name: 'ANTANANARIVO' },
-    { code: 'FI', name: 'FIANARANTSOA' },
-    { code: 'TO', name: 'TOAMASINA' },
-    { code: 'MA', name: 'MAHAJANGA' },
-    { code: 'TU', name: 'TOLIARA' },
-    { code: 'DI', name: 'ANTSIRANANA (DIEGO SUAREZ)' },
-];
+// Lookup data state - will be populated from backend enums
+// These are now loaded dynamically from the backend instead of hardcoded
 
 // Validation schemas
 const lookupSchema = yup.object({
@@ -276,6 +263,17 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     const [duplicateThreshold] = useState(70.0);
     const [pendingPersonPayload, setPendingPersonPayload] = useState<any>(null);
 
+    // Lookup data state - loaded from backend enums
+    const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([]);
+    const [personNatures, setPersonNatures] = useState<PersonNature[]>([]);
+    const [languages, setLanguages] = useState<Language[]>([]);
+    const [nationalities, setNationalities] = useState<Nationality[]>([]);
+    const [phoneCountryCodes, setPhoneCountryCodes] = useState<PhoneCountryCode[]>([]);
+    const [countries, setCountries] = useState<Country[]>([]);
+    const [provinces, setProvinces] = useState<Province[]>([]);
+    const [addressTypes, setAddressTypes] = useState<AddressType[]>([]);
+    const [lookupsLoading, setLookupsLoading] = useState(true);
+
     // Lookup form
     const lookupForm = useForm<PersonLookupForm>({
         resolver: yupResolver(lookupSchema),
@@ -381,6 +379,34 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 break;
         }
     };
+
+    // Load lookup data on component mount
+    useEffect(() => {
+        const loadLookupData = async () => {
+            try {
+                setLookupsLoading(true);
+                const data = await lookupService.getAllLookups();
+                
+                setDocumentTypes(data.document_types);
+                setPersonNatures(data.person_natures);
+                setLanguages(data.languages);
+                setNationalities(data.nationalities);
+                setPhoneCountryCodes(data.phone_country_codes);
+                setCountries(data.countries);
+                setProvinces(data.provinces);
+                setAddressTypes(data.address_types);
+                
+                console.log('✅ Lookup data loaded successfully');
+            } catch (error) {
+                console.error('❌ Failed to load lookup data:', error);
+                // Fallback data will be used from the service
+            } finally {
+                setLookupsLoading(false);
+            }
+        };
+
+        loadLookupData();
+    }, []);
 
     // Handle URL parameters for editing and initialPersonId prop
     useEffect(() => {
@@ -1116,12 +1142,12 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                 render={({ field }) => (
                                     <FormControl fullWidth error={!!lookupForm.formState.errors.document_type}>
                                         <InputLabel>Document Type *</InputLabel>
-                                        <Select {...field} label="Document Type *">
-                                            {DOCUMENT_TYPES.map((option) => (
-                                                <MenuItem key={option.value} value={option.value}>
-                                                    {option.label}
-                                                </MenuItem>
-                                            ))}
+                                                                <Select {...field} label="Document Type *">
+                            {documentTypes.map((option) => (
+                                <MenuItem key={option.value} value={option.value}>
+                                    {option.label}
+                                </MenuItem>
+                            ))}
                                         </Select>
                                         <FormHelperText>
                                             {lookupForm.formState.errors.document_type?.message || 'Select document type'}
@@ -1277,7 +1303,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                             id: "person-nature-menu"
                                         }}
                                     >
-                                        {PERSON_NATURES.map((option) => (
+                                        {personNatures.map((option) => (
                                             <MenuItem key={option.value} value={option.value}>
                                                 {option.label}
                                             </MenuItem>
@@ -1361,7 +1387,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                             id: "preferred-language-menu"
                                         }}
                                     >
-                                        {LANGUAGES.map((option) => (
+                                        {languages.map((option) => (
                                             <MenuItem key={option.value} value={option.value}>
                                                 {option.label}
                                             </MenuItem>
@@ -1542,7 +1568,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                         <FormControl fullWidth>
                                             <InputLabel>Document Type</InputLabel>
                                             <Select {...field} label="Document Type" disabled={index === 0}>
-                                                {DOCUMENT_TYPES.map((option) => (
+                                                {documentTypes.map((option) => (
                                                     <MenuItem key={option.value} value={option.value}>
                                                         {option.label}
                                                     </MenuItem>
@@ -1856,7 +1882,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                         <FormControl fullWidth>
                                             <InputLabel>Province</InputLabel>
                                             <Select {...field} label="Province">
-                                                {MADAGASCAR_PROVINCES.map((option) => (
+                                                {provinces.map((option) => (
                                                     <MenuItem key={option.code} value={option.code}>
                                                         {option.name}
                                                     </MenuItem>
@@ -1950,13 +1976,13 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                             <Grid item xs={12} md={3}>
                                 <Typography variant="subtitle2" color="text.secondary">Gender</Typography>
                                 <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                    {PERSON_NATURES.find(n => n.value === formData.person_nature)?.label || 'NOT SPECIFIED'}
+                                    {personNatures.find(n => n.value === formData.person_nature)?.label || 'NOT SPECIFIED'}
                                 </Typography>
                             </Grid>
                             <Grid item xs={12} md={3}>
                                 <Typography variant="subtitle2" color="text.secondary">Language</Typography>
                                 <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                    {LANGUAGES.find(l => l.value === formData.preferred_language)?.label || 'NOT SPECIFIED'}
+                                    {languages.find(l => l.value === formData.preferred_language)?.label || 'NOT SPECIFIED'}
                                 </Typography>
                             </Grid>
                             <Grid item xs={12} md={3}>
@@ -2013,7 +2039,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                 <Grid item xs={12} md={4}>
                                     <Typography variant="subtitle2" color="text.secondary">Document Type</Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                        {DOCUMENT_TYPES.find(type => type.value === alias.document_type)?.label || alias.document_type}
+                                        {documentTypes.find(type => type.value === alias.document_type)?.label || alias.document_type}
                                     </Typography>
                                 </Grid>
                                 <Grid item xs={12} md={4}>
