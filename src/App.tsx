@@ -17,7 +17,6 @@ import PersonEditPage from './pages/persons/PersonEditPage';
 import PersonFormTest from './pages/persons/PersonFormTest';
 
 // Admin Pages
-import AdminPage from './pages/admin/AdminPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import UserManagementPage from './pages/admin/UserManagementPage';
 import LocationManagementPage from './pages/admin/LocationManagementPage';
