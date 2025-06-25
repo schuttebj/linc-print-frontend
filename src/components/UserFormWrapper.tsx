@@ -202,20 +202,37 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                 }),
             ]);
 
-            const roles = await rolesRes.json();
-            const permissions = await permissionsRes.json();
-            const locationsData = await locationsRes.json();
+            if (!rolesRes.ok) {
+                console.error('Failed to fetch roles:', rolesRes.status, rolesRes.statusText);
+                const errorText = await rolesRes.text();
+                console.error('Roles error response:', errorText);
+                setAvailableRoles([]); // Fallback to empty array
+            } else {
+                const roles = await rolesRes.json();
+                // Handle the correct response structure from /roles/creatable
+                setAvailableRoles(roles.creatable_roles || []);
+            }
 
-            setAvailableRoles(roles);
-            
-            // Flatten permissions from categories
-            const flatPermissions: Permission[] = [];
-            Object.values(permissions).forEach((categoryPerms: any) => {
-                flatPermissions.push(...categoryPerms);
-            });
-            setAllPermissions(flatPermissions);
-            
-            setLocations(locationsData.locations || []);
+            if (!permissionsRes.ok) {
+                console.error('Failed to fetch permissions:', permissionsRes.status);
+                setAllPermissions([]); // Fallback to empty array
+            } else {
+                const permissions = await permissionsRes.json();
+                // Flatten permissions from categories
+                const flatPermissions: Permission[] = [];
+                Object.values(permissions).forEach((categoryPerms: any) => {
+                    flatPermissions.push(...categoryPerms);
+                });
+                setAllPermissions(flatPermissions);
+            }
+
+            if (!locationsRes.ok) {
+                console.error('Failed to fetch locations:', locationsRes.status);
+                setLocations([]); // Fallback to empty array
+            } else {
+                const locationsData = await locationsRes.json();
+                setLocations(locationsData.locations || []);
+            }
         } catch (error) {
             console.error('Failed to load initial data:', error);
         } finally {
