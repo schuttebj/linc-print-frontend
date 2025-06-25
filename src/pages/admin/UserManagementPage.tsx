@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -52,7 +53,6 @@ import {
 
 import { useAuth } from '../../contexts/AuthContext';
 import { API_BASE_URL } from '../../config/api';
-import UserFormWrapper from '../../components/UserFormWrapper';
 
 // Enhanced user interface with new fields
 interface User {
@@ -94,6 +94,8 @@ interface UserListResponse {
 
 const UserManagementPage: React.FC = () => {
   const { hasPermission, accessToken } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // State management
   const [users, setUsers] = useState<User[]>([]);
@@ -109,9 +111,7 @@ const UserManagementPage: React.FC = () => {
   const [userTypeFilter, setUserTypeFilter] = useState<string>('');
   const [provinceFilter, setProvinceFilter] = useState<string>('');
 
-  // Modal states
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
+  // Modal states (keeping only view, delete, and success dialogs)
   const [showViewModal, setShowViewModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -262,14 +262,15 @@ const UserManagementPage: React.FC = () => {
     });
   };
 
-  const handleUserSuccess = (user: any, isEdit: boolean) => {
-    setSuccessMessage(`User ${user.first_name} ${user.last_name} has been ${isEdit ? 'updated' : 'created'} successfully.`);
-    setShowSuccessDialog(true);
-    setShowCreateModal(false);
-    setShowEditModal(false);
-    setSelectedUser(null);
-    loadUsers();
-  };
+  // Check for success message from navigation state
+  useEffect(() => {
+    if (location.state?.successMessage) {
+      setSuccessMessage(location.state.successMessage);
+      setShowSuccessDialog(true);
+      // Clear the state to prevent showing the message again
+      navigate('/admin/users', { replace: true });
+    }
+  }, [location.state, navigate]);
 
   const handlePageChange = (_event: unknown, newPage: number) => {
     setPage(newPage);
@@ -311,7 +312,7 @@ const UserManagementPage: React.FC = () => {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => navigate('/admin/users/create')}
           >
             Create User
           </Button>
@@ -511,10 +512,7 @@ const UserManagementPage: React.FC = () => {
                     {hasPermission('users.update') && (
                       <IconButton
                         size="small"
-                        onClick={() => {
-                          setSelectedUser(user);
-                          setShowEditModal(true);
-                        }}
+                        onClick={() => navigate(`/admin/users/edit/${user.id}`)}
                       >
                         <EditIcon />
                       </IconButton>
@@ -561,26 +559,7 @@ const UserManagementPage: React.FC = () => {
         onRowsPerPageChange={handleRowsPerPageChange}
       />
 
-      {/* Create User Modal */}
-      <Dialog open={showCreateModal} onClose={() => setShowCreateModal(false)} maxWidth="lg" fullWidth>
-        <UserFormWrapper
-          mode="create"
-          onSuccess={handleUserSuccess}
-          onCancel={() => setShowCreateModal(false)}
-        />
-      </Dialog>
 
-      {/* Edit User Modal */}
-      <Dialog open={showEditModal} onClose={() => setShowEditModal(false)} maxWidth="lg" fullWidth>
-        {selectedUser && (
-          <UserFormWrapper
-            mode="edit"
-            userId={selectedUser.id}
-            onSuccess={handleUserSuccess}
-            onCancel={() => setShowEditModal(false)}
-          />
-        )}
-      </Dialog>
 
       {/* View User Modal */}
       <Dialog open={showViewModal} onClose={() => setShowViewModal(false)} maxWidth="md" fullWidth>

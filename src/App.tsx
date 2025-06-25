@@ -19,6 +19,7 @@ import PersonFormTest from './pages/persons/PersonFormTest';
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
 import UserManagementPage from './pages/admin/UserManagementPage';
+import UserFormPage from './pages/admin/UserFormPage';
 import LocationManagementPage from './pages/admin/LocationManagementPage';
 import LocationFormPage from './pages/admin/LocationFormPage';
 import AuditLogViewer from './pages/admin/AuditLogViewer';
@@ -104,6 +105,22 @@ function App() {
                 element={
                   <ProtectedRoute requiredPermission="admin.users">
                     <UserManagementPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="users/create" 
+                element={
+                  <ProtectedRoute requiredPermission="users.create">
+                    <UserFormPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="users/edit/:userId" 
+                element={
+                  <ProtectedRoute requiredPermission="users.update">
+                    <UserFormPage />
                   </ProtectedRoute>
                 } 
               />
