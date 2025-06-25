@@ -38,10 +38,12 @@ import {
   Delete as DeleteIcon,
   LocationOn as LocationIcon,
   PowerSettingsNew as CloseIcon,
-  PowerOff as OpenIcon
+  PowerOff as OpenIcon,
+  Add as AddIcon
 } from '@mui/icons-material';
 import { API_ENDPOINTS, api } from '../../config/api';
 import lookupService, { OfficeType, EquipmentStatus, Province } from '../../services/lookupService';
+import LocationFormWrapper from '../../components/LocationFormWrapper';
 
 // Location interfaces
 interface Location {
@@ -63,19 +65,7 @@ interface Location {
   updated_at: string;
 }
 
-interface LocationCreateData {
-  location_code: string;
-  location_name: string;
-  location_address: string;
-  province_code: string;
-  office_type: string;
-  max_capacity: number;
-  current_capacity: number;
-  contact_phone: string;
-  contact_email: string;
-  operational_hours: string;
-  notes?: string;
-}
+
 
 interface LocationListResponse {
   locations: Location[];
@@ -114,21 +104,6 @@ const LocationManagementPage: React.FC = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   
-  // Form data
-  const [createForm, setCreateForm] = useState<LocationCreateData>({
-    location_code: '',
-    location_name: '',
-    location_address: '',
-    province_code: '',
-    office_type: '',
-    max_capacity: 50,
-    current_capacity: 0,
-    contact_phone: '',
-    contact_email: '',
-    operational_hours: '',
-    notes: ''
-  });
-
   // Load initial data - only load lookup data, not locations
   useEffect(() => {
     loadInitialData();
@@ -140,17 +115,6 @@ const LocationManagementPage: React.FC = () => {
       loadLocations();
     }
   }, [page, rowsPerPage, searchTerm, provinceFilter, typeFilter, statusFilter, loading]);
-
-  // Set default form values when lookup data loads
-  useEffect(() => {
-    if (officeTypes.length > 0 && provinces.length > 0 && !createForm.office_type && !createForm.province_code) {
-      setCreateForm(prev => ({
-        ...prev,
-        office_type: officeTypes[0]?.value || '',
-        province_code: provinces[0]?.code || ''
-      }));
-    }
-  }, [officeTypes, provinces]);
 
   const loadInitialData = async () => {
     try {
@@ -206,42 +170,7 @@ const LocationManagementPage: React.FC = () => {
     setPage(0); // Reset to first page when changing rows per page
   };
 
-  const handleCreateLocation = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await api.post(API_ENDPOINTS.locations, createForm);
-      setShowCreateModal(false);
-      setCreateForm({
-        location_code: '',
-        location_name: '',
-        location_address: '',
-        province_code: '',
-        office_type: '',
-        max_capacity: 50,
-        current_capacity: 0,
-        contact_phone: '',
-        contact_email: '',
-        operational_hours: '',
-        notes: ''
-      });
-      await loadLocations();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create location');
-    }
-  };
 
-  const handleEditLocation = async (locationData: Partial<Location>) => {
-    if (!selectedLocation) return;
-    
-    try {
-      await api.put(`${API_ENDPOINTS.locationById(selectedLocation.id)}`, locationData);
-      setShowEditModal(false);
-      setSelectedLocation(null);
-      await loadLocations();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update location');
-    }
-  };
 
   const handleDeleteLocation = async () => {
     if (!selectedLocation) return;
@@ -300,6 +229,23 @@ const LocationManagementPage: React.FC = () => {
   const getProvinceName = (code: string) => {
     const province = provinces.find(p => p.code === code);
     return province ? province.name : code;
+  };
+
+  const handleCreateSuccess = (location: any) => {
+    setShowCreateModal(false);
+    loadLocations(); // Refresh the list
+  };
+
+  const handleEditSuccess = (location: any) => {
+    setShowEditModal(false);
+    setSelectedLocation(null);
+    loadLocations(); // Refresh the list
+  };
+
+  const handleFormCancel = () => {
+    setShowCreateModal(false);
+    setShowEditModal(false);
+    setSelectedLocation(null);
   };
 
   if (loading) {
@@ -610,154 +556,30 @@ const LocationManagementPage: React.FC = () => {
         onRowsPerPageChange={handleRowsPerPageChange}
       />
 
-      {/* Create Location Modal */}
-      <Dialog open={showCreateModal} onClose={() => setShowCreateModal(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Add New Location</DialogTitle>
-        <form onSubmit={handleCreateLocation}>
-          <DialogContent>
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Location Name"
-                  required
-                  value={createForm.location_name}
-                  onChange={(e) => setCreateForm({...createForm, location_name: e.target.value})}
-                />
-              </Grid>
-              
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Location Code"
-                  required
-                  value={createForm.location_code}
-                  onChange={(e) => setCreateForm({...createForm, location_code: e.target.value})}
-                />
-              </Grid>
-              
-              <Grid item xs={6}>
-                <FormControl fullWidth required>
-                  <InputLabel>Province</InputLabel>
-                  <Select
-                    value={createForm.province_code}
-                    onChange={(e) => setCreateForm({...createForm, province_code: e.target.value})}
-                    label="Province"
-                  >
-                    {provinces.map(province => (
-                      <MenuItem key={province.code} value={province.code}>
-                        {province.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              
-              <Grid item xs={6}>
-                <FormControl fullWidth required>
-                  <InputLabel>Office Type</InputLabel>
-                  <Select
-                    value={createForm.office_type}
-                    onChange={(e) => setCreateForm({...createForm, office_type: e.target.value})}
-                    label="Office Type"
-                  >
-                    {officeTypes.map(type => (
-                      <MenuItem key={type.value} value={type.value}>
-                        {type.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Location Address"
-                  required
-                  multiline
-                  rows={2}
-                  value={createForm.location_address}
-                  onChange={(e) => setCreateForm({...createForm, location_address: e.target.value})}
-                />
-              </Grid>
-              
-              <Grid item xs={4}>
-                <TextField
-                  fullWidth
-                  label="Max Capacity"
-                  type="number"
-                  required
-                  inputProps={{ min: 1 }}
-                  value={createForm.max_capacity}
-                  onChange={(e) => setCreateForm({...createForm, max_capacity: parseInt(e.target.value)})}
-                />
-              </Grid>
-              
-              <Grid item xs={4}>
-                <TextField
-                  fullWidth
-                  label="Current Capacity"
-                  type="number"
-                  required
-                  inputProps={{ min: 0, max: createForm.max_capacity }}
-                  value={createForm.current_capacity}
-                  onChange={(e) => setCreateForm({...createForm, current_capacity: parseInt(e.target.value)})}
-                />
-              </Grid>
-              
-              <Grid item xs={4}>
-                <TextField
-                  fullWidth
-                  label="Operational Hours"
-                  required
-                  value={createForm.operational_hours}
-                  onChange={(e) => setCreateForm({...createForm, operational_hours: e.target.value})}
-                />
-              </Grid>
-              
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Contact Phone"
-                  type="tel"
-                  value={createForm.contact_phone}
-                  onChange={(e) => setCreateForm({...createForm, contact_phone: e.target.value})}
-                />
-              </Grid>
-              
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Contact Email"
-                  type="email"
-                  value={createForm.contact_email}
-                  onChange={(e) => setCreateForm({...createForm, contact_email: e.target.value})}
-                />
-              </Grid>
-              
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Notes"
-                  multiline
-                  rows={2}
-                  value={createForm.notes}
-                  onChange={(e) => setCreateForm({...createForm, notes: e.target.value})}
-                />
-              </Grid>
-            </Grid>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setShowCreateModal(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="contained">
-              Create Location
-            </Button>
-          </DialogActions>
-        </form>
-      </Dialog>
+              {/* Create Location Modal */}
+        <Dialog open={showCreateModal} onClose={handleFormCancel} maxWidth="lg" fullWidth>
+          <LocationFormWrapper
+            mode="modal"
+            title="Create New Location"
+            subtitle="Add a new office location to the system"
+            showHeader={true}
+            onSuccess={handleCreateSuccess}
+            onCancel={handleFormCancel}
+          />
+        </Dialog>
+
+        {/* Edit Location Modal */}
+        <Dialog open={showEditModal} onClose={handleFormCancel} maxWidth="lg" fullWidth>
+          <LocationFormWrapper
+            mode="modal"
+            title="Edit Location"
+            subtitle="Update location information"
+            showHeader={true}
+            initialLocationId={selectedLocation?.id}
+            onSuccess={handleEditSuccess}
+            onCancel={handleFormCancel}
+          />
+        </Dialog>
 
       {/* Delete Confirmation Modal */}
       <Dialog open={showDeleteModal} onClose={() => setShowDeleteModal(false)}>
