@@ -42,7 +42,7 @@ import {
   Add as AddIcon
 } from '@mui/icons-material';
 import { API_ENDPOINTS, api } from '../../config/api';
-import lookupService, { OfficeType, EquipmentStatus, Province } from '../../services/lookupService';
+import lookupService, { OfficeType, Province } from '../../services/lookupService';
 import LocationFormWrapper from '../../components/LocationFormWrapper';
 
 // Location interfaces
@@ -59,7 +59,6 @@ interface Location {
   contact_email: string;
   is_operational: boolean;
   operational_hours: string;
-  equipment_status: string;
   notes?: string;
   created_at: string;
   updated_at: string;
@@ -84,7 +83,6 @@ const LocationManagementPage: React.FC = () => {
   // State management
   const [locations, setLocations] = useState<Location[]>([]);
   const [officeTypes, setOfficeTypes] = useState<OfficeType[]>([]);
-  const [equipmentStatuses, setEquipmentStatuses] = useState<EquipmentStatus[]>([]);
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -121,15 +119,13 @@ const LocationManagementPage: React.FC = () => {
       setLoading(true);
       
       // Load only lookup data first
-      const [provincesRes, officeTypesRes, equipmentStatusesRes] = await Promise.all([
+      const [provincesRes, officeTypesRes] = await Promise.all([
         lookupService.getProvinces(),
-        lookupService.getOfficeTypes(),
-        lookupService.getEquipmentStatuses()
+        lookupService.getOfficeTypes()
       ]);
       
       setProvinces(provincesRes);
       setOfficeTypes(officeTypesRes);
-      setEquipmentStatuses(equipmentStatusesRes);
       
       // Load locations after lookup data is ready
       await loadLocations();
@@ -206,25 +202,7 @@ const LocationManagementPage: React.FC = () => {
     }
   };
 
-  const getEquipmentStatusColor = (status: string): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
-    switch (status) {
-      case 'OPERATIONAL': return 'success';
-      case 'MAINTENANCE': return 'warning';
-      case 'OFFLINE': return 'error';
-      default: return 'default';
-    }
-  };
-
-  const getEquipmentStatusInfo = (status: string) => {
-    const statusInfo = equipmentStatuses.find(s => s.value === status);
-    if (statusInfo) {
-      return {
-        label: statusInfo.label,
-        color: getEquipmentStatusColor(status)
-      };
-    }
-    return { label: 'Not Set', color: 'default' as const };
-  };
+  // Equipment status functions removed - using operational toggle instead
 
   const getProvinceName = (code: string) => {
     const province = provinces.find(p => p.code === code);
@@ -419,7 +397,6 @@ const LocationManagementPage: React.FC = () => {
               <TableCell>Contact Info</TableCell>
               <TableCell>Capacity</TableCell>
               <TableCell>Status</TableCell>
-              <TableCell>Equipment</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -491,19 +468,6 @@ const LocationManagementPage: React.FC = () => {
                     color={location.is_operational ? 'success' : 'error'}
                     size="small"
                   />
-                </TableCell>
-                
-                <TableCell>
-                  {(() => {
-                    const statusInfo = getEquipmentStatusInfo(location.equipment_status);
-                    return (
-                      <Chip
-                        label={statusInfo.label}
-                        color={statusInfo.color}
-                        size="small"
-                      />
-                    );
-                  })()}
                 </TableCell>
                 
                 <TableCell align="right">
