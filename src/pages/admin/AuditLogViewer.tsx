@@ -59,7 +59,7 @@ interface AuditLog {
   error_message?: string;
   details?: any;
   location_id?: string;
-  created_at: string;
+  timestamp: string;
 }
 
 interface AuditLogResponse {
@@ -524,7 +524,7 @@ const AuditLogViewer: React.FC = () => {
                   <TableRow key={log.id} hover>
                     <TableCell>
                       <Typography variant="body2">
-                        {formatDate(log.created_at)}
+                        {formatDate(log.timestamp)}
                       </Typography>
                     </TableCell>
                     
@@ -862,7 +862,7 @@ const AuditLogViewer: React.FC = () => {
             <Grid container spacing={2}>
               <Grid item xs={6}>
                 <Typography variant="subtitle2">Timestamp:</Typography>
-                <Typography variant="body2">{formatDate(selectedLog.created_at)}</Typography>
+                <Typography variant="body2">{formatDate(selectedLog.timestamp)}</Typography>
               </Grid>
               <Grid item xs={6}>
                 <Typography variant="subtitle2">User:</Typography>
