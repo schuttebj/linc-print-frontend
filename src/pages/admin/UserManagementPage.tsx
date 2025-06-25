@@ -338,7 +338,7 @@ const UserManagementPage: React.FC = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ maxWidth: 1200, mx: 'auto', p: 3 }}>
       {/* Header */}
       <Typography variant="h4" component="h1" gutterBottom>
         User Management

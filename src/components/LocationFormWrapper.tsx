@@ -490,12 +490,13 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
     };
 
     const renderBasicInformationStep = () => (
-        <Box>
-            <Typography variant="h6" gutterBottom>
-                Basic Information
-            </Typography>
+        <Card>
+            <CardContent>
+                <Typography variant="h6" gutterBottom>
+                    Basic Information
+                </Typography>
 
-            <Grid container spacing={3}>
+                <Grid container spacing={3}>
                 <Grid item xs={12} md={6}>
                     <Controller
                         name="location_code"
@@ -579,17 +580,19 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                         )}
                     />
                 </Grid>
-            </Grid>
-        </Box>
+                            </Grid>
+            </CardContent>
+        </Card>
     );
 
     const renderAddressProvinceStep = () => (
-        <Box>
-            <Typography variant="h6" gutterBottom>
-                Address & Province
-            </Typography>
+        <Card>
+            <CardContent>
+                <Typography variant="h6" gutterBottom>
+                    Address & Province
+                </Typography>
 
-            <Grid container spacing={3}>
+                <Grid container spacing={3}>
                 <Grid item xs={12}>
                     <Controller
                         name="location_address"
@@ -640,17 +643,19 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                         )}
                     />
                 </Grid>
-            </Grid>
-        </Box>
+                            </Grid>
+            </CardContent>
+        </Card>
     );
 
     const renderCapacityOperationsStep = () => (
-        <Box>
-            <Typography variant="h6" gutterBottom>
-                Capacity & Operations
-            </Typography>
+        <Card>
+            <CardContent>
+                <Typography variant="h6" gutterBottom>
+                    Capacity & Operations
+                </Typography>
 
-            <Grid container spacing={3}>
+                <Grid container spacing={3}>
                 <Grid item xs={12} md={6}>
                     <Controller
                         name="max_capacity"
@@ -726,17 +731,19 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                         )}
                     />
                 </Grid>
-            </Grid>
-        </Box>
+                            </Grid>
+            </CardContent>
+        </Card>
     );
 
     const renderContactDetailsStep = () => (
-        <Box>
-            <Typography variant="h6" gutterBottom>
-                Contact Details
-            </Typography>
+        <Card>
+            <CardContent>
+                <Typography variant="h6" gutterBottom>
+                    Contact Details
+                </Typography>
 
-            <Grid container spacing={3}>
+                <Grid container spacing={3}>
                 <Grid item xs={12} md={6}>
                     <Controller
                         name="contact_phone"
@@ -807,18 +814,20 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                         )}
                     />
                 </Grid>
-            </Grid>
-        </Box>
+                </Grid>
+            </CardContent>
+        </Card>
     );
 
     const renderReviewStep = () => {
         const formData = locationForm.getValues();
 
         return (
-            <Box>
-                <Typography variant="h6" gutterBottom>
-                    Review & Submit
-                </Typography>
+            <Card>
+                <CardContent>
+                    <Typography variant="h6" gutterBottom>
+                        Review & Submit
+                    </Typography>
 
                     <Alert severity="info" sx={{ mb: 3 }}>
                         Please review all information before {isEditMode ? 'updating' : 'creating'} the location record.
@@ -953,7 +962,8 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                             All required information has been provided and validated.
                         </Typography>
                     </Alert>
-            </Box>
+                </CardContent>
+            </Card>
         );
     };
 
