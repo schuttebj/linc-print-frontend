@@ -1,6 +1,6 @@
 /**
  * User Management Page for Madagascar LINC Print System
- * Comprehensive admin interface for managing users, roles, and permissions
+ * Admin interface for managing users, roles, permissions, and locations
  */
 
 import React, { useState, useEffect } from 'react';
@@ -21,77 +21,74 @@ import {
   TableRow,
   Paper,
   Chip,
-  Avatar,
-  Grid,
   Card,
   CardContent,
+  Grid,
+  Avatar,
+  IconButton,
+  Pagination,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   Alert,
   CircularProgress,
-  Pagination,
-  IconButton
+  FormControlLabel,
+  Switch
 } from '@mui/material';
 import {
+  Person as PersonIcon,
   Edit as EditIcon,
+  Visibility as ViewIcon,
   Delete as DeleteIcon,
-  PersonAdd as PersonAddIcon,
-  PowerSettingsNew as DeactivateIcon,
-  PowerOff as ActivateIcon
+  Lock as LockIcon,
+  LockOpen as UnlockIcon,
+  Add as AddIcon
 } from '@mui/icons-material';
 import { API_ENDPOINTS, api } from '../../config/api';
-import lookupService, { UserStatus } from '../../services/lookupService';
+import lookupService, { UserStatus, OfficeType, Province } from '../../services/lookupService';
 
-// User interfaces
+// User-related interfaces
 interface User {
   id: string;
   username: string;
-  email: string;
   first_name: string;
   last_name: string;
-  madagascar_id_number: string;
-  employee_id?: string;
-  department?: string;
-  position?: string;
+  email: string;
   status: string;
-  is_active: boolean;
-  is_superuser: boolean;
-  roles: Role[];
-  primary_location?: Location;
-  assigned_locations: Location[];
-  last_login_at?: string;
+  primary_location: {
+    id: string;
+    location_code: string;
+    location_name: string;
+    province_code: string;
+    office_type: string;
+  };
+  permissions: string[];
+  last_login?: string;
+  failed_login_attempts: number;
+  is_locked: boolean;
   created_at: string;
   updated_at: string;
 }
 
-interface Role {
-  id: string;
-  name: string;
-  display_name: string;
-  description: string;
-  is_system_role: boolean;
-}
-
-interface Location {
-  id: string;
-  location_code: string;
-  location_name: string;
-  province_code: string;
-  office_type: string;
-}
-
 interface UserCreateData {
-  email: string;
+  username: string;
   first_name: string;
   last_name: string;
-  madagascar_id_number: string;
-  employee_id?: string;
-  department?: string;
-  position?: string;
-  phone_number?: string;
+  email: string;
   password: string;
+  status: string;
+  primary_location_id: string;
+  permissions: string[];
+}
+
+interface UserUpdateData {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  status?: string;
+  primary_location_id?: string;
+  permissions?: string[];
 }
 
 interface UserListResponse {
@@ -102,65 +99,95 @@ interface UserListResponse {
   total_pages: number;
 }
 
+interface Location {
+  id: string;
+  location_code: string;
+  location_name: string;
+  province_code: string;
+  office_type: string;
+}
+
 const UserManagementPage: React.FC = () => {
   // State management
   const [users, setUsers] = useState<User[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [locations, setLocations] = useState<Location[]>([]);
   const [userStatuses, setUserStatuses] = useState<UserStatus[]>([]);
+  const [officeTypes, setOfficeTypes] = useState<OfficeType[]>([]);
+  const [provinces, setProvinces] = useState<Province[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Pagination and filtering
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
-  const [roleFilter, setRoleFilter] = useState<string>('');
-  const [departmentFilter, setDepartmentFilter] = useState<string>('');
-  
+  const [locationFilter, setLocationFilter] = useState<string>('');
+
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  
+
   // Form data
   const [createForm, setCreateForm] = useState<UserCreateData>({
-    email: '',
+    username: '',
     first_name: '',
     last_name: '',
-    madagascar_id_number: '',
-    employee_id: '',
-    department: '',
-    position: '',
-    phone_number: '',
-    password: ''
+    email: '',
+    password: '',
+    status: 'ACTIVE',
+    primary_location_id: '',
+    permissions: []
   });
+
+  const [editForm, setEditForm] = useState<UserUpdateData>({});
+
+  // Available permissions
+  const AVAILABLE_PERMISSIONS = [
+    'READ_USERS',
+    'WRITE_USERS',
+    'DELETE_USERS',
+    'READ_PERSONS',
+    'WRITE_PERSONS',
+    'DELETE_PERSONS',
+    'READ_LOCATIONS',
+    'WRITE_LOCATIONS',
+    'VIEW_AUDIT_LOGS',
+    'EXPORT_DATA',
+    'SYSTEM_ADMIN'
+  ];
 
   // Load initial data
   useEffect(() => {
     loadInitialData();
   }, []);
 
-  // Load data when filters change
+  // Load users when filters change
   useEffect(() => {
-    loadUsers();
-  }, [currentPage, searchTerm, statusFilter, roleFilter, departmentFilter]);
+    if (!loading) {
+      loadUsers();
+    }
+  }, [currentPage, searchTerm, statusFilter, locationFilter, loading]);
 
   const loadInitialData = async () => {
     try {
       setLoading(true);
-      const [usersRes, rolesRes, locationsRes, userStatusesRes] = await Promise.all([
+      
+      const [usersRes, statusesRes, officeTypesRes, provincesRes, locationsRes] = await Promise.all([
         loadUsers(),
-        api.get<Role[]>(`${API_ENDPOINTS.users.replace('/users', '/roles')}`),
-        api.get<Location[]>(`${API_ENDPOINTS.users.replace('/users', '/locations')}`),
-        lookupService.getUserStatuses()
+        lookupService.getUserStatuses(),
+        lookupService.getOfficeTypes(),
+        lookupService.getProvinces(),
+        api.get<{ locations: Location[] }>(`${API_ENDPOINTS.locations}?per_page=100`)
       ]);
       
-      setRoles(rolesRes);
-      setLocations(locationsRes);
-      setUserStatuses(userStatusesRes);
+      setUserStatuses(statusesRes);
+      setOfficeTypes(officeTypesRes);
+      setProvinces(provincesRes);
+      setLocations(locationsRes.locations || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
@@ -175,13 +202,12 @@ const UserManagementPage: React.FC = () => {
         per_page: '20',
         ...(searchTerm && { search: searchTerm }),
         ...(statusFilter && { status: statusFilter }),
-        ...(roleFilter && { role: roleFilter }),
-        ...(departmentFilter && { department: departmentFilter })
+        ...(locationFilter && { location_id: locationFilter })
       });
 
       const response = await api.get<UserListResponse>(`${API_ENDPOINTS.users}?${params}`);
-      setUsers(response.users);
-      setTotalPages(response.total_pages);
+      setUsers(response.users || []);
+      setTotalPages(response.total_pages || 1);
       return response;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load users');
@@ -192,25 +218,17 @@ const UserManagementPage: React.FC = () => {
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // For now, assign to first location - in real implementation, this would be selected
-      const locationId = locations[0]?.id;
-      if (!locationId) {
-        setError('No locations available for user assignment');
-        return;
-      }
-
-      await api.post(`${API_ENDPOINTS.users}?location_id=${locationId}`, createForm);
+      await api.post(API_ENDPOINTS.users, createForm);
       setShowCreateModal(false);
       setCreateForm({
-        email: '',
+        username: '',
         first_name: '',
         last_name: '',
-        madagascar_id_number: '',
-        employee_id: '',
-        department: '',
-        position: '',
-        phone_number: '',
-        password: ''
+        email: '',
+        password: '',
+        status: 'ACTIVE',
+        primary_location_id: '',
+        permissions: []
       });
       await loadUsers();
     } catch (err) {
@@ -218,13 +236,15 @@ const UserManagementPage: React.FC = () => {
     }
   };
 
-  const handleEditUser = async (userData: Partial<User>) => {
+  const handleEditUser = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!selectedUser) return;
     
     try {
-      await api.put(`${API_ENDPOINTS.userById(selectedUser.id)}`, userData);
+      await api.put(`${API_ENDPOINTS.userById(selectedUser.id)}`, editForm);
       setShowEditModal(false);
       setSelectedUser(null);
+      setEditForm({});
       await loadUsers();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update user');
@@ -244,33 +264,59 @@ const UserManagementPage: React.FC = () => {
     }
   };
 
-  const handleActivateUser = async (user: User) => {
+  const handleToggleLock = async (user: User) => {
     try {
-      await api.put(`${API_ENDPOINTS.userById(user.id)}`, { status: 'ACTIVE' });
+      await api.put(`${API_ENDPOINTS.userById(user.id)}/lock`, {
+        is_locked: !user.is_locked
+      });
       await loadUsers();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to activate user');
+      setError(err instanceof Error ? err.message : 'Failed to update user lock status');
     }
   };
 
-  const handleDeactivateUser = async (user: User) => {
-    try {
-      await api.put(`${API_ENDPOINTS.userById(user.id)}`, { status: 'INACTIVE' });
-      await loadUsers();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to deactivate user');
-    }
-  };
-
-  const getStatusChipColor = (status: string): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
+  const getStatusColor = (status: string): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
     switch (status) {
       case 'ACTIVE': return 'success';
-      case 'INACTIVE': return 'default';
+      case 'INACTIVE': return 'warning';
       case 'SUSPENDED': return 'error';
-      case 'LOCKED': return 'warning';
-      case 'PENDING_ACTIVATION': return 'info';
       default: return 'default';
     }
+  };
+
+  const getLocationInfo = (user: User) => {
+    if (!user.primary_location) return 'No Location';
+    return `${user.primary_location.location_name} (${user.primary_location.location_code})`;
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch {
+      return 'Never';
+    }
+  };
+
+  const handleViewUser = (user: User) => {
+    setSelectedUser(user);
+    setShowViewModal(true);
+  };
+
+  const handleEditUserClick = (user: User) => {
+    setSelectedUser(user);
+    setEditForm({
+      first_name: user.first_name,
+      last_name: user.last_name,
+      email: user.email,
+      status: user.status,
+      primary_location_id: user.primary_location?.id || '',
+      permissions: user.permissions || []
+    });
+    setShowEditModal(true);
   };
 
   if (loading) {
@@ -288,7 +334,7 @@ const UserManagementPage: React.FC = () => {
         User Management
       </Typography>
       <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-        Manage system users, roles, and permissions
+        Manage system users, roles, permissions, and access controls
       </Typography>
 
       {/* Error Alert */}
@@ -302,11 +348,63 @@ const UserManagementPage: React.FC = () => {
         </Alert>
       )}
 
+      {/* Summary Cards */}
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item xs={12} md={3}>
+          <Card>
+            <CardContent>
+              <Typography variant="h4" color="primary.main">
+                {users.length}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Total Users
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <Card>
+            <CardContent>
+              <Typography variant="h4" color="success.main">
+                {users.filter(u => u.status === 'ACTIVE').length}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Active Users
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <Card>
+            <CardContent>
+              <Typography variant="h4" color="warning.main">
+                {users.filter(u => u.is_locked).length}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Locked Users
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <Card>
+            <CardContent>
+              <Typography variant="h4" color="info.main">
+                {users.filter(u => u.last_login).length}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Recently Active
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
       {/* Filters and Search */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} md={2}>
+            <Grid item xs={12} md={3}>
               <TextField
                 fullWidth
                 placeholder="Search users..."
@@ -324,8 +422,8 @@ const UserManagementPage: React.FC = () => {
                   onChange={(e) => setStatusFilter(e.target.value)}
                   label="Status"
                 >
-                  <MenuItem value="">All Statuses</MenuItem>
-                  {userStatuses.map((status) => (
+                  <MenuItem value="">All Status</MenuItem>
+                  {userStatuses.map(status => (
                     <MenuItem key={status.value} value={status.value}>
                       {status.label}
                     </MenuItem>
@@ -334,40 +432,32 @@ const UserManagementPage: React.FC = () => {
               </FormControl>
             </Grid>
             
-            <Grid item xs={12} md={2}>
+            <Grid item xs={12} md={3}>
               <FormControl fullWidth size="small">
-                <InputLabel>Role</InputLabel>
+                <InputLabel>Location</InputLabel>
                 <Select
-                  value={roleFilter}
-                  onChange={(e) => setRoleFilter(e.target.value)}
-                  label="Role"
+                  value={locationFilter}
+                  onChange={(e) => setLocationFilter(e.target.value)}
+                  label="Location"
                 >
-                  <MenuItem value="">All Roles</MenuItem>
-                  {roles.map(role => (
-                    <MenuItem key={role.id} value={role.name}>{role.display_name}</MenuItem>
+                  <MenuItem value="">All Locations</MenuItem>
+                  {locations.map(location => (
+                    <MenuItem key={location.id} value={location.id}>
+                      {location.location_name} ({location.location_code})
+                    </MenuItem>
                   ))}
                 </Select>
               </FormControl>
             </Grid>
             
             <Grid item xs={12} md={2}>
-              <TextField
-                fullWidth
-                placeholder="Department"
-                value={departmentFilter}
-                onChange={(e) => setDepartmentFilter(e.target.value)}
-                size="small"
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={2}>
               <Button
                 fullWidth
                 variant="contained"
-                startIcon={<PersonAddIcon />}
+                startIcon={<AddIcon />}
                 onClick={() => setShowCreateModal(true)}
               >
-                Create User
+                Add User
               </Button>
             </Grid>
           </Grid>
@@ -380,10 +470,10 @@ const UserManagementPage: React.FC = () => {
           <TableHead>
             <TableRow sx={{ backgroundColor: 'grey.50' }}>
               <TableCell>User</TableCell>
-              <TableCell>Contact</TableCell>
-              <TableCell>Roles</TableCell>
+              <TableCell>Email</TableCell>
               <TableCell>Status</TableCell>
               <TableCell>Location</TableCell>
+              <TableCell>Permissions</TableCell>
               <TableCell>Last Login</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
@@ -392,9 +482,9 @@ const UserManagementPage: React.FC = () => {
             {users.map((user) => (
               <TableRow key={user.id} hover>
                 <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
-                      {user.first_name?.charAt(0)}{user.last_name?.charAt(0)}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Avatar sx={{ bgcolor: 'primary.main' }}>
+                      <PersonIcon />
                     </Avatar>
                     <Box>
                       <Typography variant="body2" fontWeight="medium">
@@ -403,70 +493,65 @@ const UserManagementPage: React.FC = () => {
                       <Typography variant="caption" color="text.secondary">
                         @{user.username}
                       </Typography>
-                      {user.employee_id && (
-                        <Typography variant="caption" color="text.secondary" display="block">
-                          ID: {user.employee_id}
-                        </Typography>
+                      {user.is_locked && (
+                        <Chip 
+                          label="Locked" 
+                          size="small" 
+                          color="error" 
+                          sx={{ ml: 1 }}
+                        />
                       )}
                     </Box>
                   </Box>
                 </TableCell>
                 
                 <TableCell>
-                  <Typography variant="body2">{user.email}</Typography>
-                  {user.department && (
-                    <Typography variant="caption" color="text.secondary">
-                      {user.department}
+                  <Typography variant="body2">
+                    {user.email}
+                  </Typography>
+                  {user.failed_login_attempts > 0 && (
+                    <Typography variant="caption" color="warning.main">
+                      {user.failed_login_attempts} failed attempts
                     </Typography>
                   )}
                 </TableCell>
                 
                 <TableCell>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {user.roles.map((role) => (
-                      <Chip
-                        key={role.id}
-                        label={role.display_name}
-                        size="small"
-                        color="primary"
-                        variant="outlined"
-                      />
-                    ))}
-                    {user.is_superuser && (
-                      <Chip
-                        label="Super Admin"
-                        size="small"
-                        color="secondary"
-                      />
-                    )}
-                  </Box>
-                </TableCell>
-                
-                <TableCell>
                   <Chip
-                    label={user.status}
-                    color={getStatusChipColor(user.status)}
+                    label={userStatuses.find(s => s.value === user.status)?.label || user.status}
+                    color={getStatusColor(user.status)}
                     size="small"
                   />
                 </TableCell>
                 
                 <TableCell>
                   <Typography variant="body2">
-                    {user.primary_location?.location_name || 'Not assigned'}
+                    {getLocationInfo(user)}
                   </Typography>
-                  {user.assigned_locations.length > 1 && (
+                  {user.primary_location && (
                     <Typography variant="caption" color="text.secondary">
-                      +{user.assigned_locations.length - 1} more
+                      {user.primary_location.office_type}
                     </Typography>
                   )}
                 </TableCell>
                 
                 <TableCell>
-                  <Typography variant="body2" color="text.secondary">
-                    {user.last_login_at 
-                      ? new Date(user.last_login_at).toLocaleDateString()
-                      : 'Never'
-                    }
+                  <Typography variant="body2">
+                    {user.permissions?.length || 0} permissions
+                  </Typography>
+                  {user.permissions?.includes('SYSTEM_ADMIN') && (
+                    <Chip 
+                      label="Admin" 
+                      size="small" 
+                      color="primary" 
+                      sx={{ mt: 0.5 }}
+                    />
+                  )}
+                </TableCell>
+                
+                <TableCell>
+                  <Typography variant="body2">
+                    {user.last_login ? formatDate(user.last_login) : 'Never'}
                   </Typography>
                 </TableCell>
                 
@@ -474,32 +559,27 @@ const UserManagementPage: React.FC = () => {
                   <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
                     <IconButton
                       size="small"
+                      color="info"
+                      onClick={() => handleViewUser(user)}
+                    >
+                      <ViewIcon />
+                    </IconButton>
+                    
+                    <IconButton
+                      size="small"
                       color="primary"
-                      onClick={() => {
-                        setSelectedUser(user);
-                        setShowEditModal(true);
-                      }}
+                      onClick={() => handleEditUserClick(user)}
                     >
                       <EditIcon />
                     </IconButton>
                     
-                    {user.status === 'ACTIVE' ? (
-                      <IconButton
-                        size="small"
-                        color="warning"
-                        onClick={() => handleDeactivateUser(user)}
-                      >
-                        <DeactivateIcon />
-                      </IconButton>
-                    ) : (
-                      <IconButton
-                        size="small"
-                        color="success"
-                        onClick={() => handleActivateUser(user)}
-                      >
-                        <ActivateIcon />
-                      </IconButton>
-                    )}
+                    <IconButton
+                      size="small"
+                      color={user.is_locked ? 'success' : 'warning'}
+                      onClick={() => handleToggleLock(user)}
+                    >
+                      {user.is_locked ? <UnlockIcon /> : <LockIcon />}
+                    </IconButton>
                     
                     <IconButton
                       size="small"
@@ -532,19 +612,29 @@ const UserManagementPage: React.FC = () => {
       )}
 
       {/* Create User Modal */}
-      <Dialog open={showCreateModal} onClose={() => setShowCreateModal(false)} maxWidth="sm" fullWidth>
+      <Dialog open={showCreateModal} onClose={() => setShowCreateModal(false)} maxWidth="md" fullWidth>
         <DialogTitle>Create New User</DialogTitle>
         <form onSubmit={handleCreateUser}>
           <DialogContent>
             <Grid container spacing={2}>
-              <Grid item xs={12}>
+              <Grid item xs={6}>
                 <TextField
                   fullWidth
-                  label="Email"
-                  type="email"
+                  label="Username"
                   required
-                  value={createForm.email}
-                  onChange={(e) => setCreateForm({...createForm, email: e.target.value})}
+                  value={createForm.username}
+                  onChange={(e) => setCreateForm({...createForm, username: e.target.value})}
+                />
+              </Grid>
+              
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  label="Password"
+                  type="password"
+                  required
+                  value={createForm.password}
+                  onChange={(e) => setCreateForm({...createForm, password: e.target.value})}
                 />
               </Grid>
               
@@ -571,40 +661,71 @@ const UserManagementPage: React.FC = () => {
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label="Madagascar ID Number"
+                  label="Email"
+                  type="email"
                   required
-                  value={createForm.madagascar_id_number}
-                  onChange={(e) => setCreateForm({...createForm, madagascar_id_number: e.target.value})}
+                  value={createForm.email}
+                  onChange={(e) => setCreateForm({...createForm, email: e.target.value})}
                 />
               </Grid>
               
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Employee ID"
-                  value={createForm.employee_id}
-                  onChange={(e) => setCreateForm({...createForm, employee_id: e.target.value})}
-                />
+              <Grid item xs={6}>
+                <FormControl fullWidth required>
+                  <InputLabel>Status</InputLabel>
+                  <Select
+                    value={createForm.status}
+                    onChange={(e) => setCreateForm({...createForm, status: e.target.value})}
+                    label="Status"
+                  >
+                    {userStatuses.map(status => (
+                      <MenuItem key={status.value} value={status.value}>
+                        {status.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              
+              <Grid item xs={6}>
+                <FormControl fullWidth required>
+                  <InputLabel>Location</InputLabel>
+                  <Select
+                    value={createForm.primary_location_id}
+                    onChange={(e) => setCreateForm({...createForm, primary_location_id: e.target.value})}
+                    label="Location"
+                  >
+                    {locations.map(location => (
+                      <MenuItem key={location.id} value={location.id}>
+                        {location.location_name} ({location.location_code})
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Grid>
               
               <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Department"
-                  value={createForm.department}
-                  onChange={(e) => setCreateForm({...createForm, department: e.target.value})}
-                />
-              </Grid>
-              
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Password"
-                  type="password"
-                  required
-                  value={createForm.password}
-                  onChange={(e) => setCreateForm({...createForm, password: e.target.value})}
-                />
+                <Typography variant="subtitle2" gutterBottom>
+                  Permissions:
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {AVAILABLE_PERMISSIONS.map(permission => (
+                    <FormControlLabel
+                      key={permission}
+                      control={
+                        <Switch
+                          checked={createForm.permissions.includes(permission)}
+                          onChange={(e) => {
+                            const updatedPermissions = e.target.checked
+                              ? [...createForm.permissions, permission]
+                              : createForm.permissions.filter(p => p !== permission);
+                            setCreateForm({...createForm, permissions: updatedPermissions});
+                          }}
+                        />
+                      }
+                      label={permission.replace(/_/g, ' ')}
+                    />
+                  ))}
+                </Box>
               </Grid>
             </Grid>
           </DialogContent>
@@ -619,13 +740,253 @@ const UserManagementPage: React.FC = () => {
         </form>
       </Dialog>
 
+      {/* Edit User Modal */}
+      <Dialog open={showEditModal} onClose={() => setShowEditModal(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Edit User: {selectedUser?.username}</DialogTitle>
+        <form onSubmit={handleEditUser}>
+          <DialogContent>
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  label="First Name"
+                  required
+                  value={editForm.first_name || ''}
+                  onChange={(e) => setEditForm({...editForm, first_name: e.target.value})}
+                />
+              </Grid>
+              
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  label="Last Name"
+                  required
+                  value={editForm.last_name || ''}
+                  onChange={(e) => setEditForm({...editForm, last_name: e.target.value})}
+                />
+              </Grid>
+              
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Email"
+                  type="email"
+                  required
+                  value={editForm.email || ''}
+                  onChange={(e) => setEditForm({...editForm, email: e.target.value})}
+                />
+              </Grid>
+              
+              <Grid item xs={6}>
+                <FormControl fullWidth required>
+                  <InputLabel>Status</InputLabel>
+                  <Select
+                    value={editForm.status || ''}
+                    onChange={(e) => setEditForm({...editForm, status: e.target.value})}
+                    label="Status"
+                  >
+                    {userStatuses.map(status => (
+                      <MenuItem key={status.value} value={status.value}>
+                        {status.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              
+              <Grid item xs={6}>
+                <FormControl fullWidth required>
+                  <InputLabel>Location</InputLabel>
+                  <Select
+                    value={editForm.primary_location_id || ''}
+                    onChange={(e) => setEditForm({...editForm, primary_location_id: e.target.value})}
+                    label="Location"
+                  >
+                    {locations.map(location => (
+                      <MenuItem key={location.id} value={location.id}>
+                        {location.location_name} ({location.location_code})
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              
+              <Grid item xs={12}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Permissions:
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {AVAILABLE_PERMISSIONS.map(permission => (
+                    <FormControlLabel
+                      key={permission}
+                      control={
+                        <Switch
+                          checked={editForm.permissions?.includes(permission) || false}
+                          onChange={(e) => {
+                            const currentPermissions = editForm.permissions || [];
+                            const updatedPermissions = e.target.checked
+                              ? [...currentPermissions, permission]
+                              : currentPermissions.filter(p => p !== permission);
+                            setEditForm({...editForm, permissions: updatedPermissions});
+                          }}
+                        />
+                      }
+                      label={permission.replace(/_/g, ' ')}
+                    />
+                  ))}
+                </Box>
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setShowEditModal(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="contained">
+              Update User
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+
+      {/* View User Modal */}
+      <Dialog open={showViewModal} onClose={() => setShowViewModal(false)} maxWidth="md" fullWidth>
+        <DialogTitle>User Details: {selectedUser?.username}</DialogTitle>
+        <DialogContent>
+          {selectedUser && (
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Full Name
+                </Typography>
+                <Typography variant="body1">
+                  {selectedUser.first_name} {selectedUser.last_name}
+                </Typography>
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Email
+                </Typography>
+                <Typography variant="body1">
+                  {selectedUser.email}
+                </Typography>
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Status
+                </Typography>
+                <Chip
+                  label={userStatuses.find(s => s.value === selectedUser.status)?.label || selectedUser.status}
+                  color={getStatusColor(selectedUser.status)}
+                  size="small"
+                />
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Account Status
+                </Typography>
+                <Typography variant="body1">
+                  {selectedUser.is_locked ? 'Locked' : 'Active'}
+                </Typography>
+              </Grid>
+              
+              <Grid item xs={12}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Primary Location
+                </Typography>
+                <Typography variant="body1">
+                  {getLocationInfo(selectedUser)}
+                </Typography>
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Last Login
+                </Typography>
+                <Typography variant="body1">
+                  {selectedUser.last_login ? formatDate(selectedUser.last_login) : 'Never'}
+                </Typography>
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Failed Login Attempts
+                </Typography>
+                <Typography variant="body1">
+                  {selectedUser.failed_login_attempts}
+                </Typography>
+              </Grid>
+              
+              <Grid item xs={12}>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  Permissions
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {selectedUser.permissions?.length > 0 ? (
+                    selectedUser.permissions.map(permission => (
+                      <Chip
+                        key={permission}
+                        label={permission.replace(/_/g, ' ')}
+                        size="small"
+                        color={permission === 'SYSTEM_ADMIN' ? 'primary' : 'default'}
+                      />
+                    ))
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      No permissions assigned
+                    </Typography>
+                  )}
+                </Box>
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Created
+                </Typography>
+                <Typography variant="body1">
+                  {formatDate(selectedUser.created_at)}
+                </Typography>
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Last Updated
+                </Typography>
+                <Typography variant="body1">
+                  {formatDate(selectedUser.updated_at)}
+                </Typography>
+              </Grid>
+            </Grid>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowViewModal(false)}>
+            Close
+          </Button>
+          <Button 
+            variant="contained"
+            onClick={() => {
+              setShowViewModal(false);
+              if (selectedUser) {
+                handleEditUserClick(selectedUser);
+              }
+            }}
+          >
+            Edit User
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Delete Confirmation Modal */}
       <Dialog open={showDeleteModal} onClose={() => setShowDeleteModal(false)}>
         <DialogTitle>Confirm Delete</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete user <strong>{selectedUser?.first_name} {selectedUser?.last_name}</strong>? 
-            This action cannot be undone.
+            Are you sure you want to delete user <strong>{selectedUser?.username}</strong>? 
+            This action cannot be undone and will remove all associated data.
           </Typography>
         </DialogContent>
         <DialogActions>

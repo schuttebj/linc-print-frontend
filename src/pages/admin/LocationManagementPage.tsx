@@ -128,15 +128,17 @@ const LocationManagementPage: React.FC = () => {
     notes: ''
   });
 
-  // Load initial data
+  // Load initial data - only load lookup data, not locations
   useEffect(() => {
     loadInitialData();
   }, []);
 
-  // Load data when filters change
+  // Load locations when filters change (separate from initial data load)
   useEffect(() => {
-    loadLocations();
-  }, [currentPage, searchTerm, provinceFilter, typeFilter, statusFilter]);
+    if (!loading) { // Only load locations after initial data is loaded
+      loadLocations();
+    }
+  }, [currentPage, searchTerm, provinceFilter, typeFilter, statusFilter, loading]);
 
   // Set default form values when lookup data loads
   useEffect(() => {
@@ -153,9 +155,8 @@ const LocationManagementPage: React.FC = () => {
     try {
       setLoading(true);
       
-      // Load locations and lookup data
-      const [locationsRes, provincesRes, officeTypesRes, equipmentStatusesRes] = await Promise.all([
-        loadLocations(),
+      // Load only lookup data first
+      const [provincesRes, officeTypesRes, equipmentStatusesRes] = await Promise.all([
         lookupService.getProvinces(),
         lookupService.getOfficeTypes(),
         lookupService.getEquipmentStatuses()
@@ -164,6 +165,9 @@ const LocationManagementPage: React.FC = () => {
       setProvinces(provincesRes);
       setOfficeTypes(officeTypesRes);
       setEquipmentStatuses(equipmentStatusesRes);
+      
+      // Load locations after lookup data is ready
+      await loadLocations();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
@@ -182,10 +186,9 @@ const LocationManagementPage: React.FC = () => {
         ...(statusFilter && { operational: statusFilter })
       });
 
-      const locationsEndpoint = API_ENDPOINTS.users.replace('/users', '/locations');
-      const response = await api.get<LocationListResponse>(`${locationsEndpoint}?${params}`);
-      setLocations(response.locations);
-      setTotalPages(response.total_pages);
+      const response = await api.get<LocationListResponse>(`${API_ENDPOINTS.locations}?${params}`);
+      setLocations(response.locations || []);
+      setTotalPages(response.total_pages || 1);
       return response;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load locations');
@@ -196,8 +199,7 @@ const LocationManagementPage: React.FC = () => {
   const handleCreateLocation = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const locationsEndpoint = API_ENDPOINTS.users.replace('/users', '/locations');
-      await api.post(locationsEndpoint, createForm);
+      await api.post(API_ENDPOINTS.locations, createForm);
       setShowCreateModal(false);
       setCreateForm({
         location_code: '',
@@ -222,8 +224,7 @@ const LocationManagementPage: React.FC = () => {
     if (!selectedLocation) return;
     
     try {
-      const locationsEndpoint = API_ENDPOINTS.users.replace('/users', '/locations');
-      await api.put(`${locationsEndpoint}/${selectedLocation.id}`, locationData);
+      await api.put(`${API_ENDPOINTS.locationById(selectedLocation.id)}`, locationData);
       setShowEditModal(false);
       setSelectedLocation(null);
       await loadLocations();
@@ -236,8 +237,7 @@ const LocationManagementPage: React.FC = () => {
     if (!selectedLocation) return;
     
     try {
-      const locationsEndpoint = API_ENDPOINTS.users.replace('/users', '/locations');
-      await api.delete(`${locationsEndpoint}/${selectedLocation.id}`);
+      await api.delete(`${API_ENDPOINTS.locationById(selectedLocation.id)}`);
       setShowDeleteModal(false);
       setSelectedLocation(null);
       await loadLocations();
@@ -248,8 +248,7 @@ const LocationManagementPage: React.FC = () => {
 
   const handleToggleOperational = async (location: Location) => {
     try {
-      const locationsEndpoint = API_ENDPOINTS.users.replace('/users', '/locations');
-      await api.put(`${locationsEndpoint}/${location.id}`, {
+      await api.put(`${API_ENDPOINTS.locationById(location.id)}`, {
         is_operational: !location.is_operational
       });
       await loadLocations();
@@ -285,7 +284,12 @@ const LocationManagementPage: React.FC = () => {
         color: getEquipmentStatusColor(status)
       };
     }
-    return { label: 'Unknown', color: 'default' as const };
+    return { label: 'Not Set', color: 'default' as const };
+  };
+
+  const getProvinceName = (code: string) => {
+    const province = provinces.find(p => p.code === code);
+    return province ? province.name : code;
   };
 
   if (loading) {
@@ -453,9 +457,10 @@ const LocationManagementPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow sx={{ backgroundColor: 'grey.50' }}>
-              <TableCell>Location</TableCell>
-              <TableCell>Type & Province</TableCell>
-              <TableCell>Contact</TableCell>
+              <TableCell>Location Details</TableCell>
+              <TableCell>Office Type</TableCell>
+              <TableCell>Province</TableCell>
+              <TableCell>Contact Info</TableCell>
               <TableCell>Capacity</TableCell>
               <TableCell>Status</TableCell>
               <TableCell>Equipment</TableCell>
@@ -470,7 +475,7 @@ const LocationManagementPage: React.FC = () => {
                     <Typography variant="body2" fontWeight="medium">
                       {location.location_name}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" color="primary.main" fontWeight="medium">
                       {location.location_code}
                     </Typography>
                     <Typography variant="caption" color="text.secondary" display="block">
@@ -480,32 +485,47 @@ const LocationManagementPage: React.FC = () => {
                 </TableCell>
                 
                 <TableCell>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    <Chip
-                      label={officeTypes.find(t => t.value === location.office_type)?.label || location.office_type}
-                      color={getOfficeTypeColor(location.office_type)}
-                      size="small"
-                    />
-                    <Typography variant="caption" color="text.secondary">
-                      {location.province_code}
-                    </Typography>
-                  </Box>
+                  <Chip
+                    label={officeTypes.find(t => t.value === location.office_type)?.label || location.office_type}
+                    color={getOfficeTypeColor(location.office_type)}
+                    size="small"
+                  />
+                </TableCell>
+
+                <TableCell>
+                  <Typography variant="body2">
+                    {getProvinceName(location.province_code)}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    ({location.province_code})
+                  </Typography>
                 </TableCell>
                 
                 <TableCell>
                   <Box>
-                    {location.contact_phone && (
+                    {location.contact_phone ? (
                       <Typography variant="body2">{location.contact_phone}</Typography>
+                    ) : (
+                      <Typography variant="caption" color="text.secondary">No phone</Typography>
                     )}
-                    {location.contact_email && (
-                      <Typography variant="caption" color="text.secondary">{location.contact_email}</Typography>
+                    {location.contact_email ? (
+                      <Typography variant="caption" color="text.secondary" display="block">
+                        {location.contact_email}
+                      </Typography>
+                    ) : (
+                      <Typography variant="caption" color="text.secondary" display="block">
+                        No email
+                      </Typography>
                     )}
                   </Box>
                 </TableCell>
                 
                 <TableCell>
-                  <Typography variant="body2">
-                    {location.current_capacity}/{location.max_capacity}
+                  <Typography variant="body2" fontWeight="medium">
+                    {location.current_capacity} / {location.max_capacity}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Current / Max
                   </Typography>
                 </TableCell>
                 
@@ -598,6 +618,16 @@ const LocationManagementPage: React.FC = () => {
               </Grid>
               
               <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  label="Location Code"
+                  required
+                  value={createForm.location_code}
+                  onChange={(e) => setCreateForm({...createForm, location_code: e.target.value})}
+                />
+              </Grid>
+              
+              <Grid item xs={6}>
                 <FormControl fullWidth required>
                   <InputLabel>Province</InputLabel>
                   <Select
@@ -631,7 +661,7 @@ const LocationManagementPage: React.FC = () => {
                 </FormControl>
               </Grid>
               
-              <Grid item xs={6}>
+              <Grid item xs={12}>
                 <TextField
                   fullWidth
                   label="Location Address"
