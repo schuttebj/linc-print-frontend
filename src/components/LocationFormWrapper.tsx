@@ -51,7 +51,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { API_ENDPOINTS, api } from '../config/api';
 import lookupService, { 
     OfficeType, 
-    EquipmentStatus, 
     Province 
 } from '../services/lookupService';
 
@@ -73,8 +72,7 @@ interface LocationForm {
     contact_phone: string;
     contact_email: string;
 
-    // Equipment and Status
-    equipment_status: string;
+    // Status
     is_operational: boolean;
 
     // Optional Fields
@@ -93,26 +91,28 @@ interface ExistingLocation {
     operational_hours: string;
     contact_phone: string;
     contact_email: string;
-    equipment_status: string;
     is_operational: boolean;
     notes?: string;
     created_at: string;
     updated_at: string;
 }
 
-// Validation schema
+// Enhanced validation schema with proper field validation
 const locationSchema = yup.object({
     location_code: yup.string().required('Location code is required').max(10),
     location_name: yup.string().required('Location name is required').max(100),
     location_address: yup.string().required('Address is required').max(255),
     province_code: yup.string().required('Province is required'),
     office_type: yup.string().required('Office type is required'),
-    max_capacity: yup.number().required('Maximum capacity is required').min(1).max(1000),
+    max_capacity: yup.number().required('Maximum capacity is required').min(0).max(1000),
     current_capacity: yup.number().required('Current capacity is required').min(0),
     operational_hours: yup.string().max(100),
-    contact_phone: yup.string().max(20),
-    contact_email: yup.string().email('Invalid email format').max(100),
-    equipment_status: yup.string().required('Equipment status is required'),
+    contact_phone: yup.string()
+        .matches(/^[0-9+\-\s()]*$/, 'Phone number can only contain numbers, +, -, spaces, and parentheses')
+        .max(20),
+    contact_email: yup.string()
+        .email('Invalid email format')
+        .max(100),
     notes: yup.string().max(500),
 });
 
@@ -166,11 +166,14 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
 
     // Lookup data state
     const [officeTypes, setOfficeTypes] = useState<OfficeType[]>([]);
-    const [equipmentStatuses, setEquipmentStatuses] = useState<EquipmentStatus[]>([]);
     const [provinces, setProvinces] = useState<Province[]>([]);
     const [lookupsLoading, setLookupsLoading] = useState(true);
 
-    // Main location form
+    // Sequential code generation state
+    const [nextLocationCode, setNextLocationCode] = useState<string>('');
+    const [generatingCode, setGeneratingCode] = useState(false);
+
+    // Main location form with unique field names for each step
     const locationForm = useForm<LocationForm>({
         resolver: yupResolver(locationSchema),
         defaultValues: {
@@ -179,12 +182,11 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
             location_address: '',
             province_code: '',
             office_type: '',
-            max_capacity: 50,
+            max_capacity: 0,
             current_capacity: 0,
             operational_hours: 'Monday - Friday: 08:00 - 17:00',
             contact_phone: '',
             contact_email: '',
-            equipment_status: '',
             is_operational: true,
             notes: '',
         },
@@ -195,14 +197,12 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
         const loadLookupData = async () => {
             try {
                 setLookupsLoading(true);
-                const [officeTypesRes, equipmentStatusesRes, provincesRes] = await Promise.all([
+                const [officeTypesRes, provincesRes] = await Promise.all([
                     lookupService.getOfficeTypes(),
-                    lookupService.getEquipmentStatuses(),
                     lookupService.getProvinces()
                 ]);
                 
                 setOfficeTypes(officeTypesRes);
-                setEquipmentStatuses(equipmentStatusesRes);
                 setProvinces(provincesRes);
                 
                 console.log('✅ Location lookup data loaded successfully');
@@ -220,17 +220,15 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
     useEffect(() => {
         if (!lookupsLoading && 
             officeTypes.length > 0 && 
-            equipmentStatuses.length > 0 && 
             provinces.length > 0 &&
             !isEditMode &&
             !locationFound
         ) {
             // Set first option from each enum as default
             locationForm.setValue('office_type', officeTypes[0].value);
-            locationForm.setValue('equipment_status', equipmentStatuses[0].value);
             locationForm.setValue('province_code', provinces[0].code);
         }
-    }, [lookupsLoading, officeTypes, equipmentStatuses, provinces, isEditMode, locationFound, locationForm]);
+    }, [lookupsLoading, officeTypes, provinces, isEditMode, locationFound, locationForm]);
 
     // Handle URL parameters for editing and initialLocationId prop
     useEffect(() => {
@@ -239,6 +237,41 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
             fetchLocationForEditing(editLocationId);
         }
     }, [searchParams, initialLocationId, accessToken]);
+
+    // Generate sequential location code when province changes
+    const generateSequentialLocationCode = async (provinceCode: string) => {
+        if (!provinceCode || isEditMode) return;
+
+        try {
+            setGeneratingCode(true);
+            
+            // Call backend to get next sequential code for this province
+            const response = await api.get(API_ENDPOINTS.locations + `/next-code/${provinceCode}`);
+            const nextCode = (response as any).code || `${provinceCode}01`;
+            
+            setNextLocationCode(nextCode);
+            locationForm.setValue('location_code', nextCode);
+            
+            console.log(`Generated next location code for province ${provinceCode}: ${nextCode}`);
+        } catch (error) {
+            console.error('Failed to generate location code:', error);
+            
+            // Fallback: generate basic sequential code
+            const fallbackCode = `${provinceCode}01`;
+            setNextLocationCode(fallbackCode);
+            locationForm.setValue('location_code', fallbackCode);
+        } finally {
+            setGeneratingCode(false);
+        }
+    };
+
+    // Watch province code changes for automatic code generation
+    const watchedProvinceCode = locationForm.watch('province_code');
+    useEffect(() => {
+        if (watchedProvinceCode && !isEditMode) {
+            generateSequentialLocationCode(watchedProvinceCode);
+        }
+    }, [watchedProvinceCode, isEditMode]);
 
     // Fetch existing location for editing
     const fetchLocationForEditing = async (locationId: string) => {
@@ -272,12 +305,11 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
         locationForm.setValue('location_address', existingLocation.location_address || '');
         locationForm.setValue('province_code', existingLocation.province_code || '');
         locationForm.setValue('office_type', existingLocation.office_type || '');
-        locationForm.setValue('max_capacity', existingLocation.max_capacity || 50);
+        locationForm.setValue('max_capacity', existingLocation.max_capacity || 0);
         locationForm.setValue('current_capacity', existingLocation.current_capacity || 0);
         locationForm.setValue('operational_hours', existingLocation.operational_hours || '');
         locationForm.setValue('contact_phone', existingLocation.contact_phone || '');
         locationForm.setValue('contact_email', existingLocation.contact_email || '');
-        locationForm.setValue('equipment_status', existingLocation.equipment_status || '');
         locationForm.setValue('is_operational', existingLocation.is_operational);
         locationForm.setValue('notes', existingLocation.notes || '');
     };
@@ -349,7 +381,7 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
         const stepFieldMap = [
             ['location_code', 'location_name', 'office_type'], // Basic Information
             ['location_address', 'province_code'], // Address & Province
-            ['max_capacity', 'current_capacity', 'equipment_status'], // Capacity & Operations
+            ['max_capacity', 'current_capacity'], // Capacity & Operations
             [], // Contact Details (optional)
             [], // Review
         ];
@@ -391,12 +423,11 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                 location_address: formData.location_address?.toUpperCase() || '',
                 province_code: formData.province_code?.toUpperCase() || '',
                 office_type: formData.office_type?.toUpperCase() || '',
-                max_capacity: formData.max_capacity || 50,
+                max_capacity: formData.max_capacity || 0,
                 current_capacity: formData.current_capacity || 0,
                 operational_hours: formData.operational_hours || '',
                 contact_phone: formData.contact_phone || '',
-                contact_email: formData.contact_email?.toUpperCase() || '',
-                equipment_status: formData.equipment_status?.toUpperCase() || '',
+                contact_email: formData.contact_email?.toLowerCase() || '',
                 is_operational: formData.is_operational,
                 notes: formData.notes?.toUpperCase() || '',
             };
@@ -435,6 +466,7 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
         setStepValidation(new Array(steps.length).fill(false));
         setShowSuccessDialog(false);
         setCreatedLocation(null);
+        setNextLocationCode('');
         locationForm.reset();
     };
 
@@ -471,11 +503,22 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                             render={({ field }) => (
                                 <TextField
                                     {...field}
+                                    id="location-code-input"
                                     fullWidth
                                     label="Location Code *"
                                     error={!!locationForm.formState.errors.location_code}
-                                    helperText={locationForm.formState.errors.location_code?.message || 'Unique location identifier (e.g., T01, A02)'}
+                                    helperText={locationForm.formState.errors.location_code?.message || 'Auto-generated based on province (e.g., T01, A02)'}
                                     inputProps={{ maxLength: 10 }}
+                                    disabled={isEditMode || generatingCode}
+                                    InputProps={{
+                                        endAdornment: generatingCode ? (
+                                            <InputAdornment position="end">
+                                                <Typography variant="caption" color="text.secondary">
+                                                    Generating...
+                                                </Typography>
+                                            </InputAdornment>
+                                        ) : undefined,
+                                    }}
                                     onChange={(e) => {
                                         const value = e.target.value.toUpperCase();
                                         field.onChange(value);
@@ -491,8 +534,13 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                             control={locationForm.control}
                             render={({ field }) => (
                                 <FormControl fullWidth error={!!locationForm.formState.errors.office_type}>
-                                    <InputLabel>Office Type *</InputLabel>
-                                    <Select {...field} label="Office Type *">
+                                    <InputLabel id="location-office-type-label">Office Type *</InputLabel>
+                                    <Select 
+                                        {...field} 
+                                        labelId="location-office-type-label"
+                                        id="location-office-type-select"
+                                        label="Office Type *"
+                                    >
                                         {officeTypes.map((option) => (
                                             <MenuItem key={option.value} value={option.value}>
                                                 {option.label}
@@ -514,6 +562,7 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                             render={({ field }) => (
                                 <TextField
                                     {...field}
+                                    id="location-name-input"
                                     fullWidth
                                     label="Location Name *"
                                     error={!!locationForm.formState.errors.location_name}
@@ -547,6 +596,7 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                             render={({ field }) => (
                                 <TextField
                                     {...field}
+                                    id="location-address-input"
                                     fullWidth
                                     multiline
                                     rows={3}
@@ -569,8 +619,13 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                             control={locationForm.control}
                             render={({ field }) => (
                                 <FormControl fullWidth error={!!locationForm.formState.errors.province_code}>
-                                    <InputLabel>Province *</InputLabel>
-                                    <Select {...field} label="Province *">
+                                    <InputLabel id="location-province-label">Province *</InputLabel>
+                                    <Select 
+                                        {...field} 
+                                        labelId="location-province-label"
+                                        id="location-province-select"
+                                        label="Province *"
+                                    >
                                         {provinces.map((option) => (
                                             <MenuItem key={option.code} value={option.code}>
                                                 {option.name}
@@ -604,12 +659,13 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                             render={({ field }) => (
                                 <TextField
                                     {...field}
+                                    id="location-max-capacity"
                                     fullWidth
                                     type="number"
                                     label="Maximum Capacity *"
                                     error={!!locationForm.formState.errors.max_capacity}
                                     helperText={locationForm.formState.errors.max_capacity?.message || 'Maximum daily processing capacity'}
-                                    inputProps={{ min: 1, max: 1000 }}
+                                    inputProps={{ min: 0, max: 1000 }}
                                 />
                             )}
                         />
@@ -622,48 +678,13 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                             render={({ field }) => (
                                 <TextField
                                     {...field}
+                                    id="location-current-capacity"
                                     fullWidth
                                     type="number"
                                     label="Current Capacity *"
                                     error={!!locationForm.formState.errors.current_capacity}
                                     helperText={locationForm.formState.errors.current_capacity?.message || 'Current daily usage'}
                                     inputProps={{ min: 0 }}
-                                />
-                            )}
-                        />
-                    </Grid>
-
-                    <Grid item xs={12} md={6}>
-                        <Controller
-                            name="equipment_status"
-                            control={locationForm.control}
-                            render={({ field }) => (
-                                <FormControl fullWidth error={!!locationForm.formState.errors.equipment_status}>
-                                    <InputLabel>Equipment Status *</InputLabel>
-                                    <Select {...field} label="Equipment Status *">
-                                        {equipmentStatuses.map((option) => (
-                                            <MenuItem key={option.value} value={option.value}>
-                                                {option.label}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                    <FormHelperText>
-                                        {locationForm.formState.errors.equipment_status?.message || 'Current equipment status'}
-                                    </FormHelperText>
-                                </FormControl>
-                            )}
-                        />
-                    </Grid>
-
-                    <Grid item xs={12} md={6}>
-                        <Controller
-                            name="is_operational"
-                            control={locationForm.control}
-                            render={({ field }) => (
-                                <FormControlLabel
-                                    control={<Switch {...field} checked={field.value} />}
-                                    label="Location is Operational"
-                                    sx={{ mt: 2 }}
                                 />
                             )}
                         />
@@ -676,11 +697,32 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                             render={({ field }) => (
                                 <TextField
                                     {...field}
+                                    id="location-operational-hours"
                                     fullWidth
                                     label="Operational Hours"
                                     placeholder="Monday - Friday: 08:00 - 17:00"
                                     helperText="Operating hours for this location"
                                     inputProps={{ maxLength: 100 }}
+                                />
+                            )}
+                        />
+                    </Grid>
+
+                    <Grid item xs={12}>
+                        <Controller
+                            name="is_operational"
+                            control={locationForm.control}
+                            render={({ field }) => (
+                                <FormControlLabel
+                                    control={
+                                        <Switch 
+                                            {...field} 
+                                            checked={field.value}
+                                            id="location-is-operational" 
+                                        />
+                                    }
+                                    label="Location is Operational"
+                                    sx={{ mt: 2 }}
                                 />
                             )}
                         />
@@ -705,10 +747,17 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                             render={({ field }) => (
                                 <TextField
                                     {...field}
+                                    id="location-contact-phone"
                                     fullWidth
                                     label="Contact Phone"
-                                    helperText="Phone number for this location"
+                                    error={!!locationForm.formState.errors.contact_phone}
+                                    helperText={locationForm.formState.errors.contact_phone?.message || 'Phone number for this location'}
                                     inputProps={{ maxLength: 20 }}
+                                    onChange={(e) => {
+                                        // Allow only numbers, +, -, spaces, and parentheses
+                                        const value = e.target.value.replace(/[^0-9+\-\s()]/g, '');
+                                        field.onChange(value);
+                                    }}
                                 />
                             )}
                         />
@@ -721,6 +770,7 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                             render={({ field }) => (
                                 <TextField
                                     {...field}
+                                    id="location-contact-email"
                                     fullWidth
                                     type="email"
                                     label="Contact Email"
@@ -728,7 +778,8 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                                     helperText={locationForm.formState.errors.contact_email?.message || 'Email address for this location'}
                                     inputProps={{ maxLength: 100 }}
                                     onChange={(e) => {
-                                        const value = e.target.value.toUpperCase();
+                                        // Keep email in lowercase for proper formatting
+                                        const value = e.target.value.toLowerCase();
                                         field.onChange(value);
                                     }}
                                 />
@@ -743,6 +794,7 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                             render={({ field }) => (
                                 <TextField
                                     {...field}
+                                    id="location-notes"
                                     fullWidth
                                     multiline
                                     rows={4}
@@ -838,12 +890,6 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                                 <Typography variant="subtitle2" color="text.secondary">Capacity</Typography>
                                 <Typography variant="body1" sx={{ fontWeight: 500 }}>
                                     {formData.current_capacity} / {formData.max_capacity}
-                                </Typography>
-                            </Grid>
-                            <Grid item xs={12} md={4}>
-                                <Typography variant="subtitle2" color="text.secondary">Equipment Status</Typography>
-                                <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                    {equipmentStatuses.find(e => e.value === formData.equipment_status)?.label || formData.equipment_status}
                                 </Typography>
                             </Grid>
                             <Grid item xs={12} md={4}>
