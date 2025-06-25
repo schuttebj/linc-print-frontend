@@ -30,7 +30,7 @@ import {
   DialogActions,
   Alert,
   CircularProgress,
-  Pagination,
+  TablePagination,
   IconButton
 } from '@mui/material';
 import {
@@ -99,9 +99,10 @@ const LocationManagementPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Pagination and filtering
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  // Pagination and filtering - using TablePagination style
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(20);
+  const [totalResults, setTotalResults] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [provinceFilter, setProvinceFilter] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<string>('');
@@ -138,7 +139,7 @@ const LocationManagementPage: React.FC = () => {
     if (!loading) { // Only load locations after initial data is loaded
       loadLocations();
     }
-  }, [currentPage, searchTerm, provinceFilter, typeFilter, statusFilter, loading]);
+  }, [page, rowsPerPage, searchTerm, provinceFilter, typeFilter, statusFilter, loading]);
 
   // Set default form values when lookup data loads
   useEffect(() => {
@@ -178,8 +179,8 @@ const LocationManagementPage: React.FC = () => {
   const loadLocations = async () => {
     try {
       const params = new URLSearchParams({
-        page: currentPage.toString(),
-        per_page: '20',
+        page: (page + 1).toString(), // Convert from 0-based to 1-based
+        per_page: rowsPerPage.toString(),
         ...(searchTerm && { search: searchTerm }),
         ...(provinceFilter && { province: provinceFilter }),
         ...(typeFilter && { office_type: typeFilter }),
@@ -188,12 +189,21 @@ const LocationManagementPage: React.FC = () => {
 
       const response = await api.get<LocationListResponse>(`${API_ENDPOINTS.locations}?${params}`);
       setLocations(response.locations || []);
-      setTotalPages(response.total_pages || 1);
+      setTotalResults(response.total || 0);
       return response;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load locations');
       throw err;
     }
+  };
+
+  const handlePageChange = (_event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleRowsPerPageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0); // Reset to first page when changing rows per page
   };
 
   const handleCreateLocation = async (e: React.FormEvent) => {
@@ -590,16 +600,15 @@ const LocationManagementPage: React.FC = () => {
       </TableContainer>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-          <Pagination 
-            count={totalPages} 
-            page={currentPage} 
-            onChange={(_, page) => setCurrentPage(page)}
-            color="primary"
-          />
-        </Box>
-      )}
+      <TablePagination
+        rowsPerPageOptions={[10, 20, 50, 100]}
+        component="div"
+        count={totalResults}
+        rowsPerPage={rowsPerPage}
+        page={page}
+        onPageChange={handlePageChange}
+        onRowsPerPageChange={handleRowsPerPageChange}
+      />
 
       {/* Create Location Modal */}
       <Dialog open={showCreateModal} onClose={() => setShowCreateModal(false)} maxWidth="md" fullWidth>

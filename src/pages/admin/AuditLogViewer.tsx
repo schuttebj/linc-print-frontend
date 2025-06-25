@@ -25,7 +25,7 @@ import {
   TextField,
   Card,
   CardContent,
-  Pagination,
+  TablePagination,
   Alert,
   CircularProgress,
   Badge,
@@ -132,9 +132,10 @@ const AuditLogViewer: React.FC = () => {
   // Tab management
   const [activeTab, setActiveTab] = useState(0);
   
-  // Pagination and filtering
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  // Pagination and filtering - using TablePagination style
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(50);
+  const [totalResults, setTotalResults] = useState(0);
   const [actionFilter, setActionFilter] = useState('');
   const [resourceFilter, setResourceFilter] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -152,7 +153,7 @@ const AuditLogViewer: React.FC = () => {
     if (activeTab === 0) {
       loadAuditLogs();
     }
-  }, [currentPage, actionFilter, resourceFilter, startDate, endDate, activeTab]);
+  }, [page, rowsPerPage, actionFilter, resourceFilter, startDate, endDate, activeTab]);
 
   const loadAuditData = async () => {
     try {
@@ -172,8 +173,8 @@ const AuditLogViewer: React.FC = () => {
   const loadAuditLogs = async () => {
     try {
       const params = new URLSearchParams({
-        page: currentPage.toString(),
-        per_page: '50',
+        page: (page + 1).toString(), // Convert from 0-based to 1-based
+        per_page: rowsPerPage.toString(),
         ...(actionFilter && { action_type: actionFilter }),
         ...(resourceFilter && { resource_type: resourceFilter }),
         ...(startDate && { start_date: startDate }),
@@ -182,7 +183,7 @@ const AuditLogViewer: React.FC = () => {
 
       const response = await api.get<AuditLogResponse>(`${API_ENDPOINTS.audit}?${params}`);
       setAuditLogs(response.logs || []);
-      setTotalPages(response.total_pages || 1);
+      setTotalResults(response.total || 0);
     } catch (err) {
       console.error('Failed to load audit logs:', err);
     }
@@ -234,17 +235,37 @@ const AuditLogViewer: React.FC = () => {
     }
   };
 
+  const handlePageChange = (_event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleRowsPerPageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0); // Reset to first page when changing rows per page
+  };
+
   const formatDate = (dateString: string) => {
     try {
-      return new Date(dateString).toLocaleString('en-US', {
+      if (!dateString) return 'Invalid Date';
+      
+      const date = new Date(dateString);
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return 'Invalid Date';
+      }
+      
+      return date.toLocaleString('en-US', {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
-        second: '2-digit'
+        second: '2-digit',
+        hour12: false
       });
-    } catch {
+    } catch (error) {
+      console.error('Date formatting error:', error, 'for dateString:', dateString);
       return 'Invalid Date';
     }
   };
@@ -273,7 +294,7 @@ const AuditLogViewer: React.FC = () => {
 
   const getHumanReadableAction = (log: AuditLog) => {
     // Create human-readable action descriptions
-    if (log.action === 'READ' && log.endpoint) {
+    if (log.action === 'read' && log.endpoint) {
       if (log.endpoint.includes('/audit')) return 'Viewed Audit Logs';
       if (log.endpoint.includes('/users') && log.endpoint.includes('search')) return 'Searched Users';
       if (log.endpoint.includes('/users')) return 'Viewed Users';
@@ -303,6 +324,34 @@ const AuditLogViewer: React.FC = () => {
     // Default to the action name with proper formatting
     const actionType = ACTION_TYPES.find(a => a.value === log.action);
     return actionType ? actionType.label : log.action;
+  };
+
+  const getHumanReadableActionFromString = (actionString: string) => {
+    // Helper function for statistics display
+    const actionType = ACTION_TYPES.find(a => a.value === actionString);
+    return actionType ? actionType.label : actionString.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  const formatDateOnly = (dateString: string) => {
+    try {
+      if (!dateString) return 'Invalid Date';
+      
+      const date = new Date(dateString);
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return 'Invalid Date';
+      }
+      
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (error) {
+      console.error('Date formatting error:', error, 'for dateString:', dateString);
+      return 'Invalid Date';
+    }
   };
 
   const handleViewDetails = (log: AuditLog) => {
@@ -555,71 +604,216 @@ const AuditLogViewer: React.FC = () => {
           </TableContainer>
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-              <Pagination 
-                count={totalPages} 
-                page={currentPage} 
-                onChange={(_, page) => setCurrentPage(page)}
-                color="primary"
-              />
-            </Box>
-          )}
+          <TablePagination
+            rowsPerPageOptions={[25, 50, 100, 200]}
+            component="div"
+            count={totalResults}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handlePageChange}
+            onRowsPerPageChange={handleRowsPerPageChange}
+          />
         </Box>
       )}
 
       {/* Statistics Tab */}
       {activeTab === 1 && statistics && (
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={3}>
-            <Card>
-              <CardContent>
-                <Typography variant="h4" color="primary.main">
-                  {statistics.total_actions}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Total Actions
-                </Typography>
-              </CardContent>
-            </Card>
+        <Box>
+          {/* Summary Cards */}
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            <Grid item xs={12} md={3}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h4" color="primary.main">
+                    {statistics.total_actions}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Total Actions
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h4" color="success.main">
+                    {(statistics.success_rate * 100).toFixed(1)}%
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Success Rate
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h4" color="info.main">
+                    {statistics.total_users}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Active Users
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h4" color="error.main">
+                    {statistics.failed_actions}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Failed Actions
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
           </Grid>
-          <Grid item xs={12} md={3}>
-            <Card>
-              <CardContent>
-                <Typography variant="h4" color="success.main">
-                  {(statistics.success_rate * 100).toFixed(1)}%
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Success Rate
-                </Typography>
-              </CardContent>
-            </Card>
+
+          {/* Top Actions */}
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    Most Common Actions
+                  </Typography>
+                  {statistics.top_actions && statistics.top_actions.length > 0 ? (
+                    <Box>
+                      {statistics.top_actions.slice(0, 10).map((action, index) => (
+                        <Box key={action.action} sx={{ mb: 2 }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                            <Typography variant="body2" fontWeight="medium">
+                              {getHumanReadableActionFromString(action.action)}
+                            </Typography>
+                            <Chip 
+                              label={action.count} 
+                              size="small" 
+                              color="primary"
+                            />
+                          </Box>
+                          <Box sx={{ width: '100%', height: 8, backgroundColor: 'grey.200', borderRadius: 1 }}>
+                            <Box 
+                              sx={{ 
+                                width: `${(action.count / statistics.top_actions[0].count) * 100}%`, 
+                                height: '100%', 
+                                backgroundColor: 'primary.main', 
+                                borderRadius: 1 
+                              }} 
+                            />
+                          </Box>
+                        </Box>
+                      ))}
+                    </Box>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      No action data available
+                    </Typography>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+
+            {/* Daily Activity */}
+            <Grid item xs={12} md={6}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    Daily Activity (Last 7 Days)
+                  </Typography>
+                  {statistics.daily_activity && statistics.daily_activity.length > 0 ? (
+                    <Box>
+                      {statistics.daily_activity.slice(-7).map((day, index) => (
+                        <Box key={day.date} sx={{ mb: 2 }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                            <Typography variant="body2" fontWeight="medium">
+                              {formatDateOnly(day.date)}
+                            </Typography>
+                            <Chip 
+                              label={day.count} 
+                              size="small" 
+                              color="info"
+                            />
+                          </Box>
+                          <Box sx={{ width: '100%', height: 8, backgroundColor: 'grey.200', borderRadius: 1 }}>
+                            <Box 
+                              sx={{ 
+                                width: statistics.daily_activity.length > 0 
+                                  ? `${(day.count / Math.max(...statistics.daily_activity.map(d => d.count))) * 100}%` 
+                                  : '0%', 
+                                height: '100%', 
+                                backgroundColor: 'info.main', 
+                                borderRadius: 1 
+                              }} 
+                            />
+                          </Box>
+                        </Box>
+                      ))}
+                    </Box>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      No daily activity data available
+                    </Typography>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+
+            {/* System Health */}
+            <Grid item xs={12}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    System Health Overview
+                  </Typography>
+                  <Grid container spacing={3}>
+                    <Grid item xs={12} md={4}>
+                      <Box sx={{ textAlign: 'center' }}>
+                        <Typography variant="h3" color="success.main">
+                          {((statistics.total_actions - statistics.failed_actions) / statistics.total_actions * 100).toFixed(1)}%
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          System Uptime
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <Box sx={{ textAlign: 'center' }}>
+                        <Typography variant="h3" color="warning.main">
+                          {statistics.security_events}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Security Events
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <Box sx={{ textAlign: 'center' }}>
+                        <Typography variant="h3" color="info.main">
+                          {Math.round(statistics.total_actions / 30)}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Avg Daily Actions
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </CardContent>
+              </Card>
+            </Grid>
           </Grid>
-          <Grid item xs={12} md={3}>
-            <Card>
-              <CardContent>
-                <Typography variant="h4" color="info.main">
-                  {statistics.total_users}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Active Users
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <Card>
-              <CardContent>
-                <Typography variant="h4" color="error.main">
-                  {statistics.security_events}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Security Events
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
+        </Box>
+      )}
+
+      {/* Statistics Loading State */}
+      {activeTab === 1 && !statistics && (
+        <Box sx={{ textAlign: 'center', py: 4 }}>
+          <CircularProgress />
+          <Typography variant="h6" sx={{ mt: 2 }}>
+            Loading Statistics...
+          </Typography>
+        </Box>
       )}
 
       {/* Security Monitoring Tab */}

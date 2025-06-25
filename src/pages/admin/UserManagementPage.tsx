@@ -26,7 +26,7 @@ import {
   Grid,
   Avatar,
   IconButton,
-  Pagination,
+  TablePagination,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -117,9 +117,10 @@ const UserManagementPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Pagination and filtering
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  // Pagination and filtering - using TablePagination style
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(20);
+  const [totalResults, setTotalResults] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [locationFilter, setLocationFilter] = useState<string>('');
@@ -170,7 +171,7 @@ const UserManagementPage: React.FC = () => {
     if (!loading) {
       loadUsers();
     }
-  }, [currentPage, searchTerm, statusFilter, locationFilter, loading]);
+  }, [page, rowsPerPage, searchTerm, statusFilter, locationFilter, loading]);
 
   const loadInitialData = async () => {
     try {
@@ -198,8 +199,8 @@ const UserManagementPage: React.FC = () => {
   const loadUsers = async () => {
     try {
       const params = new URLSearchParams({
-        page: currentPage.toString(),
-        per_page: '20',
+        page: (page + 1).toString(), // Convert from 0-based to 1-based
+        per_page: rowsPerPage.toString(),
         ...(searchTerm && { search: searchTerm }),
         ...(statusFilter && { status: statusFilter }),
         ...(locationFilter && { location_id: locationFilter })
@@ -207,7 +208,7 @@ const UserManagementPage: React.FC = () => {
 
       const response = await api.get<UserListResponse>(`${API_ENDPOINTS.users}?${params}`);
       setUsers(response.users || []);
-      setTotalPages(response.total_pages || 1);
+      setTotalResults(response.total || 0);
       return response;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load users');
@@ -317,6 +318,15 @@ const UserManagementPage: React.FC = () => {
       permissions: user.permissions || []
     });
     setShowEditModal(true);
+  };
+
+  const handlePageChange = (_event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleRowsPerPageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0); // Reset to first page when changing rows per page
   };
 
   if (loading) {
@@ -600,16 +610,15 @@ const UserManagementPage: React.FC = () => {
       </TableContainer>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-          <Pagination 
-            count={totalPages} 
-            page={currentPage} 
-            onChange={(_, page) => setCurrentPage(page)}
-            color="primary"
-          />
-        </Box>
-      )}
+      <TablePagination
+        rowsPerPageOptions={[10, 20, 50, 100]}
+        component="div"
+        count={totalResults}
+        rowsPerPage={rowsPerPage}
+        page={page}
+        onPageChange={handlePageChange}
+        onRowsPerPageChange={handleRowsPerPageChange}
+      />
 
       {/* Create User Modal */}
       <Dialog open={showCreateModal} onClose={() => setShowCreateModal(false)} maxWidth="md" fullWidth>
