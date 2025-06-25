@@ -5,6 +5,25 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  Grid,
+  Button,
+  CircularProgress,
+  Alert,
+  Chip,
+  Paper,
+  Avatar
+} from '@mui/material';
+import {
+  Person as PersonIcon,
+  Business as BusinessIcon,
+  Assessment as AssessmentIcon,
+  MonitorHeart as HealthIcon
+} from '@mui/icons-material';
 import { API_ENDPOINTS, api } from '../../config/api';
 
 // Dashboard interfaces
@@ -35,9 +54,9 @@ interface DashboardStats {
 interface QuickAction {
   title: string;
   description: string;
-  icon: string;
+  icon: React.ReactNode;
   action: () => void;
-  color: string;
+  color: 'primary' | 'secondary' | 'success' | 'warning';
 }
 
 const AdminDashboard: React.FC = () => {
@@ -98,227 +117,285 @@ const AdminDashboard: React.FC = () => {
     {
       title: 'Create User',
       description: 'Add a new system user',
-      icon: '👤',
+      icon: <PersonIcon />,
       action: () => navigate('/dashboard/admin/users'),
-      color: 'bg-blue-500 hover:bg-blue-600'
+      color: 'primary'
     },
     {
       title: 'Add Location',
       description: 'Register new office location',
-      icon: '🏢',
+      icon: <BusinessIcon />,
       action: () => navigate('/dashboard/admin/locations'),
-      color: 'bg-green-500 hover:bg-green-600'
+      color: 'success'
     },
     {
       title: 'View Audit Logs',
       description: 'Monitor system activity',
-      icon: '📊',
+      icon: <AssessmentIcon />,
       action: () => navigate('/dashboard/admin/audit'),
-      color: 'bg-purple-500 hover:bg-purple-600'
+      color: 'secondary'
     },
     {
       title: 'System Health',
       description: 'Check system status',
-      icon: '⚡',
+      icon: <HealthIcon />,
       action: () => {
         window.open(`${API_ENDPOINTS.health}`, '_blank');
       },
-      color: 'bg-orange-500 hover:bg-orange-600'
+      color: 'warning'
     }
   ];
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress size={48} />
+      </Box>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
-        <h3 className="font-medium">Error loading dashboard</h3>
-        <p>{error}</p>
-        <button
-          onClick={loadDashboardData}
-          className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-        >
-          Retry
-        </button>
-      </div>
+      <Alert 
+        severity="error" 
+        action={
+          <Button color="inherit" size="small" onClick={loadDashboardData}>
+            Retry
+          </Button>
+        }
+      >
+        <Typography variant="h6">Error loading dashboard</Typography>
+        <Typography variant="body2">{error}</Typography>
+      </Alert>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <Box sx={{ p: 3 }}>
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg p-6">
-        <h1 className="text-3xl font-bold mb-2">Madagascar LINC Print - Admin Dashboard</h1>
-        <p className="text-blue-100">
+      <Paper 
+        sx={{ 
+          background: 'linear-gradient(135deg, #1976d2 0%, #7b1fa2 100%)',
+          color: 'white',
+          p: 4,
+          mb: 3,
+          borderRadius: 2
+        }}
+      >
+        <Typography variant="h3" component="h1" gutterBottom fontWeight="bold">
+          Madagascar LINC Print - Admin Dashboard
+        </Typography>
+        <Typography variant="h6" sx={{ opacity: 0.9, mb: 2 }}>
           System administration for the Madagascar Driver's License Print System
-        </p>
-        <div className="mt-4 text-sm">
-          <span className="bg-white bg-opacity-20 px-3 py-1 rounded-full">
-            Version {stats?.system.version}
-          </span>
-          <span className="ml-4 bg-white bg-opacity-20 px-3 py-1 rounded-full">
-            Uptime: {stats?.system.uptime}
-          </span>
-        </div>
-      </div>
+        </Typography>
+        <Box sx={{ mt: 2 }}>
+          <Chip 
+            label={`Version ${stats?.system.version}`} 
+            sx={{ 
+              backgroundColor: 'rgba(255, 255, 255, 0.2)', 
+              color: 'white',
+              mr: 2 
+            }} 
+          />
+          <Chip 
+            label={`Uptime: ${stats?.system.uptime}`} 
+            sx={{ 
+              backgroundColor: 'rgba(255, 255, 255, 0.2)', 
+              color: 'white' 
+            }} 
+          />
+        </Box>
+      </Paper>
 
       {/* Quick Actions */}
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {quickActions.map((action) => (
-            <button
-              key={action.title}
+      <Typography variant="h5" component="h2" gutterBottom sx={{ mb: 2 }}>
+        Quick Actions
+      </Typography>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        {quickActions.map((action) => (
+          <Grid item xs={12} sm={6} md={3} key={action.title}>
+            <Card 
+              sx={{ 
+                height: '100%',
+                cursor: 'pointer',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: 4
+                }
+              }}
               onClick={action.action}
-              className={`${action.color} text-white p-6 rounded-lg transition-colors duration-200 text-left`}
             >
-              <div className="text-3xl mb-2">{action.icon}</div>
-              <div className="font-semibold text-lg">{action.title}</div>
-              <div className="text-sm opacity-90">{action.description}</div>
-            </button>
-          ))}
-        </div>
-      </div>
+              <CardContent sx={{ textAlign: 'center', p: 3 }}>
+                <Avatar 
+                  sx={{ 
+                    width: 56, 
+                    height: 56, 
+                    mx: 'auto', 
+                    mb: 2,
+                    bgcolor: `${action.color}.main`
+                  }}
+                >
+                  {action.icon}
+                </Avatar>
+                <Typography variant="h6" component="h3" gutterBottom>
+                  {action.title}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {action.description}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
 
       {/* Statistics Overview */}
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">System Overview</h2>
-        
-        {/* User Statistics */}
-        <div className="mb-6">
-          <h3 className="text-lg font-medium text-gray-800 mb-3">User Management</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
-              <div className="text-2xl font-bold text-blue-600">{stats?.users.total}</div>
-              <div className="text-sm text-gray-600">Total Users</div>
-            </div>
-            <div className="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
-              <div className="text-2xl font-bold text-green-600">{stats?.users.active}</div>
-              <div className="text-sm text-gray-600">Active Users</div>
-            </div>
-            <div className="bg-white p-4 rounded-lg shadow border-l-4 border-purple-500">
-              <div className="text-2xl font-bold text-purple-600">{stats?.users.new_this_week}</div>
-              <div className="text-sm text-gray-600">New This Week</div>
-            </div>
-          </div>
-        </div>
+      <Typography variant="h5" component="h2" gutterBottom sx={{ mb: 2 }}>
+        System Overview
+      </Typography>
+      
+      {/* User Statistics */}
+      <Typography variant="h6" component="h3" gutterBottom sx={{ mt: 3, mb: 2 }}>
+        User Management
+      </Typography>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} md={4}>
+          <Card sx={{ borderLeft: 4, borderColor: 'primary.main' }}>
+            <CardContent>
+              <Typography variant="h4" color="primary.main" fontWeight="bold">
+                {stats?.users.total}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Total Users
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <Card sx={{ borderLeft: 4, borderColor: 'success.main' }}>
+            <CardContent>
+              <Typography variant="h4" color="success.main" fontWeight="bold">
+                {stats?.users.active}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Active Users
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <Card sx={{ borderLeft: 4, borderColor: 'info.main' }}>
+            <CardContent>
+              <Typography variant="h4" color="info.main" fontWeight="bold">
+                {stats?.users.new_this_week}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                New This Week
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
 
-        {/* Location Statistics */}
-        <div className="mb-6">
-          <h3 className="text-lg font-medium text-gray-800 mb-3">Location Management</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
-              <div className="text-2xl font-bold text-blue-600">{stats?.locations.total}</div>
-              <div className="text-sm text-gray-600">Total Locations</div>
-            </div>
-            <div className="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
-              <div className="text-2xl font-bold text-green-600">{stats?.locations.operational}</div>
-              <div className="text-sm text-gray-600">Operational</div>
-            </div>
-            <div className="bg-white p-4 rounded-lg shadow border-l-4 border-orange-500">
-              <div className="text-2xl font-bold text-orange-600">{stats?.locations.total_capacity}</div>
-              <div className="text-sm text-gray-600">Daily Capacity</div>
-            </div>
-          </div>
-        </div>
+      {/* Location Statistics */}
+      <Typography variant="h6" component="h3" gutterBottom sx={{ mb: 2 }}>
+        Location Management
+      </Typography>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} md={4}>
+          <Card sx={{ borderLeft: 4, borderColor: 'secondary.main' }}>
+            <CardContent>
+              <Typography variant="h4" color="secondary.main" fontWeight="bold">
+                {stats?.locations.total}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Total Locations
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <Card sx={{ borderLeft: 4, borderColor: 'success.main' }}>
+            <CardContent>
+              <Typography variant="h4" color="success.main" fontWeight="bold">
+                {stats?.locations.operational}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Operational
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <Card sx={{ borderLeft: 4, borderColor: 'warning.main' }}>
+            <CardContent>
+              <Typography variant="h4" color="warning.main" fontWeight="bold">
+                {stats?.locations.total_capacity}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Total Capacity
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
 
-        {/* Audit Statistics */}
-        <div className="mb-6">
-          <h3 className="text-lg font-medium text-gray-800 mb-3">System Activity</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
-              <div className="text-2xl font-bold text-blue-600">{stats?.audit.total_actions.toLocaleString()}</div>
-              <div className="text-sm text-gray-600">Total Actions</div>
-            </div>
-            <div className="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
-              <div className="text-2xl font-bold text-green-600">{stats?.audit.actions_today}</div>
-              <div className="text-sm text-gray-600">Actions Today</div>
-            </div>
-            <div className="bg-white p-4 rounded-lg shadow border-l-4 border-purple-500">
-              <div className="text-2xl font-bold text-purple-600">{(stats?.audit.success_rate * 100).toFixed(1)}%</div>
-              <div className="text-sm text-gray-600">Success Rate</div>
-            </div>
-            <div className="bg-white p-4 rounded-lg shadow border-l-4 border-red-500">
-              <div className="text-2xl font-bold text-red-600">{stats?.audit.security_events}</div>
-              <div className="text-sm text-gray-600">Security Events</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* System Health */}
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">System Health</h2>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <div className="text-sm font-medium text-gray-700">System Status</div>
-              <div className="flex items-center mt-1">
-                <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-                <span className="text-green-600 font-medium">Operational</span>
-              </div>
-            </div>
-            
-            <div>
-              <div className="text-sm font-medium text-gray-700">Last Backup</div>
-              <div className="text-gray-900 mt-1">
-                {stats?.system.last_backup 
-                  ? new Date(stats.system.last_backup).toLocaleDateString()
-                  : 'Unknown'
-                }
-              </div>
-            </div>
-            
-            <div>
-              <div className="text-sm font-medium text-gray-700">Database</div>
-              <div className="flex items-center mt-1">
-                <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-                <span className="text-green-600 font-medium">Connected</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Activity Summary */}
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Recent Activity</h2>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="space-y-3">
-            <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
-              <div>
-                <div className="font-medium text-gray-900">System Started</div>
-                <div className="text-sm text-gray-500">All services are running normally</div>
-              </div>
-              <div className="text-sm text-gray-400">Just now</div>
-            </div>
-            
-            <div className="flex justify-between items-center p-3 bg-blue-50 rounded">
-              <div>
-                <div className="font-medium text-gray-900">Admin Dashboard Accessed</div>
-                <div className="text-sm text-gray-500">Administrator panel loaded successfully</div>
-              </div>
-              <div className="text-sm text-gray-400">Now</div>
-            </div>
-            
-            <div className="text-center py-4">
-              <button
-                onClick={() => navigate('/dashboard/admin/audit')}
-                className="text-blue-600 hover:text-blue-800 font-medium"
-              >
-                View Full Audit Log →
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+      {/* Audit Statistics */}
+      <Typography variant="h6" component="h3" gutterBottom sx={{ mb: 2 }}>
+        Audit & Security
+      </Typography>
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={3}>
+          <Card sx={{ borderLeft: 4, borderColor: 'info.main' }}>
+            <CardContent>
+              <Typography variant="h4" color="info.main" fontWeight="bold">
+                {stats?.audit.total_actions}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Total Actions
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <Card sx={{ borderLeft: 4, borderColor: 'primary.main' }}>
+            <CardContent>
+              <Typography variant="h4" color="primary.main" fontWeight="bold">
+                {stats?.audit.actions_today}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Actions Today
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <Card sx={{ borderLeft: 4, borderColor: 'error.main' }}>
+            <CardContent>
+              <Typography variant="h4" color="error.main" fontWeight="bold">
+                {stats?.audit.security_events}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Security Events
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <Card sx={{ borderLeft: 4, borderColor: 'success.main' }}>
+            <CardContent>
+              <Typography variant="h4" color="success.main" fontWeight="bold">
+                {((stats?.audit.success_rate || 0) * 100).toFixed(1)}%
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Success Rate
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+    </Box>
   );
 };
 
