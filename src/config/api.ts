@@ -47,6 +47,22 @@ export const API_ENDPOINTS = {
   users: `${API_BASE_URL}/api/${API_VERSION}/users`,
   userById: (id: string) => `${API_BASE_URL}/api/${API_VERSION}/users/${id}`,
   
+  // Location management
+  locations: `${API_BASE_URL}/api/${API_VERSION}/locations`,
+  locationById: (id: string) => `${API_BASE_URL}/api/${API_VERSION}/locations/${id}`,
+  
+  // Role management
+  roles: `${API_BASE_URL}/api/${API_VERSION}/roles`,
+  roleById: (id: string) => `${API_BASE_URL}/api/${API_VERSION}/roles/${id}`,
+  
+  // Audit logs
+  audit: `${API_BASE_URL}/api/${API_VERSION}/audit`,
+  auditUser: (userId: string) => `${API_BASE_URL}/api/${API_VERSION}/audit/user/${userId}`,
+  auditResource: (resourceType: string, resourceId: string) => `${API_BASE_URL}/api/${API_VERSION}/audit/resource/${resourceType}/${resourceId}`,
+  auditStatistics: `${API_BASE_URL}/api/${API_VERSION}/audit/statistics`,
+  auditSecurity: `${API_BASE_URL}/api/${API_VERSION}/audit/security/suspicious-activity`,
+  auditExport: `${API_BASE_URL}/api/${API_VERSION}/audit/export`,
+  
   // Admin endpoints
   adminInitTables: `${API_BASE_URL}/admin/init-tables`,
   adminInitUsers: `${API_BASE_URL}/admin/init-users`,
