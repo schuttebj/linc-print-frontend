@@ -246,12 +246,13 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
             const response = await api.get(API_ENDPOINTS.locationById(locationId));
             console.log('Fetched location for editing:', response);
 
-            setLocationFound(response);
+            const locationData = response as ExistingLocation;
+            setLocationFound(locationData);
             setCurrentLocationId(locationId);
             setIsEditMode(true);
 
             // Populate form with existing data
-            populateFormWithExistingLocation(response);
+            populateFormWithExistingLocation(locationData);
 
             // Mark all steps as valid since we have existing data
             setStepValidation(new Array(steps.length).fill(true));
