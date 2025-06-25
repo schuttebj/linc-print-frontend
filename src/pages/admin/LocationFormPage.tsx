@@ -71,7 +71,7 @@ const LocationFormPage: React.FC = () => {
     };
 
     return (
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ maxWidth: 1200, mx: 'auto', p: 3 }}>
             {/* Header with Navigation */}
             <Box sx={{ mb: 3 }}>
                 {/* Breadcrumbs */}
@@ -126,18 +126,16 @@ const LocationFormPage: React.FC = () => {
                 </Box>
             </Box>
 
-            {/* Form Container */}
-            <Paper sx={{ p: 0, borderRadius: 2, boxShadow: 2 }}>
-                <LocationFormWrapper
-                    mode="standalone"
-                    onSuccess={handleFormSuccess}
-                    onCancel={handleFormCancel}
-                    initialLocationId={locationId || undefined}
-                    title={pageTitle}
-                    subtitle={pageSubtitle}
-                    showHeader={false} // We're handling the header above
-                />
-            </Paper>
+            {/* Form Component */}
+            <LocationFormWrapper
+                mode="standalone"
+                onSuccess={handleFormSuccess}
+                onCancel={handleFormCancel}
+                initialLocationId={locationId || undefined}
+                title={pageTitle}
+                subtitle={pageSubtitle}
+                showHeader={false} // We're handling the header above
+            />
 
             {/* Help Text */}
             <Alert 
