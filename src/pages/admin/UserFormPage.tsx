@@ -17,7 +17,7 @@ const UserFormPage: React.FC = () => {
   
   const handleSuccess = (user: any, isEdit: boolean) => {
     // Navigate back to user management page with success message
-    navigate('/admin/users', { 
+    navigate('/dashboard/admin/users', { 
       state: { 
         successMessage: `User ${user.first_name} ${user.last_name} has been ${isEdit ? 'updated' : 'created'} successfully!` 
       } 
@@ -25,7 +25,7 @@ const UserFormPage: React.FC = () => {
   };
   
   const handleCancel = () => {
-    navigate('/admin/users');
+    navigate('/dashboard/admin/users');
   };
 
   return (

@@ -268,7 +268,7 @@ const UserManagementPage: React.FC = () => {
       setSuccessMessage(location.state.successMessage);
       setShowSuccessDialog(true);
       // Clear the state to prevent showing the message again
-      navigate('/admin/users', { replace: true });
+      navigate('/dashboard/admin/users', { replace: true });
     }
   }, [location.state, navigate]);
 
@@ -312,7 +312,7 @@ const UserManagementPage: React.FC = () => {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={() => navigate('/admin/users/create')}
+            onClick={() => navigate('/dashboard/admin/users/create')}
           >
             Create User
           </Button>
@@ -512,7 +512,7 @@ const UserManagementPage: React.FC = () => {
                     {hasPermission('users.update') && (
                       <IconButton
                         size="small"
-                        onClick={() => navigate(`/admin/users/edit/${user.id}`)}
+                        onClick={() => navigate(`/dashboard/admin/users/edit/${user.id}`)}
                       >
                         <EditIcon />
                       </IconButton>
