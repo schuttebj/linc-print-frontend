@@ -20,6 +20,7 @@ import PersonFormTest from './pages/persons/PersonFormTest';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import UserManagementPage from './pages/admin/UserManagementPage';
 import LocationManagementPage from './pages/admin/LocationManagementPage';
+import LocationFormPage from './pages/admin/LocationFormPage';
 import AuditLogViewer from './pages/admin/AuditLogViewer';
 
 function App() {
@@ -111,6 +112,22 @@ function App() {
                 element={
                   <ProtectedRoute requiredPermission="admin.locations">
                     <LocationManagementPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="locations/create" 
+                element={
+                  <ProtectedRoute requiredPermission="admin.locations">
+                    <LocationFormPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="locations/edit/:locationId" 
+                element={
+                  <ProtectedRoute requiredPermission="admin.locations">
+                    <LocationFormPage />
                   </ProtectedRoute>
                 } 
               />

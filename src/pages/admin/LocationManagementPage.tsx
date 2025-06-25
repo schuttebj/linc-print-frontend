@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -43,7 +44,6 @@ import {
 } from '@mui/icons-material';
 import { API_ENDPOINTS, api } from '../../config/api';
 import lookupService, { OfficeType, Province } from '../../services/lookupService';
-import LocationFormWrapper from '../../components/LocationFormWrapper';
 
 // Location interfaces
 interface Location {
@@ -80,6 +80,8 @@ interface ProvinceOption {
 }
 
 const LocationManagementPage: React.FC = () => {
+  const navigate = useNavigate();
+  
   // State management
   const [locations, setLocations] = useState<Location[]>([]);
   const [officeTypes, setOfficeTypes] = useState<OfficeType[]>([]);
@@ -96,9 +98,7 @@ const LocationManagementPage: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   
-  // Modal states
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
+  // Delete modal state (only this modal remains)
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   
@@ -209,21 +209,12 @@ const LocationManagementPage: React.FC = () => {
     return province ? province.name : code;
   };
 
-  const handleCreateSuccess = (location: any) => {
-    setShowCreateModal(false);
-    loadLocations(); // Refresh the list
+  const handleCreateLocation = () => {
+    navigate('/dashboard/admin/locations/create');
   };
 
-  const handleEditSuccess = (location: any) => {
-    setShowEditModal(false);
-    setSelectedLocation(null);
-    loadLocations(); // Refresh the list
-  };
-
-  const handleFormCancel = () => {
-    setShowCreateModal(false);
-    setShowEditModal(false);
-    setSelectedLocation(null);
+  const handleEditLocation = (location: Location) => {
+    navigate(`/dashboard/admin/locations/edit/${location.id}`);
   };
 
   if (loading) {
@@ -377,7 +368,7 @@ const LocationManagementPage: React.FC = () => {
                 fullWidth
                 variant="contained"
                 startIcon={<LocationIcon />}
-                onClick={() => setShowCreateModal(true)}
+                onClick={handleCreateLocation}
               >
                 Add Location
               </Button>
@@ -475,10 +466,7 @@ const LocationManagementPage: React.FC = () => {
                     <IconButton
                       size="small"
                       color="primary"
-                      onClick={() => {
-                        setSelectedLocation(location);
-                        setShowEditModal(true);
-                      }}
+                      onClick={() => handleEditLocation(location)}
                     >
                       <EditIcon />
                     </IconButton>
@@ -520,30 +508,7 @@ const LocationManagementPage: React.FC = () => {
         onRowsPerPageChange={handleRowsPerPageChange}
       />
 
-              {/* Create Location Modal */}
-        <Dialog open={showCreateModal} onClose={handleFormCancel} maxWidth="lg" fullWidth>
-          <LocationFormWrapper
-            mode="modal"
-            title="Create New Location"
-            subtitle="Add a new office location to the system"
-            showHeader={true}
-            onSuccess={handleCreateSuccess}
-            onCancel={handleFormCancel}
-          />
-        </Dialog>
 
-        {/* Edit Location Modal */}
-        <Dialog open={showEditModal} onClose={handleFormCancel} maxWidth="lg" fullWidth>
-          <LocationFormWrapper
-            mode="modal"
-            title="Edit Location"
-            subtitle="Update location information"
-            showHeader={true}
-            initialLocationId={selectedLocation?.id}
-            onSuccess={handleEditSuccess}
-            onCancel={handleFormCancel}
-          />
-        </Dialog>
 
       {/* Delete Confirmation Modal */}
       <Dialog open={showDeleteModal} onClose={() => setShowDeleteModal(false)}>

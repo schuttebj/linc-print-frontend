@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
     Box,
     Typography,
@@ -27,11 +27,10 @@ import LocationFormWrapper from '../../components/LocationFormWrapper';
 
 const LocationFormPage: React.FC = () => {
     const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
+    const { locationId } = useParams();
     const { user, hasPermission } = useAuth();
 
-    // Get edit location ID from URL parameters
-    const locationId = searchParams.get('id');
+    // Determine if in edit mode
     const isEditMode = !!locationId;
 
     // State management
@@ -44,7 +43,7 @@ const LocationFormPage: React.FC = () => {
     useEffect(() => {
         const requiredPermission = isEditMode ? 'locations.update' : 'locations.create';
         if (!hasPermission(requiredPermission)) {
-            navigate('/admin/locations');
+            navigate('/dashboard/admin/locations');
             return;
         }
     }, [isEditMode, hasPermission, navigate]);
@@ -54,7 +53,7 @@ const LocationFormPage: React.FC = () => {
         console.log(`Location ${wasEdit ? 'updated' : 'created'} successfully:`, location);
         
         // Navigate back to location management with success message
-        navigate('/admin/locations', { 
+        navigate('/dashboard/admin/locations', { 
             state: { 
                 successMessage: `Location ${wasEdit ? 'updated' : 'created'} successfully: ${location.location_name}` 
             } 
@@ -63,12 +62,12 @@ const LocationFormPage: React.FC = () => {
 
     // Handle form cancellation
     const handleFormCancel = () => {
-        navigate('/admin/locations');
+        navigate('/dashboard/admin/locations');
     };
 
     // Handle navigation back
     const handleNavigateBack = () => {
-        navigate('/admin/locations');
+        navigate('/dashboard/admin/locations');
     };
 
     return (
@@ -79,20 +78,20 @@ const LocationFormPage: React.FC = () => {
                 <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
                     <Link 
                         color="inherit" 
-                        href="/admin" 
+                        href="/dashboard/admin" 
                         onClick={(e) => {
                             e.preventDefault();
-                            navigate('/admin');
+                            navigate('/dashboard/admin');
                         }}
                     >
                         Admin
                     </Link>
                     <Link
                         color="inherit"
-                        href="/admin/locations"
+                        href="/dashboard/admin/locations"
                         onClick={(e) => {
                             e.preventDefault();
-                            navigate('/admin/locations');
+                            navigate('/dashboard/admin/locations');
                         }}
                     >
                         Location Management
