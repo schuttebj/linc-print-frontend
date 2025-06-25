@@ -173,9 +173,10 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
     const [nextLocationCode, setNextLocationCode] = useState<string>('');
     const [generatingCode, setGeneratingCode] = useState(false);
 
-    // Main location form with unique field names for each step
+    // Main location form with isolated field rendering per step
     const locationForm = useForm<LocationForm>({
         resolver: yupResolver(locationSchema),
+        mode: 'onChange', // Validate on change to prevent cross-step issues
         defaultValues: {
             location_code: '',
             location_name: '',
@@ -470,19 +471,19 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
         locationForm.reset();
     };
 
-    // Render step content
+    // Render step content with unique keys to prevent field value carryover
     const renderStepContent = () => {
         switch (currentStep) {
             case 0:
-                return renderBasicInformationStep();
+                return <div key={`step-basic-${currentStep}`}>{renderBasicInformationStep()}</div>;
             case 1:
-                return renderAddressProvinceStep();
+                return <div key={`step-address-${currentStep}`}>{renderAddressProvinceStep()}</div>;
             case 2:
-                return renderCapacityOperationsStep();
+                return <div key={`step-capacity-${currentStep}`}>{renderCapacityOperationsStep()}</div>;
             case 3:
-                return renderContactDetailsStep();
+                return <div key={`step-contact-${currentStep}`}>{renderContactDetailsStep()}</div>;
             case 4:
-                return renderReviewStep();
+                return <div key={`step-review-${currentStep}`}>{renderReviewStep()}</div>;
             default:
                 return null;
         }
@@ -500,6 +501,7 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                         <Controller
                             name="location_code"
                             control={locationForm.control}
+                            key="location-code-controller"
                             render={({ field }) => (
                                 <TextField
                                     {...field}
@@ -532,6 +534,7 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                         <Controller
                             name="office_type"
                             control={locationForm.control}
+                            key="office-type-controller"
                             render={({ field }) => (
                                 <FormControl fullWidth error={!!locationForm.formState.errors.office_type}>
                                     <InputLabel id="location-office-type-label">Office Type *</InputLabel>
@@ -559,6 +562,7 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                         <Controller
                             name="location_name"
                             control={locationForm.control}
+                            key="location-name-controller"
                             render={({ field }) => (
                                 <TextField
                                     {...field}

@@ -57,10 +57,7 @@ export interface OfficeType {
   label: string;
 }
 
-export interface EquipmentStatus {
-  value: string;
-  label: string;
-}
+// Equipment status interface removed - no longer needed for location management
 
 export interface AllLookupData {
   document_types: DocumentType[];
@@ -73,7 +70,6 @@ export interface AllLookupData {
   provinces: Province[];
   user_statuses: UserStatus[];
   office_types: OfficeType[];
-  equipment_statuses: EquipmentStatus[];
 }
 
 /**
@@ -344,30 +340,7 @@ class LookupService {
     }
   }
 
-  /**
-   * Get equipment statuses
-   */
-  public async getEquipmentStatuses(): Promise<EquipmentStatus[]> {
-    const cacheKey = 'equipment_statuses';
-    
-    if (this.isCacheValid(cacheKey)) {
-      return this.cache.get(cacheKey);
-    }
-
-    try {
-      const data = await api.get<EquipmentStatus[]>(API_ENDPOINTS.lookups.equipmentStatuses);
-      this.setCache(cacheKey, data);
-      return data;
-    } catch (error) {
-      console.error('Failed to fetch equipment statuses:', error);
-      // Return fallback data
-      return [
-        { value: 'OPERATIONAL', label: 'OPERATIONAL' },
-        { value: 'MAINTENANCE', label: 'MAINTENANCE' },
-        { value: 'OFFLINE', label: 'OFFLINE' },
-      ];
-    }
-  }
+  // Equipment status methods removed - no longer needed for location management
 
   /**
    * Get provinces
@@ -424,8 +397,7 @@ class LookupService {
         countries,
         provinces,
         user_statuses,
-        office_types,
-        equipment_statuses
+        office_types
       ] = await Promise.all([
         this.getDocumentTypes(),
         this.getPersonNatures(),
@@ -436,8 +408,7 @@ class LookupService {
         this.getCountries(),
         this.getProvinces(),
         this.getUserStatuses(),
-        this.getOfficeTypes(),
-        this.getEquipmentStatuses()
+        this.getOfficeTypes()
       ]);
 
       return {
@@ -450,8 +421,7 @@ class LookupService {
         countries,
         provinces,
         user_statuses,
-        office_types,
-        equipment_statuses
+        office_types
       };
     }
   }
