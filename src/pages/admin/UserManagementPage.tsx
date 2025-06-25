@@ -1,6 +1,6 @@
 /**
  * User Management Page for Madagascar LINC Print System
- * Admin interface for managing users, roles, permissions, and locations
+ * Enhanced with role hierarchy and user type management
  */
 
 import React, { useState, useEffect } from 'react';
@@ -33,8 +33,8 @@ import {
   DialogActions,
   Alert,
   CircularProgress,
-  FormControlLabel,
-  Switch
+  InputAdornment,
+  Stack,
 } from '@mui/material';
 import {
   Person as PersonIcon,
@@ -43,12 +43,18 @@ import {
   Delete as DeleteIcon,
   Lock as LockIcon,
   LockOpen as UnlockIcon,
-  Add as AddIcon
+  Add as AddIcon,
+  Search as SearchIcon,
+  FilterList as FilterIcon,
+  CheckCircle as CheckCircleIcon,
+  Warning as WarningIcon,
 } from '@mui/icons-material';
-import { API_ENDPOINTS, api } from '../../config/api';
-import lookupService, { UserStatus, OfficeType, Province } from '../../services/lookupService';
 
-// User-related interfaces
+import { useAuth } from '../../contexts/AuthContext';
+import { API_BASE_URL } from '../../config/api';
+import UserFormWrapper from '../../components/UserFormWrapper';
+
+// Enhanced user interface with new fields
 interface User {
   id: string;
   username: string;
@@ -56,39 +62,26 @@ interface User {
   last_name: string;
   email: string;
   status: string;
-  primary_location: {
+  user_type: 'LOCATION_USER' | 'PROVINCIAL_USER' | 'NATIONAL_USER';
+  primary_location?: {
     id: string;
-    location_code: string;
-    location_name: string;
+    code: string;
+    name: string;
     province_code: string;
-    office_type: string;
+    province_name: string;
   };
-  permissions: string[];
+  scope_province?: string;
+  roles: Array<{
+    id: string;
+    name: string;
+    display_name: string;
+    hierarchy_level: number;
+  }>;
   last_login?: string;
   failed_login_attempts: number;
   is_locked: boolean;
   created_at: string;
   updated_at: string;
-}
-
-interface UserCreateData {
-  username: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  password: string;
-  status: string;
-  primary_location_id: string;
-  permissions: string[];
-}
-
-interface UserUpdateData {
-  first_name?: string;
-  last_name?: string;
-  email?: string;
-  status?: string;
-  primary_location_id?: string;
-  permissions?: string[];
 }
 
 interface UserListResponse {
@@ -99,31 +92,22 @@ interface UserListResponse {
   total_pages: number;
 }
 
-interface Location {
-  id: string;
-  location_code: string;
-  location_name: string;
-  province_code: string;
-  office_type: string;
-}
-
 const UserManagementPage: React.FC = () => {
+  const { hasPermission, accessToken } = useAuth();
+
   // State management
   const [users, setUsers] = useState<User[]>([]);
-  const [userStatuses, setUserStatuses] = useState<UserStatus[]>([]);
-  const [officeTypes, setOfficeTypes] = useState<OfficeType[]>([]);
-  const [provinces, setProvinces] = useState<Province[]>([]);
-  const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Pagination and filtering - using TablePagination style
+  // Pagination and filtering
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [totalResults, setTotalResults] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
-  const [locationFilter, setLocationFilter] = useState<string>('');
+  const [userTypeFilter, setUserTypeFilter] = useState<string>('');
+  const [provinceFilter, setProvinceFilter] = useState<string>('');
 
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -131,193 +115,160 @@ const UserManagementPage: React.FC = () => {
   const [showViewModal, setShowViewModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
-  // Form data
-  const [createForm, setCreateForm] = useState<UserCreateData>({
-    username: '',
-    first_name: '',
-    last_name: '',
-    email: '',
-    password: '',
-    status: 'ACTIVE',
-    primary_location_id: '',
-    permissions: []
-  });
-
-  const [editForm, setEditForm] = useState<UserUpdateData>({});
-
-  // Available permissions
-  const AVAILABLE_PERMISSIONS = [
-    'READ_USERS',
-    'WRITE_USERS',
-    'DELETE_USERS',
-    'READ_PERSONS',
-    'WRITE_PERSONS',
-    'DELETE_PERSONS',
-    'READ_LOCATIONS',
-    'WRITE_LOCATIONS',
-    'VIEW_AUDIT_LOGS',
-    'EXPORT_DATA',
-    'SYSTEM_ADMIN'
-  ];
-
-  // Load initial data
+  // Load users
   useEffect(() => {
-    loadInitialData();
-  }, []);
+    loadUsers();
+  }, [page, rowsPerPage, searchTerm, statusFilter, userTypeFilter, provinceFilter]);
 
-  // Load users when filters change
-  useEffect(() => {
-    if (!loading) {
-      loadUsers();
-    }
-  }, [page, rowsPerPage, searchTerm, statusFilter, locationFilter, loading]);
-
-  const loadInitialData = async () => {
+  const loadUsers = async () => {
     try {
       setLoading(true);
-      
-      const [usersRes, statusesRes, officeTypesRes, provincesRes, locationsRes] = await Promise.all([
-        loadUsers(),
-        lookupService.getUserStatuses(),
-        lookupService.getOfficeTypes(),
-        lookupService.getProvinces(),
-        api.get<{ locations: Location[] }>(`${API_ENDPOINTS.locations}?per_page=100`)
-      ]);
-      
-      setUserStatuses(statusesRes);
-      setOfficeTypes(officeTypesRes);
-      setProvinces(provincesRes);
-      setLocations(locationsRes.locations || []);
+      setError(null);
+
+      const params = new URLSearchParams({
+        page: (page + 1).toString(),
+        per_page: rowsPerPage.toString(),
+        ...(searchTerm && { search: searchTerm }),
+        ...(statusFilter && { status: statusFilter }),
+        ...(userTypeFilter && { user_type: userTypeFilter }),
+        ...(provinceFilter && { province: provinceFilter }),
+      });
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/users?${params}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to load users: ${response.statusText}`);
+      }
+
+      const data: UserListResponse = await response.json();
+      setUsers(data.users || []);
+      setTotalResults(data.total || 0);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load data');
+      setError(err instanceof Error ? err.message : 'Failed to load users');
+      console.error('Failed to load users:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const loadUsers = async () => {
-    try {
-      const params = new URLSearchParams({
-        page: (page + 1).toString(), // Convert from 0-based to 1-based
-        per_page: rowsPerPage.toString(),
-        ...(searchTerm && { search: searchTerm }),
-        ...(statusFilter && { status: statusFilter }),
-        ...(locationFilter && { location_id: locationFilter })
-      });
-
-      const response = await api.get<UserListResponse>(`${API_ENDPOINTS.users}?${params}`);
-      setUsers(response.users || []);
-      setTotalResults(response.total || 0);
-      return response;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load users');
-      throw err;
-    }
-  };
-
-  const handleCreateUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await api.post(API_ENDPOINTS.users, createForm);
-      setShowCreateModal(false);
-      setCreateForm({
-        username: '',
-        first_name: '',
-        last_name: '',
-        email: '',
-        password: '',
-        status: 'ACTIVE',
-        primary_location_id: '',
-        permissions: []
-      });
-      await loadUsers();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create user');
-    }
-  };
-
-  const handleEditUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedUser) return;
-    
-    try {
-      await api.put(`${API_ENDPOINTS.userById(selectedUser.id)}`, editForm);
-      setShowEditModal(false);
-      setSelectedUser(null);
-      setEditForm({});
-      await loadUsers();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update user');
-    }
-  };
-
   const handleDeleteUser = async () => {
     if (!selectedUser) return;
-    
+
     try {
-      await api.delete(`${API_ENDPOINTS.userById(selectedUser.id)}`);
+      const response = await fetch(`${API_BASE_URL}/api/v1/users/${selectedUser.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete user');
+      }
+
+      setSuccessMessage(`User ${selectedUser.first_name} ${selectedUser.last_name} has been deleted successfully.`);
+      setShowSuccessDialog(true);
       setShowDeleteModal(false);
       setSelectedUser(null);
-      await loadUsers();
+      loadUsers();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete user');
+      alert(`Failed to delete user: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   };
 
   const handleToggleLock = async (user: User) => {
     try {
-      await api.put(`${API_ENDPOINTS.userById(user.id)}/lock`, {
-        is_locked: !user.is_locked
+      const action = user.is_locked ? 'unlock' : 'lock';
+      const response = await fetch(`${API_BASE_URL}/api/v1/users/${user.id}/${action}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
       });
-      await loadUsers();
+
+      if (!response.ok) {
+        throw new Error(`Failed to ${action} user`);
+      }
+
+      setSuccessMessage(`User ${user.first_name} ${user.last_name} has been ${action}ed successfully.`);
+      setShowSuccessDialog(true);
+      loadUsers();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update user lock status');
+      alert(`Failed to toggle user lock: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+  };
+
+  const getUserTypeDisplay = (userType: string): { label: string; color: 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' } => {
+    switch (userType) {
+      case 'LOCATION_USER':
+        return { label: 'Location', color: 'primary' };
+      case 'PROVINCIAL_USER':
+        return { label: 'Provincial', color: 'warning' };
+      case 'NATIONAL_USER':
+        return { label: 'National', color: 'error' };
+      default:
+        return { label: userType, color: 'default' };
     }
   };
 
   const getStatusColor = (status: string): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
-    switch (status) {
-      case 'ACTIVE': return 'success';
-      case 'INACTIVE': return 'warning';
-      case 'SUSPENDED': return 'error';
-      default: return 'default';
+    switch (status?.toLowerCase()) {
+      case 'active':
+        return 'success';
+      case 'inactive':
+        return 'default';
+      case 'suspended':
+        return 'warning';
+      case 'locked':
+        return 'error';
+      default:
+        return 'default';
     }
   };
 
   const getLocationInfo = (user: User) => {
-    if (!user.primary_location) return 'No Location';
-    return `${user.primary_location.location_name} (${user.primary_location.location_code})`;
+    if (user.user_type === 'LOCATION_USER' && user.primary_location) {
+      return `${user.primary_location.name} (${user.primary_location.code})`;
+    } else if (user.user_type === 'PROVINCIAL_USER' && user.scope_province) {
+      const provinceNames: { [key: string]: string } = {
+        'T': 'ANTANANARIVO',
+        'A': 'TOAMASINA',
+        'D': 'ANTSIRANANA',
+        'F': 'FIANARANTSOA',
+        'M': 'MAHAJANGA',
+        'U': 'TOLIARA',
+      };
+      return `${provinceNames[user.scope_province] || user.scope_province} Province`;
+    } else if (user.user_type === 'NATIONAL_USER') {
+      return 'National Access';
+    }
+    return 'Not Assigned';
   };
 
   const formatDate = (dateString: string) => {
-    try {
-      return new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
-    } catch {
-      return 'Never';
-    }
-  };
-
-  const handleViewUser = (user: User) => {
-    setSelectedUser(user);
-    setShowViewModal(true);
-  };
-
-  const handleEditUserClick = (user: User) => {
-    setSelectedUser(user);
-    setEditForm({
-      first_name: user.first_name,
-      last_name: user.last_name,
-      email: user.email,
-      status: user.status,
-      primary_location_id: user.primary_location?.id || '',
-      permissions: user.permissions || []
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
-    setShowEditModal(true);
+  };
+
+  const handleUserSuccess = (user: any, isEdit: boolean) => {
+    setSuccessMessage(`User ${user.first_name} ${user.last_name} has been ${isEdit ? 'updated' : 'created'} successfully.`);
+    setShowSuccessDialog(true);
+    setShowCreateModal(false);
+    setShowEditModal(false);
+    setSelectedUser(null);
+    loadUsers();
   };
 
   const handlePageChange = (_event: unknown, newPage: number) => {
@@ -326,164 +277,150 @@ const UserManagementPage: React.FC = () => {
 
   const handleRowsPerPageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0); // Reset to first page when changing rows per page
+    setPage(0);
   };
 
-  if (loading) {
+  // Check permissions
+  if (!hasPermission('users.read')) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress size={48} />
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error">
+          You don't have permission to view users. Contact your administrator.
+        </Alert>
+      </Box>
+    );
+  }
+
+  if (loading && users.length === 0) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+        <CircularProgress />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: 'auto', p: 3 }}>
+    <Box sx={{ p: 3 }}>
       {/* Header */}
-      <Typography variant="h4" component="h1" gutterBottom>
-        User Management
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" component="h1">
+          User Management
+        </Typography>
+        
+        {hasPermission('users.create') && (
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setShowCreateModal(true)}
+          >
+            Create User
+          </Button>
+        )}
+      </Box>
+
+      <Typography variant="body1" color="text.secondary" gutterBottom>
+        Manage user accounts, roles, and permissions for the Madagascar LINC Print system.
       </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-        Manage system users, roles, permissions, and access controls
-      </Typography>
 
-      {/* Error Alert */}
-      {error && (
-        <Alert 
-          severity="error" 
-          onClose={() => setError(null)}
-          sx={{ mb: 3 }}
-        >
-          {error}
-        </Alert>
-      )}
-
-      {/* Summary Cards */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Typography variant="h4" color="primary.main">
-                {users.length}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Total Users
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Typography variant="h4" color="success.main">
-                {users.filter(u => u.status === 'ACTIVE').length}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Active Users
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Typography variant="h4" color="warning.main">
-                {users.filter(u => u.is_locked).length}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Locked Users
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Typography variant="h4" color="info.main">
-                {users.filter(u => u.last_login).length}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Recently Active
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Filters and Search */}
+      {/* Filters */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} md={3}>
+          <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <FilterIcon />
+            Search & Filters
+          </Typography>
+          
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={4}>
               <TextField
                 fullWidth
-                placeholder="Search users..."
+                label="Search Users"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                size="small"
+                placeholder="Username, name, or email"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon />
+                    </InputAdornment>
+                  ),
+                }}
               />
             </Grid>
             
             <Grid item xs={12} md={2}>
-              <FormControl fullWidth size="small">
+              <FormControl fullWidth>
                 <InputLabel>Status</InputLabel>
                 <Select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                   label="Status"
                 >
-                  <MenuItem value="">All Status</MenuItem>
-                  {userStatuses.map(status => (
-                    <MenuItem key={status.value} value={status.value}>
-                      {status.label}
-                    </MenuItem>
-                  ))}
+                  <MenuItem value="">All Statuses</MenuItem>
+                  <MenuItem value="ACTIVE">Active</MenuItem>
+                  <MenuItem value="INACTIVE">Inactive</MenuItem>
+                  <MenuItem value="SUSPENDED">Suspended</MenuItem>
+                  <MenuItem value="LOCKED">Locked</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
             
             <Grid item xs={12} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Location</InputLabel>
+              <FormControl fullWidth>
+                <InputLabel>User Type</InputLabel>
                 <Select
-                  value={locationFilter}
-                  onChange={(e) => setLocationFilter(e.target.value)}
-                  label="Location"
+                  value={userTypeFilter}
+                  onChange={(e) => setUserTypeFilter(e.target.value)}
+                  label="User Type"
                 >
-                  <MenuItem value="">All Locations</MenuItem>
-                  {locations.map(location => (
-                    <MenuItem key={location.id} value={location.id}>
-                      {location.location_name} ({location.location_code})
-                    </MenuItem>
-                  ))}
+                  <MenuItem value="">All Types</MenuItem>
+                  <MenuItem value="LOCATION_USER">Location Users</MenuItem>
+                  <MenuItem value="PROVINCIAL_USER">Provincial Users</MenuItem>
+                  <MenuItem value="NATIONAL_USER">National Users</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
             
-            <Grid item xs={12} md={2}>
-              <Button
-                fullWidth
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => setShowCreateModal(true)}
-              >
-                Add User
-              </Button>
+            <Grid item xs={12} md={3}>
+              <FormControl fullWidth>
+                <InputLabel>Province</InputLabel>
+                <Select
+                  value={provinceFilter}
+                  onChange={(e) => setProvinceFilter(e.target.value)}
+                  label="Province"
+                >
+                  <MenuItem value="">All Provinces</MenuItem>
+                  <MenuItem value="T">Antananarivo</MenuItem>
+                  <MenuItem value="A">Toamasina</MenuItem>
+                  <MenuItem value="D">Antsiranana</MenuItem>
+                  <MenuItem value="F">Fianarantsoa</MenuItem>
+                  <MenuItem value="M">Mahajanga</MenuItem>
+                  <MenuItem value="U">Toliara</MenuItem>
+                </Select>
+              </FormControl>
             </Grid>
           </Grid>
         </CardContent>
       </Card>
 
+      {/* Error Display */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
+
       {/* Users Table */}
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
-            <TableRow sx={{ backgroundColor: 'grey.50' }}>
+            <TableRow>
               <TableCell>User</TableCell>
-              <TableCell>Email</TableCell>
+              <TableCell>Username</TableCell>
+              <TableCell>Type</TableCell>
+              <TableCell>Assignment</TableCell>
+              <TableCell>Roles</TableCell>
               <TableCell>Status</TableCell>
-              <TableCell>Location</TableCell>
-              <TableCell>Permissions</TableCell>
               <TableCell>Last Login</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
@@ -494,42 +431,29 @@ const UserManagementPage: React.FC = () => {
                 <TableCell>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Avatar sx={{ bgcolor: 'primary.main' }}>
-                      <PersonIcon />
+                      {user.first_name?.[0]}{user.last_name?.[0]}
                     </Avatar>
                     <Box>
-                      <Typography variant="body2" fontWeight="medium">
+                      <Typography variant="subtitle2">
                         {user.first_name} {user.last_name}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        @{user.username}
+                      <Typography variant="body2" color="text.secondary">
+                        {user.email}
                       </Typography>
-                      {user.is_locked && (
-                        <Chip 
-                          label="Locked" 
-                          size="small" 
-                          color="error" 
-                          sx={{ ml: 1 }}
-                        />
-                      )}
                     </Box>
                   </Box>
                 </TableCell>
                 
                 <TableCell>
-                  <Typography variant="body2">
-                    {user.email}
+                  <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                    {user.username}
                   </Typography>
-                  {user.failed_login_attempts > 0 && (
-                    <Typography variant="caption" color="warning.main">
-                      {user.failed_login_attempts} failed attempts
-                    </Typography>
-                  )}
                 </TableCell>
                 
                 <TableCell>
                   <Chip
-                    label={userStatuses.find(s => s.value === user.status)?.label || user.status}
-                    color={getStatusColor(user.status)}
+                    label={getUserTypeDisplay(user.user_type).label}
+                    color={getUserTypeDisplay(user.user_type).color}
                     size="small"
                   />
                 </TableCell>
@@ -538,25 +462,32 @@ const UserManagementPage: React.FC = () => {
                   <Typography variant="body2">
                     {getLocationInfo(user)}
                   </Typography>
-                  {user.primary_location && (
-                    <Typography variant="caption" color="text.secondary">
-                      {user.primary_location.office_type}
-                    </Typography>
-                  )}
                 </TableCell>
                 
                 <TableCell>
-                  <Typography variant="body2">
-                    {user.permissions?.length || 0} permissions
-                  </Typography>
-                  {user.permissions?.includes('SYSTEM_ADMIN') && (
-                    <Chip 
-                      label="Admin" 
-                      size="small" 
-                      color="primary" 
-                      sx={{ mt: 0.5 }}
+                  <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                    {user.roles?.map((role) => (
+                      <Chip
+                        key={role.id}
+                        label={`${role.display_name} (${role.hierarchy_level})`}
+                        size="small"
+                        variant="outlined"
+                      />
+                    ))}
+                  </Stack>
+                </TableCell>
+                
+                <TableCell>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip
+                      label={user.status}
+                      color={getStatusColor(user.status)}
+                      size="small"
                     />
-                  )}
+                    {user.is_locked && (
+                      <LockIcon fontSize="small" color="error" />
+                    )}
+                  </Box>
                 </TableCell>
                 
                 <TableCell>
@@ -566,41 +497,51 @@ const UserManagementPage: React.FC = () => {
                 </TableCell>
                 
                 <TableCell align="right">
-                  <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                  <Box sx={{ display: 'flex', gap: 0.5 }}>
                     <IconButton
                       size="small"
-                      color="info"
-                      onClick={() => handleViewUser(user)}
+                      onClick={() => {
+                        setSelectedUser(user);
+                        setShowViewModal(true);
+                      }}
                     >
                       <ViewIcon />
                     </IconButton>
                     
-                    <IconButton
-                      size="small"
-                      color="primary"
-                      onClick={() => handleEditUserClick(user)}
-                    >
-                      <EditIcon />
-                    </IconButton>
+                    {hasPermission('users.update') && (
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          setSelectedUser(user);
+                          setShowEditModal(true);
+                        }}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                    )}
                     
-                    <IconButton
-                      size="small"
-                      color={user.is_locked ? 'success' : 'warning'}
-                      onClick={() => handleToggleLock(user)}
-                    >
-                      {user.is_locked ? <UnlockIcon /> : <LockIcon />}
-                    </IconButton>
+                    {hasPermission('users.update') && (
+                      <IconButton
+                        size="small"
+                        onClick={() => handleToggleLock(user)}
+                        color={user.is_locked ? 'success' : 'warning'}
+                      >
+                        {user.is_locked ? <UnlockIcon /> : <LockIcon />}
+                      </IconButton>
+                    )}
                     
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => {
-                        setSelectedUser(user);
-                        setShowDeleteModal(true);
-                      }}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
+                    {hasPermission('users.delete') && (
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          setSelectedUser(user);
+                          setShowDeleteModal(true);
+                        }}
+                        color="error"
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    )}
                   </Box>
                 </TableCell>
               </TableRow>
@@ -621,389 +562,147 @@ const UserManagementPage: React.FC = () => {
       />
 
       {/* Create User Modal */}
-      <Dialog open={showCreateModal} onClose={() => setShowCreateModal(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Create New User</DialogTitle>
-        <form onSubmit={handleCreateUser}>
-          <DialogContent>
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Username"
-                  required
-                  value={createForm.username}
-                  onChange={(e) => setCreateForm({...createForm, username: e.target.value})}
-                />
-              </Grid>
-              
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Password"
-                  type="password"
-                  required
-                  value={createForm.password}
-                  onChange={(e) => setCreateForm({...createForm, password: e.target.value})}
-                />
-              </Grid>
-              
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="First Name"
-                  required
-                  value={createForm.first_name}
-                  onChange={(e) => setCreateForm({...createForm, first_name: e.target.value})}
-                />
-              </Grid>
-              
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Last Name"
-                  required
-                  value={createForm.last_name}
-                  onChange={(e) => setCreateForm({...createForm, last_name: e.target.value})}
-                />
-              </Grid>
-              
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Email"
-                  type="email"
-                  required
-                  value={createForm.email}
-                  onChange={(e) => setCreateForm({...createForm, email: e.target.value})}
-                />
-              </Grid>
-              
-              <Grid item xs={6}>
-                <FormControl fullWidth required>
-                  <InputLabel>Status</InputLabel>
-                  <Select
-                    value={createForm.status}
-                    onChange={(e) => setCreateForm({...createForm, status: e.target.value})}
-                    label="Status"
-                  >
-                    {userStatuses.map(status => (
-                      <MenuItem key={status.value} value={status.value}>
-                        {status.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              
-              <Grid item xs={6}>
-                <FormControl fullWidth required>
-                  <InputLabel>Location</InputLabel>
-                  <Select
-                    value={createForm.primary_location_id}
-                    onChange={(e) => setCreateForm({...createForm, primary_location_id: e.target.value})}
-                    label="Location"
-                  >
-                    {locations.map(location => (
-                      <MenuItem key={location.id} value={location.id}>
-                        {location.location_name} ({location.location_code})
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              
-              <Grid item xs={12}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Permissions:
-                </Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                  {AVAILABLE_PERMISSIONS.map(permission => (
-                    <FormControlLabel
-                      key={permission}
-                      control={
-                        <Switch
-                          checked={createForm.permissions.includes(permission)}
-                          onChange={(e) => {
-                            const updatedPermissions = e.target.checked
-                              ? [...createForm.permissions, permission]
-                              : createForm.permissions.filter(p => p !== permission);
-                            setCreateForm({...createForm, permissions: updatedPermissions});
-                          }}
-                        />
-                      }
-                      label={permission.replace(/_/g, ' ')}
-                    />
-                  ))}
-                </Box>
-              </Grid>
-            </Grid>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setShowCreateModal(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="contained">
-              Create User
-            </Button>
-          </DialogActions>
-        </form>
+      <Dialog open={showCreateModal} onClose={() => setShowCreateModal(false)} maxWidth="lg" fullWidth>
+        <UserFormWrapper
+          mode="create"
+          onSuccess={handleUserSuccess}
+          onCancel={() => setShowCreateModal(false)}
+        />
       </Dialog>
 
       {/* Edit User Modal */}
-      <Dialog open={showEditModal} onClose={() => setShowEditModal(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Edit User: {selectedUser?.username}</DialogTitle>
-        <form onSubmit={handleEditUser}>
-          <DialogContent>
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="First Name"
-                  required
-                  value={editForm.first_name || ''}
-                  onChange={(e) => setEditForm({...editForm, first_name: e.target.value})}
-                />
-              </Grid>
-              
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Last Name"
-                  required
-                  value={editForm.last_name || ''}
-                  onChange={(e) => setEditForm({...editForm, last_name: e.target.value})}
-                />
-              </Grid>
-              
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Email"
-                  type="email"
-                  required
-                  value={editForm.email || ''}
-                  onChange={(e) => setEditForm({...editForm, email: e.target.value})}
-                />
-              </Grid>
-              
-              <Grid item xs={6}>
-                <FormControl fullWidth required>
-                  <InputLabel>Status</InputLabel>
-                  <Select
-                    value={editForm.status || ''}
-                    onChange={(e) => setEditForm({...editForm, status: e.target.value})}
-                    label="Status"
-                  >
-                    {userStatuses.map(status => (
-                      <MenuItem key={status.value} value={status.value}>
-                        {status.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              
-              <Grid item xs={6}>
-                <FormControl fullWidth required>
-                  <InputLabel>Location</InputLabel>
-                  <Select
-                    value={editForm.primary_location_id || ''}
-                    onChange={(e) => setEditForm({...editForm, primary_location_id: e.target.value})}
-                    label="Location"
-                  >
-                    {locations.map(location => (
-                      <MenuItem key={location.id} value={location.id}>
-                        {location.location_name} ({location.location_code})
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              
-              <Grid item xs={12}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Permissions:
-                </Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                  {AVAILABLE_PERMISSIONS.map(permission => (
-                    <FormControlLabel
-                      key={permission}
-                      control={
-                        <Switch
-                          checked={editForm.permissions?.includes(permission) || false}
-                          onChange={(e) => {
-                            const currentPermissions = editForm.permissions || [];
-                            const updatedPermissions = e.target.checked
-                              ? [...currentPermissions, permission]
-                              : currentPermissions.filter(p => p !== permission);
-                            setEditForm({...editForm, permissions: updatedPermissions});
-                          }}
-                        />
-                      }
-                      label={permission.replace(/_/g, ' ')}
-                    />
-                  ))}
-                </Box>
-              </Grid>
-            </Grid>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setShowEditModal(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="contained">
-              Update User
-            </Button>
-          </DialogActions>
-        </form>
+      <Dialog open={showEditModal} onClose={() => setShowEditModal(false)} maxWidth="lg" fullWidth>
+        {selectedUser && (
+          <UserFormWrapper
+            mode="edit"
+            userId={selectedUser.id}
+            onSuccess={handleUserSuccess}
+            onCancel={() => setShowEditModal(false)}
+          />
+        )}
       </Dialog>
 
       {/* View User Modal */}
       <Dialog open={showViewModal} onClose={() => setShowViewModal(false)} maxWidth="md" fullWidth>
-        <DialogTitle>User Details: {selectedUser?.username}</DialogTitle>
+        <DialogTitle>User Details</DialogTitle>
         <DialogContent>
           {selectedUser && (
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Full Name
-                </Typography>
-                <Typography variant="body1">
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <Typography variant="h6">
                   {selectedUser.first_name} {selectedUser.last_name}
                 </Typography>
-              </Grid>
-              
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Email
-                </Typography>
-                <Typography variant="body1">
+                <Typography variant="body2" color="text.secondary">
                   {selectedUser.email}
                 </Typography>
               </Grid>
               
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Status
+              <Grid item xs={6}>
+                <Typography variant="subtitle2">Username:</Typography>
+                <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                  {selectedUser.username}
                 </Typography>
+              </Grid>
+              
+              <Grid item xs={6}>
+                <Typography variant="subtitle2">User Type:</Typography>
                 <Chip
-                  label={userStatuses.find(s => s.value === selectedUser.status)?.label || selectedUser.status}
+                  label={getUserTypeDisplay(selectedUser.user_type).label}
+                  color={getUserTypeDisplay(selectedUser.user_type).color}
+                  size="small"
+                />
+              </Grid>
+              
+              <Grid item xs={12}>
+                <Typography variant="subtitle2">Assignment:</Typography>
+                <Typography variant="body2">
+                  {getLocationInfo(selectedUser)}
+                </Typography>
+              </Grid>
+              
+              <Grid item xs={12}>
+                <Typography variant="subtitle2">Roles:</Typography>
+                <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1 }}>
+                  {selectedUser.roles?.map((role) => (
+                    <Chip
+                      key={role.id}
+                      label={`${role.display_name} (Level ${role.hierarchy_level})`}
+                      variant="outlined"
+                    />
+                  ))}
+                </Stack>
+              </Grid>
+              
+              <Grid item xs={6}>
+                <Typography variant="subtitle2">Status:</Typography>
+                <Chip
+                  label={selectedUser.status}
                   color={getStatusColor(selectedUser.status)}
                   size="small"
                 />
               </Grid>
               
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Account Status
-                </Typography>
-                <Typography variant="body1">
-                  {selectedUser.is_locked ? 'Locked' : 'Active'}
-                </Typography>
-              </Grid>
-              
-              <Grid item xs={12}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Primary Location
-                </Typography>
-                <Typography variant="body1">
-                  {getLocationInfo(selectedUser)}
-                </Typography>
-              </Grid>
-              
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Last Login
-                </Typography>
-                <Typography variant="body1">
+              <Grid item xs={6}>
+                <Typography variant="subtitle2">Last Login:</Typography>
+                <Typography variant="body2">
                   {selectedUser.last_login ? formatDate(selectedUser.last_login) : 'Never'}
-                </Typography>
-              </Grid>
-              
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Failed Login Attempts
-                </Typography>
-                <Typography variant="body1">
-                  {selectedUser.failed_login_attempts}
-                </Typography>
-              </Grid>
-              
-              <Grid item xs={12}>
-                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                  Permissions
-                </Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                  {selectedUser.permissions?.length > 0 ? (
-                    selectedUser.permissions.map(permission => (
-                      <Chip
-                        key={permission}
-                        label={permission.replace(/_/g, ' ')}
-                        size="small"
-                        color={permission === 'SYSTEM_ADMIN' ? 'primary' : 'default'}
-                      />
-                    ))
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      No permissions assigned
-                    </Typography>
-                  )}
-                </Box>
-              </Grid>
-              
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Created
-                </Typography>
-                <Typography variant="body1">
-                  {formatDate(selectedUser.created_at)}
-                </Typography>
-              </Grid>
-              
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Last Updated
-                </Typography>
-                <Typography variant="body1">
-                  {formatDate(selectedUser.updated_at)}
                 </Typography>
               </Grid>
             </Grid>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowViewModal(false)}>
-            Close
-          </Button>
-          <Button 
-            variant="contained"
-            onClick={() => {
-              setShowViewModal(false);
-              if (selectedUser) {
-                handleEditUserClick(selectedUser);
-              }
-            }}
-          >
-            Edit User
-          </Button>
+          <Button onClick={() => setShowViewModal(false)}>Close</Button>
         </DialogActions>
       </Dialog>
 
       {/* Delete Confirmation Modal */}
       <Dialog open={showDeleteModal} onClose={() => setShowDeleteModal(false)}>
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to delete user <strong>{selectedUser?.username}</strong>? 
-            This action cannot be undone and will remove all associated data.
+        <DialogTitle sx={{ bgcolor: 'error.main', color: 'white' }}>
+          <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <WarningIcon />
+            Confirm User Deletion
           </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Alert severity="error" sx={{ mb: 2 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+              This action cannot be undone!
+            </Typography>
+          </Alert>
+          
+          {selectedUser && (
+            <Typography variant="body1">
+              Are you sure you want to delete user <strong>{selectedUser.first_name} {selectedUser.last_name}</strong>?
+            </Typography>
+          )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowDeleteModal(false)}>
+        <DialogActions sx={{ p: 3 }}>
+          <Button onClick={() => setShowDeleteModal(false)} variant="outlined">
             Cancel
           </Button>
-          <Button onClick={handleDeleteUser} color="error" variant="contained">
+          <Button onClick={handleDeleteUser} variant="contained" color="error">
             Delete User
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Success Dialog */}
+      <Dialog open={showSuccessDialog} onClose={() => setShowSuccessDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ bgcolor: 'success.main', color: 'white' }}>
+          <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <CheckCircleIcon />
+            Success
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Alert severity="success">
+            {successMessage}
+          </Alert>
+        </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button onClick={() => setShowSuccessDialog(false)} variant="contained">
+            Close
           </Button>
         </DialogActions>
       </Dialog>
