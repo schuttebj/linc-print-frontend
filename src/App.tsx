@@ -16,6 +16,13 @@ import PersonSearchPage from './pages/persons/PersonSearchPage';
 import PersonEditPage from './pages/persons/PersonEditPage';
 import PersonFormTest from './pages/persons/PersonFormTest';
 
+// Admin Pages
+import AdminPage from './pages/admin/AdminPage';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import UserManagementPage from './pages/admin/UserManagementPage';
+import LocationManagementPage from './pages/admin/LocationManagementPage';
+import AuditLogViewer from './pages/admin/AuditLogViewer';
+
 function App() {
   return (
     <AuthProvider>
@@ -77,6 +84,42 @@ function App() {
                 element={
                   <ProtectedRoute requiredPermission="persons.create">
                     <PersonFormTest />
+                  </ProtectedRoute>
+                } 
+              />
+            </Route>
+
+            {/* Admin Management - requires admin permissions */}
+            <Route path="admin">
+              <Route 
+                index 
+                element={
+                  <ProtectedRoute requiredPermission="admin.read">
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="users" 
+                element={
+                  <ProtectedRoute requiredPermission="admin.users">
+                    <UserManagementPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="locations" 
+                element={
+                  <ProtectedRoute requiredPermission="admin.locations">
+                    <LocationManagementPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="audit" 
+                element={
+                  <ProtectedRoute requiredPermission="admin.audit">
+                    <AuditLogViewer />
                   </ProtectedRoute>
                 } 
               />

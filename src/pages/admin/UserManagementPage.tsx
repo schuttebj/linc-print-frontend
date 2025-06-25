@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { API_ENDPOINTS, api } from '../../config/api';
+import lookupService, { UserStatus } from '../../services/lookupService';
 
 // User interfaces
 interface User {
@@ -17,7 +18,7 @@ interface User {
   employee_id?: string;
   department?: string;
   position?: string;
-  status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'LOCKED' | 'PENDING_ACTIVATION';
+  status: string;
   is_active: boolean;
   is_superuser: boolean;
   roles: Role[];
@@ -69,6 +70,7 @@ const UserManagementPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
+  const [userStatuses, setUserStatuses] = useState<UserStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -112,14 +114,16 @@ const UserManagementPage: React.FC = () => {
   const loadInitialData = async () => {
     try {
       setLoading(true);
-      const [usersRes, rolesRes, locationsRes] = await Promise.all([
+      const [usersRes, rolesRes, locationsRes, userStatusesRes] = await Promise.all([
         loadUsers(),
         api.get<Role[]>(`${API_ENDPOINTS.users.replace('/users', '/roles')}`),
-        api.get<Location[]>(`${API_ENDPOINTS.users.replace('/users', '/locations')}`)
+        api.get<Location[]>(`${API_ENDPOINTS.users.replace('/users', '/locations')}`),
+        lookupService.getUserStatuses()
       ]);
       
       setRoles(rolesRes);
       setLocations(locationsRes);
+      setUserStatuses(userStatusesRes);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
@@ -275,14 +279,14 @@ const UserManagementPage: React.FC = () => {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
-            <option value="">All Status</option>
-            <option value="ACTIVE">Active</option>
-            <option value="INACTIVE">Inactive</option>
-            <option value="SUSPENDED">Suspended</option>
-            <option value="LOCKED">Locked</option>
-            <option value="PENDING_ACTIVATION">Pending</option>
+            <option value="">All Statuses</option>
+            {userStatuses.map((status) => (
+              <option key={status.value} value={status.value}>
+                {status.label}
+              </option>
+            ))}
           </select>
         </div>
         

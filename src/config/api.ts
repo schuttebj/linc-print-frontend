@@ -81,6 +81,9 @@ export const API_ENDPOINTS = {
     phoneCountryCodes: `${API_BASE_URL}/api/${API_VERSION}/lookups/phone-country-codes`,
     countries: `${API_BASE_URL}/api/${API_VERSION}/lookups/countries`,
     provinces: `${API_BASE_URL}/api/${API_VERSION}/lookups/provinces`,
+    userStatuses: `${API_BASE_URL}/api/${API_VERSION}/lookups/user-statuses`,
+    officeTypes: `${API_BASE_URL}/api/${API_VERSION}/lookups/office-types`,
+    equipmentStatuses: `${API_BASE_URL}/api/${API_VERSION}/lookups/equipment-statuses`,
     all: `${API_BASE_URL}/api/${API_VERSION}/lookups/all`,
   },
 } as const;

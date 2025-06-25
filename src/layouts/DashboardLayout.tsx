@@ -30,6 +30,10 @@ import {
   Search,
   Logout,
   AccountCircle,
+  AdminPanelSettings,
+  People,
+  LocationOn,
+  Assessment,
 } from '@mui/icons-material';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -86,6 +90,34 @@ const DashboardLayout: React.FC = () => {
     },
   ];
 
+  // Admin navigation items
+  const adminNavigationItems = [
+    {
+      text: 'Admin Dashboard',
+      icon: <AdminPanelSettings />,
+      path: '/dashboard/admin',
+      permission: 'admin.read',
+    },
+    {
+      text: 'User Management',
+      icon: <People />,
+      path: '/dashboard/admin/users',
+      permission: 'admin.users',
+    },
+    {
+      text: 'Location Management',
+      icon: <LocationOn />,
+      path: '/dashboard/admin/locations',
+      permission: 'admin.locations',
+    },
+    {
+      text: 'Audit Logs',
+      icon: <Assessment />,
+      path: '/dashboard/admin/audit',
+      permission: 'admin.audit',
+    },
+  ];
+
   const drawer = (
     <Box>
       <Toolbar>
@@ -94,6 +126,8 @@ const DashboardLayout: React.FC = () => {
         </Typography>
       </Toolbar>
       <Divider />
+      
+      {/* Main Navigation */}
       <List>
         {navigationItems.map((item) => {
           // Check permissions
@@ -121,6 +155,51 @@ const DashboardLayout: React.FC = () => {
           );
         })}
       </List>
+
+      {/* Admin Section */}
+      {adminNavigationItems.some(item => !item.permission || hasPermission(item.permission)) && (
+        <>
+          <Divider />
+          <List>
+            <ListItem>
+              <ListItemText 
+                primary="Administration" 
+                primaryTypographyProps={{ 
+                  variant: 'caption', 
+                  color: 'textSecondary',
+                  fontWeight: 'bold',
+                  textTransform: 'uppercase'
+                }} 
+              />
+            </ListItem>
+            {adminNavigationItems.map((item) => {
+              // Check permissions
+              if (item.permission && !hasPermission(item.permission)) {
+                return null;
+              }
+
+              const isActive = location.pathname === item.path;
+
+              return (
+                <ListItem key={item.text} disablePadding>
+                  <ListItemButton
+                    selected={isActive}
+                    onClick={() => {
+                      navigate(item.path);
+                      if (isMobile) {
+                        setMobileOpen(false);
+                      }
+                    }}
+                  >
+                    <ListItemIcon>{item.icon}</ListItemIcon>
+                    <ListItemText primary={item.text} />
+                  </ListItemButton>
+                </ListItem>
+              );
+            })}
+          </List>
+        </>
+      )}
     </Box>
   );
 

@@ -47,6 +47,21 @@ export interface Province {
   name: string;
 }
 
+export interface UserStatus {
+  value: string;
+  label: string;
+}
+
+export interface OfficeType {
+  value: string;
+  label: string;
+}
+
+export interface EquipmentStatus {
+  value: string;
+  label: string;
+}
+
 export interface AllLookupData {
   document_types: DocumentType[];
   person_natures: PersonNature[];
@@ -56,6 +71,9 @@ export interface AllLookupData {
   phone_country_codes: PhoneCountryCode[];
   countries: Country[];
   provinces: Province[];
+  user_statuses: UserStatus[];
+  office_types: OfficeType[];
+  equipment_statuses: EquipmentStatus[];
 }
 
 /**
@@ -183,9 +201,9 @@ class LookupService {
       console.error('Failed to fetch languages:', error);
       // Return fallback data
       return [
-        { value: 'mg', label: 'MALAGASY' },
-        { value: 'fr', label: 'FRANÇAIS' },
-        { value: 'en', label: 'ENGLISH' },
+        { value: 'MG', label: 'MALAGASY' },
+        { value: 'FR', label: 'FRANÇAIS' },
+        { value: 'EN', label: 'ENGLISH' },
       ];
     }
   }
@@ -262,12 +280,91 @@ class LookupService {
       console.error('Failed to fetch countries:', error);
       // Return fallback data
       return [
-        { value: 'MG', label: 'Madagascar' },
-        { value: 'FR', label: 'France' },
-        { value: 'US', label: 'United States' },
-        { value: 'GB', label: 'United Kingdom' },
-        { value: 'ZA', label: 'South Africa' },
-        { value: 'OTHER', label: 'Other' },
+        { value: 'MG', label: 'MADAGASCAR' },
+        { value: 'FR', label: 'FRANCE' },
+        { value: 'US', label: 'UNITED STATES' },
+        { value: 'GB', label: 'UNITED KINGDOM' },
+        { value: 'ZA', label: 'SOUTH AFRICA' },
+        { value: 'OTHER', label: 'OTHER' },
+      ];
+    }
+  }
+
+  /**
+   * Get user statuses
+   */
+  public async getUserStatuses(): Promise<UserStatus[]> {
+    const cacheKey = 'user_statuses';
+    
+    if (this.isCacheValid(cacheKey)) {
+      return this.cache.get(cacheKey);
+    }
+
+    try {
+      const data = await api.get<UserStatus[]>(API_ENDPOINTS.lookups.userStatuses);
+      this.setCache(cacheKey, data);
+      return data;
+    } catch (error) {
+      console.error('Failed to fetch user statuses:', error);
+      // Return fallback data
+      return [
+        { value: 'ACTIVE', label: 'ACTIVE' },
+        { value: 'INACTIVE', label: 'INACTIVE' },
+        { value: 'SUSPENDED', label: 'SUSPENDED' },
+        { value: 'LOCKED', label: 'LOCKED' },
+        { value: 'PENDING_ACTIVATION', label: 'PENDING ACTIVATION' },
+      ];
+    }
+  }
+
+  /**
+   * Get office types
+   */
+  public async getOfficeTypes(): Promise<OfficeType[]> {
+    const cacheKey = 'office_types';
+    
+    if (this.isCacheValid(cacheKey)) {
+      return this.cache.get(cacheKey);
+    }
+
+    try {
+      const data = await api.get<OfficeType[]>(API_ENDPOINTS.lookups.officeTypes);
+      this.setCache(cacheKey, data);
+      return data;
+    } catch (error) {
+      console.error('Failed to fetch office types:', error);
+      // Return fallback data
+      return [
+        { value: 'MAIN', label: 'MAIN OFFICE' },
+        { value: 'BRANCH', label: 'BRANCH OFFICE' },
+        { value: 'KIOSK', label: 'SERVICE KIOSK' },
+        { value: 'MOBILE', label: 'MOBILE UNIT' },
+        { value: 'TEMPORARY', label: 'TEMPORARY OFFICE' },
+      ];
+    }
+  }
+
+  /**
+   * Get equipment statuses
+   */
+  public async getEquipmentStatuses(): Promise<EquipmentStatus[]> {
+    const cacheKey = 'equipment_statuses';
+    
+    if (this.isCacheValid(cacheKey)) {
+      return this.cache.get(cacheKey);
+    }
+
+    try {
+      const data = await api.get<EquipmentStatus[]>(API_ENDPOINTS.lookups.equipmentStatuses);
+      this.setCache(cacheKey, data);
+      return data;
+    } catch (error) {
+      console.error('Failed to fetch equipment statuses:', error);
+      // Return fallback data
+      return [
+        { value: 'OPERATIONAL', label: 'OPERATIONAL' },
+        { value: 'MAINTENANCE', label: 'MAINTENANCE' },
+        { value: 'OFFLINE', label: 'OFFLINE' },
       ];
     }
   }
@@ -325,7 +422,10 @@ class LookupService {
         nationalities,
         phone_country_codes,
         countries,
-        provinces
+        provinces,
+        user_statuses,
+        office_types,
+        equipment_statuses
       ] = await Promise.all([
         this.getDocumentTypes(),
         this.getPersonNatures(),
@@ -334,7 +434,10 @@ class LookupService {
         this.getNationalities(),
         this.getPhoneCountryCodes(),
         this.getCountries(),
-        this.getProvinces()
+        this.getProvinces(),
+        this.getUserStatuses(),
+        this.getOfficeTypes(),
+        this.getEquipmentStatuses()
       ]);
 
       return {
@@ -345,7 +448,10 @@ class LookupService {
         nationalities,
         phone_country_codes,
         countries,
-        provinces
+        provinces,
+        user_statuses,
+        office_types,
+        equipment_statuses
       };
     }
   }

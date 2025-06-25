@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { API_ENDPOINTS, api } from '../../config/api';
 
 // Dashboard interfaces
@@ -39,11 +40,8 @@ interface QuickAction {
   color: string;
 }
 
-interface AdminDashboardProps {
-  onNavigate: (page: 'users' | 'locations' | 'audit') => void;
-}
-
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) => {
+const AdminDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -101,21 +99,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) => {
       title: 'Create User',
       description: 'Add a new system user',
       icon: '👤',
-      action: () => onNavigate('users'),
+      action: () => navigate('/dashboard/admin/users'),
       color: 'bg-blue-500 hover:bg-blue-600'
     },
     {
       title: 'Add Location',
       description: 'Register new office location',
       icon: '🏢',
-      action: () => onNavigate('locations'),
+      action: () => navigate('/dashboard/admin/locations'),
       color: 'bg-green-500 hover:bg-green-600'
     },
     {
       title: 'View Audit Logs',
       description: 'Monitor system activity',
       icon: '📊',
-      action: () => onNavigate('audit'),
+      action: () => navigate('/dashboard/admin/audit'),
       color: 'bg-purple-500 hover:bg-purple-600'
     },
     {
@@ -311,7 +309,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) => {
             
             <div className="text-center py-4">
               <button
-                onClick={() => onNavigate('audit')}
+                onClick={() => navigate('/dashboard/admin/audit')}
                 className="text-blue-600 hover:text-blue-800 font-medium"
               >
                 View Full Audit Log →

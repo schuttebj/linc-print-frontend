@@ -5,41 +5,40 @@
 
 import React, { useState, useEffect } from 'react';
 import { API_ENDPOINTS, api } from '../../config/api';
+import lookupService, { OfficeType, EquipmentStatus, Province } from '../../services/lookupService';
 
 // Location interfaces
 interface Location {
   id: string;
   location_code: string;
   location_name: string;
+  location_address: string;
   province_code: string;
-  province_name: string;
-  office_type: 'MAIN' | 'BRANCH' | 'KIOSK' | 'MOBILE';
-  address: string;
-  city: string;
-  postal_code?: string;
-  phone_number?: string;
-  email?: string;
-  manager_name?: string;
+  office_type: string;
+  max_capacity: number;
+  current_capacity: number;
+  contact_phone: string;
+  contact_email: string;
   is_operational: boolean;
-  capacity_daily: number;
-  staff_count: number;
-  equipment_status: 'OPERATIONAL' | 'MAINTENANCE' | 'OFFLINE';
+  operational_hours: string;
+  equipment_status: string;
+  notes?: string;
   created_at: string;
   updated_at: string;
 }
 
 interface LocationCreateData {
+  location_code: string;
   location_name: string;
+  location_address: string;
   province_code: string;
-  office_type: 'MAIN' | 'BRANCH' | 'KIOSK' | 'MOBILE';
-  address: string;
-  city: string;
-  postal_code?: string;
-  phone_number?: string;
-  email?: string;
-  manager_name?: string;
-  capacity_daily: number;
-  staff_count: number;
+  office_type: string;
+  max_capacity: number;
+  current_capacity: number;
+  contact_phone: string;
+  contact_email: string;
+  operational_hours: string;
+  notes?: string;
 }
 
 interface LocationListResponse {
@@ -71,7 +70,9 @@ const EQUIPMENT_STATUS = [
 const LocationManagementPage: React.FC = () => {
   // State management
   const [locations, setLocations] = useState<Location[]>([]);
-  const [provinces, setProvinces] = useState<ProvinceOption[]>([]);
+  const [officeTypes, setOfficeTypes] = useState<OfficeType[]>([]);
+  const [equipmentStatuses, setEquipmentStatuses] = useState<EquipmentStatus[]>([]);
+  const [provinces, setProvinces] = useState<Province[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -91,17 +92,17 @@ const LocationManagementPage: React.FC = () => {
   
   // Form data
   const [createForm, setCreateForm] = useState<LocationCreateData>({
+    location_code: '',
     location_name: '',
+    location_address: '',
     province_code: '',
-    office_type: 'BRANCH',
-    address: '',
-    city: '',
-    postal_code: '',
-    phone_number: '',
-    email: '',
-    manager_name: '',
-    capacity_daily: 50,
-    staff_count: 1
+    office_type: '',
+    max_capacity: 50,
+    current_capacity: 0,
+    contact_phone: '',
+    contact_email: '',
+    operational_hours: '',
+    notes: ''
   });
 
   // Load initial data
@@ -114,17 +115,32 @@ const LocationManagementPage: React.FC = () => {
     loadLocations();
   }, [currentPage, searchTerm, provinceFilter, typeFilter, statusFilter]);
 
+  // Set default form values when lookup data loads
+  useEffect(() => {
+    if (officeTypes.length > 0 && provinces.length > 0 && !createForm.office_type && !createForm.province_code) {
+      setCreateForm(prev => ({
+        ...prev,
+        office_type: officeTypes[0]?.value || '',
+        province_code: provinces[0]?.code || ''
+      }));
+    }
+  }, [officeTypes, provinces]);
+
   const loadInitialData = async () => {
     try {
       setLoading(true);
       
-      // Load locations and provinces
-      const [locationsRes, provincesRes] = await Promise.all([
+      // Load locations and lookup data
+      const [locationsRes, provincesRes, officeTypesRes, equipmentStatusesRes] = await Promise.all([
         loadLocations(),
-        api.get<ProvinceOption[]>(`${API_ENDPOINTS.lookups.provinces}`)
+        lookupService.getProvinces(),
+        lookupService.getOfficeTypes(),
+        lookupService.getEquipmentStatuses()
       ]);
       
       setProvinces(provincesRes);
+      setOfficeTypes(officeTypesRes);
+      setEquipmentStatuses(equipmentStatusesRes);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
@@ -161,17 +177,17 @@ const LocationManagementPage: React.FC = () => {
       await api.post(locationsEndpoint, createForm);
       setShowCreateModal(false);
       setCreateForm({
+        location_code: '',
         location_name: '',
+        location_address: '',
         province_code: '',
-        office_type: 'BRANCH',
-        address: '',
-        city: '',
-        postal_code: '',
-        phone_number: '',
-        email: '',
-        manager_name: '',
-        capacity_daily: 50,
-        staff_count: 1
+        office_type: '',
+        max_capacity: 50,
+        current_capacity: 0,
+        contact_phone: '',
+        contact_email: '',
+        operational_hours: '',
+        notes: ''
       });
       await loadLocations();
     } catch (err) {
@@ -230,7 +246,16 @@ const LocationManagementPage: React.FC = () => {
   };
 
   const getEquipmentStatusInfo = (status: string) => {
-    return EQUIPMENT_STATUS.find(s => s.value === status) || EQUIPMENT_STATUS[0];
+    const statusInfo = equipmentStatuses.find(s => s.value === status);
+    if (statusInfo) {
+      return {
+        label: statusInfo.label,
+        class: status === 'OPERATIONAL' ? 'bg-green-100 text-green-800' :
+               status === 'MAINTENANCE' ? 'bg-yellow-100 text-yellow-800' :
+               'bg-red-100 text-red-800'
+      };
+    }
+    return { label: 'Unknown', class: 'bg-gray-100 text-gray-800' };
   };
 
   if (loading) {
@@ -274,13 +299,13 @@ const LocationManagementPage: React.FC = () => {
         </div>
         <div className="bg-white p-4 rounded-lg shadow">
           <div className="text-2xl font-bold text-orange-600">
-            {locations.reduce((sum, l) => sum + l.staff_count, 0)}
+            {locations.reduce((sum, l) => sum + l.current_capacity, 0)}
           </div>
-          <div className="text-sm text-gray-600">Total Staff</div>
+          <div className="text-sm text-gray-600">Total Capacity</div>
         </div>
         <div className="bg-white p-4 rounded-lg shadow">
           <div className="text-2xl font-bold text-purple-600">
-            {locations.reduce((sum, l) => sum + l.capacity_daily, 0)}
+            {locations.reduce((sum, l) => sum + l.max_capacity, 0)}
           </div>
           <div className="text-sm text-gray-600">Daily Capacity</div>
         </div>
@@ -302,11 +327,13 @@ const LocationManagementPage: React.FC = () => {
           <select
             value={provinceFilter}
             onChange={(e) => setProvinceFilter(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="">All Provinces</option>
             {provinces.map(province => (
-              <option key={province.code} value={province.code}>{province.name}</option>
+              <option key={province.code} value={province.code}>
+                {province.name}
+              </option>
             ))}
           </select>
         </div>
@@ -315,11 +342,13 @@ const LocationManagementPage: React.FC = () => {
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="">All Types</option>
-            {OFFICE_TYPES.map(type => (
-              <option key={type.value} value={type.value}>{type.label}</option>
+            {officeTypes.map(type => (
+              <option key={type.value} value={type.value}>
+                {type.label}
+              </option>
             ))}
           </select>
         </div>
@@ -384,7 +413,7 @@ const LocationManagementPage: React.FC = () => {
                     </div>
                     <div className="text-sm text-gray-500">{location.location_code}</div>
                     <div className="text-xs text-gray-400">
-                      {location.address}, {location.city}
+                      {location.location_address}
                     </div>
                   </div>
                 </td>
@@ -392,32 +421,26 @@ const LocationManagementPage: React.FC = () => {
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="space-y-1">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getOfficeTypeClass(location.office_type)}`}>
-                      {OFFICE_TYPES.find(t => t.value === location.office_type)?.label}
+                      {officeTypes.find(t => t.value === location.office_type)?.label || location.office_type}
                     </span>
-                    <div className="text-sm text-gray-600">{location.province_name}</div>
+                    <div className="text-sm text-gray-600">{location.province_code}</div>
                   </div>
                 </td>
                 
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">
-                    {location.phone_number && (
-                      <div>📞 {location.phone_number}</div>
+                    {location.contact_phone && (
+                      <div> {location.contact_phone}</div>
                     )}
-                    {location.email && (
-                      <div>📧 {location.email}</div>
-                    )}
-                    {location.manager_name && (
-                      <div className="text-xs text-gray-500">Mgr: {location.manager_name}</div>
+                    {location.contact_email && (
+                      <div> {location.contact_email}</div>
                     )}
                   </div>
                 </td>
                 
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">
-                    <div>{location.capacity_daily}/day</div>
-                    <div className="text-xs text-gray-500">
-                      {location.staff_count} staff
-                    </div>
+                    <div>{location.current_capacity}/{location.max_capacity}</div>
                   </div>
                 </td>
                 
@@ -546,66 +569,65 @@ const LocationManagementPage: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Office Type</label>
                   <select
+                    required
                     value={createForm.office_type}
-                    onChange={(e) => setCreateForm({...createForm, office_type: e.target.value as any})}
+                    onChange={(e) => setCreateForm({...createForm, office_type: e.target.value})}
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   >
-                    {OFFICE_TYPES.map(type => (
-                      <option key={type.value} value={type.value}>{type.label}</option>
+                    <option value="">Select Type</option>
+                    {officeTypes.map(type => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
                     ))}
                   </select>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">City</label>
-                  <input
-                    type="text"
+                  <label className="block text-sm font-medium text-gray-700">Location Address</label>
+                  <textarea
                     required
-                    value={createForm.city}
-                    onChange={(e) => setCreateForm({...createForm, city: e.target.value})}
+                    value={createForm.location_address}
+                    onChange={(e) => setCreateForm({...createForm, location_address: e.target.value})}
+                    rows={2}
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Address</label>
-                <textarea
-                  required
-                  value={createForm.address}
-                  onChange={(e) => setCreateForm({...createForm, address: e.target.value})}
-                  rows={2}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                />
               </div>
               
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Phone</label>
+                  <label className="block text-sm font-medium text-gray-700">Max Capacity</label>
                   <input
-                    type="tel"
-                    value={createForm.phone_number}
-                    onChange={(e) => setCreateForm({...createForm, phone_number: e.target.value})}
+                    type="number"
+                    min="1"
+                    required
+                    value={createForm.max_capacity}
+                    onChange={(e) => setCreateForm({...createForm, max_capacity: parseInt(e.target.value)})}
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Email</label>
+                  <label className="block text-sm font-medium text-gray-700">Current Capacity</label>
                   <input
-                    type="email"
-                    value={createForm.email}
-                    onChange={(e) => setCreateForm({...createForm, email: e.target.value})}
+                    type="number"
+                    min="0"
+                    max={createForm.max_capacity}
+                    required
+                    value={createForm.current_capacity}
+                    onChange={(e) => setCreateForm({...createForm, current_capacity: parseInt(e.target.value)})}
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Manager</label>
+                  <label className="block text-sm font-medium text-gray-700">Operational Hours</label>
                   <input
                     type="text"
-                    value={createForm.manager_name}
-                    onChange={(e) => setCreateForm({...createForm, manager_name: e.target.value})}
+                    required
+                    value={createForm.operational_hours}
+                    onChange={(e) => setCreateForm({...createForm, operational_hours: e.target.value})}
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
@@ -613,25 +635,33 @@ const LocationManagementPage: React.FC = () => {
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Daily Capacity</label>
+                  <label className="block text-sm font-medium text-gray-700">Contact Phone</label>
                   <input
-                    type="number"
-                    min="1"
-                    required
-                    value={createForm.capacity_daily}
-                    onChange={(e) => setCreateForm({...createForm, capacity_daily: parseInt(e.target.value)})}
+                    type="tel"
+                    value={createForm.contact_phone}
+                    onChange={(e) => setCreateForm({...createForm, contact_phone: e.target.value})}
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Staff Count</label>
+                  <label className="block text-sm font-medium text-gray-700">Contact Email</label>
                   <input
-                    type="number"
-                    min="1"
-                    required
-                    value={createForm.staff_count}
-                    onChange={(e) => setCreateForm({...createForm, staff_count: parseInt(e.target.value)})}
+                    type="email"
+                    value={createForm.contact_email}
+                    onChange={(e) => setCreateForm({...createForm, contact_email: e.target.value})}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Notes</label>
+                  <textarea
+                    value={createForm.notes}
+                    onChange={(e) => setCreateForm({...createForm, notes: e.target.value})}
+                    rows={2}
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
