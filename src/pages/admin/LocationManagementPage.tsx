@@ -4,6 +4,42 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Typography,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Chip,
+  Grid,
+  Card,
+  CardContent,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Alert,
+  CircularProgress,
+  Pagination,
+  IconButton
+} from '@mui/material';
+import {
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  LocationOn as LocationIcon,
+  PowerSettingsNew as CloseIcon,
+  PowerOff as OpenIcon
+} from '@mui/icons-material';
 import { API_ENDPOINTS, api } from '../../config/api';
 import lookupService, { OfficeType, EquipmentStatus, Province } from '../../services/lookupService';
 
@@ -53,19 +89,6 @@ interface ProvinceOption {
   code: string;
   name: string;
 }
-
-const OFFICE_TYPES = [
-  { value: 'MAIN', label: 'Main Office' },
-  { value: 'BRANCH', label: 'Branch Office' },
-  { value: 'KIOSK', label: 'Service Kiosk' },
-  { value: 'MOBILE', label: 'Mobile Unit' }
-];
-
-const EQUIPMENT_STATUS = [
-  { value: 'OPERATIONAL', label: 'Operational', class: 'bg-green-100 text-green-800' },
-  { value: 'MAINTENANCE', label: 'Maintenance', class: 'bg-yellow-100 text-yellow-800' },
-  { value: 'OFFLINE', label: 'Offline', class: 'bg-red-100 text-red-800' }
-];
 
 const LocationManagementPage: React.FC = () => {
   // State management
@@ -235,13 +258,22 @@ const LocationManagementPage: React.FC = () => {
     }
   };
 
-  const getOfficeTypeClass = (type: string) => {
+  const getOfficeTypeColor = (type: string): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
     switch (type) {
-      case 'MAIN': return 'bg-purple-100 text-purple-800';
-      case 'BRANCH': return 'bg-blue-100 text-blue-800';
-      case 'KIOSK': return 'bg-green-100 text-green-800';
-      case 'MOBILE': return 'bg-orange-100 text-orange-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'MAIN': return 'primary';
+      case 'BRANCH': return 'secondary';
+      case 'KIOSK': return 'info';
+      case 'MOBILE': return 'warning';
+      default: return 'default';
+    }
+  };
+
+  const getEquipmentStatusColor = (status: string): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
+    switch (status) {
+      case 'OPERATIONAL': return 'success';
+      case 'MAINTENANCE': return 'warning';
+      case 'OFFLINE': return 'error';
+      default: return 'default';
     }
   };
 
@@ -250,471 +282,463 @@ const LocationManagementPage: React.FC = () => {
     if (statusInfo) {
       return {
         label: statusInfo.label,
-        class: status === 'OPERATIONAL' ? 'bg-green-100 text-green-800' :
-               status === 'MAINTENANCE' ? 'bg-yellow-100 text-yellow-800' :
-               'bg-red-100 text-red-800'
+        color: getEquipmentStatusColor(status)
       };
     }
-    return { label: 'Unknown', class: 'bg-gray-100 text-gray-800' };
+    return { label: 'Unknown', color: 'default' as const };
   };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress size={48} />
+      </Box>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Location Management</h1>
-        <p className="text-gray-600">Manage office locations, capacity, and operational status</p>
-      </div>
+    <Box sx={{ p: 3 }}>
+      {/* Header */}
+      <Typography variant="h4" component="h1" gutterBottom>
+        Location Management
+      </Typography>
+      <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+        Manage office locations, capacity, and operational status
+      </Typography>
 
+      {/* Error Alert */}
       {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+        <Alert 
+          severity="error" 
+          onClose={() => setError(null)}
+          sx={{ mb: 3 }}
+        >
           {error}
-          <button
-            onClick={() => setError(null)}
-            className="ml-4 text-red-500 hover:text-red-700"
-          >
-            ✕
-          </button>
-        </div>
+        </Alert>
       )}
 
       {/* Summary Cards */}
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow">
-          <div className="text-2xl font-bold text-blue-600">{locations.length}</div>
-          <div className="text-sm text-gray-600">Total Locations</div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <div className="text-2xl font-bold text-green-600">
-            {locations.filter(l => l.is_operational).length}
-          </div>
-          <div className="text-sm text-gray-600">Operational</div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <div className="text-2xl font-bold text-orange-600">
-            {locations.reduce((sum, l) => sum + l.current_capacity, 0)}
-          </div>
-          <div className="text-sm text-gray-600">Total Capacity</div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <div className="text-2xl font-bold text-purple-600">
-            {locations.reduce((sum, l) => sum + l.max_capacity, 0)}
-          </div>
-          <div className="text-sm text-gray-600">Daily Capacity</div>
-        </div>
-      </div>
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item xs={12} md={3}>
+          <Card>
+            <CardContent>
+              <Typography variant="h4" color="primary.main">
+                {locations.length}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Total Locations
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <Card>
+            <CardContent>
+              <Typography variant="h4" color="success.main">
+                {locations.filter(l => l.is_operational).length}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Operational
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <Card>
+            <CardContent>
+              <Typography variant="h4" color="warning.main">
+                {locations.reduce((sum, l) => sum + l.current_capacity, 0)}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Current Capacity
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <Card>
+            <CardContent>
+              <Typography variant="h4" color="info.main">
+                {locations.reduce((sum, l) => sum + l.max_capacity, 0)}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Max Capacity
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
 
       {/* Filters and Search */}
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div>
-          <input
-            type="text"
-            placeholder="Search locations..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        
-        <div>
-          <select
-            value={provinceFilter}
-            onChange={(e) => setProvinceFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="">All Provinces</option>
-            {provinces.map(province => (
-              <option key={province.code} value={province.code}>
-                {province.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        
-        <div>
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="">All Types</option>
-            {officeTypes.map(type => (
-              <option key={type.value} value={type.value}>
-                {type.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        
-        <div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">All Status</option>
-            <option value="true">Operational</option>
-            <option value="false">Closed</option>
-          </select>
-        </div>
-        
-        <div>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            Add Location
-          </button>
-        </div>
-      </div>
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} md={2}>
+              <TextField
+                fullWidth
+                placeholder="Search locations..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                size="small"
+              />
+            </Grid>
+            
+            <Grid item xs={12} md={2}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Province</InputLabel>
+                <Select
+                  value={provinceFilter}
+                  onChange={(e) => setProvinceFilter(e.target.value)}
+                  label="Province"
+                >
+                  <MenuItem value="">All Provinces</MenuItem>
+                  {provinces.map(province => (
+                    <MenuItem key={province.code} value={province.code}>
+                      {province.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} md={2}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Type</InputLabel>
+                <Select
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                  label="Type"
+                >
+                  <MenuItem value="">All Types</MenuItem>
+                  {officeTypes.map(type => (
+                    <MenuItem key={type.value} value={type.value}>
+                      {type.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} md={2}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  label="Status"
+                >
+                  <MenuItem value="">All Status</MenuItem>
+                  <MenuItem value="true">Operational</MenuItem>
+                  <MenuItem value="false">Closed</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} md={2}>
+              <Button
+                fullWidth
+                variant="contained"
+                startIcon={<LocationIcon />}
+                onClick={() => setShowCreateModal(true)}
+              >
+                Add Location
+              </Button>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
 
       {/* Locations Table */}
-      <div className="bg-white shadow-md rounded-lg overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Location
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Type & Province
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Contact
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Capacity
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Equipment
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow sx={{ backgroundColor: 'grey.50' }}>
+              <TableCell>Location</TableCell>
+              <TableCell>Type & Province</TableCell>
+              <TableCell>Contact</TableCell>
+              <TableCell>Capacity</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Equipment</TableCell>
+              <TableCell align="right">Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
             {locations.map((location) => (
-              <tr key={location.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">
+              <TableRow key={location.id} hover>
+                <TableCell>
+                  <Box>
+                    <Typography variant="body2" fontWeight="medium">
                       {location.location_name}
-                    </div>
-                    <div className="text-sm text-gray-500">{location.location_code}</div>
-                    <div className="text-xs text-gray-400">
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {location.location_code}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" display="block">
                       {location.location_address}
-                    </div>
-                  </div>
-                </td>
+                    </Typography>
+                  </Box>
+                </TableCell>
                 
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="space-y-1">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getOfficeTypeClass(location.office_type)}`}>
-                      {officeTypes.find(t => t.value === location.office_type)?.label || location.office_type}
-                    </span>
-                    <div className="text-sm text-gray-600">{location.province_code}</div>
-                  </div>
-                </td>
+                <TableCell>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <Chip
+                      label={officeTypes.find(t => t.value === location.office_type)?.label || location.office_type}
+                      color={getOfficeTypeColor(location.office_type)}
+                      size="small"
+                    />
+                    <Typography variant="caption" color="text.secondary">
+                      {location.province_code}
+                    </Typography>
+                  </Box>
+                </TableCell>
                 
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">
+                <TableCell>
+                  <Box>
                     {location.contact_phone && (
-                      <div> {location.contact_phone}</div>
+                      <Typography variant="body2">{location.contact_phone}</Typography>
                     )}
                     {location.contact_email && (
-                      <div> {location.contact_email}</div>
+                      <Typography variant="caption" color="text.secondary">{location.contact_email}</Typography>
                     )}
-                  </div>
-                </td>
+                  </Box>
+                </TableCell>
                 
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">
-                    <div>{location.current_capacity}/{location.max_capacity}</div>
-                  </div>
-                </td>
+                <TableCell>
+                  <Typography variant="body2">
+                    {location.current_capacity}/{location.max_capacity}
+                  </Typography>
+                </TableCell>
                 
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    location.is_operational 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {location.is_operational ? 'Operational' : 'Closed'}
-                  </span>
-                </td>
+                <TableCell>
+                  <Chip
+                    label={location.is_operational ? 'Operational' : 'Closed'}
+                    color={location.is_operational ? 'success' : 'error'}
+                    size="small"
+                  />
+                </TableCell>
                 
-                <td className="px-6 py-4 whitespace-nowrap">
+                <TableCell>
                   {(() => {
                     const statusInfo = getEquipmentStatusInfo(location.equipment_status);
                     return (
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusInfo.class}`}>
-                        {statusInfo.label}
-                      </span>
+                      <Chip
+                        label={statusInfo.label}
+                        color={statusInfo.color}
+                        size="small"
+                      />
                     );
                   })()}
-                </td>
+                </TableCell>
                 
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <div className="flex justify-end gap-2">
-                    <button
+                <TableCell align="right">
+                  <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                    <IconButton
+                      size="small"
+                      color="primary"
                       onClick={() => {
                         setSelectedLocation(location);
                         setShowEditModal(true);
                       }}
-                      className="text-blue-600 hover:text-blue-900"
                     >
-                      Edit
-                    </button>
+                      <EditIcon />
+                    </IconButton>
                     
-                    <button
+                    <IconButton
+                      size="small"
+                      color={location.is_operational ? 'warning' : 'success'}
                       onClick={() => handleToggleOperational(location)}
-                      className={`${
-                        location.is_operational 
-                          ? 'text-orange-600 hover:text-orange-900' 
-                          : 'text-green-600 hover:text-green-900'
-                      }`}
                     >
-                      {location.is_operational ? 'Close' : 'Open'}
-                    </button>
+                      {location.is_operational ? <CloseIcon /> : <OpenIcon />}
+                    </IconButton>
                     
-                    <button
+                    <IconButton
+                      size="small"
+                      color="error"
                       onClick={() => {
                         setSelectedLocation(location);
                         setShowDeleteModal(true);
                       }}
-                      className="text-red-600 hover:text-red-900"
                     >
-                      Delete
-                    </button>
-                  </div>
-                </td>
-              </tr>
+                      <DeleteIcon />
+                    </IconButton>
+                  </Box>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </TableContainer>
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="mt-6 flex justify-between items-center">
-          <div className="text-sm text-gray-700">
-            Page {currentPage} of {totalPages}
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-            >
-              Previous
-            </button>
-            <button
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage === totalPages}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
-        </div>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+          <Pagination 
+            count={totalPages} 
+            page={currentPage} 
+            onChange={(_, page) => setCurrentPage(page)}
+            color="primary"
+          />
+        </Box>
       )}
 
       {/* Create Location Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-10 mx-auto p-5 border w-[600px] shadow-lg rounded-md bg-white">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Add New Location</h3>
-            
-            <form onSubmit={handleCreateLocation} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Location Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={createForm.location_name}
-                    onChange={(e) => setCreateForm({...createForm, location_name: e.target.value})}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Province</label>
-                  <select
-                    required
+      <Dialog open={showCreateModal} onClose={() => setShowCreateModal(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Add New Location</DialogTitle>
+        <form onSubmit={handleCreateLocation}>
+          <DialogContent>
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  label="Location Name"
+                  required
+                  value={createForm.location_name}
+                  onChange={(e) => setCreateForm({...createForm, location_name: e.target.value})}
+                />
+              </Grid>
+              
+              <Grid item xs={6}>
+                <FormControl fullWidth required>
+                  <InputLabel>Province</InputLabel>
+                  <Select
                     value={createForm.province_code}
                     onChange={(e) => setCreateForm({...createForm, province_code: e.target.value})}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    label="Province"
                   >
-                    <option value="">Select Province</option>
                     {provinces.map(province => (
-                      <option key={province.code} value={province.code}>{province.name}</option>
+                      <MenuItem key={province.code} value={province.code}>
+                        {province.name}
+                      </MenuItem>
                     ))}
-                  </select>
-                </div>
-              </div>
+                  </Select>
+                </FormControl>
+              </Grid>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Office Type</label>
-                  <select
-                    required
+              <Grid item xs={6}>
+                <FormControl fullWidth required>
+                  <InputLabel>Office Type</InputLabel>
+                  <Select
                     value={createForm.office_type}
                     onChange={(e) => setCreateForm({...createForm, office_type: e.target.value})}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    label="Office Type"
                   >
-                    <option value="">Select Type</option>
                     {officeTypes.map(type => (
-                      <option key={type.value} value={type.value}>
+                      <MenuItem key={type.value} value={type.value}>
                         {type.label}
-                      </option>
+                      </MenuItem>
                     ))}
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Location Address</label>
-                  <textarea
-                    required
-                    value={createForm.location_address}
-                    onChange={(e) => setCreateForm({...createForm, location_address: e.target.value})}
-                    rows={2}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-              </div>
+                  </Select>
+                </FormControl>
+              </Grid>
               
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Max Capacity</label>
-                  <input
-                    type="number"
-                    min="1"
-                    required
-                    value={createForm.max_capacity}
-                    onChange={(e) => setCreateForm({...createForm, max_capacity: parseInt(e.target.value)})}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Current Capacity</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max={createForm.max_capacity}
-                    required
-                    value={createForm.current_capacity}
-                    onChange={(e) => setCreateForm({...createForm, current_capacity: parseInt(e.target.value)})}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Operational Hours</label>
-                  <input
-                    type="text"
-                    required
-                    value={createForm.operational_hours}
-                    onChange={(e) => setCreateForm({...createForm, operational_hours: e.target.value})}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-              </div>
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  label="Location Address"
+                  required
+                  multiline
+                  rows={2}
+                  value={createForm.location_address}
+                  onChange={(e) => setCreateForm({...createForm, location_address: e.target.value})}
+                />
+              </Grid>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Contact Phone</label>
-                  <input
-                    type="tel"
-                    value={createForm.contact_phone}
-                    onChange={(e) => setCreateForm({...createForm, contact_phone: e.target.value})}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Contact Email</label>
-                  <input
-                    type="email"
-                    value={createForm.contact_email}
-                    onChange={(e) => setCreateForm({...createForm, contact_email: e.target.value})}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-              </div>
+              <Grid item xs={4}>
+                <TextField
+                  fullWidth
+                  label="Max Capacity"
+                  type="number"
+                  required
+                  inputProps={{ min: 1 }}
+                  value={createForm.max_capacity}
+                  onChange={(e) => setCreateForm({...createForm, max_capacity: parseInt(e.target.value)})}
+                />
+              </Grid>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Notes</label>
-                  <textarea
-                    value={createForm.notes}
-                    onChange={(e) => setCreateForm({...createForm, notes: e.target.value})}
-                    rows={2}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-              </div>
+              <Grid item xs={4}>
+                <TextField
+                  fullWidth
+                  label="Current Capacity"
+                  type="number"
+                  required
+                  inputProps={{ min: 0, max: createForm.max_capacity }}
+                  value={createForm.current_capacity}
+                  onChange={(e) => setCreateForm({...createForm, current_capacity: parseInt(e.target.value)})}
+                />
+              </Grid>
               
-              <div className="flex justify-end gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-                >
-                  Create Location
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+              <Grid item xs={4}>
+                <TextField
+                  fullWidth
+                  label="Operational Hours"
+                  required
+                  value={createForm.operational_hours}
+                  onChange={(e) => setCreateForm({...createForm, operational_hours: e.target.value})}
+                />
+              </Grid>
+              
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  label="Contact Phone"
+                  type="tel"
+                  value={createForm.contact_phone}
+                  onChange={(e) => setCreateForm({...createForm, contact_phone: e.target.value})}
+                />
+              </Grid>
+              
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  label="Contact Email"
+                  type="email"
+                  value={createForm.contact_email}
+                  onChange={(e) => setCreateForm({...createForm, contact_email: e.target.value})}
+                />
+              </Grid>
+              
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Notes"
+                  multiline
+                  rows={2}
+                  value={createForm.notes}
+                  onChange={(e) => setCreateForm({...createForm, notes: e.target.value})}
+                />
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setShowCreateModal(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="contained">
+              Create Location
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
 
       {/* Delete Confirmation Modal */}
-      {showDeleteModal && selectedLocation && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Confirm Delete</h3>
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to delete location <strong>{selectedLocation.location_name}</strong>? 
-              This action cannot be undone and will affect all associated users.
-            </p>
-            
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeleteLocation}
-                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700"
-              >
-                Delete Location
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      <Dialog open={showDeleteModal} onClose={() => setShowDeleteModal(false)}>
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete location <strong>{selectedLocation?.location_name}</strong>? 
+            This action cannot be undone and will affect all associated users.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowDeleteModal(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleDeleteLocation} color="error" variant="contained">
+            Delete Location
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 };
 

@@ -1,9 +1,40 @@
 /**
  * Audit Log Viewer for Madagascar LINC Print System
- * Comprehensive interface for viewing audit logs, security events, and system monitoring
+ * Comprehensive interface for viewing system audit logs, statistics, and security monitoring
  */
 
 import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Paper,
+  Typography,
+  Tab,
+  Tabs,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Chip,
+  Button,
+  Grid,
+  FormControl,
+  Select,
+  MenuItem,
+  TextField,
+  Card,
+  CardContent,
+  Pagination,
+  Alert,
+  CircularProgress,
+  Badge
+} from '@mui/material';
+import {
+  GetApp as ExportIcon,
+  Security as SecurityIcon,
+  Assessment as AssessmentIcon
+} from '@mui/icons-material';
 import { API_ENDPOINTS, api } from '../../config/api';
 
 // Audit log interfaces
@@ -63,15 +94,8 @@ interface SuspiciousActivity {
   ip_addresses: string[];
 }
 
-const ACTION_TYPES = [
-  'CREATE', 'READ', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 
-  'EXPORT', 'PRINT', 'PERMISSION_CHANGE', 'SECURITY_EVENT'
-];
-
-const RESOURCE_TYPES = [
-  'USER', 'PERSON', 'LOCATION', 'ROLE', 'PERMISSION', 
-  'AUDIT_LOGS', 'SYSTEM', 'FILE'
-];
+const ACTION_TYPES = ['LOGIN', 'LOGOUT', 'CREATE', 'READ', 'UPDATE', 'DELETE', 'EXPORT', 'PERMISSION_CHANGE'];
+const RESOURCE_TYPES = ['USER', 'PERSON', 'LOCATION', 'AUDIT_LOGS', 'SYSTEM_SECURITY'];
 
 const AuditLogViewer: React.FC = () => {
   // State management
@@ -80,41 +104,37 @@ const AuditLogViewer: React.FC = () => {
   const [suspiciousActivity, setSuspiciousActivity] = useState<SuspiciousActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'logs' | 'statistics' | 'security'>('logs');
+  const [exporting, setExporting] = useState(false);
+  
+  // Tab management
+  const [activeTab, setActiveTab] = useState(0);
   
   // Pagination and filtering
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [actionFilter, setActionFilter] = useState<string>('');
-  const [resourceFilter, setResourceFilter] = useState<string>('');
-  const [userFilter, setUserFilter] = useState<string>('');
-  const [successFilter, setSuccessFilter] = useState<string>('');
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
-  
-  // Export state
-  const [exporting, setExporting] = useState(false);
+  const [actionFilter, setActionFilter] = useState('');
+  const [resourceFilter, setResourceFilter] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
-  // Load initial data
   useEffect(() => {
     loadAuditData();
   }, []);
 
-  // Load data when filters change
   useEffect(() => {
-    loadAuditLogs();
-  }, [currentPage, actionFilter, resourceFilter, userFilter, successFilter, startDate, endDate]);
+    if (activeTab === 0) {
+      loadAuditLogs();
+    }
+  }, [currentPage, actionFilter, resourceFilter, startDate, endDate, activeTab]);
 
   const loadAuditData = async () => {
     try {
       setLoading(true);
-      
-      const [logsRes, statsRes, securityRes] = await Promise.all([
+      await Promise.all([
         loadAuditLogs(),
         loadStatistics(),
         loadSuspiciousActivity()
       ]);
-      
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load audit data');
     } finally {
@@ -129,84 +149,59 @@ const AuditLogViewer: React.FC = () => {
         per_page: '50',
         ...(actionFilter && { action_type: actionFilter }),
         ...(resourceFilter && { resource_type: resourceFilter }),
-        ...(userFilter && { user_id: userFilter }),
         ...(startDate && { start_date: startDate }),
-        ...(endDate && { end_date: endDate }),
-        ...(successFilter && { success_only: successFilter })
+        ...(endDate && { end_date: endDate })
       });
 
-      const auditEndpoint = API_ENDPOINTS.users.replace('/users', '/audit');
-      const response = await api.get<AuditLogResponse>(`${auditEndpoint}?${params}`);
-      setAuditLogs(response.logs);
-      setTotalPages(response.total_pages);
-      return response;
+      const response = await api.get<AuditLogResponse>(`${API_ENDPOINTS.audit}?${params}`);
+      setAuditLogs(response.logs || []);
+      setTotalPages(response.total_pages || 1);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load audit logs');
-      throw err;
+      console.error('Failed to load audit logs:', err);
     }
   };
 
   const loadStatistics = async () => {
     try {
-      const auditEndpoint = API_ENDPOINTS.users.replace('/users', '/audit');
-      const response = await api.get<AuditStatistics>(`${auditEndpoint}/statistics`);
+      const response = await api.get<AuditStatistics>(`${API_ENDPOINTS.auditStatistics}`);
       setStatistics(response);
-      return response;
     } catch (err) {
       console.error('Failed to load statistics:', err);
-      return null;
     }
   };
 
   const loadSuspiciousActivity = async () => {
     try {
-      const auditEndpoint = API_ENDPOINTS.users.replace('/users', '/audit');
-      const response = await api.get<{ suspicious_activities: SuspiciousActivity[] }>(`${auditEndpoint}/security/suspicious-activity`);
-      setSuspiciousActivity(response.suspicious_activities);
-      return response;
+      const response = await api.get<SuspiciousActivity[]>(`${API_ENDPOINTS.auditSecurity}`);
+      setSuspiciousActivity(response || []);
     } catch (err) {
       console.error('Failed to load suspicious activity:', err);
-      return null;
     }
   };
 
   const handleExport = async (format: 'csv' | 'json') => {
     try {
       setExporting(true);
+      const response = await api.post<string>(`${API_ENDPOINTS.auditExport}`, {
+        format,
+        action_type: actionFilter,
+        resource_type: resourceFilter,
+        start_date: startDate,
+        end_date: endDate
+      });
       
-      const params = new URLSearchParams({
-        export_format: format,
-        ...(actionFilter && { action_type: actionFilter }),
-        ...(resourceFilter && { resource_type: resourceFilter }),
-        ...(userFilter && { user_id: userFilter }),
-        ...(startDate && { start_date: startDate }),
-        ...(endDate && { end_date: endDate }),
-        ...(successFilter && { success_only: successFilter })
-      });
-
-      const auditEndpoint = API_ENDPOINTS.users.replace('/users', '/audit');
-      const response = await fetch(`${auditEndpoint}/export?${params}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `audit_logs_${new Date().toISOString().split('T')[0]}.${format}`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      } else {
-        throw new Error('Export failed');
-      }
+      // Handle file download
+      const blob = new Blob([response], { type: format === 'csv' ? 'text/csv' : 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `audit-logs-${new Date().toISOString().split('T')[0]}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to export audit logs');
+      setError(err instanceof Error ? err.message : 'Failed to export data');
     } finally {
       setExporting(false);
     }
@@ -216,409 +211,361 @@ const AuditLogViewer: React.FC = () => {
     return new Date(dateString).toLocaleString();
   };
 
-  const getActionColor = (action: string) => {
+  const getActionColor = (action: string): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
     switch (action.toLowerCase()) {
-      case 'create': return 'bg-green-100 text-green-800';
-      case 'read': return 'bg-blue-100 text-blue-800';
-      case 'update': return 'bg-yellow-100 text-yellow-800';
-      case 'delete': return 'bg-red-100 text-red-800';
-      case 'login': return 'bg-purple-100 text-purple-800';
-      case 'logout': return 'bg-gray-100 text-gray-800';
-      case 'security_event': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'create': return 'success';
+      case 'read': return 'info';
+      case 'update': return 'warning';
+      case 'delete': return 'error';
+      case 'login': return 'primary';
+      case 'logout': return 'secondary';
+      default: return 'default';
     }
   };
 
-  const getRiskLevelColor = (level: string) => {
-    switch (level) {
-      case 'LOW': return 'bg-green-100 text-green-800';
-      case 'MEDIUM': return 'bg-yellow-100 text-yellow-800';
-      case 'HIGH': return 'bg-orange-100 text-orange-800';
-      case 'CRITICAL': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+  const getRiskLevelColor = (level: string): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
+    switch (level.toLowerCase()) {
+      case 'low': return 'info';
+      case 'medium': return 'warning';
+      case 'high': return 'error';
+      case 'critical': return 'error';
+      default: return 'default';
     }
   };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress size={48} />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert severity="error">
+        <Typography variant="h6">Error loading audit data</Typography>
+        <Typography variant="body2">{error}</Typography>
+      </Alert>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Audit Log Viewer</h1>
-        <p className="text-gray-600">Monitor system activity, security events, and user actions</p>
-      </div>
+    <Box sx={{ p: 3 }}>
+      {/* Header */}
+      <Typography variant="h4" component="h1" gutterBottom>
+        Audit Log Viewer
+      </Typography>
+      <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+        Monitor system activity, security events, and user actions
+      </Typography>
 
-      {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
-          {error}
-          <button
-            onClick={() => setError(null)}
-            className="ml-4 text-red-500 hover:text-red-700"
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
-      {/* Tab Navigation */}
-      <div className="mb-6 border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
-          <button
-            onClick={() => setActiveTab('logs')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'logs'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Audit Logs
-          </button>
-          <button
-            onClick={() => setActiveTab('statistics')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'statistics'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Statistics
-          </button>
-          <button
-            onClick={() => setActiveTab('security')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'security'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Security Monitoring
-            {suspiciousActivity.length > 0 && (
-              <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                {suspiciousActivity.length}
-              </span>
-            )}
-          </button>
-        </nav>
-      </div>
+      {/* Main Tabs */}
+      <Paper sx={{ mb: 3 }}>
+        <Tabs 
+          value={activeTab} 
+          onChange={(_, newValue) => setActiveTab(newValue)}
+          indicatorColor="primary"
+          textColor="primary"
+        >
+          <Tab 
+            label="Audit Logs" 
+            icon={<AssessmentIcon />}
+            iconPosition="start"
+          />
+          <Tab 
+            label="Statistics" 
+            icon={<AssessmentIcon />}
+            iconPosition="start"
+          />
+          <Tab 
+            label={
+              <Badge badgeContent={suspiciousActivity?.length || 0} color="error">
+                Security Monitoring
+              </Badge>
+            }
+            icon={<SecurityIcon />}
+            iconPosition="start"
+          />
+        </Tabs>
+      </Paper>
 
       {/* Audit Logs Tab */}
-      {activeTab === 'logs' && (
-        <div>
-          {/* Filters and Export */}
-          <div className="mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <select
-                value={actionFilter}
-                onChange={(e) => setActionFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">All Actions</option>
-                {ACTION_TYPES.map(action => (
-                  <option key={action} value={action}>{action}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div>
-              <select
-                value={resourceFilter}
-                onChange={(e) => setResourceFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">All Resources</option>
-                {RESOURCE_TYPES.map(resource => (
-                  <option key={resource} value={resource}>{resource}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            
-            <div>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
+      {activeTab === 0 && (
+        <Box>
+          {/* Filters */}
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Filters & Export
+              </Typography>
+              <Grid container spacing={2} sx={{ mb: 2 }}>
+                <Grid item xs={12} md={3}>
+                  <FormControl fullWidth>
+                    <Select
+                      value={actionFilter}
+                      onChange={(e) => setActionFilter(e.target.value)}
+                      displayEmpty
+                    >
+                      <MenuItem value="">All Actions</MenuItem>
+                      {ACTION_TYPES.map(action => (
+                        <MenuItem key={action} value={action}>{action}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                
+                <Grid item xs={12} md={3}>
+                  <FormControl fullWidth>
+                    <Select
+                      value={resourceFilter}
+                      onChange={(e) => setResourceFilter(e.target.value)}
+                      displayEmpty
+                    >
+                      <MenuItem value="">All Resources</MenuItem>
+                      {RESOURCE_TYPES.map(resource => (
+                        <MenuItem key={resource} value={resource}>{resource}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                
+                <Grid item xs={12} md={3}>
+                  <TextField
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    fullWidth
+                    label="Start Date"
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+                
+                <Grid item xs={12} md={3}>
+                  <TextField
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    fullWidth
+                    label="End Date"
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+              </Grid>
 
-          {/* Export buttons */}
-          <div className="mb-6 flex gap-4">
-            <button
-              onClick={() => handleExport('csv')}
-              disabled={exporting}
-              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-            >
-              {exporting ? 'Exporting...' : 'Export CSV'}
-            </button>
-            <button
-              onClick={() => handleExport('json')}
-              disabled={exporting}
-              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-            >
-              {exporting ? 'Exporting...' : 'Export JSON'}
-            </button>
-          </div>
+              {/* Export buttons */}
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <Button
+                  variant="outlined"
+                  startIcon={<ExportIcon />}
+                  onClick={() => handleExport('csv')}
+                  disabled={exporting}
+                >
+                  {exporting ? 'Exporting...' : 'Export CSV'}
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<ExportIcon />}
+                  onClick={() => handleExport('json')}
+                  disabled={exporting}
+                >
+                  {exporting ? 'Exporting...' : 'Export JSON'}
+                </Button>
+              </Box>
+            </CardContent>
+          </Card>
 
           {/* Audit Logs Table */}
-          <div className="bg-white shadow-md rounded-lg overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Timestamp
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    User
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Action
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Resource
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    IP Address
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow sx={{ backgroundColor: 'grey.50' }}>
+                  <TableCell>Timestamp</TableCell>
+                  <TableCell>User</TableCell>
+                  <TableCell>Action</TableCell>
+                  <TableCell>Resource</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>IP Address</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
                 {auditLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatDate(log.created_at)}
-                    </td>
+                  <TableRow key={log.id} hover>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {formatDate(log.created_at)}
+                      </Typography>
+                    </TableCell>
                     
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
+                    <TableCell>
+                      <Typography variant="body2" fontWeight="medium">
                         {log.username || 'System'}
-                      </div>
+                      </Typography>
                       {log.user_agent && (
-                        <div className="text-xs text-gray-500 truncate max-w-40">
+                        <Typography variant="caption" color="text.secondary" noWrap>
                           {log.user_agent}
-                        </div>
+                        </Typography>
                       )}
-                    </td>
+                    </TableCell>
                     
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getActionColor(log.action)}`}>
-                        {log.action}
-                      </span>
+                    <TableCell>
+                      <Chip 
+                        label={log.action}
+                        color={getActionColor(log.action)}
+                        size="small"
+                      />
                       {log.method && log.endpoint && (
-                        <div className="text-xs text-gray-500 mt-1">
+                        <Typography variant="caption" color="text.secondary" display="block">
                           {log.method} {log.endpoint}
-                        </div>
+                        </Typography>
                       )}
-                    </td>
+                    </TableCell>
                     
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <TableCell>
                       {log.resource && (
-                        <div>
-                          <div className="font-medium">{log.resource}</div>
+                        <Box>
+                          <Typography variant="body2" fontWeight="medium">
+                            {log.resource}
+                          </Typography>
                           {log.resource_id && (
-                            <div className="text-xs text-gray-500 truncate max-w-32">
+                            <Typography variant="caption" color="text.secondary" noWrap>
                               ID: {log.resource_id}
-                            </div>
+                            </Typography>
                           )}
-                        </div>
+                        </Box>
                       )}
-                    </td>
+                    </TableCell>
                     
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        log.success 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {log.success ? 'Success' : 'Failed'}
-                      </span>
+                    <TableCell>
+                      <Chip 
+                        label={log.success ? 'Success' : 'Failed'}
+                        color={log.success ? 'success' : 'error'}
+                        size="small"
+                      />
                       {!log.success && log.error_message && (
-                        <div className="text-xs text-red-600 mt-1 truncate max-w-40">
+                        <Typography variant="caption" color="error.main" display="block" noWrap>
                           {log.error_message}
-                        </div>
+                        </Typography>
                       )}
-                    </td>
+                    </TableCell>
                     
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {log.ip_address || 'Unknown'}
-                    </td>
-                  </tr>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {log.ip_address || 'Unknown'}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </TableBody>
+            </Table>
+          </TableContainer>
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="mt-6 flex justify-between items-center">
-              <div className="text-sm text-gray-700">
-                Page {currentPage} of {totalPages}
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
-                  className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+              <Pagination 
+                count={totalPages} 
+                page={currentPage} 
+                onChange={(_, page) => setCurrentPage(page)}
+                color="primary"
+              />
+            </Box>
           )}
-        </div>
+        </Box>
       )}
 
       {/* Statistics Tab */}
-      {activeTab === 'statistics' && statistics && (
-        <div className="space-y-6">
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-white p-6 rounded-lg shadow">
-              <div className="text-2xl font-bold text-blue-600">{statistics.total_actions.toLocaleString()}</div>
-              <div className="text-sm text-gray-600">Total Actions</div>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow">
-              <div className="text-2xl font-bold text-green-600">{statistics.total_users}</div>
-              <div className="text-sm text-gray-600">Active Users</div>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow">
-              <div className="text-2xl font-bold text-purple-600">{(statistics.success_rate * 100).toFixed(1)}%</div>
-              <div className="text-sm text-gray-600">Success Rate</div>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow">
-              <div className="text-2xl font-bold text-red-600">{statistics.security_events}</div>
-              <div className="text-sm text-gray-600">Security Events</div>
-            </div>
-          </div>
+      {activeTab === 1 && statistics && (
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={3}>
+            <Card>
+              <CardContent>
+                <Typography variant="h4" color="primary.main">
+                  {statistics.total_actions}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Total Actions
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Card>
+              <CardContent>
+                <Typography variant="h4" color="success.main">
+                  {(statistics.success_rate * 100).toFixed(1)}%
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Success Rate
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Card>
+              <CardContent>
+                <Typography variant="h4" color="info.main">
+                  {statistics.total_users}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Active Users
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Card>
+              <CardContent>
+                <Typography variant="h4" color="error.main">
+                  {statistics.security_events}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Security Events
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      )}
 
-          {/* Top Actions */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Most Common Actions</h3>
-            <div className="space-y-3">
-              {statistics.top_actions.slice(0, 10).map((item, index) => (
-                <div key={item.action} className="flex justify-between items-center">
-                  <div className="flex items-center">
-                    <span className="text-sm font-medium text-gray-700 mr-2">#{index + 1}</span>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getActionColor(item.action)}`}>
-                      {item.action}
-                    </span>
-                  </div>
-                  <span className="text-sm text-gray-900 font-medium">{item.count.toLocaleString()}</span>
-                </div>
+      {/* Security Monitoring Tab */}
+      {activeTab === 2 && (
+        <Box>
+          {suspiciousActivity && suspiciousActivity.length > 0 ? (
+            <Grid container spacing={2}>
+              {suspiciousActivity.map((activity, index) => (
+                <Grid item xs={12} key={index}>
+                  <Card>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Box>
+                          <Typography variant="h6">{activity.activity_type}</Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            User: {activity.username}
+                          </Typography>
+                          <Typography variant="body2">
+                            {activity.description}
+                          </Typography>
+                        </Box>
+                        <Chip 
+                          label={activity.risk_level}
+                          color={getRiskLevelColor(activity.risk_level)}
+                        />
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
               ))}
-            </div>
-          </div>
-        </div>
+            </Grid>
+          ) : (
+            <Alert severity="success">
+              <Typography variant="h6">No Suspicious Activity Detected</Typography>
+              <Typography variant="body2">All system activity appears normal.</Typography>
+            </Alert>
+          )}
+        </Box>
       )}
-
-      {/* Security Tab */}
-      {activeTab === 'security' && (
-        <div>
-          <div className="mb-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Suspicious Activity Detection</h3>
-            
-            {suspiciousActivity.length === 0 ? (
-              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md">
-                ✅ No suspicious activity detected in the last 24 hours.
-              </div>
-            ) : (
-              <div className="bg-white shadow-md rounded-lg overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        User
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Activity Type
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Risk Level
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Event Count
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Time Period
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        IP Addresses
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {suspiciousActivity.map((activity, index) => (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
-                            {activity.username}
-                          </div>
-                          <div className="text-xs text-gray-500">{activity.user_id}</div>
-                        </td>
-                        
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{activity.activity_type}</div>
-                          <div className="text-xs text-gray-500">{activity.description}</div>
-                        </td>
-                        
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRiskLevelColor(activity.risk_level)}`}>
-                            {activity.risk_level}
-                          </span>
-                        </td>
-                        
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {activity.event_count}
-                        </td>
-                        
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <div>{formatDate(activity.first_occurrence)}</div>
-                          <div className="text-xs">to {formatDate(activity.last_occurrence)}</div>
-                        </td>
-                        
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <div className="max-w-32">
-                            {activity.ip_addresses.slice(0, 2).join(', ')}
-                            {activity.ip_addresses.length > 2 && (
-                              <span className="text-xs"> +{activity.ip_addresses.length - 2} more</span>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
+    </Box>
   );
 };
 

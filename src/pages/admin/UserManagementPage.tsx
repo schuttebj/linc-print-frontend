@@ -4,6 +4,43 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Typography,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Chip,
+  Avatar,
+  Grid,
+  Card,
+  CardContent,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Alert,
+  CircularProgress,
+  Pagination,
+  IconButton
+} from '@mui/material';
+import {
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  PersonAdd as PersonAddIcon,
+  PowerSettingsNew as DeactivateIcon,
+  PowerOff as ActivateIcon
+} from '@mui/icons-material';
 import { API_ENDPOINTS, api } from '../../config/api';
 import lookupService, { UserStatus } from '../../services/lookupService';
 
@@ -198,7 +235,7 @@ const UserManagementPage: React.FC = () => {
     if (!selectedUser) return;
     
     try {
-      await api.delete(API_ENDPOINTS.userById(selectedUser.id));
+      await api.delete(`${API_ENDPOINTS.userById(selectedUser.id)}`);
       setShowDeleteModal(false);
       setSelectedUser(null);
       await loadUsers();
@@ -209,7 +246,7 @@ const UserManagementPage: React.FC = () => {
 
   const handleActivateUser = async (user: User) => {
     try {
-      await api.post(`${API_ENDPOINTS.userById(user.id)}/activate`);
+      await api.put(`${API_ENDPOINTS.userById(user.id)}`, { status: 'ACTIVE' });
       await loadUsers();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to activate user');
@@ -218,410 +255,389 @@ const UserManagementPage: React.FC = () => {
 
   const handleDeactivateUser = async (user: User) => {
     try {
-      await api.post(`${API_ENDPOINTS.userById(user.id)}/deactivate`);
+      await api.put(`${API_ENDPOINTS.userById(user.id)}`, { status: 'INACTIVE' });
       await loadUsers();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to deactivate user');
     }
   };
 
-  const getStatusBadgeClass = (status: string) => {
+  const getStatusChipColor = (status: string): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
     switch (status) {
-      case 'ACTIVE': return 'bg-green-100 text-green-800';
-      case 'INACTIVE': return 'bg-gray-100 text-gray-800';
-      case 'SUSPENDED': return 'bg-red-100 text-red-800';
-      case 'LOCKED': return 'bg-orange-100 text-orange-800';
-      case 'PENDING_ACTIVATION': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'ACTIVE': return 'success';
+      case 'INACTIVE': return 'default';
+      case 'SUSPENDED': return 'error';
+      case 'LOCKED': return 'warning';
+      case 'PENDING_ACTIVATION': return 'info';
+      default: return 'default';
     }
   };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress size={48} />
+      </Box>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">User Management</h1>
-        <p className="text-gray-600">Manage system users, roles, and permissions</p>
-      </div>
+    <Box sx={{ p: 3 }}>
+      {/* Header */}
+      <Typography variant="h4" component="h1" gutterBottom>
+        User Management
+      </Typography>
+      <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+        Manage system users, roles, and permissions
+      </Typography>
 
+      {/* Error Alert */}
       {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+        <Alert 
+          severity="error" 
+          onClose={() => setError(null)}
+          sx={{ mb: 3 }}
+        >
           {error}
-          <button
-            onClick={() => setError(null)}
-            className="ml-4 text-red-500 hover:text-red-700"
-          >
-            ✕
-          </button>
-        </div>
+        </Alert>
       )}
 
       {/* Filters and Search */}
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div>
-          <input
-            type="text"
-            placeholder="Search users..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        
-        <div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="">All Statuses</option>
-            {userStatuses.map((status) => (
-              <option key={status.value} value={status.value}>
-                {status.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        
-        <div>
-          <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">All Roles</option>
-            {roles.map(role => (
-              <option key={role.id} value={role.name}>{role.display_name}</option>
-            ))}
-          </select>
-        </div>
-        
-        <div>
-          <input
-            type="text"
-            placeholder="Department"
-            value={departmentFilter}
-            onChange={(e) => setDepartmentFilter(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        
-        <div>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            Create User
-          </button>
-        </div>
-      </div>
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} md={2}>
+              <TextField
+                fullWidth
+                placeholder="Search users..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                size="small"
+              />
+            </Grid>
+            
+            <Grid item xs={12} md={2}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  label="Status"
+                >
+                  <MenuItem value="">All Statuses</MenuItem>
+                  {userStatuses.map((status) => (
+                    <MenuItem key={status.value} value={status.value}>
+                      {status.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} md={2}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Role</InputLabel>
+                <Select
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value)}
+                  label="Role"
+                >
+                  <MenuItem value="">All Roles</MenuItem>
+                  {roles.map(role => (
+                    <MenuItem key={role.id} value={role.name}>{role.display_name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} md={2}>
+              <TextField
+                fullWidth
+                placeholder="Department"
+                value={departmentFilter}
+                onChange={(e) => setDepartmentFilter(e.target.value)}
+                size="small"
+              />
+            </Grid>
+            
+            <Grid item xs={12} md={2}>
+              <Button
+                fullWidth
+                variant="contained"
+                startIcon={<PersonAddIcon />}
+                onClick={() => setShowCreateModal(true)}
+              >
+                Create User
+              </Button>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
 
       {/* Users Table */}
-      <div className="bg-white shadow-md rounded-lg overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                User
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Contact
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Roles
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Location
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Last Login
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow sx={{ backgroundColor: 'grey.50' }}>
+              <TableCell>User</TableCell>
+              <TableCell>Contact</TableCell>
+              <TableCell>Roles</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Location</TableCell>
+              <TableCell>Last Login</TableCell>
+              <TableCell align="right">Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
             {users.map((user) => (
-              <tr key={user.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0 h-10 w-10">
-                      <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
-                        {user.first_name?.charAt(0)}{user.last_name?.charAt(0)}
-                      </div>
-                    </div>
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">
+              <TableRow key={user.id} hover>
+                <TableCell>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
+                      {user.first_name?.charAt(0)}{user.last_name?.charAt(0)}
+                    </Avatar>
+                    <Box>
+                      <Typography variant="body2" fontWeight="medium">
                         {user.first_name} {user.last_name}
-                      </div>
-                      <div className="text-sm text-gray-500">@{user.username}</div>
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        @{user.username}
+                      </Typography>
                       {user.employee_id && (
-                        <div className="text-xs text-gray-400">ID: {user.employee_id}</div>
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          ID: {user.employee_id}
+                        </Typography>
                       )}
-                    </div>
-                  </div>
-                </td>
+                    </Box>
+                  </Box>
+                </TableCell>
                 
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{user.email}</div>
+                <TableCell>
+                  <Typography variant="body2">{user.email}</Typography>
                   {user.department && (
-                    <div className="text-sm text-gray-500">{user.department}</div>
+                    <Typography variant="caption" color="text.secondary">
+                      {user.department}
+                    </Typography>
                   )}
-                </td>
+                </TableCell>
                 
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex flex-wrap gap-1">
+                <TableCell>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                     {user.roles.map((role) => (
-                      <span
+                      <Chip
                         key={role.id}
-                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                      >
-                        {role.display_name}
-                      </span>
+                        label={role.display_name}
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                      />
                     ))}
                     {user.is_superuser && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                        Super Admin
-                      </span>
+                      <Chip
+                        label="Super Admin"
+                        size="small"
+                        color="secondary"
+                      />
                     )}
-                  </div>
-                </td>
+                  </Box>
+                </TableCell>
                 
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(user.status)}`}>
-                    {user.status}
-                  </span>
-                </td>
+                <TableCell>
+                  <Chip
+                    label={user.status}
+                    color={getStatusChipColor(user.status)}
+                    size="small"
+                  />
+                </TableCell>
                 
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {user.primary_location?.location_name || 'Not assigned'}
+                <TableCell>
+                  <Typography variant="body2">
+                    {user.primary_location?.location_name || 'Not assigned'}
+                  </Typography>
                   {user.assigned_locations.length > 1 && (
-                    <div className="text-xs text-gray-500">
+                    <Typography variant="caption" color="text.secondary">
                       +{user.assigned_locations.length - 1} more
-                    </div>
+                    </Typography>
                   )}
-                </td>
+                </TableCell>
                 
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {user.last_login_at 
-                    ? new Date(user.last_login_at).toLocaleDateString()
-                    : 'Never'
-                  }
-                </td>
+                <TableCell>
+                  <Typography variant="body2" color="text.secondary">
+                    {user.last_login_at 
+                      ? new Date(user.last_login_at).toLocaleDateString()
+                      : 'Never'
+                    }
+                  </Typography>
+                </TableCell>
                 
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <div className="flex justify-end gap-2">
-                    <button
+                <TableCell align="right">
+                  <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                    <IconButton
+                      size="small"
+                      color="primary"
                       onClick={() => {
                         setSelectedUser(user);
                         setShowEditModal(true);
                       }}
-                      className="text-blue-600 hover:text-blue-900"
                     >
-                      Edit
-                    </button>
+                      <EditIcon />
+                    </IconButton>
                     
                     {user.status === 'ACTIVE' ? (
-                      <button
+                      <IconButton
+                        size="small"
+                        color="warning"
                         onClick={() => handleDeactivateUser(user)}
-                        className="text-orange-600 hover:text-orange-900"
                       >
-                        Deactivate
-                      </button>
+                        <DeactivateIcon />
+                      </IconButton>
                     ) : (
-                      <button
+                      <IconButton
+                        size="small"
+                        color="success"
                         onClick={() => handleActivateUser(user)}
-                        className="text-green-600 hover:text-green-900"
                       >
-                        Activate
-                      </button>
+                        <ActivateIcon />
+                      </IconButton>
                     )}
                     
-                    <button
+                    <IconButton
+                      size="small"
+                      color="error"
                       onClick={() => {
                         setSelectedUser(user);
                         setShowDeleteModal(true);
                       }}
-                      className="text-red-600 hover:text-red-900"
                     >
-                      Delete
-                    </button>
-                  </div>
-                </td>
-              </tr>
+                      <DeleteIcon />
+                    </IconButton>
+                  </Box>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </TableContainer>
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="mt-6 flex justify-between items-center">
-          <div className="text-sm text-gray-700">
-            Page {currentPage} of {totalPages}
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-            >
-              Previous
-            </button>
-            <button
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage === totalPages}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
-        </div>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+          <Pagination 
+            count={totalPages} 
+            page={currentPage} 
+            onChange={(_, page) => setCurrentPage(page)}
+            color="primary"
+          />
+        </Box>
       )}
 
       {/* Create User Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Create New User</h3>
-            
-            <form onSubmit={handleCreateUser} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Email</label>
-                <input
+      <Dialog open={showCreateModal} onClose={() => setShowCreateModal(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Create New User</DialogTitle>
+        <form onSubmit={handleCreateUser}>
+          <DialogContent>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Email"
                   type="email"
                   required
                   value={createForm.email}
                   onChange={(e) => setCreateForm({...createForm, email: e.target.value})}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
-              </div>
+              </Grid>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">First Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={createForm.first_name}
-                    onChange={(e) => setCreateForm({...createForm, first_name: e.target.value})}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Last Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={createForm.last_name}
-                    onChange={(e) => setCreateForm({...createForm, last_name: e.target.value})}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-              </div>
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  label="First Name"
+                  required
+                  value={createForm.first_name}
+                  onChange={(e) => setCreateForm({...createForm, first_name: e.target.value})}
+                />
+              </Grid>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Madagascar ID Number</label>
-                <input
-                  type="text"
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  label="Last Name"
+                  required
+                  value={createForm.last_name}
+                  onChange={(e) => setCreateForm({...createForm, last_name: e.target.value})}
+                />
+              </Grid>
+              
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Madagascar ID Number"
                   required
                   value={createForm.madagascar_id_number}
                   onChange={(e) => setCreateForm({...createForm, madagascar_id_number: e.target.value})}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
-              </div>
+              </Grid>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Employee ID</label>
-                <input
-                  type="text"
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Employee ID"
                   value={createForm.employee_id}
                   onChange={(e) => setCreateForm({...createForm, employee_id: e.target.value})}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
-              </div>
+              </Grid>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Department</label>
-                <input
-                  type="text"
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Department"
                   value={createForm.department}
                   onChange={(e) => setCreateForm({...createForm, department: e.target.value})}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
-              </div>
+              </Grid>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Password</label>
-                <input
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Password"
                   type="password"
                   required
                   value={createForm.password}
                   onChange={(e) => setCreateForm({...createForm, password: e.target.value})}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
-              </div>
-              
-              <div className="flex justify-end gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-                >
-                  Create User
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setShowCreateModal(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="contained">
+              Create User
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
 
       {/* Delete Confirmation Modal */}
-      {showDeleteModal && selectedUser && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Confirm Delete</h3>
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to delete user <strong>{selectedUser.first_name} {selectedUser.last_name}</strong>? 
-              This action cannot be undone.
-            </p>
-            
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeleteUser}
-                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700"
-              >
-                Delete User
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      <Dialog open={showDeleteModal} onClose={() => setShowDeleteModal(false)}>
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete user <strong>{selectedUser?.first_name} {selectedUser?.last_name}</strong>? 
+            This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowDeleteModal(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleDeleteUser} color="error" variant="contained">
+            Delete User
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 };
 
