@@ -423,6 +423,8 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                 role_ids: data.role_id ? [data.role_id] : [],
                 // Remove the single role_id field
                 role_id: undefined,
+                // Remove primary_location_id for non-location users to avoid UUID validation error
+                primary_location_id: data.user_type === 'LOCATION_USER' ? data.primary_location_id : undefined,
             };
             
             // Build URL with query parameters for create mode

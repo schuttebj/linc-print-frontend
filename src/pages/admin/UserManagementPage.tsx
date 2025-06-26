@@ -42,8 +42,6 @@ import {
   Edit as EditIcon,
   Visibility as ViewIcon,
   Delete as DeleteIcon,
-  Lock as LockIcon,
-  LockOpen as UnlockIcon,
   Add as AddIcon,
   Search as SearchIcon,
   FilterList as FilterIcon,
@@ -64,7 +62,7 @@ interface User {
   last_name: string;
   email: string;
   status: string;
-  user_type: 'LOCATION_USER' | 'PROVINCIAL_USER' | 'NATIONAL_USER';
+  user_type: 'SYSTEM_USER' | 'NATIONAL_ADMIN' | 'PROVINCIAL_ADMIN' | 'LOCATION_USER';
   primary_location?: {
     id: string;
     code: string;
@@ -81,7 +79,6 @@ interface User {
   }>;
   last_login?: string;
   failed_login_attempts: number;
-  is_locked: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -185,28 +182,6 @@ const UserManagementPage: React.FC = () => {
     }
   };
 
-  const handleToggleLock = async (user: User) => {
-    try {
-      const action = user.is_locked ? 'unlock' : 'lock';
-      const response = await fetch(`${API_BASE_URL}/api/v1/users/${user.id}/${action}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to ${action} user`);
-      }
-
-      setSuccessMessage(`User ${user.first_name} ${user.last_name} has been ${action}ed successfully.`);
-      setShowSuccessDialog(true);
-      loadUsers();
-    } catch (err) {
-      alert(`Failed to toggle user lock: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    }
-  };
-
   const handleToggleActivation = async (user: User) => {
     try {
       const action = user.status === 'ACTIVE' ? 'deactivate' : 'activate';
@@ -231,12 +206,14 @@ const UserManagementPage: React.FC = () => {
 
   const getUserTypeDisplay = (userType: string): { label: string; color: 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' } => {
     switch (userType) {
+      case 'SYSTEM_USER':
+        return { label: 'System', color: 'error' };
+      case 'NATIONAL_ADMIN':
+        return { label: 'National', color: 'error' };
+      case 'PROVINCIAL_ADMIN':
+        return { label: 'Provincial', color: 'warning' };
       case 'LOCATION_USER':
         return { label: 'Location', color: 'primary' };
-      case 'PROVINCIAL_USER':
-        return { label: 'Provincial', color: 'warning' };
-      case 'NATIONAL_USER':
-        return { label: 'National', color: 'error' };
       default:
         return { label: userType, color: 'default' };
     }
@@ -250,8 +227,6 @@ const UserManagementPage: React.FC = () => {
         return 'default';
       case 'suspended':
         return 'warning';
-      case 'locked':
-        return 'error';
       default:
         return 'default';
     }
@@ -260,7 +235,7 @@ const UserManagementPage: React.FC = () => {
   const getLocationInfo = (user: User) => {
     if (user.user_type === 'LOCATION_USER' && user.primary_location) {
       return `${user.primary_location.name} (${user.primary_location.code})`;
-    } else if (user.user_type === 'PROVINCIAL_USER' && user.scope_province) {
+    } else if (user.user_type === 'PROVINCIAL_ADMIN' && user.scope_province) {
       const provinceNames: { [key: string]: string } = {
         'T': 'ANTANANARIVO',
         'A': 'TOAMASINA',
@@ -270,8 +245,10 @@ const UserManagementPage: React.FC = () => {
         'U': 'TOLIARA',
       };
       return `${provinceNames[user.scope_province] || user.scope_province} Province`;
-    } else if (user.user_type === 'NATIONAL_USER') {
+    } else if (user.user_type === 'NATIONAL_ADMIN') {
       return 'National Access';
+    } else if (user.user_type === 'SYSTEM_USER') {
+      return 'System Access';
     }
     return 'Not Assigned';
   };
@@ -385,7 +362,6 @@ const UserManagementPage: React.FC = () => {
                   <MenuItem value="ACTIVE">Active</MenuItem>
                   <MenuItem value="INACTIVE">Inactive</MenuItem>
                   <MenuItem value="SUSPENDED">Suspended</MenuItem>
-                  <MenuItem value="LOCKED">Locked</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -399,9 +375,10 @@ const UserManagementPage: React.FC = () => {
                   label="User Type"
                 >
                   <MenuItem value="">All Types</MenuItem>
-                  <MenuItem value="LOCATION_USER">Location Users</MenuItem>
-                  <MenuItem value="PROVINCIAL_USER">Provincial Users</MenuItem>
-                  <MenuItem value="NATIONAL_USER">National Users</MenuItem>
+                  <MenuItem value="SYSTEM_USER">System User</MenuItem>
+                  <MenuItem value="NATIONAL_ADMIN">National Admin</MenuItem>
+                  <MenuItem value="PROVINCIAL_ADMIN">Provincial Admin</MenuItem>
+                  <MenuItem value="LOCATION_USER">Location User</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -441,7 +418,6 @@ const UserManagementPage: React.FC = () => {
           <TableHead>
             <TableRow>
               <TableCell>User</TableCell>
-              <TableCell>Username</TableCell>
               <TableCell>Type</TableCell>
               <TableCell>Assignment</TableCell>
               <TableCell>Roles</TableCell>
@@ -456,23 +432,20 @@ const UserManagementPage: React.FC = () => {
                 <TableCell>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Avatar sx={{ bgcolor: 'primary.main' }}>
-                      {user.first_name?.[0]}{user.last_name?.[0]}
+                      <PersonIcon />
                     </Avatar>
                     <Box>
-                      <Typography variant="subtitle2">
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                         {user.first_name} {user.last_name}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body2" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+                        {user.username}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
                         {user.email}
                       </Typography>
                     </Box>
                   </Box>
-                </TableCell>
-                
-                <TableCell>
-                  <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                    {user.username}
-                  </Typography>
                 </TableCell>
                 
                 <TableCell>
@@ -494,7 +467,7 @@ const UserManagementPage: React.FC = () => {
                     {user.roles?.map((role) => (
                       <Chip
                         key={role.id}
-                        label={`${role.display_name} (${role.hierarchy_level})`}
+                        label={`${role.display_name || role.name} (${role.hierarchy_level})`}
                         size="small"
                         variant="outlined"
                       />
@@ -503,16 +476,11 @@ const UserManagementPage: React.FC = () => {
                 </TableCell>
                 
                 <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip
-                      label={user.status}
-                      color={getStatusColor(user.status)}
-                      size="small"
-                    />
-                    {user.is_locked && (
-                      <LockIcon fontSize="small" color="error" />
-                    )}
-                  </Box>
+                  <Chip
+                    label={user.status}
+                    color={getStatusColor(user.status)}
+                    size="small"
+                  />
                 </TableCell>
                 
                 <TableCell>
@@ -552,17 +520,6 @@ const UserManagementPage: React.FC = () => {
                         {user.status === 'ACTIVE' ? <DeactivateIcon /> : <ActivateIcon />}
                       </IconButton>
                     )}
-
-                    {hasPermission('users.update') && (
-                      <IconButton
-                        size="small"
-                        onClick={() => handleToggleLock(user)}
-                        color={user.is_locked ? 'success' : 'warning'}
-                        title={user.is_locked ? 'Unlock User' : 'Lock User'}
-                      >
-                        {user.is_locked ? <UnlockIcon /> : <LockIcon />}
-                      </IconButton>
-                    )}
                     
                     {hasPermission('users.delete') && (
                       <IconButton
@@ -595,8 +552,6 @@ const UserManagementPage: React.FC = () => {
         onPageChange={handlePageChange}
         onRowsPerPageChange={handleRowsPerPageChange}
       />
-
-
 
       {/* View User Modal */}
       <Dialog open={showViewModal} onClose={() => setShowViewModal(false)} maxWidth="md" fullWidth>
@@ -642,7 +597,7 @@ const UserManagementPage: React.FC = () => {
                   {selectedUser.roles?.map((role) => (
                     <Chip
                       key={role.id}
-                      label={`${role.display_name} (Level ${role.hierarchy_level})`}
+                      label={`${role.display_name || role.name} (Level ${role.hierarchy_level})`}
                       variant="outlined"
                     />
                   ))}
