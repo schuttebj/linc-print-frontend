@@ -545,6 +545,7 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                                             type="email"
                                             error={!!form.formState.errors.email}
                                             helperText={form.formState.errors.email?.message}
+                                            onChange={(e) => field.onChange(e.target.value.toUpperCase())}
                                         />
                                     )}
                                 />
