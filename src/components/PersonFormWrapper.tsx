@@ -462,13 +462,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         }
     }, [searchParams, initialPersonId, accessToken]);
 
-    // Re-populate form when languages are loaded and we have an existing person
-    useEffect(() => {
-        if (!lookupsLoading && personFound && languages.length > 0 && isEditMode) {
-            console.log('Re-populating form after languages loaded');
-            populateFormWithExistingPerson(personFound);
-        }
-    }, [lookupsLoading, personFound, languages, isEditMode]);
+
 
     // Fetch existing person for editing
     const fetchPersonForEditing = async (personId: string) => {
@@ -680,17 +674,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             personForm.setValue('nationality_code', existingPerson.nationality_code.toUpperCase());
         }
         if (existingPerson.preferred_language) {
-            console.log('Setting preferred_language from existing person:', existingPerson.preferred_language);
-            // Convert to uppercase to match the language options format (MG, FR, EN)
-            const normalizedLanguage = existingPerson.preferred_language.toUpperCase();
-            personForm.setValue('preferred_language', normalizedLanguage);
-            console.log('Normalized preferred_language value:', normalizedLanguage);
-            
-            // Force form to re-render with the new value
-            setTimeout(() => {
-                personForm.setValue('preferred_language', normalizedLanguage);
-                console.log('Re-confirmed preferred_language value:', normalizedLanguage);
-            }, 100);
+            personForm.setValue('preferred_language', existingPerson.preferred_language);
         }
 
         // Populate contact information - EMAIL CAPITALIZED
@@ -852,7 +836,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 person_nature: formData.person_nature?.toUpperCase() || '',
                 birth_date: formData.birth_date || undefined,
                 nationality_code: formData.nationality_code?.toUpperCase() || 'MG',
-                preferred_language: formData.preferred_language?.toLowerCase() || 'mg', // Language codes stay lowercase
+                preferred_language: formData.preferred_language || 'MG', // Language codes stay uppercase
                 email_address: formData.email_address?.toUpperCase() || undefined,
                 work_phone: formData.work_phone || undefined,
                 cell_phone_country_code: formData.cell_phone_country_code || '+261',
