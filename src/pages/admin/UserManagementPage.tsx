@@ -467,7 +467,7 @@ const UserManagementPage: React.FC = () => {
                     {user.roles?.map((role) => (
                       <Chip
                         key={role.id}
-                        label={`${role.display_name || role.name} (${role.hierarchy_level})`}
+                        label={`${role.display_name || role.name}${role.hierarchy_level ? ` (${role.hierarchy_level})` : ''}`}
                         size="small"
                         variant="outlined"
                       />
@@ -597,7 +597,7 @@ const UserManagementPage: React.FC = () => {
                   {selectedUser.roles?.map((role) => (
                     <Chip
                       key={role.id}
-                      label={`${role.display_name || role.name} (Level ${role.hierarchy_level})`}
+                      label={`${role.display_name || role.name}${role.hierarchy_level ? ` (Level ${role.hierarchy_level})` : ''}`}
                       variant="outlined"
                     />
                   ))}
