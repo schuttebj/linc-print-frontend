@@ -31,6 +31,10 @@ import {
     Tabs,
     Tab,
     Divider,
+    Checkbox,
+    Accordion,
+    AccordionSummary,
+    AccordionDetails,
 } from '@mui/material';
 import {
     PersonAdd as PersonAddIcon,
@@ -40,6 +44,9 @@ import {
     CheckCircle as CheckCircleIcon,
     Warning as WarningIcon,
     VpnKey as VpnKeyIcon,
+    ExpandMore as ExpandMoreIcon,
+    Lock as LockIcon,
+    LockOpen as LockOpenIcon,
 } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -409,6 +416,47 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
         return [];
     };
 
+    const getRolePermissions = (roleId: string): Permission[] => {
+        const role = availableRoles.find(r => r.id === roleId);
+        if (role && role.permissions) {
+            return role.permissions;
+        }
+        return [];
+    };
+
+    const groupPermissionsByCategory = (permissions: Permission[]): { [category: string]: Permission[] } => {
+        return permissions.reduce((acc, permission) => {
+            const category = permission.category || 'Other';
+            if (!acc[category]) {
+                acc[category] = [];
+            }
+            acc[category].push(permission);
+            return acc;
+        }, {} as { [category: string]: Permission[] });
+    };
+
+    const handlePermissionToggle = (permissionName: string, checked: boolean) => {
+        const currentOverrides = form.getValues('permission_overrides') || {};
+        const newOverrides = {
+            ...currentOverrides,
+            [permissionName]: checked
+        };
+        form.setValue('permission_overrides', newOverrides);
+    };
+
+    const isPermissionOverridden = (permissionName: string): boolean => {
+        const overrides = form.watch('permission_overrides') || {};
+        return overrides.hasOwnProperty(permissionName);
+    };
+
+    const getPermissionValue = (permissionName: string, isRoleDefault: boolean): boolean => {
+        const overrides = form.watch('permission_overrides') || {};
+        if (overrides.hasOwnProperty(permissionName)) {
+            return overrides[permissionName];
+        }
+        return isRoleDefault;
+    };
+
     const handleSubmit = async (data: UserFormData) => {
         try {
             setSubmitLoading(true);
@@ -614,7 +662,7 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                                     />
                                 </Grid>
                                 
-                                <Grid item xs={12} md={6}>
+                                <Grid item xs={12} md={8}>
                                     <Controller
                                         name="madagascar_id_number"
                                         control={form.control}
@@ -894,30 +942,160 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                 {watchedRole && (
                     <Card sx={{ mb: 3 }}>
                         <CardContent>
-                            <Typography variant="h6" gutterBottom>
+                            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <SecurityIcon color="primary" />
                                 Individual Permission Overrides
                             </Typography>
                             
                             <Alert severity="info" sx={{ mb: 2 }}>
                                 The selected role provides default permissions. You can override specific permissions here if needed.
+                                <strong> Green checkmarks</strong> = role defaults, <strong>modified permissions</strong> will be highlighted.
                             </Alert>
                             
-                            <Typography variant="body2" color="text.secondary">
-                                Default permissions from role: {getRoleDefaultPermissions(watchedRole).join(', ')}
+                            <Typography variant="body2" color="text.secondary" gutterBottom>
+                                Default permissions from role: {getRoleDefaultPermissions(watchedRole).length} permissions
                             </Typography>
                             
-                            {/* TODO: Implement detailed permission override interface */}
-                            <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                                <Typography variant="body2" color="text.secondary">
-                                    TODO: Individual permission toggle interface will be implemented here
-                                </Typography>
-                            </Box>
+                            {(() => {
+                                const rolePermissions = getRolePermissions(watchedRole);
+                                const allAvailablePermissions = allPermissions;
+                                const groupedRolePermissions = groupPermissionsByCategory(rolePermissions);
+                                const groupedAllPermissions = groupPermissionsByCategory(allAvailablePermissions);
+                                
+                                return (
+                                    <Box sx={{ mt: 2 }}>
+                                        {Object.entries(groupedAllPermissions).map(([category, categoryPermissions]) => {
+                                            const hasRolePermissionsInCategory = categoryPermissions.some(p => 
+                                                rolePermissions.some(rp => rp.name === p.name)
+                                            );
+                                            
+                                            return (
+                                                <Accordion key={category} sx={{ mb: 1 }}>
+                                                    <AccordionSummary 
+                                                        expandIcon={<ExpandMoreIcon />}
+                                                        sx={{ 
+                                                            bgcolor: hasRolePermissionsInCategory ? 'primary.50' : 'grey.50',
+                                                            '&:hover': { bgcolor: hasRolePermissionsInCategory ? 'primary.100' : 'grey.100' }
+                                                        }}
+                                                    >
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                                                            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                                                                {category.charAt(0).toUpperCase() + category.slice(1)}
+                                                            </Typography>
+                                                            <Chip 
+                                                                label={`${categoryPermissions.filter(p => 
+                                                                    rolePermissions.some(rp => rp.name === p.name)
+                                                                ).length}/${categoryPermissions.length}`}
+                                                                size="small"
+                                                                color={hasRolePermissionsInCategory ? "primary" : "default"}
+                                                            />
+                                                            {hasRolePermissionsInCategory && (
+                                                                <CheckCircleIcon color="primary" fontSize="small" />
+                                                            )}
+                                                        </Box>
+                                                    </AccordionSummary>
+                                                    <AccordionDetails>
+                                                        <Grid container spacing={1}>
+                                                            {categoryPermissions.map((permission) => {
+                                                                const isRoleDefault = rolePermissions.some(rp => rp.name === permission.name);
+                                                                const isOverridden = isPermissionOverridden(permission.name);
+                                                                const currentValue = getPermissionValue(permission.name, isRoleDefault);
+                                                                
+                                                                return (
+                                                                    <Grid item xs={12} sm={6} md={4} key={permission.name}>
+                                                                        <Box 
+                                                                            sx={{ 
+                                                                                p: 1.5, 
+                                                                                border: '1px solid', 
+                                                                                borderColor: isOverridden ? 'warning.main' : 'divider',
+                                                                                borderRadius: 1,
+                                                                                bgcolor: isOverridden ? 'warning.50' : 'background.paper',
+                                                                                transition: 'all 0.2s ease'
+                                                                            }}
+                                                                        >
+                                                                            <FormControlLabel
+                                                                                control={
+                                                                                    <Checkbox
+                                                                                        checked={currentValue}
+                                                                                        onChange={(e) => handlePermissionToggle(permission.name, e.target.checked)}
+                                                                                        color={isRoleDefault ? "success" : "primary"}
+                                                                                        icon={isRoleDefault ? <LockOpenIcon /> : <LockIcon />}
+                                                                                        checkedIcon={isRoleDefault ? <CheckCircleIcon /> : <CheckCircleIcon />}
+                                                                                    />
+                                                                                }
+                                                                                label={
+                                                                                    <Box>
+                                                                                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                                                                            {permission.display_name}
+                                                                                        </Typography>
+                                                                                        <Typography variant="caption" color="text.secondary">
+                                                                                            {permission.description}
+                                                                                        </Typography>
+                                                                                        {isRoleDefault && (
+                                                                                            <Chip 
+                                                                                                label="Role Default" 
+                                                                                                size="small" 
+                                                                                                color="success" 
+                                                                                                sx={{ ml: 1, height: 16, fontSize: '0.6rem' }}
+                                                                                            />
+                                                                                        )}
+                                                                                        {isOverridden && (
+                                                                                            <Chip 
+                                                                                                label="Modified" 
+                                                                                                size="small" 
+                                                                                                color="warning" 
+                                                                                                sx={{ ml: 1, height: 16, fontSize: '0.6rem' }}
+                                                                                            />
+                                                                                        )}
+                                                                                    </Box>
+                                                                                }
+                                                                                sx={{ alignItems: 'flex-start', m: 0 }}
+                                                                            />
+                                                                        </Box>
+                                                                    </Grid>
+                                                                );
+                                                            })}
+                                                        </Grid>
+                                                    </AccordionDetails>
+                                                </Accordion>
+                                            );
+                                        })}
+                                        
+                                        {/* Permission Override Summary */}
+                                        <Box sx={{ mt: 2, p: 2, bgcolor: 'info.50', borderRadius: 1 }}>
+                                            <Typography variant="subtitle2" gutterBottom>
+                                                Permission Override Summary:
+                                            </Typography>
+                                            <Grid container spacing={2}>
+                                                <Grid item xs={12} sm={4}>
+                                                    <Typography variant="body2">
+                                                        <strong>Role Permissions:</strong> {getRoleDefaultPermissions(watchedRole).length}
+                                                    </Typography>
+                                                </Grid>
+                                                <Grid item xs={12} sm={4}>
+                                                    <Typography variant="body2">
+                                                        <strong>Overrides:</strong> {Object.keys(form.watch('permission_overrides') || {}).length}
+                                                    </Typography>
+                                                </Grid>
+                                                <Grid item xs={12} sm={4}>
+                                                    <Typography variant="body2">
+                                                        <strong>Total Permissions:</strong> {allPermissions.length}
+                                                    </Typography>
+                                                </Grid>
+                                            </Grid>
+                                        </Box>
+                                    </Box>
+                                );
+                            })()}
                         </CardContent>
                     </Card>
                 )}
 
-                {/* Submit Buttons */}
-                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+            </form>
+
+            {/* Navigation Buttons - Matching PersonFormWrapper Style */}
+            <Paper sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                     {onCancel && (
                         <Button 
                             variant="outlined" 
@@ -927,16 +1105,21 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                             Cancel
                         </Button>
                     )}
-                    <Button
-                        type="submit"
-                        variant="contained"
-                        disabled={submitLoading}
-                        sx={{ minWidth: 120 }}
-                    >
-                        {submitLoading ? 'Processing...' : mode === 'create' ? 'Create User' : 'Update User'}
-                    </Button>
+                    
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            disabled={submitLoading}
+                            startIcon={<PersonAddIcon />}
+                            sx={{ minWidth: 120 }}
+                            onClick={form.handleSubmit(handleSubmit)}
+                        >
+                            {submitLoading ? 'Processing...' : mode === 'create' ? 'Create User' : 'Update User'}
+                        </Button>
+                    </Box>
                 </Box>
-            </form>
+            </Paper>
 
             {/* Success Dialog */}
             <Dialog open={showSuccessDialog} onClose={() => setShowSuccessDialog(false)} maxWidth="sm" fullWidth>
