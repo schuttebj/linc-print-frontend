@@ -465,50 +465,66 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                                     )}
                                 />
                             </Grid>
-                            
-                            <Grid item xs={12} md={4}>
-                                <Controller
-                                    name="id_document_type"
-                                    control={form.control}
-                                    render={({ field }) => (
-                                        <FormControl fullWidth error={!!form.formState.errors.id_document_type}>
-                                            <InputLabel>ID Document Type *</InputLabel>
-                                            <Select {...field} label="ID Document Type *">
-                                                <MenuItem value="MADAGASCAR_ID">Madagascar National ID</MenuItem>
-                                                <MenuItem value="PASSPORT">Passport</MenuItem>
-                                                <MenuItem value="BIRTH_CERTIFICATE">Birth Certificate</MenuItem>
-                                                <MenuItem value="DRIVING_LICENSE">Driving License</MenuItem>
-                                            </Select>
-                                            <FormHelperText>
-                                                {form.formState.errors.id_document_type?.message || 'Select document type used for identification'}
-                                            </FormHelperText>
-                                        </FormControl>
-                                    )}
-                                />
-                            </Grid>
-                            
-                            <Grid item xs={12} md={12}>
-                                <Controller
-                                    name="madagascar_id_number"
-                                    control={form.control}
-                                    render={({ field }) => (
-                                        <TextField
-                                            {...field}
-                                            fullWidth
-                                            label="Document Number *"
-                                            error={!!form.formState.errors.madagascar_id_number}
-                                            helperText={form.formState.errors.madagascar_id_number?.message || 'Enter the document number (numbers only, will be auto-formatted)'}
-                                            placeholder="Example: 123456789012"
-                                            onChange={(e) => {
-                                                // Allow only numbers for document numbers (matching PersonFormWrapper style)
-                                                const value = e.target.value.replace(/\D/g, '');
-                                                field.onChange(value);
-                                            }}
-                                        />
-                                    )}
-                                />
-                            </Grid>
                         </Grid>
+                    </CardContent>
+                </Card>
+
+                {/* Identification Document - Matching PersonFormWrapper Style */}
+                <Card sx={{ mb: 3 }}>
+                    <CardContent>
+                        <Typography variant="h6" gutterBottom>
+                            Identification Document
+                        </Typography>
+
+                        <Box sx={{ mb: 4, p: 3, border: '1px solid #e0e0e0', borderRadius: 2, backgroundColor: '#fafafa' }}>
+                            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, color: 'primary.main' }}>
+                                Primary Document
+                            </Typography>
+
+                            <Grid container spacing={3}>
+                                <Grid item xs={12} md={4}>
+                                    <Controller
+                                        name="id_document_type"
+                                        control={form.control}
+                                        render={({ field }) => (
+                                            <FormControl fullWidth error={!!form.formState.errors.id_document_type}>
+                                                <InputLabel>Document Type *</InputLabel>
+                                                <Select {...field} label="Document Type *">
+                                                    <MenuItem value="MADAGASCAR_ID">Madagascar National ID</MenuItem>
+                                                    <MenuItem value="PASSPORT">Passport</MenuItem>
+                                                    <MenuItem value="BIRTH_CERTIFICATE">Birth Certificate</MenuItem>
+                                                    <MenuItem value="DRIVING_LICENSE">Driving License</MenuItem>
+                                                </Select>
+                                                <FormHelperText>
+                                                    {form.formState.errors.id_document_type?.message || 'Select document type'}
+                                                </FormHelperText>
+                                            </FormControl>
+                                        )}
+                                    />
+                                </Grid>
+                                
+                                <Grid item xs={12} md={6}>
+                                    <Controller
+                                        name="madagascar_id_number"
+                                        control={form.control}
+                                        render={({ field }) => (
+                                            <TextField
+                                                {...field}
+                                                fullWidth
+                                                label="Document Number *"
+                                                error={!!form.formState.errors.madagascar_id_number}
+                                                helperText={form.formState.errors.madagascar_id_number?.message || 'Document number (numbers only)'}
+                                                onChange={(e) => {
+                                                    // Allow only numbers for document numbers (matching PersonFormWrapper style)
+                                                    const value = e.target.value.replace(/\D/g, '');
+                                                    field.onChange(value);
+                                                }}
+                                            />
+                                        )}
+                                    />
+                                </Grid>
+                            </Grid>
+                        </Box>
                     </CardContent>
                 </Card>
 
