@@ -160,10 +160,13 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
     const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
     const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
     const [locations, setLocations] = useState<Location[]>([]);
+    const [filteredLocations, setFilteredLocations] = useState<Location[]>([]);
     const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([]);
     const [userStatuses, setUserStatuses] = useState<UserStatus[]>([]);
     const [userTypes, setUserTypes] = useState<UserType[]>([]);
     const [provinces, setProvinces] = useState<Province[]>([]);
+    const [filteredProvinces, setFilteredProvinces] = useState<Province[]>([]);
+    const [filteredUserTypes, setFilteredUserTypes] = useState<UserType[]>([]);
     const [lookupsLoading, setLookupsLoading] = useState(true);
 
     // Form management
@@ -199,6 +202,11 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
             setGeneratedPassword(generateRandomPassword());
         }
     }, [mode, userId]);
+
+    // Filter locations and provinces based on current user's scope
+    useEffect(() => {
+        filterAvailableLocationsAndProvinces();
+    }, [watchedUserType, currentUser, locations, provinces]);
 
     // Filter roles based on user type and current user's hierarchy
     useEffect(() => {
@@ -315,6 +323,57 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
         
         // Filter roles based on current user's hierarchy level and user type restriction
         // Implementation depends on your backend role filtering logic
+    };
+
+    // NEW: Filter locations and provinces based on current user's scope
+    const filterAvailableLocationsAndProvinces = () => {
+        // No filtering for superuser - show all
+        if (!currentUser || currentUser.is_superuser) {
+            setFilteredLocations(locations);
+            setFilteredProvinces(provinces);
+            setFilteredUserTypes(userTypes);
+            return;
+        }
+
+        // National users can create anywhere
+        if (currentUser.user_type === 'NATIONAL_USER') {
+            setFilteredLocations(locations);
+            setFilteredProvinces(provinces);
+            // National users can create Provincial and Location users, but not other National users
+            setFilteredUserTypes(userTypes.filter(ut => ut.value !== 'NATIONAL_USER'));
+            return;
+        }
+
+        // Provincial users can only create users in their province
+        if (currentUser.user_type === 'PROVINCIAL_USER' && currentUser.scope_province) {
+            // Filter locations to only show ones in the current user's province
+            setFilteredLocations(locations.filter(location => location.province_code === currentUser.scope_province));
+            
+            // Filter provinces to only show the current user's province
+            setFilteredProvinces(provinces.filter(province => province.code === currentUser.scope_province));
+            
+            // Provincial users can only create Location users
+            setFilteredUserTypes(userTypes.filter(ut => ut.value === 'LOCATION_USER'));
+            return;
+        }
+
+        // Office supervisors can only create users in their own location
+        if (currentUser.user_type === 'LOCATION_USER' && currentUser.primary_location_id) {
+            // Filter locations to only show the supervisor's location
+            setFilteredLocations(locations.filter(location => location.id === currentUser.primary_location_id));
+            
+            // No province selection needed for office supervisors
+            setFilteredProvinces([]);
+            
+            // Office supervisors can only create Location users
+            setFilteredUserTypes(userTypes.filter(ut => ut.value === 'LOCATION_USER'));
+            return;
+        }
+
+        // Default: no access
+        setFilteredLocations([]);
+        setFilteredProvinces([]);
+        setFilteredUserTypes([]);
     };
 
     const generateUsername = (): string => {
@@ -483,7 +542,6 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                                             type="email"
                                             error={!!form.formState.errors.email}
                                             helperText={form.formState.errors.email?.message}
-                                            onChange={(e) => field.onChange(e.target.value.toLowerCase())}
                                         />
                                     )}
                                 />
@@ -618,7 +676,7 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                                         <FormControl fullWidth error={!!form.formState.errors.user_type}>
                                             <InputLabel>User Type *</InputLabel>
                                             <Select {...field} label="User Type *">
-                                                {userTypes.map((userType) => (
+                                                {filteredUserTypes.map((userType) => (
                                                     <MenuItem key={userType.value} value={userType.value}>
                                                         {userType.label}
                                                     </MenuItem>
@@ -641,7 +699,7 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                                             <FormControl fullWidth>
                                                 <InputLabel>Primary Location *</InputLabel>
                                                 <Select {...field} label="Primary Location *">
-                                                    {locations.map((location) => (
+                                                    {filteredLocations.map((location) => (
                                                         <MenuItem key={location.id} value={location.id}>
                                                             {location.name} ({location.code}) - {location.province_name}
                                                         </MenuItem>
@@ -663,7 +721,7 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                                             <FormControl fullWidth>
                                                 <InputLabel>Province Scope *</InputLabel>
                                                 <Select {...field} label="Province Scope *">
-                                                    {provinces.map((province) => (
+                                                    {filteredProvinces.map((province) => (
                                                         <MenuItem key={province.code} value={province.code}>
                                                             {province.name} ({province.code})
                                                         </MenuItem>
