@@ -29,33 +29,31 @@ const UserFormPage: React.FC = () => {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'grey.50', py: 3 }}>
-      <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>
-        {/* Header with Back Button */}
-        <Paper sx={{ p: 3, mb: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Button
-              startIcon={<ArrowBackIcon />}
-              onClick={handleCancel}
-              variant="outlined"
-            >
-              Back to Users
-            </Button>
-            <Box>
-              <Typography variant="h4" component="h1">
-                {isEditMode ? 'Edit User' : 'Create New User'}
-              </Typography>
-              <Typography variant="body1" color="text.secondary">
-                {isEditMode 
-                  ? 'Update user information and permissions' 
-                  : 'Create a new user account with appropriate role and permissions'
-                }
-              </Typography>
-            </Box>
-          </Box>
-        </Paper>
+    <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
+      {/* Header with Back Button */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3, px: 3, pt: 3 }}>
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={handleCancel}
+          variant="outlined"
+        >
+          Back to Users
+        </Button>
+        <Box>
+          <Typography variant="h4" component="h1">
+            {isEditMode ? 'Edit User' : 'Create New User'}
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            {isEditMode 
+              ? 'Update user information and permissions' 
+              : 'Create a new user account with appropriate role and permissions'
+            }
+          </Typography>
+        </Box>
+      </Box>
 
-        {/* User Form */}
+      {/* User Form */}
+      <Box sx={{ px: 3, pb: 3 }}>
         <UserFormWrapper
           mode={isEditMode ? 'edit' : 'create'}
           userId={userId}
