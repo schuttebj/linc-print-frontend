@@ -69,6 +69,9 @@ interface UserFormData {
     // Role Assignment (single role only for LOCATION_USER)
     role_id?: string;
     
+    // User Status
+    status?: string;
+    
     // Individual Permission Overrides
     permission_overrides: {
         [key: string]: boolean;
@@ -182,6 +185,7 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
             primary_location_id: '',
             scope_province: '',
             role_id: '',
+            status: 'ACTIVE', // Default to active
             permission_overrides: {},
         },
     });
@@ -767,6 +771,49 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                         </Grid>
                     </CardContent>
                 </Card>
+
+                {/* User Status - Only for edit mode */}
+                {mode === 'edit' && (
+                    <Card sx={{ mb: 3 }}>
+                        <CardContent>
+                            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <CheckCircleIcon color="primary" />
+                                User Status
+                            </Typography>
+                            
+                            <Grid container spacing={3}>
+                                <Grid item xs={12} md={6}>
+                                    <Controller
+                                        name="status"
+                                        control={form.control}
+                                        render={({ field }) => (
+                                            <FormControl fullWidth>
+                                                <InputLabel>Status</InputLabel>
+                                                <Select {...field} label="Status">
+                                                    {userStatuses.map((status) => (
+                                                        <MenuItem key={status.value} value={status.value}>
+                                                            {status.label}
+                                                        </MenuItem>
+                                                    ))}
+                                                </Select>
+                                                <FormHelperText>User account status</FormHelperText>
+                                            </FormControl>
+                                        )}
+                                    />
+                                </Grid>
+                                
+                                <Grid item xs={12} md={6}>
+                                    <Alert severity="info">
+                                        <strong>Active:</strong> User can log in and access the system.<br/>
+                                        <strong>Inactive:</strong> User cannot log in but account is preserved.<br/>
+                                        <strong>Suspended:</strong> Temporarily blocked access.<br/>
+                                        <strong>Locked:</strong> Account locked due to security issues.
+                                    </Alert>
+                                </Grid>
+                            </Grid>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Role Assignment - Only for Location Users */}
                 {watchedUserType === 'LOCATION_USER' && (

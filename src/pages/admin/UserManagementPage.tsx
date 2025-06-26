@@ -49,6 +49,8 @@ import {
   FilterList as FilterIcon,
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon,
+  PlayArrow as ActivateIcon,
+  Pause as DeactivateIcon,
 } from '@mui/icons-material';
 
 import { useAuth } from '../../contexts/AuthContext';
@@ -202,6 +204,28 @@ const UserManagementPage: React.FC = () => {
       loadUsers();
     } catch (err) {
       alert(`Failed to toggle user lock: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+  };
+
+  const handleToggleActivation = async (user: User) => {
+    try {
+      const action = user.status === 'ACTIVE' ? 'deactivate' : 'activate';
+      const response = await fetch(`${API_BASE_URL}/api/v1/users/${user.id}/${action}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to ${action} user`);
+      }
+
+      setSuccessMessage(`User ${user.first_name} ${user.last_name} has been ${action}d successfully.`);
+      setShowSuccessDialog(true);
+      loadUsers();
+    } catch (err) {
+      alert(`Failed to toggle user activation: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   };
 
@@ -521,8 +545,20 @@ const UserManagementPage: React.FC = () => {
                     {hasPermission('users.update') && (
                       <IconButton
                         size="small"
+                        onClick={() => handleToggleActivation(user)}
+                        color={user.status === 'ACTIVE' ? 'warning' : 'success'}
+                        title={user.status === 'ACTIVE' ? 'Deactivate User' : 'Activate User'}
+                      >
+                        {user.status === 'ACTIVE' ? <DeactivateIcon /> : <ActivateIcon />}
+                      </IconButton>
+                    )}
+
+                    {hasPermission('users.update') && (
+                      <IconButton
+                        size="small"
                         onClick={() => handleToggleLock(user)}
                         color={user.is_locked ? 'success' : 'warning'}
+                        title={user.is_locked ? 'Unlock User' : 'Lock User'}
                       >
                         {user.is_locked ? <UnlockIcon /> : <LockIcon />}
                       </IconButton>
@@ -536,6 +572,7 @@ const UserManagementPage: React.FC = () => {
                           setShowDeleteModal(true);
                         }}
                         color="error"
+                        title="Delete User"
                       >
                         <DeleteIcon />
                       </IconButton>
