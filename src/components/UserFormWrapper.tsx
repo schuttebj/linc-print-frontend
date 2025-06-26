@@ -39,6 +39,7 @@ import {
     LocationOn as LocationIcon,
     CheckCircle as CheckCircleIcon,
     Warning as WarningIcon,
+    VpnKey as VpnKeyIcon,
 } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -53,8 +54,6 @@ interface UserFormData {
     first_name: string;
     last_name: string;
     email: string;
-    password?: string;
-    confirm_password?: string;
     
     // Madagascar-specific fields
     username?: string; // Will be auto-generated
@@ -66,8 +65,8 @@ interface UserFormData {
     primary_location_id?: string;
     scope_province?: string;
     
-    // Role Assignment
-    role_ids: string[];
+    // Role Assignment (single role only for LOCATION_USER)
+    role_id?: string;
     
     // Individual Permission Overrides
     permission_overrides: {
@@ -118,24 +117,25 @@ const userSchema = yup.object({
     first_name: yup.string().required('First name is required').max(50),
     last_name: yup.string().required('Last name is required').max(50),
     email: yup.string().email('Invalid email format').required('Email is required'),
-    password: yup.string().when('$isEdit', {
-        is: false,
-        then: () => yup.string().required('Password is required').min(8, 'Password must be at least 8 characters'),
-        otherwise: () => yup.string().min(8, 'Password must be at least 8 characters'),
-    }),
-    confirm_password: yup.string().when('$isEdit', {
-        is: false,
-        then: () => yup.string()
-            .required('Please confirm your password')
-            .oneOf([yup.ref('password')], 'Passwords must match'),
-        otherwise: () => yup.string()
-            .oneOf([yup.ref('password')], 'Passwords must match'),
-    }),
     madagascar_id_number: yup.string().required('Madagascar ID number is required'),
     id_document_type: yup.string().required('ID document type is required'),
     user_type: yup.string().required('User type is required'),
-    role_ids: yup.array().min(1, 'At least one role is required'),
+    role_id: yup.string().when('user_type', {
+        is: 'LOCATION_USER',
+        then: () => yup.string().required('Role is required for location users'),
+        otherwise: () => yup.string().optional(),
+    }),
 });
+
+// Generate random password function
+const generateRandomPassword = (): string => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+    let password = '';
+    for (let i = 0; i < 12; i++) {
+        password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+};
 
 const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
     mode = 'create',
@@ -152,6 +152,7 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
     const [submitLoading, setSubmitLoading] = useState(false);
     const [showSuccessDialog, setShowSuccessDialog] = useState(false);
     const [createdUser, setCreatedUser] = useState<any>(null);
+    const [generatedPassword, setGeneratedPassword] = useState<string>('');
     const [permissionTab, setPermissionTab] = useState(0);
 
     // Data states
@@ -170,19 +171,16 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
     // Form management
     const form = useForm<UserFormData>({
         resolver: yupResolver(userSchema),
-        context: { isEdit: mode === 'edit' },
         defaultValues: {
             first_name: '',
             last_name: '',
             email: '',
-            password: '',
-            confirm_password: '',
             madagascar_id_number: '',
-            id_document_type: '',
+            id_document_type: 'MADAGASCAR_ID',
             user_type: 'LOCATION_USER',
             primary_location_id: '',
             scope_province: '',
-            role_ids: [],
+            role_id: '',
             permission_overrides: {},
         },
     });
@@ -190,13 +188,17 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
     const watchedUserType = form.watch('user_type');
     const watchedLocation = form.watch('primary_location_id');
     const watchedProvince = form.watch('scope_province');
-    const watchedRoles = form.watch('role_ids');
+    const watchedRole = form.watch('role_id');
 
     // Load initial data
     useEffect(() => {
         loadInitialData();
         if (mode === 'edit' && userId) {
             loadUserForEdit();
+        }
+        // Generate password for new users
+        if (mode === 'create') {
+            setGeneratedPassword(generateRandomPassword());
         }
     }, [mode, userId]);
 
@@ -223,21 +225,17 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
 
             if (!rolesRes.ok) {
                 console.error('Failed to fetch roles:', rolesRes.status, rolesRes.statusText);
-                const errorText = await rolesRes.text();
-                console.error('Roles error response:', errorText);
-                setAvailableRoles([]); // Fallback to empty array
+                setAvailableRoles([]);
             } else {
                 const roles = await rolesRes.json();
-                // Handle the correct response structure from /roles/creatable
                 setAvailableRoles(roles.creatable_roles || []);
             }
 
             if (!permissionsRes.ok) {
                 console.error('Failed to fetch permissions:', permissionsRes.status);
-                setAllPermissions([]); // Fallback to empty array
+                setAllPermissions([]);
             } else {
                 const permissions = await permissionsRes.json();
-                // Flatten permissions from categories
                 const flatPermissions: Permission[] = [];
                 Object.values(permissions).forEach((categoryPerms: any) => {
                     flatPermissions.push(...categoryPerms);
@@ -247,7 +245,7 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
 
             if (!locationsRes.ok) {
                 console.error('Failed to fetch locations:', locationsRes.status);
-                setLocations([]); // Fallback to empty array
+                setLocations([]);
             } else {
                 const locationsData = await locationsRes.json();
                 setLocations(locationsData.locations || []);
@@ -269,19 +267,16 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
             
             const userData = await response.json();
             
-            // Populate form with user data
             form.reset({
                 first_name: userData.first_name,
                 last_name: userData.last_name,
                 email: userData.email,
-                password: userData.password,
-                confirm_password: userData.password,
                 madagascar_id_number: userData.madagascar_id_number || '',
-                id_document_type: userData.id_document_type || '',
+                id_document_type: userData.id_document_type || 'MADAGASCAR_ID',
                 user_type: userData.user_type || 'LOCATION_USER',
                 primary_location_id: userData.primary_location?.id || '',
                 scope_province: userData.scope_province || '',
-                role_ids: userData.roles?.map((r: any) => r.id) || [],
+                role_id: userData.roles?.[0]?.id || '',
                 permission_overrides: userData.permission_overrides || {},
             });
         } catch (error) {
@@ -290,53 +285,38 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
     };
 
     const filterAvailableRoles = () => {
-        // Filter roles based on user type restriction and current user's hierarchy
-        const filteredRoles = availableRoles.filter(role => {
-            // Check user type restriction
-            if (role.user_type_restriction && role.user_type_restriction !== watchedUserType) {
-                return false;
-            }
-            
-            // Additional filtering based on current user's permissions could go here
-            return true;
-        });
+        if (watchedUserType !== 'LOCATION_USER') {
+            // Provincial and National users don't need role assignment
+            return;
+        }
         
-        // Update available roles (this could be a separate state if needed)
+        // Filter roles based on current user's hierarchy level and user type restriction
+        // Implementation depends on your backend role filtering logic
     };
 
     const generateUsername = (): string => {
-        const userType = form.getValues('user_type');
-        const locationId = form.getValues('primary_location_id');
-        const province = form.getValues('scope_province');
-        
-        if (userType === 'LOCATION_USER' && locationId) {
-            const location = locations.find(l => l.id === locationId);
-            if (location) {
-                return `${location.code}001`; // This would be generated by backend
-            }
-        } else if (userType === 'PROVINCIAL_USER' && province) {
-            return `${province}001`; // This would be generated by backend
-        } else if (userType === 'NATIONAL_USER') {
-            return 'N001'; // This would be generated by backend
+        switch (watchedUserType) {
+            case 'LOCATION_USER':
+                const selectedLocation = locations.find(loc => loc.id === watchedLocation);
+                if (selectedLocation) {
+                    return `${selectedLocation.province_code}${selectedLocation.code.slice(-3)}001`;
+                }
+                return 'T010001';
+            case 'PROVINCIAL_USER':
+                return watchedProvince ? `${watchedProvince}007` : 'T007';
+            case 'NATIONAL_USER':
+                return 'N001';
+            default:
+                return 'T010001';
         }
-        
-        return 'Will be generated automatically';
     };
 
-    const getRoleDefaultPermissions = (roleIds: string[]): string[] => {
-        const selectedRoles = availableRoles.filter(role => roleIds.includes(role.id));
-        const defaultPermissions = new Set<string>();
-        
-        selectedRoles.forEach(role => {
-            // Check if permissions exist before trying to iterate
-            if (role.permissions && Array.isArray(role.permissions)) {
-                role.permissions.forEach(permission => {
-                    defaultPermissions.add(permission.name);
-                });
-            }
-        });
-        
-        return Array.from(defaultPermissions);
+    const getRoleDefaultPermissions = (roleId: string): string[] => {
+        const role = availableRoles.find(r => r.id === roleId);
+        if (role && role.permissions) {
+            return role.permissions.map(p => p.name);
+        }
+        return [];
     };
 
     const handleSubmit = async (data: UserFormData) => {
@@ -345,12 +325,14 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
             
             const payload = {
                 ...data,
-                // Add auto-generated username
+                // Add auto-generated username and password
                 username: generateUsername(),
-                // Remove confirm_password as backend doesn't expect it
-                confirm_password: undefined,
-                // Remove password if empty in edit mode
-                ...(mode === 'edit' && !data.password && { password: undefined }),
+                password: generatedPassword,
+                confirm_password: generatedPassword,
+                // Convert single role to array for backend compatibility
+                role_ids: data.role_id ? [data.role_id] : [],
+                // Remove the single role_id field
+                role_id: undefined,
             };
             
             const url = mode === 'create' 
@@ -486,57 +468,6 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                             
                             <Grid item xs={12} md={4}>
                                 <Controller
-                                    name="madagascar_id_number"
-                                    control={form.control}
-                                    render={({ field }) => (
-                                        <TextField
-                                            {...field}
-                                            fullWidth
-                                            label="Madagascar ID Number *"
-                                            error={!!form.formState.errors.madagascar_id_number}
-                                            helperText={form.formState.errors.madagascar_id_number?.message}
-                                            placeholder="e.g., CIN123456789"
-                                        />
-                                    )}
-                                />
-                            </Grid>
-                            
-                            <Grid item xs={12} md={6}>
-                                <Controller
-                                    name="password"
-                                    control={form.control}
-                                    render={({ field }) => (
-                                        <TextField
-                                            {...field}
-                                            fullWidth
-                                            label={mode === 'create' ? 'Password *' : 'New Password'}
-                                            type="password"
-                                            error={!!form.formState.errors.password}
-                                            helperText={form.formState.errors.password?.message || (mode === 'edit' ? 'Leave blank to keep current password' : '')}
-                                        />
-                                    )}
-                                />
-                            </Grid>
-                            
-                            <Grid item xs={12} md={6}>
-                                <Controller
-                                    name="confirm_password"
-                                    control={form.control}
-                                    render={({ field }) => (
-                                        <TextField
-                                            {...field}
-                                            fullWidth
-                                            label={mode === 'create' ? 'Confirm Password *' : 'Confirm New Password'}
-                                            type="password"
-                                            error={!!form.formState.errors.confirm_password}
-                                            helperText={form.formState.errors.confirm_password?.message || (mode === 'edit' ? 'Leave blank if not changing password' : '')}
-                                        />
-                                    )}
-                                />
-                            </Grid>
-                            
-                            <Grid item xs={12} md={4}>
-                                <Controller
                                     name="id_document_type"
                                     control={form.control}
                                     render={({ field }) => (
@@ -555,9 +486,80 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                                     )}
                                 />
                             </Grid>
+                            
+                            <Grid item xs={12} md={12}>
+                                <Controller
+                                    name="madagascar_id_number"
+                                    control={form.control}
+                                    render={({ field }) => (
+                                        <TextField
+                                            {...field}
+                                            fullWidth
+                                            label="Document Number *"
+                                            error={!!form.formState.errors.madagascar_id_number}
+                                            helperText={form.formState.errors.madagascar_id_number?.message || 'Enter the document number (numbers only, will be auto-formatted)'}
+                                            placeholder="Example: 123456789012"
+                                            onChange={(e) => {
+                                                // Allow only numbers for document numbers (matching PersonFormWrapper style)
+                                                const value = e.target.value.replace(/\D/g, '');
+                                                field.onChange(value);
+                                            }}
+                                        />
+                                    )}
+                                />
+                            </Grid>
                         </Grid>
                     </CardContent>
                 </Card>
+
+                {/* Generated Credentials Display */}
+                {mode === 'create' && (
+                    <Card sx={{ mb: 3, bgcolor: 'success.50', border: '1px solid', borderColor: 'success.200' }}>
+                        <CardContent>
+                            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'success.main' }}>
+                                <VpnKeyIcon color="success" />
+                                Generated Login Credentials
+                            </Typography>
+                            
+                            <Grid container spacing={3}>
+                                <Grid item xs={12} md={6}>
+                                    <Box sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                                            Username:
+                                        </Typography>
+                                        <Typography variant="h6" sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                                            {generateUsername()}
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                            {watchedUserType === 'LOCATION_USER' && 'Format: {ProvinceCode}{OfficeNumber}{UserNumber}'}
+                                            {watchedUserType === 'PROVINCIAL_USER' && 'Format: {ProvinceCode}{Number}'}
+                                            {watchedUserType === 'NATIONAL_USER' && 'Format: N{Number}'}
+                                        </Typography>
+                                    </Box>
+                                </Grid>
+                                
+                                <Grid item xs={12} md={6}>
+                                    <Box sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                                            Generated Password:
+                                        </Typography>
+                                        <Typography variant="h6" sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                                            {generatedPassword}
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                            User will be required to change on first login
+                                        </Typography>
+                                    </Box>
+                                </Grid>
+                            </Grid>
+                            
+                            <Alert severity="warning" sx={{ mt: 2 }}>
+                                <strong>Important:</strong> Please save these credentials securely. The password will not be shown again after user creation.
+                                {/* TODO: Implement first-login password change requirement */}
+                            </Alert>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* User Type and Location */}
                 <Card sx={{ mb: 3 }}>
@@ -639,184 +641,150 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                                     </Alert>
                                 </Grid>
                             )}
-                            
-                            {/* Generated Username Display */}
-                            <Grid item xs={12}>
-                                <Box sx={{ p: 2, bgcolor: 'primary.50', borderRadius: 1, border: '1px solid', borderColor: 'primary.200' }}>
-                                    <Typography variant="subtitle2" color="primary.main" gutterBottom>
-                                        Generated Username:
-                                    </Typography>
-                                    <Typography variant="h6" sx={{ fontFamily: 'monospace' }}>
-                                        {generateUsername()}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                        {watchedUserType === 'LOCATION_USER' && 'Format: {ProvinceCode}{OfficeNumber}{UserNumber} (e.g., T010001)'}
-                                        {watchedUserType === 'PROVINCIAL_USER' && 'Format: {ProvinceCode}{Number} (e.g., T007)'}
-                                        {watchedUserType === 'NATIONAL_USER' && 'Format: N{Number} (e.g., N001)'}
-                                    </Typography>
-                                </Box>
-                            </Grid>
                         </Grid>
                     </CardContent>
                 </Card>
 
-                {/* Role Assignment */}
-                <Card sx={{ mb: 3 }}>
-                    <CardContent>
-                        <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <SecurityIcon color="primary" />
-                            Role Assignment
-                        </Typography>
-                        
-                        <Controller
-                            name="role_ids"
-                            control={form.control}
-                            render={({ field }) => (
-                                <FormControl fullWidth error={!!form.formState.errors.role_ids}>
-                                    <InputLabel>Roles *</InputLabel>
-                                    <Select
-                                        {...field}
-                                        multiple
-                                        label="Roles *"
-                                        renderValue={(selected) => (
-                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                                {(selected as string[]).map((roleId) => {
-                                                    const role = availableRoles.find(r => r.id === roleId);
-                                                    return (
-                                                        <Chip
-                                                            key={roleId}
-                                                            label={role?.display_name || roleId}
-                                                            size="small"
-                                                            color="primary"
-                                                        />
-                                                    );
-                                                })}
-                                            </Box>
+                {/* Role Assignment - Only for Location Users */}
+                {watchedUserType === 'LOCATION_USER' && (
+                    <Card sx={{ mb: 3 }}>
+                        <CardContent>
+                            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <SecurityIcon color="primary" />
+                                Role Assignment
+                            </Typography>
+                            
+                            <Grid container spacing={3}>
+                                <Grid item xs={12}>
+                                    <Controller
+                                        name="role_id"
+                                        control={form.control}
+                                        render={({ field }) => (
+                                            <FormControl fullWidth error={!!form.formState.errors.role_id}>
+                                                <InputLabel>Role *</InputLabel>
+                                                <Select {...field} label="Role *">
+                                                    {availableRoles.map((role) => (
+                                                        <MenuItem key={role.id} value={role.id}>
+                                                            <Box>
+                                                                <Typography variant="body1">{role.display_name}</Typography>
+                                                                <Typography variant="body2" color="text.secondary">
+                                                                    Level {role.hierarchy_level} - {role.description || 'No description available'}
+                                                                </Typography>
+                                                            </Box>
+                                                        </MenuItem>
+                                                    ))}
+                                                </Select>
+                                                <FormHelperText>
+                                                    {form.formState.errors.role_id?.message || 'Select a single role (hierarchical system - higher roles include lower permissions)'}
+                                                </FormHelperText>
+                                            </FormControl>
                                         )}
-                                    >
-                                        {availableRoles.map((role) => (
-                                            <MenuItem key={role.id} value={role.id}>
-                                                <Box>
-                                                    <Typography variant="subtitle2">
-                                                        {role.display_name} (Level {role.hierarchy_level})
-                                                    </Typography>
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        {role.description || 'No description available'}
-                                                    </Typography>
-                                                </Box>
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                    <FormHelperText>
-                                        {form.formState.errors.role_ids?.message || 'Select one or more roles for this user'}
-                                    </FormHelperText>
-                                </FormControl>
-                            )}
-                        />
-                        
-                        {/* Role Permissions Preview */}
-                        {watchedRoles.length > 0 && (
-                            <Box sx={{ mt: 2 }}>
-                                <Typography variant="subtitle2" gutterBottom>
-                                    Default Permissions from Selected Roles:
-                                </Typography>
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                    {getRoleDefaultPermissions(watchedRoles).map((permission) => (
-                                        <Chip
-                                            key={permission}
-                                            label={permission.replace(/[._]/g, ' ').toUpperCase()}
-                                            size="small"
-                                            variant="outlined"
-                                        />
-                                    ))}
-                                </Box>
-                            </Box>
-                        )}
-                    </CardContent>
-                </Card>
+                                    />
+                                </Grid>
+                            </Grid>
+                        </CardContent>
+                    </Card>
+                )}
 
-                {/* Permission Overrides */}
-                <Card sx={{ mb: 3 }}>
-                    <CardContent>
-                        <Typography variant="h6" gutterBottom>
-                            Individual Permission Overrides
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" gutterBottom>
-                            Grant or revoke specific permissions beyond the default role permissions.
-                        </Typography>
-                        
-                        <Tabs value={permissionTab} onChange={(_, newValue) => setPermissionTab(newValue)}>
-                            <Tab label="User Management" />
-                            <Tab label="Location Management" />
-                            <Tab label="System Administration" />
-                        </Tabs>
-                        
-                        <Box sx={{ mt: 2 }}>
-                            {/* Permission toggles would go here based on selected tab */}
+                {/* Provincial/National Role Info */}
+                {(watchedUserType === 'PROVINCIAL_USER' || watchedUserType === 'NATIONAL_USER') && (
+                    <Card sx={{ mb: 3 }}>
+                        <CardContent>
+                            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <SecurityIcon color="primary" />
+                                Access Permissions
+                            </Typography>
+                            
                             <Alert severity="info">
-                                Permission override interface will be implemented here with simple toggles grouped by category.
+                                <Typography variant="body1" gutterBottom>
+                                    <strong>{watchedUserType === 'PROVINCIAL_USER' ? 'Provincial User' : 'National User'}</strong> accounts have inherent permissions based on their user type:
+                                </Typography>
+                                <ul>
+                                    <li>No specific role assignment required</li>
+                                    <li>{watchedUserType === 'PROVINCIAL_USER' ? 'Province-wide oversight capabilities' : 'System-wide administrative access'}</li>
+                                    <li>Automatic access to appropriate management functions</li>
+                                </ul>
                             </Alert>
-                        </Box>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                )}
 
-                {/* Submit Actions */}
-                <Paper sx={{ p: 3 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Button
-                            variant="outlined"
+                {/* Individual Permission Overrides */}
+                {watchedRole && (
+                    <Card sx={{ mb: 3 }}>
+                        <CardContent>
+                            <Typography variant="h6" gutterBottom>
+                                Individual Permission Overrides
+                            </Typography>
+                            
+                            <Alert severity="info" sx={{ mb: 2 }}>
+                                The selected role provides default permissions. You can override specific permissions here if needed.
+                            </Alert>
+                            
+                            <Typography variant="body2" color="text.secondary">
+                                Default permissions from role: {getRoleDefaultPermissions(watchedRole).join(', ')}
+                            </Typography>
+                            
+                            {/* TODO: Implement detailed permission override interface */}
+                            <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                                <Typography variant="body2" color="text.secondary">
+                                    TODO: Individual permission toggle interface will be implemented here
+                                </Typography>
+                            </Box>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Submit Buttons */}
+                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                    {onCancel && (
+                        <Button 
+                            variant="outlined" 
                             onClick={onCancel}
                             disabled={submitLoading}
                         >
                             Cancel
                         </Button>
-                        
-                        <Button
-                            type="submit"
-                            variant="contained"
-                            disabled={submitLoading}
-                            startIcon={mode === 'create' ? <PersonAddIcon /> : <EditIcon />}
-                        >
-                            {submitLoading ? (mode === 'create' ? 'Creating...' : 'Updating...') : (mode === 'create' ? 'Create User' : 'Update User')}
-                        </Button>
-                    </Box>
-                </Paper>
+                    )}
+                    <Button
+                        type="submit"
+                        variant="contained"
+                        disabled={submitLoading}
+                        sx={{ minWidth: 120 }}
+                    >
+                        {submitLoading ? 'Processing...' : mode === 'create' ? 'Create User' : 'Update User'}
+                    </Button>
+                </Box>
             </form>
 
             {/* Success Dialog */}
-            <Dialog
-                open={showSuccessDialog}
-                onClose={() => setShowSuccessDialog(false)}
-                maxWidth="sm"
-                fullWidth
-            >
-                <DialogTitle sx={{ bgcolor: 'success.main', color: 'white' }}>
-                    <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <CheckCircleIcon />
-                        User {mode === 'create' ? 'Created' : 'Updated'} Successfully!
-                    </Typography>
+            <Dialog open={showSuccessDialog} onClose={() => setShowSuccessDialog(false)} maxWidth="sm" fullWidth>
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <CheckCircleIcon color="success" />
+                    User {mode === 'create' ? 'Created' : 'Updated'} Successfully
                 </DialogTitle>
-                <DialogContent sx={{ pt: 3 }}>
+                <DialogContent>
                     {createdUser && (
                         <Box>
-                            <Alert severity="success" sx={{ mb: 2 }}>
-                                User <strong>{createdUser.first_name} {createdUser.last_name}</strong> has been successfully {mode === 'create' ? 'created' : 'updated'}!
-                            </Alert>
-                            
+                            <Typography variant="body1" gutterBottom>
+                                {mode === 'create' ? 'New user account has been created:' : 'User account has been updated:'}
+                            </Typography>
                             <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                                <Typography variant="subtitle2" color="text.secondary">Username:</Typography>
-                                <Typography variant="body1" sx={{ fontFamily: 'monospace', mt: 0.5 }}>
-                                    {createdUser.username}
-                                </Typography>
+                                <Typography variant="body2"><strong>Name:</strong> {createdUser.first_name} {createdUser.last_name}</Typography>
+                                <Typography variant="body2"><strong>Email:</strong> {createdUser.email}</Typography>
+                                <Typography variant="body2"><strong>Username:</strong> {createdUser.username}</Typography>
+                                <Typography variant="body2"><strong>User Type:</strong> {createdUser.user_type?.replace('_', ' ')}</Typography>
                             </Box>
+                            {mode === 'create' && (
+                                <Alert severity="warning" sx={{ mt: 2 }}>
+                                    Please provide the user with their login credentials. They will be required to change their password on first login.
+                                </Alert>
+                            )}
                         </Box>
                     )}
                 </DialogContent>
-                <DialogActions sx={{ p: 3 }}>
-                    <Button
-                        onClick={() => setShowSuccessDialog(false)}
-                        variant="contained"
-                    >
+                <DialogActions>
+                    <Button onClick={() => setShowSuccessDialog(false)} variant="contained">
                         Close
                     </Button>
                 </DialogActions>
