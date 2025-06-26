@@ -337,9 +337,10 @@ class LookupService {
       console.error('Failed to fetch user types:', error);
       // Return fallback data
       return [
+        { value: 'SYSTEM_USER', label: 'SYSTEM USER' },
+        { value: 'NATIONAL_ADMIN', label: 'NATIONAL ADMIN' },
+        { value: 'PROVINCIAL_ADMIN', label: 'PROVINCIAL ADMIN' },
         { value: 'LOCATION_USER', label: 'LOCATION USER' },
-        { value: 'PROVINCIAL_USER', label: 'PROVINCIAL ADMIN' },
-        { value: 'NATIONAL_USER', label: 'NATIONAL ADMIN' },
       ];
     }
   }

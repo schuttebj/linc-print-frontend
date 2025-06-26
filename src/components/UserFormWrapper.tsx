@@ -312,6 +312,7 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                 primary_location_id: userData.primary_location?.id || '',
                 scope_province: userData.scope_province || '',
                 role_id: userData.roles?.[0]?.id || '',
+                status: userData.status || 'ACTIVE',
                 permission_overrides: userData.permission_overrides || {},
             });
         } catch (error) {
