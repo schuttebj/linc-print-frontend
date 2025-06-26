@@ -293,7 +293,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             person_nature: '',
             birth_date: '',
             nationality_code: 'MG',
-            preferred_language: 'mg',
+            preferred_language: 'MG',
             email_address: '',
             work_phone: '',
             cell_phone_country_code: '+261',
@@ -592,7 +592,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         // Get first option from each enum, with fallbacks
         const defaultPersonNature = personNatures.length > 0 ? personNatures[0].value : '01';
         const defaultNationality = nationalities.length > 0 ? nationalities[0].value : 'MG';
-        const defaultLanguage = languages.length > 0 ? languages[0].value : 'mg';
+        const defaultLanguage = languages.length > 0 ? languages[0].value : 'MG';
         const defaultPhoneCountryCode = phoneCountryCodes.length > 0 ? phoneCountryCodes[0].value : '+261';
         const defaultDocumentType = documentTypes.length > 0 ? documentTypes[0].value : 'MADAGASCAR_ID';
         const defaultCountry = countries.length > 0 ? countries[0].value : 'MG';
@@ -681,12 +681,15 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         }
         if (existingPerson.preferred_language) {
             console.log('Setting preferred_language from existing person:', existingPerson.preferred_language);
-            personForm.setValue('preferred_language', existingPerson.preferred_language);
+            // Convert to uppercase to match the language options format (MG, FR, EN)
+            const normalizedLanguage = existingPerson.preferred_language.toUpperCase();
+            personForm.setValue('preferred_language', normalizedLanguage);
+            console.log('Normalized preferred_language value:', normalizedLanguage);
             
             // Force form to re-render with the new value
             setTimeout(() => {
-                personForm.setValue('preferred_language', existingPerson.preferred_language);
-                console.log('Re-confirmed preferred_language value:', existingPerson.preferred_language);
+                personForm.setValue('preferred_language', normalizedLanguage);
+                console.log('Re-confirmed preferred_language value:', normalizedLanguage);
             }, 100);
         }
 
@@ -1466,35 +1469,31 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                         <Controller
                             name="preferred_language"
                             control={personForm.control}
-                            render={({ field }) => {
-                                console.log('Preferred language field value:', field.value);
-                                console.log('Available languages:', languages);
-                                return (
-                                    <FormControl fullWidth error={!!personForm.formState.errors.preferred_language}>
-                                        <InputLabel>Preferred Language *</InputLabel>
-                                        <Select
-                                            id="preferred-language-select"
-                                            name={field.name}
-                                            value={field.value || (languages.length > 0 ? languages[0].value : 'mg')}
-                                            onChange={field.onChange}
-                                            onBlur={field.onBlur}
-                                            label="Preferred Language *"
-                                            MenuProps={{
-                                                id: "preferred-language-menu"
-                                            }}
-                                        >
-                                            {languages.map((option) => (
-                                                <MenuItem key={option.value} value={option.value}>
-                                                    {option.label}
-                                                </MenuItem>
-                                            ))}
-                                        </Select>
-                                        <FormHelperText>
-                                            {personForm.formState.errors.preferred_language?.message || 'Select preferred language'}
-                                        </FormHelperText>
-                                    </FormControl>
-                                );
-                            }}
+                            render={({ field }) => (
+                                <FormControl fullWidth error={!!personForm.formState.errors.preferred_language}>
+                                    <InputLabel>Preferred Language *</InputLabel>
+                                    <Select
+                                        id="preferred-language-select"
+                                        name={field.name}
+                                        value={field.value || (languages.length > 0 ? languages[0].value : 'MG')}
+                                        onChange={field.onChange}
+                                        onBlur={field.onBlur}
+                                        label="Preferred Language *"
+                                        MenuProps={{
+                                            id: "preferred-language-menu"
+                                        }}
+                                    >
+                                        {languages.map((option) => (
+                                            <MenuItem key={option.value} value={option.value}>
+                                                {option.label}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                    <FormHelperText>
+                                        {personForm.formState.errors.preferred_language?.message || 'Select preferred language'}
+                                    </FormHelperText>
+                                </FormControl>
+                            )}
                         />
                     </Grid>
                 </Grid>
