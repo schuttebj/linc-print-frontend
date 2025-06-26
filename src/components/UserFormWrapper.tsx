@@ -503,7 +503,7 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
     }
 
     return (
-        <Box sx={{ maxWidth: 1000, mx: 'auto', p: 3 }}>
+        <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
             {/* Header */}
             <Box sx={{ mb: 3 }}>
                 <Typography variant="h4" component="h1" gutterBottom>
