@@ -420,9 +420,27 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                 role_id: undefined,
             };
             
-            const url = mode === 'create' 
+            // Build URL with query parameters for create mode
+            let url = mode === 'create' 
                 ? `${API_BASE_URL}/api/v1/users/`
                 : `${API_BASE_URL}/api/v1/users/${userId}`;
+                
+            // Add query parameters for LOCATION_USER and PROVINCIAL_ADMIN creation
+            if (mode === 'create') {
+                const queryParams = new URLSearchParams();
+                
+                if (data.user_type === 'LOCATION_USER' && data.primary_location_id) {
+                    queryParams.append('location_id', data.primary_location_id);
+                }
+                
+                if (data.user_type === 'PROVINCIAL_ADMIN' && data.scope_province) {
+                    queryParams.append('province_code', data.scope_province);
+                }
+                
+                if (queryParams.toString()) {
+                    url += `?${queryParams.toString()}`;
+                }
+            }
                 
             const method = mode === 'create' ? 'POST' : 'PUT';
             
