@@ -233,6 +233,29 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
         }
     }, [lookupsLoading, documentTypes, mode, form]);
 
+    // Set default permissions when role changes
+    useEffect(() => {
+        if (watchedRole && availableRoles.length > 0) {
+            const selectedRole = availableRoles.find(role => role.id === watchedRole);
+            if (selectedRole && selectedRole.permissions) {
+                console.log('🔄 Role changed, setting default permissions for:', selectedRole.display_name);
+                
+                // Clear existing permission overrides for new role selection
+                const newPermissionOverrides: { [key: string]: boolean } = {};
+                
+                // Set role default permissions as the base (these won't be in overrides)
+                // Only explicit overrides will be tracked in permission_overrides
+                
+                form.setValue('permission_overrides', newPermissionOverrides);
+                console.log('✅ Permission overrides reset for new role');
+            }
+        } else if (!watchedRole) {
+            // Clear permissions when no role is selected
+            form.setValue('permission_overrides', {});
+            console.log('🧹 Cleared permissions - no role selected');
+        }
+    }, [watchedRole, availableRoles, form]);
+
     const loadInitialData = async () => {
         try {
             setLoading(true);
@@ -437,11 +460,25 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
 
     const handlePermissionToggle = (permissionName: string, checked: boolean) => {
         const currentOverrides = form.getValues('permission_overrides') || {};
-        const newOverrides = {
-            ...currentOverrides,
-            [permissionName]: checked
-        };
-        form.setValue('permission_overrides', newOverrides);
+        const rolePermissions = getRolePermissions(watchedRole || '');
+        const isRoleDefault = rolePermissions.some(p => p.name === permissionName);
+        
+        // Only store as override if it differs from the role default
+        if (checked === isRoleDefault) {
+            // Remove from overrides if it matches role default
+            const newOverrides = { ...currentOverrides };
+            delete newOverrides[permissionName];
+            form.setValue('permission_overrides', newOverrides);
+            console.log(`🔄 Removed override for ${permissionName} (matches role default: ${checked})`);
+        } else {
+            // Store as override if it differs from role default
+            const newOverrides = {
+                ...currentOverrides,
+                [permissionName]: checked
+            };
+            form.setValue('permission_overrides', newOverrides);
+            console.log(`✏️ Added override for ${permissionName}: ${checked} (role default: ${isRoleDefault})`);
+        }
     };
 
     const isPermissionOverridden = (permissionName: string): boolean => {
@@ -457,9 +494,39 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
         return isRoleDefault;
     };
 
+    const prepareFinalPermissions = (roleId: string, overrides: { [key: string]: boolean }) => {
+        // Get role default permissions
+        const rolePermissions = getRolePermissions(roleId);
+        const rolePermissionNames = rolePermissions.map(p => p.name);
+        
+        // Start with role defaults
+        const finalPermissions: { [key: string]: boolean } = {};
+        rolePermissionNames.forEach(permissionName => {
+            finalPermissions[permissionName] = true; // Role defaults are enabled
+        });
+        
+        // Apply overrides (both enabling non-role permissions and disabling role permissions)
+        Object.entries(overrides).forEach(([permissionName, enabled]) => {
+            finalPermissions[permissionName] = enabled;
+        });
+        
+        // Convert to array of enabled permission names for backend
+        return Object.entries(finalPermissions)
+            .filter(([_, enabled]) => enabled)
+            .map(([permissionName, _]) => permissionName);
+    };
+
     const handleSubmit = async (data: UserFormData) => {
         try {
             setSubmitLoading(true);
+            
+            // Prepare final permissions (role defaults + overrides)
+            let finalPermissionNames: string[] = [];
+            if (data.role_id && data.user_type === 'LOCATION_USER') {
+                finalPermissionNames = prepareFinalPermissions(data.role_id, data.permission_overrides || {});
+                console.log('📋 Final permissions for user:', finalPermissionNames);
+                console.log('🔧 Permission overrides:', data.permission_overrides);
+            }
             
             const payload = {
                 ...data,
@@ -469,6 +536,10 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                 confirm_password: generatedPassword,
                 // Convert single role to array for backend compatibility
                 role_ids: data.role_id ? [data.role_id] : [],
+                // Add final computed permissions for LOCATION_USER
+                permission_names: data.user_type === 'LOCATION_USER' ? finalPermissionNames : undefined,
+                // Keep permission_overrides for audit/tracking purposes
+                permission_overrides: data.permission_overrides,
                 // Remove the single role_id field
                 role_id: undefined,
                 // Remove primary_location_id for non-location users to avoid UUID validation error
