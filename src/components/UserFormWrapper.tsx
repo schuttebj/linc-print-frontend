@@ -62,7 +62,7 @@ interface UserFormData {
     id_document_type: string;
     
     // User Type and Location
-    user_type: 'LOCATION_USER' | 'PROVINCIAL_USER' | 'NATIONAL_USER';
+    user_type: 'SYSTEM_USER' | 'NATIONAL_ADMIN' | 'PROVINCIAL_ADMIN' | 'LOCATION_USER';
     primary_location_id?: string;
     scope_province?: string;
     
@@ -335,17 +335,17 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
             return;
         }
 
-        // National users can create anywhere
-        if (currentUser.user_type === 'NATIONAL_USER') {
+        // National admins can create anywhere
+        if (currentUser.user_type === 'NATIONAL_ADMIN') {
             setFilteredLocations(locations);
             setFilteredProvinces(provinces);
-            // National users can create Provincial and Location users, but not other National users
-            setFilteredUserTypes(userTypes.filter(ut => ut.value !== 'NATIONAL_USER'));
+            // National admins can create Provincial and Location users, but not System or other National users
+            setFilteredUserTypes(userTypes.filter(ut => !['SYSTEM_USER', 'NATIONAL_ADMIN'].includes(ut.value)));
             return;
         }
 
-        // Provincial users can only create users in their province
-        if (currentUser.user_type === 'PROVINCIAL_USER' && currentUser.scope_province) {
+        // Provincial admins can only create users in their province
+        if (currentUser.user_type === 'PROVINCIAL_ADMIN' && currentUser.scope_province) {
             // Filter locations to only show ones in the current user's province
             setFilteredLocations(locations.filter(location => location.province_code === currentUser.scope_province));
             
@@ -378,16 +378,18 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
 
     const generateUsername = (): string => {
         switch (watchedUserType) {
+            case 'SYSTEM_USER':
+                return 'S001';
+            case 'NATIONAL_ADMIN':
+                return 'N001';
+            case 'PROVINCIAL_ADMIN':
+                return watchedProvince ? `${watchedProvince}007` : 'T007';
             case 'LOCATION_USER':
                 const selectedLocation = locations.find(loc => loc.id === watchedLocation);
                 if (selectedLocation) {
                     return `${selectedLocation.province_code}${selectedLocation.code.slice(-3)}001`;
                 }
                 return 'T010001';
-            case 'PROVINCIAL_USER':
-                return watchedProvince ? `${watchedProvince}007` : 'T007';
-            case 'NATIONAL_USER':
-                return 'N001';
             default:
                 return 'T010001';
         }
@@ -629,9 +631,10 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                                             {generateUsername()}
                                         </Typography>
                                         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                            {watchedUserType === 'SYSTEM_USER' && 'Format: S{Number}'}
+                                            {watchedUserType === 'NATIONAL_ADMIN' && 'Format: N{Number}'}
+                                            {watchedUserType === 'PROVINCIAL_ADMIN' && 'Format: {ProvinceCode}{Number}'}
                                             {watchedUserType === 'LOCATION_USER' && 'Format: {ProvinceCode}{OfficeNumber}{UserNumber}'}
-                                            {watchedUserType === 'PROVINCIAL_USER' && 'Format: {ProvinceCode}{Number}'}
-                                            {watchedUserType === 'NATIONAL_USER' && 'Format: N{Number}'}
                                         </Typography>
                                     </Box>
                                 </Grid>
@@ -712,7 +715,7 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                                 </Grid>
                             )}
                             
-                            {watchedUserType === 'PROVINCIAL_USER' && (
+                            {watchedUserType === 'PROVINCIAL_ADMIN' && (
                                 <Grid item xs={12} md={8}>
                                     <Controller
                                         name="scope_province"
@@ -734,10 +737,10 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                                 </Grid>
                             )}
                             
-                            {watchedUserType === 'NATIONAL_USER' && (
+                            {(watchedUserType === 'SYSTEM_USER' || watchedUserType === 'NATIONAL_ADMIN') && (
                                 <Grid item xs={12} md={8}>
                                     <Alert severity="info">
-                                        National users have system-wide access across all provinces and locations.
+                                        {watchedUserType === 'SYSTEM_USER' ? 'System users have full administrative access across the entire system.' : 'National admins have system-wide access across all provinces and locations.'}
                                     </Alert>
                                 </Grid>
                             )}
@@ -786,8 +789,8 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                     </Card>
                 )}
 
-                {/* Provincial/National Role Info */}
-                {(watchedUserType === 'PROVINCIAL_USER' || watchedUserType === 'NATIONAL_USER') && (
+                {/* System/Provincial/National Role Info */}
+                {(['SYSTEM_USER', 'PROVINCIAL_ADMIN', 'NATIONAL_ADMIN'].includes(watchedUserType)) && (
                     <Card sx={{ mb: 3 }}>
                         <CardContent>
                             <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -797,11 +800,19 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                             
                             <Alert severity="info">
                                 <Typography variant="body1" gutterBottom>
-                                    <strong>{watchedUserType === 'PROVINCIAL_USER' ? 'Provincial User' : 'National User'}</strong> accounts have inherent permissions based on their user type:
+                                    <strong>
+                                        {watchedUserType === 'SYSTEM_USER' && 'System User'}
+                                        {watchedUserType === 'NATIONAL_ADMIN' && 'National Admin'}
+                                        {watchedUserType === 'PROVINCIAL_ADMIN' && 'Provincial Admin'}
+                                    </strong> accounts have inherent permissions based on their user type:
                                 </Typography>
                                 <ul>
                                     <li>No specific role assignment required</li>
-                                    <li>{watchedUserType === 'PROVINCIAL_USER' ? 'Province-wide oversight capabilities' : 'System-wide administrative access'}</li>
+                                    <li>
+                                        {watchedUserType === 'SYSTEM_USER' && 'Full system administrative access'}
+                                        {watchedUserType === 'NATIONAL_ADMIN' && 'System-wide administrative access'}  
+                                        {watchedUserType === 'PROVINCIAL_ADMIN' && 'Province-wide oversight capabilities'}
+                                    </li>
                                     <li>Automatic access to appropriate management functions</li>
                                 </ul>
                             </Alert>

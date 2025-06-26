@@ -39,7 +39,7 @@ export interface User {
   last_name?: string;
   is_active: boolean;
   is_superuser: boolean;
-  user_type?: 'LOCATION_USER' | 'PROVINCIAL_USER' | 'NATIONAL_USER';
+  user_type?: 'SYSTEM_USER' | 'NATIONAL_ADMIN' | 'PROVINCIAL_ADMIN' | 'LOCATION_USER';
   scope_province?: string;
   primary_location_id?: string;
   roles: Role[];
