@@ -462,6 +462,14 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         }
     }, [searchParams, initialPersonId, accessToken]);
 
+    // Re-populate form when languages are loaded and we have an existing person
+    useEffect(() => {
+        if (!lookupsLoading && personFound && languages.length > 0 && isEditMode) {
+            console.log('Re-populating form after languages loaded');
+            populateFormWithExistingPerson(personFound);
+        }
+    }, [lookupsLoading, personFound, languages, isEditMode]);
+
     // Fetch existing person for editing
     const fetchPersonForEditing = async (personId: string) => {
         setLookupLoading(true);
@@ -608,7 +616,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 document_type: lookupData.document_type?.toUpperCase() || defaultDocumentType,
                 document_number: lookupData.document_number?.toUpperCase() || '',
                 country_of_issue: defaultCountry,
-                name_in_document: '',
+                name_in_document: '', // Will be auto-populated when user fills in names
                 is_primary: true,
                 is_current: true,
                 expiry_date: '',
@@ -629,6 +637,24 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         setIsNewPerson(true);
         setIsEditMode(false);
         setCurrentPersonId(null);
+    };
+
+    // Auto-populate name_in_document when transitioning from personal info to contact details step
+    const populateNameInDocument = () => {
+        if (isNewPerson && !isEditMode) {
+            const formData = personForm.getValues();
+            const { surname, first_name, middle_name } = formData;
+            
+            if (surname || first_name || middle_name) {
+                const fullName = [first_name, middle_name, surname].filter(Boolean).join(' ').toUpperCase();
+                
+                // Update the primary alias (first one) with combined name
+                if (formData.aliases && formData.aliases.length > 0) {
+                    personForm.setValue('aliases.0.name_in_document', fullName);
+                    console.log('Auto-populated name_in_document:', fullName);
+                }
+            }
+        }
     };
 
     const populateFormWithExistingPerson = (existingPerson: ExistingPerson) => {
@@ -654,7 +680,14 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             personForm.setValue('nationality_code', existingPerson.nationality_code.toUpperCase());
         }
         if (existingPerson.preferred_language) {
-            personForm.setValue('preferred_language', existingPerson.preferred_language.toLowerCase()); // Language codes stay lowercase
+            console.log('Setting preferred_language from existing person:', existingPerson.preferred_language);
+            personForm.setValue('preferred_language', existingPerson.preferred_language);
+            
+            // Force form to re-render with the new value
+            setTimeout(() => {
+                personForm.setValue('preferred_language', existingPerson.preferred_language);
+                console.log('Re-confirmed preferred_language value:', existingPerson.preferred_language);
+            }, 100);
         }
 
         // Populate contact information - EMAIL CAPITALIZED
@@ -768,6 +801,10 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 const lookupData = lookupForm.getValues();
                 await performLookup(lookupData);
             } else if (currentStep < steps.length - 1) {
+                // Auto-populate name_in_document when moving from step 1 (personal info) to step 2 (contact details)
+                if (currentStep === 1) {
+                    populateNameInDocument();
+                }
                 setCurrentStep(currentStep + 1);
             }
         }
@@ -1429,31 +1466,35 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                         <Controller
                             name="preferred_language"
                             control={personForm.control}
-                            render={({ field }) => (
-                                <FormControl fullWidth error={!!personForm.formState.errors.preferred_language}>
-                                    <InputLabel>Preferred Language *</InputLabel>
-                                    <Select
-                                        id="preferred-language-select"
-                                        name={field.name}
-                                        value={field.value || 'mg'}
-                                        onChange={field.onChange}
-                                        onBlur={field.onBlur}
-                                        label="Preferred Language *"
-                                        MenuProps={{
-                                            id: "preferred-language-menu"
-                                        }}
-                                    >
-                                        {languages.map((option) => (
-                                            <MenuItem key={option.value} value={option.value}>
-                                                {option.label}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                    <FormHelperText>
-                                        {personForm.formState.errors.preferred_language?.message || 'Select preferred language'}
-                                    </FormHelperText>
-                                </FormControl>
-                            )}
+                            render={({ field }) => {
+                                console.log('Preferred language field value:', field.value);
+                                console.log('Available languages:', languages);
+                                return (
+                                    <FormControl fullWidth error={!!personForm.formState.errors.preferred_language}>
+                                        <InputLabel>Preferred Language *</InputLabel>
+                                        <Select
+                                            id="preferred-language-select"
+                                            name={field.name}
+                                            value={field.value || (languages.length > 0 ? languages[0].value : 'mg')}
+                                            onChange={field.onChange}
+                                            onBlur={field.onBlur}
+                                            label="Preferred Language *"
+                                            MenuProps={{
+                                                id: "preferred-language-menu"
+                                            }}
+                                        >
+                                            {languages.map((option) => (
+                                                <MenuItem key={option.value} value={option.value}>
+                                                    {option.label}
+                                                </MenuItem>
+                                            ))}
+                                        </Select>
+                                        <FormHelperText>
+                                            {personForm.formState.errors.preferred_language?.message || 'Select preferred language'}
+                                        </FormHelperText>
+                                    </FormControl>
+                                );
+                            }}
                         />
                     </Grid>
                 </Grid>
@@ -2168,7 +2209,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     }
 
     return (
-        <Box sx={{ maxWidth: 1200, mx: 'auto', p: 3 }}>
+        <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
             {showHeader && (
                 <>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>

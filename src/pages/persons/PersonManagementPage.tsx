@@ -75,9 +75,9 @@ const PersonManagementPage: React.FC = () => {
   }
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: 'auto', p: 3 }}>
+    <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, px: 3, pt: 3 }}>
         <Typography variant="h4" component="h1">
           Person Management
         </Typography>
@@ -91,18 +91,20 @@ const PersonManagementPage: React.FC = () => {
         </Button>
       </Box>
 
-      <Typography variant="body1" color="text.secondary" gutterBottom>
+      <Typography variant="body1" color="text.secondary" gutterBottom sx={{ px: 3 }}>
         Register new Madagascar citizens for driver's license applications.
       </Typography>
 
       {/* PersonFormWrapper Component */}
-      <PersonFormWrapper
-        mode="standalone"
-        onSuccess={handleFormSuccess}
-        title="Person Management"
-        subtitle="Register new Madagascar citizens for driver's license applications."
-        showHeader={false}
-      />
+      <Box sx={{ px: 3, pb: 3 }}>
+        <PersonFormWrapper
+          mode="standalone"
+          onSuccess={handleFormSuccess}
+          title="Person Management"
+          subtitle="Register new Madagascar citizens for driver's license applications."
+          showHeader={false}
+        />
+      </Box>
 
       {/* Success Dialog - Blue Corporate Style matching search edit */}
       <Dialog 
