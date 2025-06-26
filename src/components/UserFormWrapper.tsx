@@ -73,10 +73,10 @@ interface Role {
     id: string;
     name: string;
     display_name: string;
-    description: string;
+    description?: string;
     hierarchy_level: number;
     user_type_restriction?: string;
-    permissions: Permission[];
+    permissions?: Permission[];
 }
 
 interface Permission {
@@ -305,9 +305,12 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
         const defaultPermissions = new Set<string>();
         
         selectedRoles.forEach(role => {
-            role.permissions.forEach(permission => {
-                defaultPermissions.add(permission.name);
-            });
+            // Check if permissions exist before trying to iterate
+            if (role.permissions && Array.isArray(role.permissions)) {
+                role.permissions.forEach(permission => {
+                    defaultPermissions.add(permission.name);
+                });
+            }
         });
         
         return Array.from(defaultPermissions);
@@ -616,7 +619,7 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                                                         {role.display_name} (Level {role.hierarchy_level})
                                                     </Typography>
                                                     <Typography variant="caption" color="text.secondary">
-                                                        {role.description}
+                                                        {role.description || 'No description available'}
                                                     </Typography>
                                                 </Box>
                                             </MenuItem>
