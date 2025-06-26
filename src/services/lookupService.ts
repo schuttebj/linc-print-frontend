@@ -52,6 +52,11 @@ export interface UserStatus {
   label: string;
 }
 
+export interface UserType {
+  value: string;
+  label: string;
+}
+
 export interface OfficeType {
   value: string;
   label: string;
@@ -69,6 +74,7 @@ export interface AllLookupData {
   countries: Country[];
   provinces: Province[];
   user_statuses: UserStatus[];
+  user_types: UserType[];
   office_types: OfficeType[];
 }
 
@@ -314,6 +320,31 @@ class LookupService {
   }
 
   /**
+   * Get user types
+   */
+  public async getUserTypes(): Promise<UserType[]> {
+    const cacheKey = 'user_types';
+    
+    if (this.isCacheValid(cacheKey)) {
+      return this.cache.get(cacheKey);
+    }
+
+    try {
+      const data = await api.get<UserType[]>(API_ENDPOINTS.lookups.userTypes);
+      this.setCache(cacheKey, data);
+      return data;
+    } catch (error) {
+      console.error('Failed to fetch user types:', error);
+      // Return fallback data
+      return [
+        { value: 'LOCATION_USER', label: 'LOCATION USER' },
+        { value: 'PROVINCIAL_USER', label: 'PROVINCIAL ADMIN' },
+        { value: 'NATIONAL_USER', label: 'NATIONAL ADMIN' },
+      ];
+    }
+  }
+
+  /**
    * Get office types
    */
   public async getOfficeTypes(): Promise<OfficeType[]> {
@@ -397,6 +428,7 @@ class LookupService {
         countries,
         provinces,
         user_statuses,
+        user_types,
         office_types
       ] = await Promise.all([
         this.getDocumentTypes(),
@@ -408,6 +440,7 @@ class LookupService {
         this.getCountries(),
         this.getProvinces(),
         this.getUserStatuses(),
+        this.getUserTypes(),
         this.getOfficeTypes()
       ]);
 
@@ -421,6 +454,7 @@ class LookupService {
         countries,
         provinces,
         user_statuses,
+        user_types,
         office_types
       };
     }

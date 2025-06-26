@@ -47,6 +47,7 @@ import * as yup from 'yup';
 
 import { useAuth } from '../contexts/AuthContext';
 import { API_BASE_URL } from '../config/api';
+import lookupService, { DocumentType, UserStatus, UserType, Province } from '../services/lookupService';
 
 // Types for Madagascar user management
 interface UserFormData {
@@ -159,14 +160,11 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
     const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
     const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
     const [locations, setLocations] = useState<Location[]>([]);
-    const [provinces] = useState([
-        { code: 'T', name: 'ANTANANARIVO' },
-        { code: 'A', name: 'TOAMASINA' },
-        { code: 'D', name: 'ANTSIRANANA' },
-        { code: 'F', name: 'FIANARANTSOA' },
-        { code: 'M', name: 'MAHAJANGA' },
-        { code: 'U', name: 'TOLIARA' },
-    ]);
+    const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([]);
+    const [userStatuses, setUserStatuses] = useState<UserStatus[]>([]);
+    const [userTypes, setUserTypes] = useState<UserType[]>([]);
+    const [provinces, setProvinces] = useState<Province[]>([]);
+    const [lookupsLoading, setLookupsLoading] = useState(true);
 
     // Form management
     const form = useForm<UserFormData>({
@@ -176,7 +174,7 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
             last_name: '',
             email: '',
             madagascar_id_number: '',
-            id_document_type: 'MADAGASCAR_ID',
+            id_document_type: 'MADAGASCAR_ID', // Fallback until lookup data loads
             user_type: 'LOCATION_USER',
             primary_location_id: '',
             scope_province: '',
@@ -207,9 +205,33 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
         filterAvailableRoles();
     }, [watchedUserType, allPermissions]);
 
+    // Set default document type after lookup data is loaded
+    useEffect(() => {
+        if (!lookupsLoading && documentTypes.length > 0 && mode === 'create') {
+            const defaultDocumentType = documentTypes[0].value;
+            form.setValue('id_document_type', defaultDocumentType);
+            console.log('✅ Default document type set:', defaultDocumentType);
+        }
+    }, [lookupsLoading, documentTypes, mode, form]);
+
     const loadInitialData = async () => {
         try {
             setLoading(true);
+            setLookupsLoading(true);
+            
+            // Load lookup data
+            const lookupData = await lookupService.getAllLookups();
+            setDocumentTypes(lookupData.document_types);
+            setUserStatuses(lookupData.user_statuses);
+            setUserTypes(lookupData.user_types);
+            setProvinces(lookupData.provinces);
+            console.log('✅ Lookup data loaded:', { 
+                documentTypes: lookupData.document_types,
+                userStatuses: lookupData.user_statuses,
+                userTypes: lookupData.user_types,
+                provinces: lookupData.provinces
+            });
+            setLookupsLoading(false);
             
             const [rolesRes, permissionsRes, locationsRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/api/v1/roles/creatable`, {
@@ -252,6 +274,7 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
             }
         } catch (error) {
             console.error('Failed to load initial data:', error);
+            setLookupsLoading(false);
         } finally {
             setLoading(false);
         }
@@ -414,7 +437,7 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                         </Typography>
                         
                         <Grid container spacing={3}>
-                            <Grid item xs={12} md={6}>
+                            <Grid item xs={12} sm={6}>
                                 <Controller
                                     name="first_name"
                                     control={form.control}
@@ -431,7 +454,7 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                                 />
                             </Grid>
                             
-                            <Grid item xs={12} md={6}>
+                            <Grid item xs={12} sm={6}>
                                 <Controller
                                     name="last_name"
                                     control={form.control}
@@ -448,7 +471,7 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                                 />
                             </Grid>
                             
-                            <Grid item xs={12} md={8}>
+                            <Grid item xs={12}>
                                 <Controller
                                     name="email"
                                     control={form.control}
@@ -490,10 +513,11 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                                             <FormControl fullWidth error={!!form.formState.errors.id_document_type}>
                                                 <InputLabel>Document Type *</InputLabel>
                                                 <Select {...field} label="Document Type *">
-                                                    <MenuItem value="MADAGASCAR_ID">Madagascar National ID</MenuItem>
-                                                    <MenuItem value="PASSPORT">Passport</MenuItem>
-                                                    <MenuItem value="BIRTH_CERTIFICATE">Birth Certificate</MenuItem>
-                                                    <MenuItem value="DRIVING_LICENSE">Driving License</MenuItem>
+                                                    {documentTypes.map((type) => (
+                                                        <MenuItem key={type.value} value={type.value}>
+                                                            {type.label}
+                                                        </MenuItem>
+                                                    ))}
                                                 </Select>
                                                 <FormHelperText>
                                                     {form.formState.errors.id_document_type?.message || 'Select document type'}
@@ -594,9 +618,11 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                                         <FormControl fullWidth error={!!form.formState.errors.user_type}>
                                             <InputLabel>User Type *</InputLabel>
                                             <Select {...field} label="User Type *">
-                                                <MenuItem value="LOCATION_USER">Location User</MenuItem>
-                                                <MenuItem value="PROVINCIAL_USER">Provincial User</MenuItem>
-                                                <MenuItem value="NATIONAL_USER">National User</MenuItem>
+                                                {userTypes.map((userType) => (
+                                                    <MenuItem key={userType.value} value={userType.value}>
+                                                        {userType.label}
+                                                    </MenuItem>
+                                                ))}
                                             </Select>
                                             <FormHelperText>
                                                 {form.formState.errors.user_type?.message || 'Select user access level'}
