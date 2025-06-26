@@ -387,7 +387,8 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
             case 'LOCATION_USER':
                 const selectedLocation = locations.find(loc => loc.id === watchedLocation);
                 if (selectedLocation) {
-                    return `${selectedLocation.province_code}${selectedLocation.code.slice(-3)}001`;
+                    // location.code already contains the full code (e.g., "F01"), just append user number
+                    return `${selectedLocation.code}001`;
                 }
                 return 'T010001';
             default:
