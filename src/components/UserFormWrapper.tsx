@@ -54,6 +54,12 @@ interface UserFormData {
     last_name: string;
     email: string;
     password?: string;
+    confirm_password?: string;
+    
+    // Madagascar-specific fields
+    username?: string; // Will be auto-generated
+    madagascar_id_number: string;
+    id_document_type: string;
     
     // User Type and Location
     user_type: 'LOCATION_USER' | 'PROVINCIAL_USER' | 'NATIONAL_USER';
@@ -117,6 +123,16 @@ const userSchema = yup.object({
         then: () => yup.string().required('Password is required').min(8, 'Password must be at least 8 characters'),
         otherwise: () => yup.string().min(8, 'Password must be at least 8 characters'),
     }),
+    confirm_password: yup.string().when('$isEdit', {
+        is: false,
+        then: () => yup.string()
+            .required('Please confirm your password')
+            .oneOf([yup.ref('password')], 'Passwords must match'),
+        otherwise: () => yup.string()
+            .oneOf([yup.ref('password')], 'Passwords must match'),
+    }),
+    madagascar_id_number: yup.string().required('Madagascar ID number is required'),
+    id_document_type: yup.string().required('ID document type is required'),
     user_type: yup.string().required('User type is required'),
     role_ids: yup.array().min(1, 'At least one role is required'),
 });
@@ -160,6 +176,9 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
             last_name: '',
             email: '',
             password: '',
+            confirm_password: '',
+            madagascar_id_number: '',
+            id_document_type: '',
             user_type: 'LOCATION_USER',
             primary_location_id: '',
             scope_province: '',
@@ -255,6 +274,10 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                 first_name: userData.first_name,
                 last_name: userData.last_name,
                 email: userData.email,
+                password: userData.password,
+                confirm_password: userData.password,
+                madagascar_id_number: userData.madagascar_id_number || '',
+                id_document_type: userData.id_document_type || '',
                 user_type: userData.user_type || 'LOCATION_USER',
                 primary_location_id: userData.primary_location?.id || '',
                 scope_province: userData.scope_province || '',
@@ -322,6 +345,10 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
             
             const payload = {
                 ...data,
+                // Add auto-generated username
+                username: generateUsername(),
+                // Remove confirm_password as backend doesn't expect it
+                confirm_password: undefined,
                 // Remove password if empty in edit mode
                 ...(mode === 'edit' && !data.password && { password: undefined }),
             };
@@ -459,6 +486,23 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                             
                             <Grid item xs={12} md={4}>
                                 <Controller
+                                    name="madagascar_id_number"
+                                    control={form.control}
+                                    render={({ field }) => (
+                                        <TextField
+                                            {...field}
+                                            fullWidth
+                                            label="Madagascar ID Number *"
+                                            error={!!form.formState.errors.madagascar_id_number}
+                                            helperText={form.formState.errors.madagascar_id_number?.message}
+                                            placeholder="e.g., CIN123456789"
+                                        />
+                                    )}
+                                />
+                            </Grid>
+                            
+                            <Grid item xs={12} md={6}>
+                                <Controller
                                     name="password"
                                     control={form.control}
                                     render={({ field }) => (
@@ -470,6 +514,44 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                                             error={!!form.formState.errors.password}
                                             helperText={form.formState.errors.password?.message || (mode === 'edit' ? 'Leave blank to keep current password' : '')}
                                         />
+                                    )}
+                                />
+                            </Grid>
+                            
+                            <Grid item xs={12} md={6}>
+                                <Controller
+                                    name="confirm_password"
+                                    control={form.control}
+                                    render={({ field }) => (
+                                        <TextField
+                                            {...field}
+                                            fullWidth
+                                            label={mode === 'create' ? 'Confirm Password *' : 'Confirm New Password'}
+                                            type="password"
+                                            error={!!form.formState.errors.confirm_password}
+                                            helperText={form.formState.errors.confirm_password?.message || (mode === 'edit' ? 'Leave blank if not changing password' : '')}
+                                        />
+                                    )}
+                                />
+                            </Grid>
+                            
+                            <Grid item xs={12} md={4}>
+                                <Controller
+                                    name="id_document_type"
+                                    control={form.control}
+                                    render={({ field }) => (
+                                        <FormControl fullWidth error={!!form.formState.errors.id_document_type}>
+                                            <InputLabel>ID Document Type *</InputLabel>
+                                            <Select {...field} label="ID Document Type *">
+                                                <MenuItem value="MADAGASCAR_ID">Madagascar National ID</MenuItem>
+                                                <MenuItem value="PASSPORT">Passport</MenuItem>
+                                                <MenuItem value="BIRTH_CERTIFICATE">Birth Certificate</MenuItem>
+                                                <MenuItem value="DRIVING_LICENSE">Driving License</MenuItem>
+                                            </Select>
+                                            <FormHelperText>
+                                                {form.formState.errors.id_document_type?.message || 'Select document type used for identification'}
+                                            </FormHelperText>
+                                        </FormControl>
                                     )}
                                 />
                             </Grid>
