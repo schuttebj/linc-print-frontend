@@ -202,6 +202,10 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
     const watchedProvince = form.watch('scope_province');
     const watchedRole = form.watch('role_id');
 
+    // Check if current user can manage permissions
+    const canManagePermissions = currentUser?.is_superuser || 
+        ['SYSTEM_USER', 'NATIONAL_ADMIN', 'PROVINCIAL_ADMIN'].includes(currentUser?.user_type || '');
+
     // Load initial data
     useEffect(() => {
         loadInitialData();
@@ -235,10 +239,12 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
 
     // Set default permissions when role changes
     useEffect(() => {
+        console.log('🔄 Role change detected:', watchedRole, 'Available roles:', availableRoles.length);
         if (watchedRole && availableRoles.length > 0) {
             const selectedRole = availableRoles.find(role => role.id === watchedRole);
-            if (selectedRole && selectedRole.permissions) {
-                console.log('🔄 Role changed, setting default permissions for:', selectedRole.display_name);
+            console.log('🎯 Selected role:', selectedRole?.display_name, 'Has permissions:', !!selectedRole?.permissions);
+            if (selectedRole) {
+                console.log('📋 Role permissions count:', selectedRole.permissions?.length || 0);
                 
                 // Clear existing permission overrides for new role selection
                 const newPermissionOverrides: { [key: string]: boolean } = {};
@@ -276,7 +282,7 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
             setLookupsLoading(false);
             
             const [rolesRes, permissionsRes, locationsRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/api/v1/roles/creatable`, {
+                fetch(`${API_BASE_URL}/api/v1/roles/creatable?include_permissions=true`, {
                     headers: { 'Authorization': `Bearer ${accessToken}` }
                 }),
                 fetch(`${API_BASE_URL}/api/v1/permissions/by-category`, {
@@ -292,6 +298,8 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                 setAvailableRoles([]);
             } else {
                 const roles = await rolesRes.json();
+                console.log('✅ Roles loaded:', roles.creatable_roles?.length || 0);
+                console.log('🔍 First role permissions:', roles.creatable_roles?.[0]?.permissions?.length || 0);
                 setAvailableRoles(roles.creatable_roles || []);
             }
 
@@ -441,9 +449,12 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
 
     const getRolePermissions = (roleId: string): Permission[] => {
         const role = availableRoles.find(r => r.id === roleId);
+        console.log('🔍 Getting permissions for role:', role?.display_name, 'Permissions:', role?.permissions?.length || 0);
         if (role && role.permissions) {
+            console.log('📋 Role permissions:', role.permissions.map(p => p.name));
             return role.permissions;
         }
+        console.log('⚠️ No permissions found for role:', roleId);
         return [];
     };
 
@@ -1009,8 +1020,29 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                     </Card>
                 )}
 
-                {/* Individual Permission Overrides */}
-                {watchedRole && (
+                {/* Permission Information for non-privileged users */}
+                {watchedRole && !canManagePermissions && (
+                    <Card sx={{ mb: 3 }}>
+                        <CardContent>
+                            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <SecurityIcon color="primary" />
+                                Role Permissions
+                            </Typography>
+                            
+                            <Alert severity="info" sx={{ mb: 2 }}>
+                                This user will receive the default permissions from the selected role. 
+                                Permission overrides can only be managed by System Administrators, National Administrators, or Provincial Administrators.
+                            </Alert>
+                            
+                            <Typography variant="body2" color="text.secondary" gutterBottom>
+                                Default permissions from role: {getRoleDefaultPermissions(watchedRole).length} permissions
+                            </Typography>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Individual Permission Overrides - Only for System/National/Provincial Admins */}
+                {watchedRole && canManagePermissions && (
                     <Card sx={{ mb: 3 }}>
                         <CardContent>
                             <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
