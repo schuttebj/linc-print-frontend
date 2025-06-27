@@ -239,6 +239,46 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
         }));
     };
 
+    // Helper function to parse legacy operating hours string
+    const parseOperatingHoursString = (hoursString: string): DaySchedule[] => {
+        const defaultSchedule = createDefaultSchedule();
+        
+        if (!hoursString || hoursString.trim() === '') {
+            return defaultSchedule;
+        }
+
+        try {
+            // Parse string format like "Monday: 08:00-17:00; Tuesday: 08:00-17:00; Wednesday: Closed"
+            const dayParts = hoursString.split(';').map(part => part.trim());
+            const scheduleMap: { [key: string]: { is_open: boolean; open_time?: string; close_time?: string } } = {};
+
+            dayParts.forEach(dayPart => {
+                const [dayName, timeRange] = dayPart.split(':').map(part => part.trim());
+                
+                if (timeRange.toLowerCase() === 'closed') {
+                    scheduleMap[dayName] = { is_open: false };
+                } else if (timeRange.includes('-')) {
+                    const [openTime, closeTime] = timeRange.split('-').map(time => time.trim());
+                    scheduleMap[dayName] = { 
+                        is_open: true, 
+                        open_time: openTime, 
+                        close_time: closeTime 
+                    };
+                }
+            });
+
+            // Apply parsed data to default schedule
+            return defaultSchedule.map(daySchedule => ({
+                ...daySchedule,
+                ...scheduleMap[daySchedule.day]
+            }));
+
+        } catch (error) {
+            console.warn('Error parsing operating hours string:', error);
+            return defaultSchedule;
+        }
+    };
+
     // Main location form
     const locationForm = useForm<LocationForm>({
         resolver: yupResolver(locationSchema),
@@ -400,10 +440,19 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
             province_code: existingLocation.province_code?.toUpperCase() || '',
         });
 
-        // Handle operational schedule - use default schedule since backend doesn't store structured format yet
-        if (existingLocation.operating_hours) {
-            // TODO: Parse the operating_hours string into structured format if needed
-            locationForm.setValue('operational_schedule', createDefaultSchedule());
+        // Handle operational schedule - try structured format first, fallback to string parsing, then default
+        if (existingLocation.operational_schedule && Array.isArray(existingLocation.operational_schedule)) {
+            // New structured format already available
+            locationForm.setValue('operational_schedule', existingLocation.operational_schedule);
+        } else if (existingLocation.operating_hours) {
+            // Try to parse legacy string format
+            try {
+                const parsedSchedule = parseOperatingHoursString(existingLocation.operating_hours);
+                locationForm.setValue('operational_schedule', parsedSchedule);
+            } catch (error) {
+                console.warn('Failed to parse operating hours string:', error);
+                locationForm.setValue('operational_schedule', createDefaultSchedule());
+            }
         } else {
             // Use default schedule
             locationForm.setValue('operational_schedule', createDefaultSchedule());
@@ -538,6 +587,7 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                 operating_hours: formData.operational_schedule?.map(s => 
                     s.is_open ? `${s.day}: ${s.open_time}-${s.close_time}` : `${s.day}: Closed`
                 ).join('; ') || '',
+                operational_schedule: formData.operational_schedule || [],
                 phone_number: formData.contact_phone || '', // Backend expects 'phone_number'
                 email: formData.contact_email?.toLowerCase() || '', // Backend expects 'email' (lowercase for emails)
                 is_operational: formData.is_operational,
