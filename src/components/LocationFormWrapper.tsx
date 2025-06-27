@@ -480,21 +480,21 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
     const handleFormComplete = (location: any) => {
         setCreatedLocation(location);
         
-        if (onSuccess) {
-            onSuccess(location, isEditMode);
-            return;
+        // Always show success dialog in standalone mode
+        if (mode === 'standalone') {
+            setShowSuccessDialog(true);
         }
         
-        switch (mode) {
-            case 'standalone':
-                setShowSuccessDialog(true);
-                break;
-            case 'modal':
-            case 'embedded':
-                if (onComplete) {
-                    onComplete(location);
-                }
-                break;
+        // Call onSuccess callback if provided (but don't prevent dialog)
+        if (onSuccess) {
+            onSuccess(location, isEditMode);
+        }
+        
+        // Handle modal/embedded modes
+        if (mode === 'modal' || mode === 'embedded') {
+            if (onComplete) {
+                onComplete(location);
+            }
         }
     };
 
