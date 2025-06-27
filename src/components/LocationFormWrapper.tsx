@@ -1435,10 +1435,17 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
             {/* Success Dialog - Matching PersonFormWrapper Style */}
             <Dialog
                 open={showSuccessDialog}
-                onClose={null}
+                onClose={() => {}}
                 disableEscapeKeyDown
                 maxWidth="sm"
                 fullWidth
+                slotProps={{
+                    backdrop: {
+                        onClick: (event) => {
+                            event.stopPropagation();
+                        }
+                    }
+                }}
             >
                 <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white' }}>
                     <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

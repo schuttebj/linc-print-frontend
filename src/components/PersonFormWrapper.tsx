@@ -2292,10 +2292,17 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             {/* Duplicate Detection Dialog */}
             <Dialog
                 open={showDuplicateDialog}
-                onClose={null}
+                onClose={() => {}}
                 disableEscapeKeyDown
                 maxWidth="md"
                 fullWidth
+                slotProps={{
+                    backdrop: {
+                        onClick: (event) => {
+                            event.stopPropagation();
+                        }
+                    }
+                }}
             >
                 <DialogTitle sx={{ bgcolor: 'warning.main', color: 'white' }}>
                     <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -2396,10 +2403,17 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             {/* Success Dialog */}
             <Dialog
                 open={showSuccessDialog}
-                onClose={null}
+                onClose={() => {}}
                 disableEscapeKeyDown
                 maxWidth="sm"
                 fullWidth
+                slotProps={{
+                    backdrop: {
+                        onClick: (event) => {
+                            event.stopPropagation();
+                        }
+                    }
+                }}
             >
                 <DialogTitle sx={{ bgcolor: 'success.main', color: 'white' }}>
                     <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
