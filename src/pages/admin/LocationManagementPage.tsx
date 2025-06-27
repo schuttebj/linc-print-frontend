@@ -52,21 +52,39 @@ import {
 import { API_ENDPOINTS, api } from '../../config/api';
 import lookupService, { OfficeType, Province } from '../../services/lookupService';
 
-// Location interfaces
+// Location interfaces - Updated to match actual API response
 interface Location {
   id: string;
-  location_code: string;
-  location_name: string;
-  location_address: string;
+  name: string; // API uses 'name' not 'location_name'
+  code: string; // API uses 'code' not 'location_code'
+  full_code: string;
+  display_code: string;
   province_code: string;
+  province_name: string;
+  office_number: string;
   office_type: string;
-  max_capacity: number;
-  current_capacity: number;
-  contact_phone: string;
-  contact_email: string;
+  locality: string;
+  street_address: string;
+  postal_code: string | null;
+  phone_number: string; // API uses 'phone_number' not 'contact_phone'
+  email: string; // API uses 'email' not 'contact_email'
+  manager_name: string | null;
   is_operational: boolean;
-  operational_hours: string;
-  notes?: string;
+  accepts_applications: boolean;
+  accepts_renewals: boolean;
+  accepts_collections: boolean;
+  max_daily_capacity: number; // API uses 'max_daily_capacity' not 'max_capacity'
+  current_staff_count: number; // API uses 'current_staff_count' not 'current_capacity'
+  max_staff_capacity: number;
+  next_user_number: number;
+  operating_hours: string | null;
+  operational_schedule: Array<{
+    day: string;
+    is_open: boolean;
+    open_time: string;
+    close_time: string;
+  }>;
+  special_notes: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -179,7 +197,7 @@ const LocationManagementPage: React.FC = () => {
     
     try {
       await api.delete(`${API_ENDPOINTS.locationById(selectedLocation.id)}`);
-      setSuccessMessage(`Location ${selectedLocation.location_name} has been deleted successfully.`);
+      setSuccessMessage(`Location ${selectedLocation.name} has been deleted successfully.`);
       setShowSuccessDialog(true);
       setShowDeleteModal(false);
       setSelectedLocation(null);
@@ -195,7 +213,7 @@ const LocationManagementPage: React.FC = () => {
         is_operational: !location.is_operational
       });
       
-      setSuccessMessage(`Location ${location.location_name} has been ${location.is_operational ? 'closed' : 'opened'} successfully.`);
+      setSuccessMessage(`Location ${location.name} has been ${location.is_operational ? 'closed' : 'opened'} successfully.`);
       setShowSuccessDialog(true);
       await loadLocations();
     } catch (err) {
@@ -369,7 +387,8 @@ const LocationManagementPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Location</TableCell>
+              <TableCell>Location Code</TableCell>
+              <TableCell>Location Name</TableCell>
               <TableCell>Office Type</TableCell>
               <TableCell>Province</TableCell>
               <TableCell>Contact Info</TableCell>
@@ -382,19 +401,24 @@ const LocationManagementPage: React.FC = () => {
             {locations.map((location) => (
               <TableRow key={location.id} hover>
                 <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <BusinessIcon sx={{ color: 'primary.main' }} />
-                    <Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                        {location.location_name}
+                  <Typography variant="body1" color="primary.main" sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
+                    {location.display_code}
+                  </Typography>
+                </TableCell>
+
+                <TableCell>
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                      {location.name}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {location.street_address}
+                    </Typography>
+                    {location.locality && (
+                      <Typography variant="caption" color="text.secondary" display="block">
+                        {location.locality}
                       </Typography>
-                      <Typography variant="body2" color="primary.main" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
-                        {location.location_code}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {location.location_address}
-                      </Typography>
-                    </Box>
+                    )}
                   </Box>
                 </TableCell>
                 
@@ -408,7 +432,7 @@ const LocationManagementPage: React.FC = () => {
 
                 <TableCell>
                   <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    {getProvinceName(location.province_code)}
+                    {location.province_name}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
                     ({location.province_code})
@@ -417,37 +441,42 @@ const LocationManagementPage: React.FC = () => {
                 
                 <TableCell>
                   <Stack spacing={0.5}>
-                    {location.contact_phone ? (
+                    {location.phone_number ? (
                       <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                        {location.contact_phone}
+                        {location.phone_number}
                       </Typography>
                     ) : (
                       <Typography variant="caption" color="text.secondary">No phone</Typography>
                     )}
-                    {location.contact_email ? (
+                    {location.email ? (
                       <Typography variant="caption" color="text.secondary">
-                        {location.contact_email}
+                        {location.email}
                       </Typography>
                     ) : (
                       <Typography variant="caption" color="text.secondary">
                         No email
                       </Typography>
                     )}
-                    {location.operational_hours && (
+                    {location.manager_name && (
                       <Typography variant="caption" color="text.secondary">
-                        {location.operational_hours}
+                        Manager: {location.manager_name}
                       </Typography>
                     )}
                   </Stack>
                 </TableCell>
                 
                 <TableCell>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {location.current_capacity} / {location.max_capacity}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Current / Max
-                  </Typography>
+                  <Stack spacing={0.5}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {location.max_daily_capacity}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Daily Capacity
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Staff: {location.current_staff_count}/{location.max_staff_capacity}
+                    </Typography>
+                  </Stack>
                 </TableCell>
                 
                 <TableCell>
@@ -524,7 +553,7 @@ const LocationManagementPage: React.FC = () => {
           
           {selectedLocation && (
             <Typography variant="body1">
-              Are you sure you want to delete location <strong>{selectedLocation.location_name}</strong>? 
+              Are you sure you want to delete location <strong>{selectedLocation.name}</strong>? 
               This will affect all associated users and data.
             </Typography>
           )}
