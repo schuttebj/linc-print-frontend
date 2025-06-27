@@ -244,7 +244,6 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
         if (mode === 'edit' && 
             watchedRole && 
             availableRoles.length > 0 && 
-            userActualPermissions.length > 0 && 
             !permissionsLoaded) {
             
             const selectedRole = availableRoles.find(role => role.id === watchedRole);
@@ -256,21 +255,28 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                 const rolePermissions = selectedRole.permissions.map(p => p.name);
                 const overrides: { [key: string]: boolean } = {};
                 
-                // Find permissions that user has but role doesn't (granted overrides)
-                userActualPermissions.forEach(permission => {
-                    if (!rolePermissions.includes(permission)) {
-                        overrides[permission] = true;
-                        console.log(`✅ Found granted override: ${permission}`);
-                    }
-                });
-                
-                // Find permissions that role has but user doesn't (revoked overrides)
-                rolePermissions.forEach(permission => {
-                    if (!userActualPermissions.includes(permission)) {
-                        overrides[permission] = false;
-                        console.log(`❌ Found revoked override: ${permission}`);
-                    }
-                });
+                // If userActualPermissions is empty (after role change), start fresh with role defaults
+                if (userActualPermissions.length === 0) {
+                    console.log('🔄 Starting fresh with new role defaults (no user permissions to compare)');
+                    // No overrides needed - user will get exactly the role's permissions
+                } else {
+                    // Normal case: compare user's actual permissions with role defaults
+                    // Find permissions that user has but role doesn't (granted overrides)
+                    userActualPermissions.forEach(permission => {
+                        if (!rolePermissions.includes(permission)) {
+                            overrides[permission] = true;
+                            console.log(`✅ Found granted override: ${permission}`);
+                        }
+                    });
+                    
+                    // Find permissions that role has but user doesn't (revoked overrides)
+                    rolePermissions.forEach(permission => {
+                        if (!userActualPermissions.includes(permission)) {
+                            overrides[permission] = false;
+                            console.log(`❌ Found revoked override: ${permission}`);
+                        }
+                    });
+                }
                 
                 form.setValue('permission_overrides', overrides);
                 setPermissionsLoaded(true);
@@ -291,10 +297,17 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
     // Function to handle manual role changes in edit mode
     const handleRoleChange = (newRoleId: string) => {
         if (mode === 'edit' && permissionsLoaded) {
-            // User is manually changing the role - clear custom permissions
-            console.log('⚠️ User manually changed role in edit mode - clearing custom permissions');
+            // User is manually changing the role - completely reset permissions to new role defaults
+            console.log('⚠️ User manually changed role in edit mode - resetting all permissions to new role defaults');
+            
+            // Clear all custom permissions
             form.setValue('permission_overrides', {});
-            setPermissionsLoaded(false); // Will trigger reload of permissions for new role
+            
+            // Reset permissions loaded flag to trigger fresh calculation for new role
+            setPermissionsLoaded(false);
+            
+            // Clear the user's actual permissions so the new role's permissions become the baseline
+            setUserActualPermissions([]);
         }
         form.setValue('role_id', newRoleId);
     };
