@@ -109,9 +109,19 @@ const PersonManagementPage: React.FC = () => {
       {/* Success Dialog - Blue Corporate Style matching search edit */}
       <Dialog 
         open={showSuccessDialog} 
-        onClose={() => setShowSuccessDialog(false)}
+        onClose={() => {}}
+        disableEscapeKeyDown
         maxWidth="md"
         fullWidth
+        slotProps={{
+          backdrop: {
+            onClick: (event) => {
+              console.log('🚨 PersonManagementPage EXTERNAL DIALOG: Backdrop clicked!', event);
+              event.stopPropagation();
+              event.preventDefault();
+            }
+          }
+        }}
       >
         <DialogTitle 
           sx={{ 

@@ -816,7 +816,22 @@ const PersonSearchPage: React.FC = () => {
       )}
 
       {/* Person Details Dialog */}
-      <Dialog open={showDetailsDialog} onClose={() => setShowDetailsDialog(false)} maxWidth="md" fullWidth>
+      <Dialog 
+        open={showDetailsDialog} 
+        onClose={() => {}}
+        disableEscapeKeyDown
+        maxWidth="md" 
+        fullWidth
+        slotProps={{
+          backdrop: {
+            onClick: (event) => {
+              console.log('🚨 PersonSearchPage DETAILS DIALOG: Backdrop clicked!', event);
+              event.stopPropagation();
+              event.preventDefault();
+            }
+          }
+        }}
+      >
         <DialogTitle>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <PersonIcon color="primary" />
@@ -1032,7 +1047,22 @@ const PersonSearchPage: React.FC = () => {
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={showDeleteDialog} onClose={() => setShowDeleteDialog(false)} maxWidth="sm" fullWidth>
+      <Dialog 
+        open={showDeleteDialog} 
+        onClose={() => {}}
+        disableEscapeKeyDown
+        maxWidth="sm" 
+        fullWidth
+        slotProps={{
+          backdrop: {
+            onClick: (event) => {
+              console.log('🚨 PersonSearchPage DELETE DIALOG: Backdrop clicked!', event);
+              event.stopPropagation();
+              event.preventDefault();
+            }
+          }
+        }}
+      >
         <DialogTitle>
           <Typography variant="h6" color="error">
             Confirm Delete
