@@ -524,7 +524,7 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
             console.log('Raw form data:', formData);
 
             // Transform form data to match backend schema - ALL UPPERCASE
-            // For now, keep backward compatibility with existing backend
+            // Backend expects specific field names based on the error response
             const addressString = [
                 formData.address?.street_line1,
                 formData.address?.street_line2,
@@ -534,8 +534,10 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
 
             const locationPayload = {
                 location_code: formData.location_code?.toUpperCase() || '',
-                location_name: formData.location_name?.toUpperCase() || '',
+                name: formData.location_name?.toUpperCase() || '', // Backend expects 'name' not 'location_name'
                 location_address: addressString || '',
+                locality: formData.address?.locality?.toUpperCase() || '', // Backend requires separate locality field
+                office_number: formData.location_code?.toUpperCase() || '', // Use location_code as office_number
                 province_code: formData.province_code?.toUpperCase() || '',
                 office_type: formData.office_type?.toUpperCase() || '',
                 max_capacity: parseInt(formData.max_capacity?.toString() || '0'),
