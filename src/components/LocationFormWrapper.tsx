@@ -431,12 +431,26 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
         locationForm.setValue('notes', existingLocation.special_notes?.toUpperCase() || '');
 
         // Handle address - map backend fields to structured format
+        // Split backend locality back into locality and town (best effort)
+        const backendLocality = existingLocation.locality?.toUpperCase() || '';
+        let locality = '';
+        let town = backendLocality; // Default to using the full value as town
+        
+        // Try to split if there's a comma (our save format was "locality, town")
+        if (backendLocality.includes(',')) {
+            const parts = backendLocality.split(',').map(part => part.trim());
+            if (parts.length >= 2) {
+                locality = parts[0];
+                town = parts.slice(1).join(', '); // Join remaining parts as town
+            }
+        }
+
         locationForm.setValue('address', {
             street_line1: existingLocation.street_address?.toUpperCase() || '',
             street_line2: '', // Not provided by backend
-            locality: existingLocation.locality?.toUpperCase() || '',
+            locality: locality,
             postal_code: existingLocation.postal_code?.toUpperCase() || '',
-            town: '', // Not provided separately by backend
+            town: town,
             province_code: existingLocation.province_code?.toUpperCase() || '',
         });
 
@@ -573,11 +587,17 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                 formData.address?.town
             ].filter(Boolean).join(', ').toUpperCase();
 
+            // Combine locality and town for backend (backend only has locality field)
+            const combinedLocality = [
+                formData.address?.locality,
+                formData.address?.town
+            ].filter(Boolean).join(', ').toUpperCase() || formData.address?.town?.toUpperCase() || formData.address?.locality?.toUpperCase() || '';
+
             const locationPayload = {
                 location_code: formData.location_code?.toUpperCase() || '',
                 name: formData.location_name?.toUpperCase() || '', 
                 street_address: formData.address?.street_line1?.toUpperCase() || '', // Backend expects 'street_address'
-                locality: formData.address?.locality?.toUpperCase() || '', 
+                locality: combinedLocality, // Backend expects combined locality (includes town)
                 postal_code: formData.address?.postal_code || '', // Backend expects at root level
                 office_number: formData.location_code?.replace(/[A-Z]/g, '') || '', 
                 province_code: formData.province_code?.toUpperCase() || '',
