@@ -2296,11 +2296,10 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 disableEscapeKeyDown
                 maxWidth="md"
                 fullWidth
-                slotProps={{
-                    backdrop: {
-                        onClick: (event) => {
-                            event.stopPropagation();
-                        }
+                BackdropProps={{
+                    onClick: (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
                     }
                 }}
             >
@@ -2407,15 +2406,14 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 disableEscapeKeyDown
                 maxWidth="sm"
                 fullWidth
-                slotProps={{
-                    backdrop: {
-                        onClick: (event) => {
-                            event.stopPropagation();
-                        }
+                BackdropProps={{
+                    onClick: (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
                     }
                 }}
             >
-                <DialogTitle sx={{ bgcolor: 'success.main', color: 'white' }}>
+                <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white' }}>
                     <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <PersonAddIcon />
                         {isEditMode ? 'Person Updated Successfully!' : 'Person Created Successfully!'}
