@@ -248,7 +248,7 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
             if (selectedRole) {
                 console.log('📋 Role permissions count:', selectedRole.permissions?.length || 0);
                 
-                // For edit mode - distinguish between initial load and role change
+                // For edit mode - only calculate overrides once when we have all the data
                 if (mode === 'edit' && userActualPermissions.length > 0 && !initialRoleLoaded) {
                     // Initial load: calculate overrides based on user's actual permissions vs role defaults
                     const rolePermissions = selectedRole.permissions?.map(p => p.name) || [];
@@ -273,15 +273,19 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                     form.setValue('permission_overrides', overrides);
                     console.log('✅ Permission overrides calculated for initial edit load:', overrides);
                     setInitialRoleLoaded(true);
-                } else {
-                    // Role change (create mode OR edit mode after initial load): clear all custom permissions
-                    const newPermissionOverrides: { [key: string]: boolean } = {};
-                    form.setValue('permission_overrides', newPermissionOverrides);
-                    console.log('🔄 Permission overrides cleared for role change - only role defaults will be active');
+                } else if (mode === 'create' || (mode === 'edit' && initialRoleLoaded)) {
+                    // Only clear permissions for:
+                    // 1. Create mode (always clear when role changes)
+                    // 2. Edit mode AFTER initial load (user is actually changing the role)
+                    const currentOverrides = form.getValues('permission_overrides') || {};
+                    const hasExistingOverrides = Object.keys(currentOverrides).length > 0;
                     
-                    // Mark that we've handled the initial load if this is edit mode
-                    if (mode === 'edit') {
-                        setInitialRoleLoaded(true);
+                    if (mode === 'create' || hasExistingOverrides) {
+                        const newPermissionOverrides: { [key: string]: boolean } = {};
+                        form.setValue('permission_overrides', newPermissionOverrides);
+                        console.log('🔄 Permission overrides cleared for role change - only role defaults will be active');
+                    } else {
+                        console.log('🔄 Role change detected but no existing overrides to clear');
                     }
                 }
             }
@@ -289,7 +293,9 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
             // Clear permissions when no role is selected
             form.setValue('permission_overrides', {});
             console.log('🧹 Cleared permissions - no role selected');
-            setInitialRoleLoaded(false);
+            if (mode === 'edit') {
+                setInitialRoleLoaded(false);
+            }
         }
     }, [watchedRole, availableRoles, form, mode, userActualPermissions, initialRoleLoaded]);
 
