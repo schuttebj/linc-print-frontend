@@ -2299,7 +2299,9 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 slotProps={{
                     backdrop: {
                         onClick: (event) => {
+                            console.log('🚨 PersonFormWrapper DUPLICATE DIALOG: Backdrop clicked!', event);
                             event.stopPropagation();
+                            event.preventDefault();
                         }
                     }
                 }}
@@ -2403,14 +2405,18 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             {/* Success Dialog */}
             <Dialog
                 open={showSuccessDialog}
-                onClose={() => {}}
+                onClose={(event, reason) => {
+                    console.log('🚨 PersonFormWrapper SUCCESS DIALOG: onClose called!', { event, reason });
+                }}
                 disableEscapeKeyDown
                 maxWidth="sm"
                 fullWidth
                 slotProps={{
                     backdrop: {
                         onClick: (event) => {
+                            console.log('🚨 PersonFormWrapper SUCCESS DIALOG: Backdrop clicked!', event);
                             event.stopPropagation();
+                            event.preventDefault();
                         }
                     }
                 }}

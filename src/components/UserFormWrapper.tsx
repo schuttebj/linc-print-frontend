@@ -1347,13 +1347,16 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
             {/* Success Dialog - Matching PersonFormWrapper Style */}
             <Dialog 
                 open={showSuccessDialog} 
-                onClose={() => {}}
+                onClose={(event, reason) => {
+                    console.log('✅ UserFormWrapper SUCCESS DIALOG: onClose called!', { event, reason });
+                }}
                 disableEscapeKeyDown
                 maxWidth="sm" 
                 fullWidth
                 slotProps={{
                     backdrop: {
                         onClick: (event) => {
+                            console.log('✅ UserFormWrapper SUCCESS DIALOG: Backdrop clicked!', event);
                             event.stopPropagation();
                         }
                     }
