@@ -2292,7 +2292,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             {/* Duplicate Detection Dialog */}
             <Dialog
                 open={showDuplicateDialog}
-                onClose={() => setShowDuplicateDialog(false)}
+                onClose={null}
+                disableEscapeKeyDown
                 maxWidth="md"
                 fullWidth
             >
@@ -2395,7 +2396,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             {/* Success Dialog */}
             <Dialog
                 open={showSuccessDialog}
-                onClose={() => setShowSuccessDialog(false)}
+                onClose={null}
+                disableEscapeKeyDown
                 maxWidth="sm"
                 fullWidth
             >

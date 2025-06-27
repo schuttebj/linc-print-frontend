@@ -1435,7 +1435,8 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
             {/* Success Dialog - Matching PersonFormWrapper Style */}
             <Dialog
                 open={showSuccessDialog}
-                onClose={() => setShowSuccessDialog(false)}
+                onClose={null}
+                disableEscapeKeyDown
                 maxWidth="sm"
                 fullWidth
             >

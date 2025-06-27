@@ -1347,7 +1347,8 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
             {/* Success Dialog - Matching PersonFormWrapper Style */}
             <Dialog 
                 open={showSuccessDialog} 
-                onClose={() => setShowSuccessDialog(false)} 
+                onClose={null}
+                disableEscapeKeyDown
                 maxWidth="sm" 
                 fullWidth
             >
