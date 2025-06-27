@@ -691,10 +691,12 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
             const result = await response.json();
             setCreatedUser(result);
             
+            // Always show success dialog
+            setShowSuccessDialog(true);
+            
+            // Call onSuccess callback if provided (but don't prevent dialog)
             if (onSuccess) {
                 onSuccess(result, mode === 'edit');
-            } else {
-                setShowSuccessDialog(true);
             }
         } catch (error) {
             console.error(`Failed to ${mode} user:`, error);

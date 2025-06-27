@@ -15,14 +15,10 @@ const UserFormPage: React.FC = () => {
   
   const isEditMode = Boolean(userId);
   
-  const handleSuccess = (user: any, isEdit: boolean) => {
-    // Navigate back to user management page with success message
-    navigate('/dashboard/admin/users', { 
-      state: { 
-        successMessage: `User ${user.first_name} ${user.last_name} has been ${isEdit ? 'updated' : 'created'} successfully!` 
-      } 
-    });
-  };
+  // Handle successful form completion - REMOVED to use internal dialog
+  // const handleSuccess = (user: any, isEdit: boolean) => {
+  //   console.log(`User ${user.first_name} ${user.last_name} has been ${isEdit ? 'updated' : 'created'} successfully!`);
+  // };
   
   const handleCancel = () => {
     navigate('/dashboard/admin/users');
@@ -57,7 +53,6 @@ const UserFormPage: React.FC = () => {
         <UserFormWrapper
           mode={isEditMode ? 'edit' : 'create'}
           userId={userId}
-          onSuccess={handleSuccess}
           onCancel={handleCancel}
         />
       </Box>

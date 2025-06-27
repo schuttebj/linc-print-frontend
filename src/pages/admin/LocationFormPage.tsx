@@ -48,17 +48,10 @@ const LocationFormPage: React.FC = () => {
         }
     }, [isEditMode, hasPermission, navigate]);
 
-    // Handle successful form completion
-    const handleFormSuccess = (location: any, wasEdit: boolean) => {
-        console.log(`Location ${wasEdit ? 'updated' : 'created'} successfully:`, location);
-        
-        // Navigate back to location management with success message
-        navigate('/dashboard/admin/locations', { 
-            state: { 
-                successMessage: `Location ${wasEdit ? 'updated' : 'created'} successfully: ${location.location_name}` 
-            } 
-        });
-    };
+    // Handle successful form completion - REMOVED to use internal dialog
+    // const handleFormSuccess = (location: any, wasEdit: boolean) => {
+    //     console.log(`Location ${wasEdit ? 'updated' : 'created'} successfully:`, location);
+    // };
 
     // Handle form cancellation
     const handleFormCancel = () => {
@@ -129,7 +122,6 @@ const LocationFormPage: React.FC = () => {
             {/* Form Component */}
             <LocationFormWrapper
                 mode="standalone"
-                onSuccess={handleFormSuccess}
                 onCancel={handleFormCancel}
                 initialLocationId={locationId || undefined}
                 title={pageTitle}
