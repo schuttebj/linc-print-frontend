@@ -77,6 +77,7 @@ interface LocationForm {
     location_code: string;
     location_name: string;
     office_type: string;
+    province_code: string; // Moved to basic info for code generation
 
     // Address Information (structured like person addresses)
     address: LocationAddress;
@@ -138,6 +139,7 @@ const locationSchema = yup.object({
     location_code: yup.string().required('Location code is required').max(10),
     location_name: yup.string().required('Location name is required').max(100),
     office_type: yup.string().required('Office type is required'),
+    province_code: yup.string().required('Province is required'),
     address: yup.object({
         street_line1: yup.string().max(100),
         street_line2: yup.string().max(100),
@@ -245,6 +247,7 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
             location_code: '',
             location_name: '',
             office_type: '',
+            province_code: '',
             address: {
                 street_line1: '',
                 street_line2: '',
@@ -304,6 +307,7 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
         ) {
             // Set first option from each enum as default
             locationForm.setValue('office_type', officeTypes[0].value);
+            locationForm.setValue('province_code', provinces[0].code);
             locationForm.setValue('address.province_code', provinces[0].code);
         }
     }, [lookupsLoading, officeTypes, provinces, isEditMode, locationFound, locationForm]);
@@ -338,12 +342,14 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
     };
 
     // Watch province code changes for automatic code generation
-    const watchedAddress = locationForm.watch('address');
+    const watchedProvinceCode = locationForm.watch('province_code');
     useEffect(() => {
-        if (watchedAddress?.province_code && !isEditMode) {
-            generateSequentialLocationCode(watchedAddress.province_code);
+        if (watchedProvinceCode && !isEditMode) {
+            generateSequentialLocationCode(watchedProvinceCode);
+            // Also sync to address province
+            locationForm.setValue('address.province_code', watchedProvinceCode);
         }
-    }, [watchedAddress?.province_code, isEditMode]);
+    }, [watchedProvinceCode, isEditMode, locationForm]);
 
     // Fetch existing location for editing
     const fetchLocationForEditing = async (locationId: string) => {
@@ -375,6 +381,7 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
         locationForm.setValue('location_code', existingLocation.location_code?.toUpperCase() || '');
         locationForm.setValue('location_name', existingLocation.location_name?.toUpperCase() || '');
         locationForm.setValue('office_type', existingLocation.office_type?.toUpperCase() || '');
+        locationForm.setValue('province_code', existingLocation.province_code?.toUpperCase() || existingLocation.address?.province_code?.toUpperCase() || '');
         locationForm.setValue('max_capacity', existingLocation.max_capacity || 0);
         locationForm.setValue('current_capacity', existingLocation.current_capacity || 0);
         locationForm.setValue('contact_phone', existingLocation.contact_phone || '');
@@ -479,7 +486,7 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
 
     const getStepFields = (step: number) => {
         const stepFieldMap = [
-            ['location_code', 'location_name', 'office_type'], // Basic Information
+            ['location_code', 'location_name', 'office_type', 'province_code'], // Basic Information
             ['address.locality', 'address.postal_code', 'address.town', 'address.province_code'], // Address Information
             [], // Operational Schedule (custom validation)
             [], // Contact Details (optional)
@@ -517,21 +524,25 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
             console.log('Raw form data:', formData);
 
             // Transform form data to match backend schema - ALL UPPERCASE
+            // For now, keep backward compatibility with existing backend
+            const addressString = [
+                formData.address?.street_line1,
+                formData.address?.street_line2,
+                formData.address?.locality,
+                formData.address?.town
+            ].filter(Boolean).join(', ').toUpperCase();
+
             const locationPayload = {
                 location_code: formData.location_code?.toUpperCase() || '',
                 location_name: formData.location_name?.toUpperCase() || '',
+                location_address: addressString || '',
+                province_code: formData.province_code?.toUpperCase() || '',
                 office_type: formData.office_type?.toUpperCase() || '',
-                address: {
-                    street_line1: formData.address?.street_line1?.toUpperCase() || '',
-                    street_line2: formData.address?.street_line2?.toUpperCase() || '',
-                    locality: formData.address?.locality?.toUpperCase() || '',
-                    postal_code: formData.address?.postal_code || '',
-                    town: formData.address?.town?.toUpperCase() || '',
-                    province_code: formData.address?.province_code?.toUpperCase() || '',
-                },
-                max_capacity: formData.max_capacity || 0,
-                current_capacity: formData.current_capacity || 0,
-                operational_schedule: formData.operational_schedule || [],
+                max_capacity: parseInt(formData.max_capacity?.toString() || '0'),
+                current_capacity: parseInt(formData.current_capacity?.toString() || '0'),
+                operational_hours: formData.operational_schedule?.map(s => 
+                    s.is_open ? `${s.day}: ${s.open_time}-${s.close_time}` : `${s.day}: Closed`
+                ).join('; ') || '',
                 contact_phone: formData.contact_phone || '',
                 contact_email: formData.contact_email?.toUpperCase() || '',
                 is_operational: formData.is_operational,
@@ -645,7 +656,7 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                         />
                     </Grid>
 
-                    <Grid item xs={12}>
+                    <Grid item xs={12} md={6}>
                         <Controller
                             name="location_name"
                             control={locationForm.control}
@@ -662,6 +673,28 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                                         field.onChange(value);
                                     }}
                                 />
+                            )}
+                        />
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                        <Controller
+                            name="province_code"
+                            control={locationForm.control}
+                            render={({ field }) => (
+                                <FormControl fullWidth error={!!locationForm.formState.errors.province_code}>
+                                    <InputLabel>Province *</InputLabel>
+                                    <Select {...field} label="Province *">
+                                        {provinces.map((option) => (
+                                            <MenuItem key={option.code} value={option.code}>
+                                                {option.name}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                    <FormHelperText>
+                                        {locationForm.formState.errors.province_code?.message || 'Madagascar province (generates location code)'}
+                                    </FormHelperText>
+                                </FormControl>
                             )}
                         />
                     </Grid>
@@ -793,9 +826,9 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                                 name="address.province_code"
                                 control={locationForm.control}
                                 render={({ field }) => (
-                                    <FormControl fullWidth error={!!locationForm.formState.errors.address?.province_code}>
-                                        <InputLabel>Province *</InputLabel>
-                                        <Select {...field} label="Province *">
+                                    <FormControl fullWidth disabled>
+                                        <InputLabel>Province</InputLabel>
+                                        <Select {...field} label="Province">
                                             {provinces.map((option) => (
                                                 <MenuItem key={option.code} value={option.code}>
                                                     {option.name}
@@ -803,7 +836,7 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                                             ))}
                                         </Select>
                                         <FormHelperText>
-                                            {locationForm.formState.errors.address?.province_code?.message || 'Madagascar province'}
+                                            Province is set in basic information
                                         </FormHelperText>
                                     </FormControl>
                                 )}
@@ -993,8 +1026,7 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                                     error={!!locationForm.formState.errors.contact_phone}
                                     helperText={locationForm.formState.errors.contact_phone?.message || 'Phone number for this location'}
                                     inputProps={{
-                                        maxLength: 20,
-                                        pattern: '[0-9+\\-\\s()]*'
+                                        maxLength: 20
                                     }}
                                 />
                             )}
