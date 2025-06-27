@@ -4,7 +4,7 @@
  * Adapted for Madagascar LINC Print system with provincial/national roles
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     Box,
     Typography,
@@ -180,6 +180,7 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
     const [lookupsLoading, setLookupsLoading] = useState(true);
     const [userActualPermissions, setUserActualPermissions] = useState<string[]>([]);
     const [initialRoleLoaded, setInitialRoleLoaded] = useState(false);
+    const overridesCalculatedRef = useRef(false);
 
     // Form management
     const form = useForm<UserFormData>({
@@ -249,7 +250,7 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                 console.log('📋 Role permissions count:', selectedRole.permissions?.length || 0);
                 
                 // For edit mode - only calculate overrides once when we have all the data
-                if (mode === 'edit' && userActualPermissions.length > 0 && !initialRoleLoaded) {
+                if (mode === 'edit' && userActualPermissions.length > 0 && !overridesCalculatedRef.current) {
                     // Initial load: calculate overrides based on user's actual permissions vs role defaults
                     const rolePermissions = selectedRole.permissions?.map(p => p.name) || [];
                     const overrides: { [key: string]: boolean } = {};
@@ -272,21 +273,35 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                     
                     form.setValue('permission_overrides', overrides);
                     console.log('✅ Permission overrides calculated for initial edit load:', overrides);
+                    overridesCalculatedRef.current = true;
                     setInitialRoleLoaded(true);
-                } else if (mode === 'create' || (mode === 'edit' && initialRoleLoaded)) {
-                    // Only clear permissions for:
-                    // 1. Create mode (always clear when role changes)
-                    // 2. Edit mode AFTER initial load (user is actually changing the role)
+                } else if (mode === 'create') {
+                    // Create mode: always clear when role changes
+                    const newPermissionOverrides: { [key: string]: boolean } = {};
+                    form.setValue('permission_overrides', newPermissionOverrides);
+                    console.log('🔄 Permission overrides cleared for role change (create mode)');
+                } else if (mode === 'edit' && initialRoleLoaded) {
+                    // Edit mode: only clear if this is a genuine role change (not just multiple useEffect triggers)
                     const currentOverrides = form.getValues('permission_overrides') || {};
                     const hasExistingOverrides = Object.keys(currentOverrides).length > 0;
                     
-                    if (mode === 'create' || hasExistingOverrides) {
+                    console.log('🔍 Edit mode role change check:', {
+                        initialRoleLoaded,
+                        hasExistingOverrides,
+                        currentOverrides: Object.keys(currentOverrides)
+                    });
+                    
+                    // Only clear if we actually have overrides to clear AND this isn't just a loading artifact
+                    if (hasExistingOverrides) {
+                        console.log('⚠️ User is changing role in edit mode - custom permissions will be cleared');
                         const newPermissionOverrides: { [key: string]: boolean } = {};
                         form.setValue('permission_overrides', newPermissionOverrides);
-                        console.log('🔄 Permission overrides cleared for role change - only role defaults will be active');
+                        console.log('🔄 Permission overrides cleared for actual role change in edit mode');
                     } else {
-                        console.log('🔄 Role change detected but no existing overrides to clear');
+                        console.log('ℹ️ Role change detected but no overrides to clear (loading artifact)');
                     }
+                } else {
+                    console.log('ℹ️ Role change ignored - edit mode initial load still in progress');
                 }
             }
         } else if (!watchedRole) {
@@ -295,6 +310,7 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
             console.log('🧹 Cleared permissions - no role selected');
             if (mode === 'edit') {
                 setInitialRoleLoaded(false);
+                overridesCalculatedRef.current = false;
             }
         }
     }, [watchedRole, availableRoles, form, mode, userActualPermissions, initialRoleLoaded]);
@@ -418,6 +434,9 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
             });
             
             console.log('✅ User form reset, will calculate overrides after roles load');
+            
+            // Reset the overrides calculation flag for this user
+            overridesCalculatedRef.current = false;
         } catch (error) {
             console.error('Failed to load user for edit:', error);
         }
