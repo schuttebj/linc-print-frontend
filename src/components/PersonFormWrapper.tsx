@@ -2296,10 +2296,11 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 disableEscapeKeyDown
                 maxWidth="md"
                 fullWidth
-                BackdropProps={{
-                    onClick: (event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
+                slotProps={{
+                    backdrop: {
+                        onClick: (event) => {
+                            event.stopPropagation();
+                        }
                     }
                 }}
             >
@@ -2406,10 +2407,11 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 disableEscapeKeyDown
                 maxWidth="sm"
                 fullWidth
-                BackdropProps={{
-                    onClick: (event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
+                slotProps={{
+                    backdrop: {
+                        onClick: (event) => {
+                            event.stopPropagation();
+                        }
                     }
                 }}
             >
