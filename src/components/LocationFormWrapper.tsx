@@ -374,51 +374,43 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
         }
     };
 
-    const populateFormWithExistingLocation = (existingLocation: ExistingLocation) => {
+    const populateFormWithExistingLocation = (existingLocation: any) => {
         console.log('Populating form with existing location:', existingLocation);
+        console.log('Available backend fields:', Object.keys(existingLocation));
 
-        // Populate basic fields - ALL UPPERCASE
-        locationForm.setValue('location_code', existingLocation.location_code?.toUpperCase() || '');
-        locationForm.setValue('location_name', existingLocation.location_name?.toUpperCase() || '');
+        // Map backend fields to form fields - ALL UPPERCASE
+        locationForm.setValue('location_code', existingLocation.code?.toUpperCase() || '');
+        locationForm.setValue('location_name', existingLocation.name?.toUpperCase() || '');
         locationForm.setValue('office_type', existingLocation.office_type?.toUpperCase() || '');
-        locationForm.setValue('province_code', existingLocation.province_code?.toUpperCase() || existingLocation.address?.province_code?.toUpperCase() || '');
-        locationForm.setValue('max_capacity', existingLocation.max_capacity || 0);
-        locationForm.setValue('current_capacity', existingLocation.current_capacity || 0);
-        locationForm.setValue('contact_phone', existingLocation.contact_phone || '');
-        locationForm.setValue('contact_email', existingLocation.contact_email?.toUpperCase() || '');
-        locationForm.setValue('is_operational', existingLocation.is_operational);
-        locationForm.setValue('notes', existingLocation.notes?.toUpperCase() || '');
+        locationForm.setValue('province_code', existingLocation.province_code?.toUpperCase() || '');
+        locationForm.setValue('max_capacity', existingLocation.max_daily_capacity || 0);
+        locationForm.setValue('current_capacity', existingLocation.current_staff_count || 0);
+        locationForm.setValue('contact_phone', existingLocation.phone_number || '');
+        locationForm.setValue('contact_email', existingLocation.email?.toUpperCase() || '');
+        locationForm.setValue('is_operational', existingLocation.is_operational ?? true);
+        locationForm.setValue('notes', existingLocation.special_notes?.toUpperCase() || '');
 
-        // Handle address - check for new structured format or fallback to legacy
-        if (existingLocation.address) {
-            // New structured format - ensure uppercase
-            locationForm.setValue('address', {
-                street_line1: existingLocation.address.street_line1?.toUpperCase() || '',
-                street_line2: existingLocation.address.street_line2?.toUpperCase() || '',
-                locality: existingLocation.address.locality?.toUpperCase() || '',
-                postal_code: existingLocation.address.postal_code || '',
-                town: existingLocation.address.town?.toUpperCase() || '',
-                province_code: existingLocation.address.province_code?.toUpperCase() || '',
-            });
-        } else if (existingLocation.location_address) {
-            // Parse legacy address string or set as street_line1
-            locationForm.setValue('address', {
-                street_line1: existingLocation.location_address.toUpperCase(),
-                street_line2: '',
-                locality: '',
-                postal_code: '',
-                town: '',
-                province_code: existingLocation.province_code?.toUpperCase() || '',
-            });
-        }
+        // Handle address - map backend fields to structured format
+        locationForm.setValue('address', {
+            street_line1: existingLocation.street_address?.toUpperCase() || '',
+            street_line2: '', // Not provided by backend
+            locality: existingLocation.locality?.toUpperCase() || '',
+            postal_code: existingLocation.postal_code?.toUpperCase() || '',
+            town: '', // Not provided separately by backend
+            province_code: existingLocation.province_code?.toUpperCase() || '',
+        });
 
-        // Handle operational schedule - check for new structured format or fallback to legacy
-        if (existingLocation.operational_schedule) {
-            locationForm.setValue('operational_schedule', existingLocation.operational_schedule);
-        } else if (existingLocation.operational_hours) {
-            // Parse legacy hours string or use default schedule
+        // Handle operational schedule - use default schedule since backend doesn't store structured format yet
+        if (existingLocation.operating_hours) {
+            // TODO: Parse the operating_hours string into structured format if needed
+            locationForm.setValue('operational_schedule', createDefaultSchedule());
+        } else {
+            // Use default schedule
             locationForm.setValue('operational_schedule', createDefaultSchedule());
         }
+
+        // Log final form values for debugging
+        console.log('Form values after population:', locationForm.getValues());
     };
 
     // Context-aware completion handler
