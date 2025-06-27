@@ -1,7 +1,7 @@
 /**
- * LocationFormWrapper - Reusable Location Form Component
- * Handles location creation/editing with context-aware navigation
- * Multi-step form for Madagascar office locations
+ * LocationFormWrapper - Enhanced Location Form Component  
+ * Handles location creation/editing with structured addresses and operational schedules
+ * Multi-step form for Madagascar office locations with 1400px styling
  */
 
 import React, { useState, useEffect } from 'react';
@@ -25,8 +25,7 @@ import {
     CardContent,
     FormControlLabel,
     Switch,
-    IconButton,
-    InputAdornment,
+    Checkbox,
     Chip,
     Stack,
     Dialog,
@@ -41,8 +40,10 @@ import {
     Clear as ClearIcon,
     ArrowForward as ArrowForwardIcon,
     ArrowBack as ArrowBackIcon,
+    Schedule as ScheduleIcon,
+    Home as HomeIcon,
 } from '@mui/icons-material';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useSearchParams } from 'react-router-dom';
@@ -55,18 +56,37 @@ import lookupService, {
 } from '../services/lookupService';
 
 // Types for Madagascar location management
+interface DaySchedule {
+    day: string;
+    is_open: boolean;
+    open_time: string;
+    close_time: string;
+}
+
+interface LocationAddress {
+    street_line1: string;
+    street_line2?: string;
+    locality: string;
+    postal_code: string;
+    town: string;
+    province_code: string;
+}
+
 interface LocationForm {
     // Basic Information
     location_code: string;
     location_name: string;
-    location_address: string;
-    province_code: string;
     office_type: string;
+
+    // Address Information (structured like person addresses)
+    address: LocationAddress;
 
     // Capacity and Operations
     max_capacity: number;
     current_capacity: number;
-    operational_hours: string;
+    
+    // Operational Hours (structured by day)
+    operational_schedule: DaySchedule[];
 
     // Contact Information
     contact_phone: string;
@@ -83,12 +103,14 @@ interface ExistingLocation {
     id: string;
     location_code: string;
     location_name: string;
-    location_address: string;
-    province_code: string;
+    location_address?: string; // Legacy field
+    address?: LocationAddress; // New structured address
+    province_code?: string; // Legacy field
     office_type: string;
     max_capacity: number;
     current_capacity: number;
-    operational_hours: string;
+    operational_hours?: string; // Legacy field
+    operational_schedule?: DaySchedule[]; // New structured schedule
     contact_phone: string;
     contact_email: string;
     is_operational: boolean;
@@ -97,16 +119,51 @@ interface ExistingLocation {
     updated_at: string;
 }
 
-// Enhanced validation schema with proper field validation
+// Time options in 15-minute increments
+const generateTimeOptions = () => {
+    const times = [];
+    for (let hour = 0; hour < 24; hour++) {
+        for (let minute = 0; minute < 60; minute += 15) {
+            const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+            times.push(timeString);
+        }
+    }
+    return times;
+};
+
+const TIME_OPTIONS = generateTimeOptions();
+
+// Enhanced validation schema
 const locationSchema = yup.object({
     location_code: yup.string().required('Location code is required').max(10),
     location_name: yup.string().required('Location name is required').max(100),
-    location_address: yup.string().required('Address is required').max(255),
-    province_code: yup.string().required('Province is required'),
     office_type: yup.string().required('Office type is required'),
+    address: yup.object({
+        street_line1: yup.string().max(100),
+        street_line2: yup.string().max(100),
+        locality: yup.string().required('Locality is required').max(100),
+        postal_code: yup.string().required('Postal code is required').matches(/^\d{3}$/, 'Postal code must be exactly 3 digits'),
+        town: yup.string().required('Town is required').max(100),
+        province_code: yup.string().required('Province is required'),
+    }),
     max_capacity: yup.number().required('Maximum capacity is required').min(0).max(1000),
     current_capacity: yup.number().required('Current capacity is required').min(0),
-    operational_hours: yup.string().max(100),
+    operational_schedule: yup.array().of(
+        yup.object({
+            day: yup.string().required(),
+            is_open: yup.boolean().required(),
+            open_time: yup.string().when('is_open', {
+                is: true,
+                then: () => yup.string().required('Open time is required when location is open'),
+                otherwise: () => yup.string(),
+            }),
+            close_time: yup.string().when('is_open', {
+                is: true,
+                then: () => yup.string().required('Close time is required when location is open'),
+                otherwise: () => yup.string(),
+            }),
+        })
+    ),
     contact_phone: yup.string()
         .matches(/^[0-9+\-\s()]*$/, 'Phone number can only contain numbers, +, -, spaces, and parentheses')
         .max(20),
@@ -118,8 +175,8 @@ const locationSchema = yup.object({
 
 const steps = [
     'Basic Information',
-    'Address & Province',
-    'Capacity & Operations',
+    'Address Information', 
+    'Operational Schedule',
     'Contact Details',
     'Review & Submit',
 ];
@@ -169,29 +226,49 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
     const [provinces, setProvinces] = useState<Province[]>([]);
     const [lookupsLoading, setLookupsLoading] = useState(true);
 
-    // Sequential code generation state
-    const [nextLocationCode, setNextLocationCode] = useState<string>('');
-    const [generatingCode, setGeneratingCode] = useState(false);
+    // Helper function to create default schedule
+    const createDefaultSchedule = (): DaySchedule[] => {
+        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        return days.map(day => ({
+            day,
+            is_open: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].includes(day),
+            open_time: '08:00',
+            close_time: '17:00'
+        }));
+    };
 
-    // Main location form with isolated field rendering per step
+    // Main location form
     const locationForm = useForm<LocationForm>({
         resolver: yupResolver(locationSchema),
-        mode: 'onChange', // Validate on change to prevent cross-step issues
+        mode: 'onChange',
         defaultValues: {
             location_code: '',
             location_name: '',
-            location_address: '',
-            province_code: '',
             office_type: '',
+            address: {
+                street_line1: '',
+                street_line2: '',
+                locality: '',
+                postal_code: '',
+                town: '',
+                province_code: '',
+            },
             max_capacity: 0,
             current_capacity: 0,
-            operational_hours: 'Monday - Friday: 08:00 - 17:00',
+            operational_schedule: createDefaultSchedule(),
             contact_phone: '',
             contact_email: '',
             is_operational: true,
             notes: '',
         },
     });
+
+    const { fields: scheduleFields } = useFieldArray({
+        control: locationForm.control,
+        name: 'operational_schedule',
+    });
+
+    // Continue with component logic...
 
     // Load lookup data on component mount
     useEffect(() => {
@@ -227,7 +304,7 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
         ) {
             // Set first option from each enum as default
             locationForm.setValue('office_type', officeTypes[0].value);
-            locationForm.setValue('province_code', provinces[0].code);
+            locationForm.setValue('address.province_code', provinces[0].code);
         }
     }, [lookupsLoading, officeTypes, provinces, isEditMode, locationFound, locationForm]);
 
@@ -244,13 +321,10 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
         if (!provinceCode || isEditMode) return;
 
         try {
-            setGeneratingCode(true);
-            
             // Call backend to get next sequential code for this province
             const response = await api.get(API_ENDPOINTS.locations + `/next-code/${provinceCode}`);
             const nextCode = (response as any).code || `${provinceCode}01`;
             
-            setNextLocationCode(nextCode);
             locationForm.setValue('location_code', nextCode);
             
             console.log(`Generated next location code for province ${provinceCode}: ${nextCode}`);
@@ -259,20 +333,17 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
             
             // Fallback: generate basic sequential code
             const fallbackCode = `${provinceCode}01`;
-            setNextLocationCode(fallbackCode);
             locationForm.setValue('location_code', fallbackCode);
-        } finally {
-            setGeneratingCode(false);
         }
     };
 
     // Watch province code changes for automatic code generation
-    const watchedProvinceCode = locationForm.watch('province_code');
+    const watchedAddress = locationForm.watch('address');
     useEffect(() => {
-        if (watchedProvinceCode && !isEditMode) {
-            generateSequentialLocationCode(watchedProvinceCode);
+        if (watchedAddress?.province_code && !isEditMode) {
+            generateSequentialLocationCode(watchedAddress.province_code);
         }
-    }, [watchedProvinceCode, isEditMode]);
+    }, [watchedAddress?.province_code, isEditMode]);
 
     // Fetch existing location for editing
     const fetchLocationForEditing = async (locationId: string) => {
@@ -300,19 +371,47 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
     const populateFormWithExistingLocation = (existingLocation: ExistingLocation) => {
         console.log('Populating form with existing location:', existingLocation);
 
-        // Populate all form fields
-        locationForm.setValue('location_code', existingLocation.location_code || '');
-        locationForm.setValue('location_name', existingLocation.location_name || '');
-        locationForm.setValue('location_address', existingLocation.location_address || '');
-        locationForm.setValue('province_code', existingLocation.province_code || '');
-        locationForm.setValue('office_type', existingLocation.office_type || '');
+        // Populate basic fields - ALL UPPERCASE
+        locationForm.setValue('location_code', existingLocation.location_code?.toUpperCase() || '');
+        locationForm.setValue('location_name', existingLocation.location_name?.toUpperCase() || '');
+        locationForm.setValue('office_type', existingLocation.office_type?.toUpperCase() || '');
         locationForm.setValue('max_capacity', existingLocation.max_capacity || 0);
         locationForm.setValue('current_capacity', existingLocation.current_capacity || 0);
-        locationForm.setValue('operational_hours', existingLocation.operational_hours || '');
         locationForm.setValue('contact_phone', existingLocation.contact_phone || '');
-        locationForm.setValue('contact_email', existingLocation.contact_email || '');
+        locationForm.setValue('contact_email', existingLocation.contact_email?.toUpperCase() || '');
         locationForm.setValue('is_operational', existingLocation.is_operational);
-        locationForm.setValue('notes', existingLocation.notes || '');
+        locationForm.setValue('notes', existingLocation.notes?.toUpperCase() || '');
+
+        // Handle address - check for new structured format or fallback to legacy
+        if (existingLocation.address) {
+            // New structured format - ensure uppercase
+            locationForm.setValue('address', {
+                street_line1: existingLocation.address.street_line1?.toUpperCase() || '',
+                street_line2: existingLocation.address.street_line2?.toUpperCase() || '',
+                locality: existingLocation.address.locality?.toUpperCase() || '',
+                postal_code: existingLocation.address.postal_code || '',
+                town: existingLocation.address.town?.toUpperCase() || '',
+                province_code: existingLocation.address.province_code?.toUpperCase() || '',
+            });
+        } else if (existingLocation.location_address) {
+            // Parse legacy address string or set as street_line1
+            locationForm.setValue('address', {
+                street_line1: existingLocation.location_address.toUpperCase(),
+                street_line2: '',
+                locality: '',
+                postal_code: '',
+                town: '',
+                province_code: existingLocation.province_code?.toUpperCase() || '',
+            });
+        }
+
+        // Handle operational schedule - check for new structured format or fallback to legacy
+        if (existingLocation.operational_schedule) {
+            locationForm.setValue('operational_schedule', existingLocation.operational_schedule);
+        } else if (existingLocation.operational_hours) {
+            // Parse legacy hours string or use default schedule
+            locationForm.setValue('operational_schedule', createDefaultSchedule());
+        }
     };
 
     // Context-aware completion handler
@@ -381,8 +480,8 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
     const getStepFields = (step: number) => {
         const stepFieldMap = [
             ['location_code', 'location_name', 'office_type'], // Basic Information
-            ['location_address', 'province_code'], // Address & Province
-            ['max_capacity', 'current_capacity'], // Capacity & Operations
+            ['address.locality', 'address.postal_code', 'address.town', 'address.province_code'], // Address Information
+            [], // Operational Schedule (custom validation)
             [], // Contact Details (optional)
             [], // Review
         ];
@@ -417,18 +516,24 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
             const formData = locationForm.getValues();
             console.log('Raw form data:', formData);
 
-            // Transform form data to match backend schema
+            // Transform form data to match backend schema - ALL UPPERCASE
             const locationPayload = {
                 location_code: formData.location_code?.toUpperCase() || '',
                 location_name: formData.location_name?.toUpperCase() || '',
-                location_address: formData.location_address?.toUpperCase() || '',
-                province_code: formData.province_code?.toUpperCase() || '',
                 office_type: formData.office_type?.toUpperCase() || '',
+                address: {
+                    street_line1: formData.address?.street_line1?.toUpperCase() || '',
+                    street_line2: formData.address?.street_line2?.toUpperCase() || '',
+                    locality: formData.address?.locality?.toUpperCase() || '',
+                    postal_code: formData.address?.postal_code || '',
+                    town: formData.address?.town?.toUpperCase() || '',
+                    province_code: formData.address?.province_code?.toUpperCase() || '',
+                },
                 max_capacity: formData.max_capacity || 0,
                 current_capacity: formData.current_capacity || 0,
-                operational_hours: formData.operational_hours || '',
+                operational_schedule: formData.operational_schedule || [],
                 contact_phone: formData.contact_phone || '',
-                contact_email: formData.contact_email?.toLowerCase() || '',
+                contact_email: formData.contact_email?.toUpperCase() || '',
                 is_operational: formData.is_operational,
                 notes: formData.notes?.toUpperCase() || '',
             };
@@ -467,23 +572,22 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
         setStepValidation(new Array(steps.length).fill(false));
         setShowSuccessDialog(false);
         setCreatedLocation(null);
-        setNextLocationCode('');
         locationForm.reset();
     };
 
-    // Render step content with unique keys to prevent field value carryover
+    // Render step content
     const renderStepContent = () => {
         switch (currentStep) {
             case 0:
-                return <div key={`step-basic-${currentStep}`}>{renderBasicInformationStep()}</div>;
+                return renderBasicInformationStep();
             case 1:
-                return <div key={`step-address-${currentStep}`}>{renderAddressProvinceStep()}</div>;
+                return renderAddressStep();
             case 2:
-                return <div key={`step-capacity-${currentStep}`}>{renderCapacityOperationsStep()}</div>;
+                return renderOperationalScheduleStep();
             case 3:
-                return <div key={`step-contact-${currentStep}`}>{renderContactDetailsStep()}</div>;
+                return renderContactDetailsStep();
             case 4:
-                return <div key={`step-review-${currentStep}`}>{renderReviewStep()}</div>;
+                return renderReviewStep();
             default:
                 return null;
         }
@@ -497,241 +601,374 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                 </Typography>
 
                 <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
-                    <Controller
-                        name="location_code"
-                        control={locationForm.control}
-                        key="location-code-controller"
-                        render={({ field }) => (
-                            <TextField
-                                {...field}
-                                id="location-code-input"
-                                fullWidth
-                                label="Location Code *"
-                                error={!!locationForm.formState.errors.location_code}
-                                helperText={locationForm.formState.errors.location_code?.message || 'Auto-generated based on province (e.g., T01, A02)'}
-                                inputProps={{ maxLength: 10 }}
-                                disabled={isEditMode || generatingCode}
-                                InputProps={{
-                                    endAdornment: generatingCode ? (
-                                        <InputAdornment position="end">
-                                            <Typography variant="caption" color="text.secondary">
-                                                Generating...
-                                            </Typography>
-                                        </InputAdornment>
-                                    ) : undefined,
-                                }}
-                                onChange={(e) => {
-                                    const value = e.target.value.toUpperCase();
-                                    field.onChange(value);
-                                }}
-                            />
-                        )}
-                    />
-                </Grid>
+                    <Grid item xs={12} md={6}>
+                        <Controller
+                            name="location_code"
+                            control={locationForm.control}
+                            render={({ field }) => (
+                                <TextField
+                                    {...field}
+                                    fullWidth
+                                    label="Location Code *"
+                                    error={!!locationForm.formState.errors.location_code}
+                                    helperText={locationForm.formState.errors.location_code?.message || 'Auto-generated based on province (e.g., T01, A02)'}
+                                    inputProps={{ maxLength: 10 }}
+                                    disabled={isEditMode}
+                                    onChange={(e) => {
+                                        const value = e.target.value.toUpperCase();
+                                        field.onChange(value);
+                                    }}
+                                />
+                            )}
+                        />
+                    </Grid>
 
-                <Grid item xs={12} md={6}>
-                    <Controller
-                        name="office_type"
-                        control={locationForm.control}
-                        key="office-type-controller"
-                        render={({ field }) => (
-                            <FormControl fullWidth error={!!locationForm.formState.errors.office_type}>
-                                <InputLabel id="location-office-type-label">Office Type *</InputLabel>
-                                <Select 
-                                    {...field} 
-                                    labelId="location-office-type-label"
-                                    id="location-office-type-select"
-                                    label="Office Type *"
-                                >
-                                    {officeTypes.map((option) => (
-                                        <MenuItem key={option.value} value={option.value}>
-                                            {option.label}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                                <FormHelperText>
-                                    {locationForm.formState.errors.office_type?.message || 'Type of office location'}
-                                </FormHelperText>
-                            </FormControl>
-                        )}
-                    />
-                </Grid>
+                    <Grid item xs={12} md={6}>
+                        <Controller
+                            name="office_type"
+                            control={locationForm.control}
+                            render={({ field }) => (
+                                <FormControl fullWidth error={!!locationForm.formState.errors.office_type}>
+                                    <InputLabel>Office Type *</InputLabel>
+                                    <Select {...field} label="Office Type *">
+                                        {officeTypes.map((option) => (
+                                            <MenuItem key={option.value} value={option.value}>
+                                                {option.label}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                    <FormHelperText>
+                                        {locationForm.formState.errors.office_type?.message || 'Type of office location'}
+                                    </FormHelperText>
+                                </FormControl>
+                            )}
+                        />
+                    </Grid>
 
-                <Grid item xs={12}>
-                    <Controller
-                        name="location_name"
-                        control={locationForm.control}
-                        key="location-name-controller"
-                        render={({ field }) => (
-                            <TextField
-                                {...field}
-                                id="location-name-input"
-                                fullWidth
-                                label="Location Name *"
-                                error={!!locationForm.formState.errors.location_name}
-                                helperText={locationForm.formState.errors.location_name?.message || 'Full name of the location'}
-                                inputProps={{ maxLength: 100 }}
-                                onChange={(e) => {
-                                    const value = e.target.value.toUpperCase();
-                                    field.onChange(value);
-                                }}
-                            />
-                        )}
-                    />
+                    <Grid item xs={12}>
+                        <Controller
+                            name="location_name"
+                            control={locationForm.control}
+                            render={({ field }) => (
+                                <TextField
+                                    {...field}
+                                    fullWidth
+                                    label="Location Name *"
+                                    error={!!locationForm.formState.errors.location_name}
+                                    helperText={locationForm.formState.errors.location_name?.message || 'Full name of the location'}
+                                    inputProps={{ maxLength: 100 }}
+                                    onChange={(e) => {
+                                        const value = e.target.value.toUpperCase();
+                                        field.onChange(value);
+                                    }}
+                                />
+                            )}
+                        />
+                    </Grid>
                 </Grid>
-                            </Grid>
             </CardContent>
         </Card>
     );
 
-    const renderAddressProvinceStep = () => (
+    const renderAddressStep = () => (
         <Card>
             <CardContent>
-                <Typography variant="h6" gutterBottom>
-                    Address & Province
+                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <HomeIcon color="primary" />
+                    Address Information
                 </Typography>
 
-                <Grid container spacing={3}>
-                <Grid item xs={12}>
-                    <Controller
-                        name="location_address"
-                        control={locationForm.control}
-                        render={({ field }) => (
-                            <TextField
-                                {...field}
-                                id="location-address-input"
-                                fullWidth
-                                multiline
-                                rows={3}
-                                label="Location Address *"
-                                error={!!locationForm.formState.errors.location_address}
-                                helperText={locationForm.formState.errors.location_address?.message || 'Complete address of the location'}
-                                inputProps={{ maxLength: 255 }}
-                                onChange={(e) => {
-                                    const value = e.target.value.toUpperCase();
-                                    field.onChange(value);
-                                }}
-                            />
-                        )}
-                    />
-                </Grid>
+                <Box sx={{ mb: 4, p: 3, border: '1px solid #e0e0e0', borderRadius: 2, backgroundColor: '#fafafa' }}>
+                    <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, color: 'primary.main' }}>
+                        Location Address
+                    </Typography>
 
-                <Grid item xs={12} md={6}>
-                    <Controller
-                        name="province_code"
-                        control={locationForm.control}
-                        render={({ field }) => (
-                            <FormControl fullWidth error={!!locationForm.formState.errors.province_code}>
-                                <InputLabel id="location-province-label">Province *</InputLabel>
-                                <Select 
-                                    {...field} 
-                                    labelId="location-province-label"
-                                    id="location-province-select"
-                                    label="Province *"
-                                >
-                                    {provinces.map((option) => (
-                                        <MenuItem key={option.code} value={option.code}>
-                                            {option.name}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                                <FormHelperText>
-                                    {locationForm.formState.errors.province_code?.message || 'Madagascar province/region'}
-                                </FormHelperText>
-                            </FormControl>
-                        )}
-                    />
-                </Grid>
-                            </Grid>
-            </CardContent>
-        </Card>
-    );
-
-    const renderCapacityOperationsStep = () => (
-        <Card>
-            <CardContent>
-                <Typography variant="h6" gutterBottom>
-                    Capacity & Operations
-                </Typography>
-
-                <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
-                    <Controller
-                        name="max_capacity"
-                        control={locationForm.control}
-                        render={({ field }) => (
-                            <TextField
-                                {...field}
-                                id="location-max-capacity"
-                                fullWidth
-                                type="number"
-                                label="Maximum Capacity *"
-                                error={!!locationForm.formState.errors.max_capacity}
-                                helperText={locationForm.formState.errors.max_capacity?.message || 'Maximum daily processing capacity'}
-                                inputProps={{ min: 0, max: 1000 }}
-                            />
-                        )}
-                    />
-                </Grid>
-
-                <Grid item xs={12} md={6}>
-                    <Controller
-                        name="current_capacity"
-                        control={locationForm.control}
-                        render={({ field }) => (
-                            <TextField
-                                {...field}
-                                id="location-current-capacity"
-                                fullWidth
-                                type="number"
-                                label="Current Capacity *"
-                                error={!!locationForm.formState.errors.current_capacity}
-                                helperText={locationForm.formState.errors.current_capacity?.message || 'Current daily usage'}
-                                inputProps={{ min: 0 }}
-                            />
-                        )}
-                    />
-                </Grid>
-
-                <Grid item xs={12}>
-                    <Controller
-                        name="operational_hours"
-                        control={locationForm.control}
-                        render={({ field }) => (
-                            <TextField
-                                {...field}
-                                id="location-operational-hours"
-                                fullWidth
-                                label="Operational Hours"
-                                placeholder="Monday - Friday: 08:00 - 17:00"
-                                helperText="Operating hours for this location"
-                                inputProps={{ maxLength: 100 }}
-                            />
-                        )}
-                    />
-                </Grid>
-
-                <Grid item xs={12}>
-                    <Controller
-                        name="is_operational"
-                        control={locationForm.control}
-                        render={({ field }) => (
-                            <FormControlLabel
-                                control={
-                                    <Switch 
-                                        {...field} 
-                                        checked={field.value}
-                                        id="location-is-operational" 
+                    <Grid container spacing={3}>
+                        <Grid item xs={12} md={6}>
+                            <Controller
+                                name="address.street_line1"
+                                control={locationForm.control}
+                                render={({ field }) => (
+                                    <TextField
+                                        {...field}
+                                        fullWidth
+                                        label="Street Line 1"
+                                        helperText="Street address line 1"
+                                        onChange={(e) => {
+                                            const value = e.target.value.toUpperCase();
+                                            field.onChange(value);
+                                        }}
                                     />
-                                }
-                                label="Location is Operational"
-                                sx={{ mt: 2 }}
+                                )}
                             />
-                        )}
-                    />
-                </Grid>
+                        </Grid>
+
+                        <Grid item xs={12} md={6}>
+                            <Controller
+                                name="address.street_line2"
+                                control={locationForm.control}
+                                render={({ field }) => (
+                                    <TextField
+                                        {...field}
+                                        fullWidth
+                                        label="Street Line 2"
+                                        helperText="Street address line 2 (optional)"
+                                        onChange={(e) => {
+                                            const value = e.target.value.toUpperCase();
+                                            field.onChange(value);
+                                        }}
+                                    />
+                                )}
+                            />
+                        </Grid>
+
+                        <Grid item xs={12} md={4}>
+                            <Controller
+                                name="address.locality"
+                                control={locationForm.control}
+                                render={({ field }) => (
+                                    <TextField
+                                        {...field}
+                                        fullWidth
+                                        label="Locality *"
+                                        error={!!locationForm.formState.errors.address?.locality}
+                                        helperText={locationForm.formState.errors.address?.locality?.message || 'Village, quartier, or city district'}
+                                        onChange={(e) => {
+                                            const value = e.target.value.toUpperCase();
+                                            field.onChange(value);
+                                        }}
+                                    />
+                                )}
+                            />
+                        </Grid>
+
+                        <Grid item xs={12} md={3}>
+                            <Controller
+                                name="address.postal_code"
+                                control={locationForm.control}
+                                render={({ field }) => (
+                                    <TextField
+                                        {...field}
+                                        fullWidth
+                                        label="Postal Code *"
+                                        placeholder="### (3 digits)"
+                                        error={!!locationForm.formState.errors.address?.postal_code}
+                                        helperText={locationForm.formState.errors.address?.postal_code?.message || 'Madagascar postal code (3 digits)'}
+                                        inputProps={{
+                                            maxLength: 3,
+                                            pattern: '[0-9]*',
+                                            inputMode: 'numeric'
+                                        }}
+                                        onChange={(e) => {
+                                            const value = e.target.value.replace(/\D/g, '');
+                                            field.onChange(value);
+                                        }}
+                                    />
+                                )}
+                            />
+                        </Grid>
+
+                        <Grid item xs={12} md={3}>
+                            <Controller
+                                name="address.town"
+                                control={locationForm.control}
+                                render={({ field }) => (
+                                    <TextField
+                                        {...field}
+                                        fullWidth
+                                        label="Town *"
+                                        error={!!locationForm.formState.errors.address?.town}
+                                        helperText={locationForm.formState.errors.address?.town?.message || 'Town or city'}
+                                        onChange={(e) => {
+                                            const value = e.target.value.toUpperCase();
+                                            field.onChange(value);
+                                        }}
+                                    />
+                                )}
+                            />
+                        </Grid>
+
+                        <Grid item xs={12} md={2}>
+                            <Controller
+                                name="address.province_code"
+                                control={locationForm.control}
+                                render={({ field }) => (
+                                    <FormControl fullWidth error={!!locationForm.formState.errors.address?.province_code}>
+                                        <InputLabel>Province *</InputLabel>
+                                        <Select {...field} label="Province *">
+                                            {provinces.map((option) => (
+                                                <MenuItem key={option.code} value={option.code}>
+                                                    {option.name}
+                                                </MenuItem>
+                                            ))}
+                                        </Select>
+                                        <FormHelperText>
+                                            {locationForm.formState.errors.address?.province_code?.message || 'Madagascar province'}
+                                        </FormHelperText>
+                                    </FormControl>
+                                )}
+                            />
+                        </Grid>
+                    </Grid>
+                </Box>
+            </CardContent>
+        </Card>
+    );
+
+    const renderOperationalScheduleStep = () => (
+        <Card>
+            <CardContent>
+                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <ScheduleIcon color="primary" />
+                    Operational Schedule
+                </Typography>
+
+                <Typography variant="body2" color="text.secondary" gutterBottom sx={{ mb: 3 }}>
+                    Set the operating hours for each day of the week. Use 15-minute increments.
+                </Typography>
+
+                {scheduleFields.map((field, index) => (
+                    <Box key={field.id} sx={{ mb: 3, p: 3, border: '1px solid #e0e0e0', borderRadius: 2, backgroundColor: '#fafafa' }}>
+                        <Grid container spacing={3} alignItems="center">
+                            <Grid item xs={12} md={2}>
+                                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                                    {field.day}
+                                </Typography>
                             </Grid>
+
+                            <Grid item xs={12} md={2}>
+                                <Controller
+                                    name={`operational_schedule.${index}.is_open`}
+                                    control={locationForm.control}
+                                    render={({ field: checkboxField }) => (
+                                        <FormControlLabel
+                                            control={
+                                                <Checkbox
+                                                    {...checkboxField}
+                                                    checked={checkboxField.value}
+                                                    color="primary"
+                                                />
+                                            }
+                                            label="Open"
+                                        />
+                                    )}
+                                />
+                            </Grid>
+
+                            {locationForm.watch(`operational_schedule.${index}.is_open`) && (
+                                <>
+                                    <Grid item xs={12} md={4}>
+                                        <Controller
+                                            name={`operational_schedule.${index}.open_time`}
+                                            control={locationForm.control}
+                                            render={({ field: timeField }) => (
+                                                <FormControl fullWidth>
+                                                    <InputLabel>Open Time</InputLabel>
+                                                    <Select {...timeField} label="Open Time">
+                                                        {TIME_OPTIONS.map((time) => (
+                                                            <MenuItem key={time} value={time}>
+                                                                {time}
+                                                            </MenuItem>
+                                                        ))}
+                                                    </Select>
+                                                </FormControl>
+                                            )}
+                                        />
+                                    </Grid>
+
+                                    <Grid item xs={12} md={4}>
+                                        <Controller
+                                            name={`operational_schedule.${index}.close_time`}
+                                            control={locationForm.control}
+                                            render={({ field: timeField }) => (
+                                                <FormControl fullWidth>
+                                                    <InputLabel>Close Time</InputLabel>
+                                                    <Select {...timeField} label="Close Time">
+                                                        {TIME_OPTIONS.map((time) => (
+                                                            <MenuItem key={time} value={time}>
+                                                                {time}
+                                                            </MenuItem>
+                                                        ))}
+                                                    </Select>
+                                                </FormControl>
+                                            )}
+                                        />
+                                    </Grid>
+                                </>
+                            )}
+
+                            {!locationForm.watch(`operational_schedule.${index}.is_open`) && (
+                                <Grid item xs={12} md={8}>
+                                    <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                                        Closed
+                                    </Typography>
+                                </Grid>
+                            )}
+                        </Grid>
+                    </Box>
+                ))}
+
+                <Box sx={{ mt: 3, p: 2, bgcolor: 'info.50', borderRadius: 1 }}>
+                    <Typography variant="subtitle2" gutterBottom>
+                        Capacity & Operations
+                    </Typography>
+                    <Grid container spacing={3}>
+                        <Grid item xs={12} md={6}>
+                            <Controller
+                                name="max_capacity"
+                                control={locationForm.control}
+                                render={({ field }) => (
+                                    <TextField
+                                        {...field}
+                                        fullWidth
+                                        type="number"
+                                        label="Maximum Capacity *"
+                                        error={!!locationForm.formState.errors.max_capacity}
+                                        helperText={locationForm.formState.errors.max_capacity?.message || 'Maximum people this location can serve'}
+                                        inputProps={{ min: 0, max: 1000 }}
+                                    />
+                                )}
+                            />
+                        </Grid>
+
+                        <Grid item xs={12} md={6}>
+                            <Controller
+                                name="current_capacity"
+                                control={locationForm.control}
+                                render={({ field }) => (
+                                    <TextField
+                                        {...field}
+                                        fullWidth
+                                        type="number"
+                                        label="Current Capacity *"
+                                        error={!!locationForm.formState.errors.current_capacity}
+                                        helperText={locationForm.formState.errors.current_capacity?.message || 'Current number of people being served'}
+                                        inputProps={{ min: 0 }}
+                                    />
+                                )}
+                            />
+                        </Grid>
+
+                        <Grid item xs={12}>
+                            <Controller
+                                name="is_operational"
+                                control={locationForm.control}
+                                render={({ field }) => (
+                                    <FormControlLabel
+                                        control={
+                                            <Switch
+                                                {...field}
+                                                checked={field.value}
+                                                color="primary"
+                                            />
+                                        }
+                                        label="Location is Operational"
+                                    />
+                                )}
+                            />
+                        </Grid>
+                    </Grid>
+                </Box>
             </CardContent>
         </Card>
     );
@@ -740,80 +977,73 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
         <Card>
             <CardContent>
                 <Typography variant="h6" gutterBottom>
-                    Contact Details
+                    Contact Information
                 </Typography>
 
                 <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
-                    <Controller
-                        name="contact_phone"
-                        control={locationForm.control}
-                        render={({ field }) => (
-                            <TextField
-                                {...field}
-                                id="location-contact-phone"
-                                fullWidth
-                                label="Contact Phone"
-                                error={!!locationForm.formState.errors.contact_phone}
-                                helperText={locationForm.formState.errors.contact_phone?.message || 'Phone number for this location'}
-                                inputProps={{ maxLength: 20 }}
-                                onChange={(e) => {
-                                    // Allow only numbers, +, -, spaces, and parentheses
-                                    const value = e.target.value.replace(/[^0-9+\-\s()]/g, '');
-                                    field.onChange(value);
-                                }}
-                            />
-                        )}
-                    />
-                </Grid>
+                    <Grid item xs={12} md={6}>
+                        <Controller
+                            name="contact_phone"
+                            control={locationForm.control}
+                            render={({ field }) => (
+                                <TextField
+                                    {...field}
+                                    fullWidth
+                                    label="Contact Phone"
+                                    error={!!locationForm.formState.errors.contact_phone}
+                                    helperText={locationForm.formState.errors.contact_phone?.message || 'Phone number for this location'}
+                                    inputProps={{
+                                        maxLength: 20,
+                                        pattern: '[0-9+\\-\\s()]*'
+                                    }}
+                                />
+                            )}
+                        />
+                    </Grid>
 
-                <Grid item xs={12} md={6}>
-                    <Controller
-                        name="contact_email"
-                        control={locationForm.control}
-                        render={({ field }) => (
-                            <TextField
-                                {...field}
-                                id="location-contact-email"
-                                fullWidth
-                                type="email"
-                                label="Contact Email"
-                                error={!!locationForm.formState.errors.contact_email}
-                                helperText={locationForm.formState.errors.contact_email?.message || 'Email address for this location'}
-                                inputProps={{ maxLength: 100 }}
-                                onChange={(e) => {
-                                    // Keep email in lowercase for proper formatting
-                                    const value = e.target.value.toLowerCase();
-                                    field.onChange(value);
-                                }}
-                            />
-                        )}
-                    />
-                </Grid>
+                    <Grid item xs={12} md={6}>
+                        <Controller
+                            name="contact_email"
+                            control={locationForm.control}
+                            render={({ field }) => (
+                                <TextField
+                                    {...field}
+                                    fullWidth
+                                    type="email"
+                                    label="Contact Email"
+                                    error={!!locationForm.formState.errors.contact_email}
+                                    helperText={locationForm.formState.errors.contact_email?.message || 'Email address for this location'}
+                                    onChange={(e) => {
+                                        const value = e.target.value.toUpperCase();
+                                        field.onChange(value);
+                                    }}
+                                />
+                            )}
+                        />
+                    </Grid>
 
-                <Grid item xs={12}>
-                    <Controller
-                        name="notes"
-                        control={locationForm.control}
-                        render={({ field }) => (
-                            <TextField
-                                {...field}
-                                id="location-notes"
-                                fullWidth
-                                multiline
-                                rows={4}
-                                label="Notes"
-                                placeholder="Additional information about this location..."
-                                helperText="Optional notes or special instructions"
-                                inputProps={{ maxLength: 500 }}
-                                onChange={(e) => {
-                                    const value = e.target.value.toUpperCase();
-                                    field.onChange(value);
-                                }}
-                            />
-                        )}
-                    />
-                </Grid>
+                    <Grid item xs={12}>
+                        <Controller
+                            name="notes"
+                            control={locationForm.control}
+                            render={({ field }) => (
+                                <TextField
+                                    {...field}
+                                    fullWidth
+                                    multiline
+                                    rows={4}
+                                    label="Notes"
+                                    error={!!locationForm.formState.errors.notes}
+                                    helperText={locationForm.formState.errors.notes?.message || 'Additional notes about this location (optional)'}
+                                    inputProps={{ maxLength: 500 }}
+                                    onChange={(e) => {
+                                        const value = e.target.value.toUpperCase();
+                                        field.onChange(value);
+                                    }}
+                                />
+                            )}
+                        />
+                    </Grid>
                 </Grid>
             </CardContent>
         </Card>
@@ -840,22 +1070,22 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                         </Typography>
 
                         <Grid container spacing={2}>
-                            <Grid item xs={12} md={6}>
-                                <Typography variant="subtitle2" color="text.secondary">Location Name</Typography>
-                                <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                    {formData.location_name}
-                                </Typography>
-                            </Grid>
-                            <Grid item xs={12} md={3}>
+                            <Grid item xs={12} md={4}>
                                 <Typography variant="subtitle2" color="text.secondary">Location Code</Typography>
                                 <Typography variant="body1" sx={{ fontWeight: 500 }}>
                                     {formData.location_code}
                                 </Typography>
                             </Grid>
-                            <Grid item xs={12} md={3}>
+                            <Grid item xs={12} md={4}>
+                                <Typography variant="subtitle2" color="text.secondary">Location Name</Typography>
+                                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                    {formData.location_name}
+                                </Typography>
+                            </Grid>
+                            <Grid item xs={12} md={4}>
                                 <Typography variant="subtitle2" color="text.secondary">Office Type</Typography>
                                 <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                    {officeTypes.find(t => t.value === formData.office_type)?.label || formData.office_type}
+                                    {officeTypes.find(type => type.value === formData.office_type)?.label || formData.office_type}
                                 </Typography>
                             </Grid>
                         </Grid>
@@ -864,102 +1094,123 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                     {/* Address Summary */}
                     <Box sx={{ mb: 4, p: 3, border: '1px solid #e0e0e0', borderRadius: 2, backgroundColor: '#fafafa' }}>
                         <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, color: 'primary.main' }}>
-                            Address & Location
+                            Address Information
                         </Typography>
 
                         <Grid container spacing={2}>
-                            <Grid item xs={12} md={8}>
-                                <Typography variant="subtitle2" color="text.secondary">Address</Typography>
+                            <Grid item xs={12}>
+                                <Typography variant="subtitle2" color="text.secondary">Full Address</Typography>
                                 <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                    {formData.location_address}
+                                    {[
+                                        formData.address?.street_line1,
+                                        formData.address?.street_line2,
+                                        formData.address?.locality,
+                                        formData.address?.town
+                                    ].filter(Boolean).join(', ')}
+                                    {formData.address?.postal_code && ` - ${formData.address.postal_code}`}
                                 </Typography>
                             </Grid>
-                            <Grid item xs={12} md={4}>
+                            <Grid item xs={12} md={6}>
                                 <Typography variant="subtitle2" color="text.secondary">Province</Typography>
                                 <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                    {provinces.find(p => p.code === formData.province_code)?.name || formData.province_code}
+                                    {provinces.find(p => p.code === formData.address?.province_code)?.name || formData.address?.province_code}
                                 </Typography>
                             </Grid>
                         </Grid>
                     </Box>
 
-                    {/* Operations Summary */}
+                    {/* Operational Schedule Summary */}
                     <Box sx={{ mb: 4, p: 3, border: '1px solid #e0e0e0', borderRadius: 2, backgroundColor: '#fafafa' }}>
                         <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, color: 'primary.main' }}>
-                            Operations & Capacity
+                            Operational Schedule
                         </Typography>
 
-                        <Grid container spacing={2}>
+                        <Grid container spacing={1}>
+                            {formData.operational_schedule?.map((schedule, index) => (
+                                <Grid item xs={12} sm={6} md={4} key={index}>
+                                    <Box sx={{ p: 1, border: '1px solid #e0e0e0', borderRadius: 1 }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                            {schedule.day}
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary">
+                                            {schedule.is_open 
+                                                ? `${schedule.open_time} - ${schedule.close_time}`
+                                                : 'Closed'
+                                            }
+                                        </Typography>
+                                    </Box>
+                                </Grid>
+                            ))}
+                        </Grid>
+
+                        <Grid container spacing={2} sx={{ mt: 2 }}>
                             <Grid item xs={12} md={4}>
-                                <Typography variant="subtitle2" color="text.secondary">Capacity</Typography>
+                                <Typography variant="subtitle2" color="text.secondary">Maximum Capacity</Typography>
                                 <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                    {formData.current_capacity} / {formData.max_capacity}
+                                    {formData.max_capacity} people
+                                </Typography>
+                            </Grid>
+                            <Grid item xs={12} md={4}>
+                                <Typography variant="subtitle2" color="text.secondary">Current Capacity</Typography>
+                                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                    {formData.current_capacity} people
                                 </Typography>
                             </Grid>
                             <Grid item xs={12} md={4}>
                                 <Typography variant="subtitle2" color="text.secondary">Status</Typography>
-                                <Chip
-                                    label={formData.is_operational ? 'Operational' : 'Closed'}
+                                <Chip 
+                                    label={formData.is_operational ? 'Operational' : 'Not Operational'} 
                                     color={formData.is_operational ? 'success' : 'error'}
                                     size="small"
                                 />
                             </Grid>
-                            {formData.operational_hours && (
-                                <Grid item xs={12}>
-                                    <Typography variant="subtitle2" color="text.secondary">Operating Hours</Typography>
+                        </Grid>
+                    </Box>
+
+                    {/* Contact Information Summary */}
+                    <Box sx={{ mb: 4, p: 3, border: '1px solid #e0e0e0', borderRadius: 2, backgroundColor: '#fafafa' }}>
+                        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, color: 'primary.main' }}>
+                            Contact Information
+                        </Typography>
+
+                        <Grid container spacing={2}>
+                            {formData.contact_phone && (
+                                <Grid item xs={12} md={6}>
+                                    <Typography variant="subtitle2" color="text.secondary">Phone</Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                        {formData.operational_hours}
+                                        {formData.contact_phone}
+                                    </Typography>
+                                </Grid>
+                            )}
+                            {formData.contact_email && (
+                                <Grid item xs={12} md={6}>
+                                    <Typography variant="subtitle2" color="text.secondary">Email</Typography>
+                                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                        {formData.contact_email}
+                                    </Typography>
+                                </Grid>
+                            )}
+                            {formData.notes && (
+                                <Grid item xs={12}>
+                                    <Typography variant="subtitle2" color="text.secondary">Notes</Typography>
+                                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                        {formData.notes}
                                     </Typography>
                                 </Grid>
                             )}
                         </Grid>
                     </Box>
 
-                    {/* Contact Information */}
-                    {(formData.contact_phone || formData.contact_email) && (
-                        <Box sx={{ mb: 4, p: 3, border: '1px solid #e0e0e0', borderRadius: 2, backgroundColor: '#fafafa' }}>
-                            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, color: 'primary.main' }}>
-                                Contact Information
-                            </Typography>
-
-                            <Grid container spacing={2}>
-                                {formData.contact_phone && (
-                                    <Grid item xs={12} md={6}>
-                                        <Typography variant="subtitle2" color="text.secondary">Phone</Typography>
-                                        <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                            {formData.contact_phone}
-                                        </Typography>
-                                    </Grid>
-                                )}
-                                {formData.contact_email && (
-                                    <Grid item xs={12} md={6}>
-                                        <Typography variant="subtitle2" color="text.secondary">Email</Typography>
-                                        <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                            {formData.contact_email}
-                                        </Typography>
-                                    </Grid>
-                                )}
-                            </Grid>
-                        </Box>
-                    )}
-
-                    {formData.notes && (
-                        <Box sx={{ mb: 4, p: 3, border: '1px solid #e0e0e0', borderRadius: 2, backgroundColor: '#fafafa' }}>
-                            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, color: 'primary.main' }}>
-                                Notes
-                            </Typography>
-                            <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                {formData.notes}
-                            </Typography>
-                        </Box>
-                    )}
-
                     <Alert severity="success" sx={{ mt: 3 }}>
                         <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                             Ready to {isEditMode ? 'Update' : 'Create'} Location
                         </Typography>
                         <Typography variant="body2">
-                            All required information has been provided and validated.
+                            • Address: {[formData.address?.locality, formData.address?.town].filter(Boolean).join(', ')}
+                            <br />
+                            • Open Days: {formData.operational_schedule?.filter(s => s.is_open).length || 0} day(s)
+                            <br />
+                            • Capacity: {formData.max_capacity} maximum
                         </Typography>
                     </Alert>
                 </CardContent>
@@ -988,8 +1239,12 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
         );
     }
 
+    if (lookupsLoading) {
+        return <Box sx={{ p: 3, textAlign: 'center' }}>Loading...</Box>;
+    }
+
     return (
-        <Box sx={{ maxWidth: 1200, mx: 'auto', p: mode === 'embedded' ? 0 : 0 }}>
+        <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
             {showHeader && (
                 <>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -1025,61 +1280,60 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
             )}
 
             {/* Stepper */}
-            <Box sx={{ mb: 3 }}>
+            <Paper sx={{ p: 3, mb: 3 }}>
                 <Stepper activeStep={currentStep} alternativeLabel>
-                    {steps.map((label, index) => {
-                        const canNavigate = index < currentStep || stepValidation[index];
-                        return (
-                            <Step key={label} completed={stepValidation[index]}>
-                                <StepLabel
-                                    onClick={() => canNavigate && handleStepClick(index)}
-                                    sx={{
-                                        cursor: canNavigate ? 'pointer' : 'default',
-                                        '&:hover': canNavigate ? { opacity: 0.8 } : {},
-                                    }}
-                                >
-                                    {label}
-                                </StepLabel>
-                            </Step>
-                        );
-                    })}
+                    {steps.map((label, index) => (
+                        <Step key={label} completed={stepValidation[index]}>
+                            <StepLabel
+                                onClick={() => handleStepClick(index)}
+                                sx={{
+                                    cursor: (index < currentStep || stepValidation[index]) ? 'pointer' : 'default',
+                                    '&:hover': (index < currentStep || stepValidation[index]) ? { opacity: 0.8 } : {},
+                                }}
+                            >
+                                {label}
+                            </StepLabel>
+                        </Step>
+                    ))}
                 </Stepper>
-            </Box>
+            </Paper>
 
             {/* Step Content */}
             <Box sx={{ mb: 3 }}>
                 {renderStepContent()}
             </Box>
 
-            {/* Navigation */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', pt: 3 }}>
-                <Button
-                    disabled={currentStep === 0}
-                    onClick={handleBack}
-                >
-                    Back
-                </Button>
+            {/* Navigation - Matching PersonFormWrapper Style */}
+            <Paper sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Button
+                        disabled={currentStep === 0}
+                        onClick={handleBack}
+                    >
+                        Back
+                    </Button>
 
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                    {currentStep < steps.length - 1 ? (
-                        <Button
-                            variant="contained"
-                            onClick={handleNext}
-                        >
-                            Next
-                        </Button>
-                    ) : (
-                        <Button
-                            variant="contained"
-                            onClick={handleSubmit}
-                            disabled={submitLoading}
-                            startIcon={<LocationIcon />}
-                        >
-                            {submitLoading ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Update Location' : 'Create Location')}
-                        </Button>
-                    )}
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                        {currentStep < steps.length - 1 ? (
+                            <Button
+                                variant="contained"
+                                onClick={handleNext}
+                            >
+                                Next
+                            </Button>
+                        ) : (
+                            <Button
+                                variant="contained"
+                                onClick={handleSubmit}
+                                disabled={submitLoading}
+                                startIcon={<LocationIcon />}
+                            >
+                                {submitLoading ? 'Processing...' : (isEditMode ? 'Update Location' : 'Create Location')}
+                            </Button>
+                        )}
+                    </Box>
                 </Box>
-            </Box>
+            </Paper>
 
             {/* Success Dialog */}
             <Dialog
@@ -1091,7 +1345,7 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                 <DialogTitle sx={{ bgcolor: 'success.main', color: 'white' }}>
                     <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <LocationIcon />
-                        {isEditMode ? 'Location Updated Successfully!' : 'Location Created Successfully!'}
+                        Location {isEditMode ? 'Updated' : 'Created'} Successfully!
                     </Typography>
                 </DialogTitle>
                 <DialogContent sx={{ pt: 3 }}>
@@ -1118,21 +1372,18 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                     <Button
                         onClick={() => {
                             setShowSuccessDialog(false);
-                            // Don't reset form, let user choose
+                            resetForm();
                         }}
                         variant="outlined"
                     >
-                        Continue Editing
+                        Create Another Location
                     </Button>
                     <Button
-                        onClick={() => {
-                            setShowSuccessDialog(false);
-                            resetForm();
-                        }}
+                        onClick={() => setShowSuccessDialog(false)}
                         variant="contained"
-                        startIcon={<AddIcon />}
+                        startIcon={<LocationIcon />}
                     >
-                        Create Another Location
+                        Close
                     </Button>
                 </DialogActions>
             </Dialog>
