@@ -531,12 +531,22 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
         try {
             setSubmitLoading(true);
             
+            // Get current form values to ensure we have the latest permission overrides
+            const currentFormValues = form.getValues();
+            console.log('🎯 Current form values:', currentFormValues);
+            console.log('🎯 Current permission_overrides from form:', currentFormValues.permission_overrides);
+            console.log('🎯 Data permission_overrides:', data.permission_overrides);
+            
+            // Use the current form values instead of the data parameter
+            const actualOverrides = currentFormValues.permission_overrides || {};
+            
             // Prepare final permissions (role defaults + overrides)
             let finalPermissionNames: string[] = [];
             if (data.role_id && data.user_type === 'LOCATION_USER') {
-                finalPermissionNames = prepareFinalPermissions(data.role_id, data.permission_overrides || {});
+                finalPermissionNames = prepareFinalPermissions(data.role_id, actualOverrides);
                 console.log('📋 Final permissions for user:', finalPermissionNames);
-                console.log('🔧 Permission overrides:', data.permission_overrides);
+                console.log('🔧 Permission overrides being sent:', actualOverrides);
+                console.log('🔧 Number of overrides:', Object.keys(actualOverrides).length);
             }
             
             const payload = {
@@ -549,13 +559,15 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                 role_ids: data.role_id ? [data.role_id] : [],
                 // Add final computed permissions for LOCATION_USER
                 permission_names: data.user_type === 'LOCATION_USER' ? finalPermissionNames : undefined,
-                // Keep permission_overrides for audit/tracking purposes
-                permission_overrides: data.permission_overrides,
+                // Keep permission_overrides for audit/tracking purposes (use actual overrides)
+                permission_overrides: actualOverrides,
                 // Remove the single role_id field
                 role_id: undefined,
                 // Remove primary_location_id for non-location users to avoid UUID validation error
                 primary_location_id: data.user_type === 'LOCATION_USER' ? data.primary_location_id : undefined,
             };
+            
+            console.log('🚀 Full payload being sent to backend:', JSON.stringify(payload, null, 2));
             
             // Build URL with query parameters for create mode
             let url = mode === 'create' 
