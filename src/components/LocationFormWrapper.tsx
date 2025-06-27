@@ -1439,7 +1439,7 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                 maxWidth="sm"
                 fullWidth
             >
-                <DialogTitle sx={{ bgcolor: 'success.main', color: 'white' }}>
+                <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white' }}>
                     <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <LocationIcon />
                         {isEditMode ? 'Location Updated Successfully!' : 'Location Created Successfully!'}
@@ -1465,20 +1465,22 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                         </Box>
                     )}
                 </DialogContent>
-                <DialogActions sx={{ p: 3, gap: 1 }}>
+                <DialogActions sx={{ p: 3, gap: 1, justifyContent: 'space-between' }}>
                     <Button
                         onClick={() => {
                             setShowSuccessDialog(false);
-                            // Don't reset form, let user choose
+                            // Navigate to location management list
+                            window.location.href = '/dashboard/admin/locations';
                         }}
                         variant="outlined"
                     >
-                        Continue Editing
+                        Close
                     </Button>
                     <Button
                         onClick={() => {
                             setShowSuccessDialog(false);
-                            resetForm();
+                            // Navigate to create new location page
+                            window.location.href = '/dashboard/admin/locations/create';
                         }}
                         variant="contained"
                         startIcon={<LocationIcon />}

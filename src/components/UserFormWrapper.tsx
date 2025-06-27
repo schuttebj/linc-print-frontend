@@ -47,6 +47,7 @@ import {
     ExpandMore as ExpandMoreIcon,
     Lock as LockIcon,
     LockOpen as LockOpenIcon,
+    ContentCopy as ContentCopyIcon,
 } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -1350,7 +1351,7 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                 maxWidth="sm" 
                 fullWidth
             >
-                <DialogTitle sx={{ bgcolor: 'success.main', color: 'white' }}>
+                <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white' }}>
                     <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <PersonAddIcon />
                         {mode === 'create' ? 'User Created Successfully!' : 'User Updated Successfully!'}
@@ -1363,54 +1364,83 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                                 <strong>{createdUser.first_name} {createdUser.last_name}</strong> has been successfully {mode === 'create' ? 'created' : 'updated'} in the system.
                             </Typography>
 
-                            <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                                <Typography variant="subtitle2" color="text.secondary">User ID:</Typography>
-                                <Typography variant="body2" sx={{ fontFamily: 'monospace', mt: 0.5 }}>
-                                    {createdUser.id}
-                                </Typography>
-                                {mode === 'create' && (
-                                    <>
-                                        <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 1 }}>Username:</Typography>
-                                        <Typography variant="body2" sx={{ fontFamily: 'monospace', mt: 0.5 }}>
+                            {mode === 'create' && createdUser.username && generatedPassword ? (
+                                <>
+                                    <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                                        <Typography variant="subtitle2" color="text.secondary">Username:</Typography>
+                                        <Typography variant="body2" sx={{ fontFamily: 'monospace', mt: 0.5, fontWeight: 600 }}>
                                             {createdUser.username}
                                         </Typography>
                                         <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 1 }}>Password:</Typography>
-                                        <Typography variant="body2" sx={{ fontFamily: 'monospace', mt: 0.5 }}>
+                                        <Typography variant="body2" sx={{ fontFamily: 'monospace', mt: 0.5, fontWeight: 600 }}>
                                             {generatedPassword}
                                         </Typography>
-                                    </>
-                                )}
-                            </Box>
+                                    </Box>
 
-                            <Alert severity="success" sx={{ mt: 2 }}>
-                                {mode === 'create' 
-                                    ? 'The user account is now ready for system access. Please provide the credentials to the user.'
-                                    : 'User information has been updated and changes are now active in the system.'
-                                }
-                            </Alert>
+                                    <Alert severity="success" sx={{ mt: 2 }}>
+                                        The user account is ready for system access. Please provide these credentials to the user.
+                                    </Alert>
 
-                            {mode === 'create' && (
-                                <Alert severity="warning" sx={{ mt: 1 }}>
-                                    The user will be required to change their password on first login.
-                                </Alert>
+                                    <Alert severity="warning" sx={{ mt: 1 }}>
+                                        The user will be required to change their password on first login.
+                                    </Alert>
+                                </>
+                            ) : (
+                                <>
+                                    <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                                        <Typography variant="subtitle2" color="text.secondary">User ID:</Typography>
+                                        <Typography variant="body2" sx={{ fontFamily: 'monospace', mt: 0.5 }}>
+                                            {createdUser.id}
+                                        </Typography>
+                                    </Box>
+
+                                    <Alert severity="success" sx={{ mt: 2 }}>
+                                        User information has been updated and changes are now active in the system.
+                                    </Alert>
+                                </>
                             )}
                         </Box>
                     )}
                 </DialogContent>
-                <DialogActions sx={{ p: 3, gap: 1 }}>
+                <DialogActions sx={{ p: 3, gap: 1, justifyContent: 'space-between' }}>
                     <Button 
-                        onClick={() => setShowSuccessDialog(false)}
+                        onClick={() => {
+                            setShowSuccessDialog(false);
+                            // Navigate to user management list
+                            window.location.href = '/dashboard/admin/users';
+                        }}
                         variant="outlined"
                     >
-                        Continue Editing
+                        Close
                     </Button>
-                    <Button 
-                        onClick={() => setShowSuccessDialog(false)}
-                        variant="contained"
-                        startIcon={<PersonAddIcon />}
-                    >
-                        Create Another User
-                    </Button>
+                    
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                        {mode === 'create' && createdUser?.username && generatedPassword && (
+                            <Button 
+                                onClick={() => {
+                                    const credentials = `Username: ${createdUser.username}\nPassword: ${generatedPassword}`;
+                                    navigator.clipboard.writeText(credentials);
+                                    alert('Credentials copied to clipboard!');
+                                }}
+                                variant="outlined"
+                                startIcon={<ContentCopyIcon />}
+                            >
+                                Copy Credentials
+                            </Button>
+                        )}
+                        
+                        <Button 
+                            onClick={() => {
+                                setShowSuccessDialog(false);
+                                // Navigate to create new user page
+                                window.location.href = '/dashboard/admin/users/create';
+                            }}
+                            variant="contained"
+                            startIcon={<PersonAddIcon />}
+                        >
+                            Create Another User
+                        </Button>
+                    </Box>
                 </DialogActions>
             </Dialog>
         </Box>
