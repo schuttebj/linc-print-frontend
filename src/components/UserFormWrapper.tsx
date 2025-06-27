@@ -1244,7 +1244,25 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                                                 </Grid>
                                                 <Grid item xs={12} sm={4}>
                                                     <Typography variant="body2">
-                                                        <strong>Total Permissions:</strong> {allPermissions.length}
+                                                        <strong>Total Permissions:</strong> {(() => {
+                                                            if (!watchedRole) return 0;
+                                                            const rolePermissions = getRoleDefaultPermissions(watchedRole);
+                                                            const overrides = form.watch('permission_overrides') || {};
+                                                            
+                                                            // Start with role permissions
+                                                            const finalPermissions = new Set(rolePermissions);
+                                                            
+                                                            // Apply overrides
+                                                            Object.entries(overrides).forEach(([permission, granted]) => {
+                                                                if (granted) {
+                                                                    finalPermissions.add(permission);
+                                                                } else {
+                                                                    finalPermissions.delete(permission);
+                                                                }
+                                                            });
+                                                            
+                                                            return finalPermissions.size;
+                                                        })()}
                                                     </Typography>
                                                 </Grid>
                                             </Grid>
