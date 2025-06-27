@@ -526,21 +526,22 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
 
             const locationPayload = {
                 location_code: formData.location_code?.toUpperCase() || '',
-                name: formData.location_name?.toUpperCase() || '', // Backend expects 'name' not 'location_name'
-                location_address: addressString || '',
-                locality: formData.address?.locality?.toUpperCase() || '', // Backend requires separate locality field
-                office_number: formData.location_code?.replace(/[A-Z]/g, '') || '', // Extract numeric part only (max 2 chars)
+                name: formData.location_name?.toUpperCase() || '', 
+                street_address: formData.address?.street_line1?.toUpperCase() || '', // Backend expects 'street_address'
+                locality: formData.address?.locality?.toUpperCase() || '', 
+                postal_code: formData.address?.postal_code || '', // Backend expects at root level
+                office_number: formData.location_code?.replace(/[A-Z]/g, '') || '', 
                 province_code: formData.province_code?.toUpperCase() || '',
                 office_type: formData.office_type?.toUpperCase() || '',
-                max_capacity: parseInt(formData.max_capacity?.toString() || '0'),
-                current_capacity: parseInt(formData.current_capacity?.toString() || '0'),
-                operational_hours: formData.operational_schedule?.map(s => 
+                max_daily_capacity: parseInt(formData.max_capacity?.toString() || '0'), // Backend expects 'max_daily_capacity'
+                current_staff_count: parseInt(formData.current_capacity?.toString() || '0'), // Backend expects 'current_staff_count'
+                operating_hours: formData.operational_schedule?.map(s => 
                     s.is_open ? `${s.day}: ${s.open_time}-${s.close_time}` : `${s.day}: Closed`
                 ).join('; ') || '',
-                contact_phone: formData.contact_phone || '',
-                contact_email: formData.contact_email?.toUpperCase() || '',
+                phone_number: formData.contact_phone || '', // Backend expects 'phone_number'
+                email: formData.contact_email?.toLowerCase() || '', // Backend expects 'email' (lowercase for emails)
                 is_operational: formData.is_operational,
-                notes: formData.notes?.toUpperCase() || '',
+                special_notes: formData.notes?.toUpperCase() || '', // Backend expects 'special_notes'
             };
 
             console.log('Transformed location payload:', locationPayload);
