@@ -178,6 +178,7 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
     const [filteredProvinces, setFilteredProvinces] = useState<Province[]>([]);
     const [filteredUserTypes, setFilteredUserTypes] = useState<UserType[]>([]);
     const [lookupsLoading, setLookupsLoading] = useState(true);
+    const [userActualPermissions, setUserActualPermissions] = useState<string[]>([]);
 
     // Form management
     const form = useForm<UserFormData>({
@@ -246,21 +247,42 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
             if (selectedRole) {
                 console.log('📋 Role permissions count:', selectedRole.permissions?.length || 0);
                 
-                // Clear existing permission overrides for new role selection
-                const newPermissionOverrides: { [key: string]: boolean } = {};
-                
-                // Set role default permissions as the base (these won't be in overrides)
-                // Only explicit overrides will be tracked in permission_overrides
-                
-                form.setValue('permission_overrides', newPermissionOverrides);
-                console.log('✅ Permission overrides reset for new role');
+                // For edit mode, calculate overrides based on user's actual permissions vs role defaults
+                if (mode === 'edit' && userActualPermissions.length > 0) {
+                    const rolePermissions = selectedRole.permissions?.map(p => p.name) || [];
+                    const overrides: { [key: string]: boolean } = {};
+                    
+                    // Find permissions that user has but role doesn't (granted overrides)
+                    userActualPermissions.forEach(permission => {
+                        if (!rolePermissions.includes(permission)) {
+                            overrides[permission] = true;
+                            console.log(`✅ Found granted override: ${permission}`);
+                        }
+                    });
+                    
+                    // Find permissions that role has but user doesn't (revoked overrides)
+                    rolePermissions.forEach(permission => {
+                        if (!userActualPermissions.includes(permission)) {
+                            overrides[permission] = false;
+                            console.log(`❌ Found revoked override: ${permission}`);
+                        }
+                    });
+                    
+                    form.setValue('permission_overrides', overrides);
+                    console.log('✅ Permission overrides calculated for edit mode:', overrides);
+                } else {
+                    // For create mode, clear existing permission overrides for new role selection
+                    const newPermissionOverrides: { [key: string]: boolean } = {};
+                    form.setValue('permission_overrides', newPermissionOverrides);
+                    console.log('✅ Permission overrides reset for new role');
+                }
             }
         } else if (!watchedRole) {
             // Clear permissions when no role is selected
             form.setValue('permission_overrides', {});
             console.log('🧹 Cleared permissions - no role selected');
         }
-    }, [watchedRole, availableRoles, form]);
+    }, [watchedRole, availableRoles, form, mode, userActualPermissions]);
 
     const loadInitialData = async () => {
         try {
@@ -339,6 +361,32 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
             if (!response.ok) throw new Error('Failed to load user');
             
             const userData = await response.json();
+            console.log('📥 Loaded user data:', userData);
+            
+            // Calculate permission overrides by comparing user's actual permissions with role defaults
+            let permissionOverrides = {};
+            if (userData.user_type === 'LOCATION_USER' && userData.roles?.[0]) {
+                try {
+                    // Get user's actual permissions
+                    const permissionsResponse = await fetch(`${API_BASE_URL}/api/v1/users/${userId}/permissions`, {
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                    });
+                    
+                    if (permissionsResponse.ok) {
+                        const permissionsData = await permissionsResponse.json();
+                        const userPermissions = permissionsData.permissions.map(p => p.name);
+                        console.log('📥 User actual permissions:', userPermissions);
+                        
+                        // Wait for roles to be loaded to compare against role defaults
+                        // We'll calculate overrides after roles are loaded
+                        setUserActualPermissions(userPermissions);
+                    } else {
+                        console.log('ℹ️ Could not load user permissions');
+                    }
+                } catch (permissionError) {
+                    console.log('ℹ️ Could not load user permissions:', permissionError);
+                }
+            }
             
             form.reset({
                 first_name: userData.first_name,
@@ -351,8 +399,10 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                 scope_province: userData.scope_province || '',
                 role_id: userData.roles?.[0]?.id || '',
                 status: userData.status || 'ACTIVE',
-                permission_overrides: userData.permission_overrides || {},
+                permission_overrides: {}, // Will be calculated after roles load
             });
+            
+            console.log('✅ User form reset, will calculate overrides after roles load');
         } catch (error) {
             console.error('Failed to load user for edit:', error);
         }
