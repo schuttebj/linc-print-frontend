@@ -537,7 +537,7 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                 name: formData.location_name?.toUpperCase() || '', // Backend expects 'name' not 'location_name'
                 location_address: addressString || '',
                 locality: formData.address?.locality?.toUpperCase() || '', // Backend requires separate locality field
-                office_number: formData.location_code?.toUpperCase() || '', // Use location_code as office_number
+                office_number: formData.location_code?.replace(/[A-Z]/g, '') || '', // Extract numeric part only (max 2 chars)
                 province_code: formData.province_code?.toUpperCase() || '',
                 office_type: formData.office_type?.toUpperCase() || '',
                 max_capacity: parseInt(formData.max_capacity?.toString() || '0'),
