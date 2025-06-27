@@ -1341,134 +1341,73 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                 </Box>
             </Paper>
 
-            {/* Success Dialog - Blue Corporate Style matching PersonFormWrapper */}
+            {/* Success Dialog - Matching PersonFormWrapper Style */}
             <Dialog 
                 open={showSuccessDialog} 
                 onClose={() => setShowSuccessDialog(false)} 
-                maxWidth="md" 
+                maxWidth="sm" 
                 fullWidth
             >
-                <DialogTitle 
-                    sx={{ 
-                        bgcolor: 'primary.main', 
-                        color: 'white',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1
-                    }}
-                >
-                    <CheckCircleIcon />
-                    User {mode === 'create' ? 'Created' : 'Updated'} Successfully!
+                <DialogTitle sx={{ bgcolor: 'success.main', color: 'white' }}>
+                    <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <PersonAddIcon />
+                        {mode === 'create' ? 'User Created Successfully!' : 'User Updated Successfully!'}
+                    </Typography>
                 </DialogTitle>
-                <DialogContent sx={{ p: 3 }}>
+                <DialogContent sx={{ pt: 3 }}>
                     {createdUser && (
                         <Box>
-                            <Alert severity="success" sx={{ mb: 3 }}>
-                                User <strong>{createdUser.first_name} {createdUser.last_name}</strong> has been successfully {mode === 'create' ? 'created' : 'updated'}!
+                            <Typography variant="body1" gutterBottom>
+                                <strong>{createdUser.first_name} {createdUser.last_name}</strong> has been successfully {mode === 'create' ? 'created' : 'updated'} in the system.
+                            </Typography>
+
+                            <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                                <Typography variant="subtitle2" color="text.secondary">User ID:</Typography>
+                                <Typography variant="body2" sx={{ fontFamily: 'monospace', mt: 0.5 }}>
+                                    {createdUser.id}
+                                </Typography>
+                                {mode === 'create' && (
+                                    <>
+                                        <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 1 }}>Username:</Typography>
+                                        <Typography variant="body2" sx={{ fontFamily: 'monospace', mt: 0.5 }}>
+                                            {createdUser.username}
+                                        </Typography>
+                                        <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 1 }}>Password:</Typography>
+                                        <Typography variant="body2" sx={{ fontFamily: 'monospace', mt: 0.5 }}>
+                                            {generatedPassword}
+                                        </Typography>
+                                    </>
+                                )}
+                            </Box>
+
+                            <Alert severity="success" sx={{ mt: 2 }}>
+                                {mode === 'create' 
+                                    ? 'The user account is now ready for system access. Please provide the credentials to the user.'
+                                    : 'User information has been updated and changes are now active in the system.'
+                                }
                             </Alert>
 
-                            <Grid container spacing={3}>
-                                <Grid item xs={12} md={6}>
-                                    <Box 
-                                        sx={{ 
-                                            p: 3, 
-                                            border: '1px solid',
-                                            borderColor: 'primary.main',
-                                            borderRadius: 2,
-                                            bgcolor: 'primary.50'
-                                        }}
-                                    >
-                                        <Typography variant="h6" color="primary.main" gutterBottom>
-                                            👤 User Information
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary" gutterBottom>
-                                            The user account has been {mode === 'create' ? 'created' : 'updated'} and is ready for system access.
-                                        </Typography>
-                                        <Box sx={{ mt: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
-                                            <Typography variant="subtitle2">Name:</Typography>
-                                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                                {createdUser.first_name} {createdUser.last_name}
-                                            </Typography>
-                                            <Typography variant="subtitle2" sx={{ mt: 1 }}>Email:</Typography>
-                                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                                {createdUser.email}
-                                            </Typography>
-                                            <Typography variant="subtitle2" sx={{ mt: 1 }}>User Type:</Typography>
-                                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                                {createdUser.user_type?.replace('_', ' ')}
-                                            </Typography>
-                                        </Box>
-                                    </Box>
-                                </Grid>
-
-                                <Grid item xs={12} md={6}>
-                                    <Box 
-                                        sx={{ 
-                                            p: 3, 
-                                            border: '1px solid',
-                                            borderColor: mode === 'create' ? 'warning.main' : 'success.main',
-                                            borderRadius: 2,
-                                            bgcolor: mode === 'create' ? 'warning.50' : 'success.50'
-                                        }}
-                                    >
-                                        <Typography variant="h6" color={mode === 'create' ? 'warning.main' : 'success.main'} gutterBottom>
-                                            {mode === 'create' ? '🔑 Login Credentials' : '✅ Update Complete'}
-                                        </Typography>
-                                        {mode === 'create' ? (
-                                            <>
-                                                <Typography variant="body2" color="text.secondary" gutterBottom>
-                                                    Provide these credentials to the user for their first login.
-                                                </Typography>
-                                                <Box sx={{ mt: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
-                                                    <Typography variant="subtitle2">Username:</Typography>
-                                                    <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
-                                                        {createdUser.username}
-                                                    </Typography>
-                                                    <Typography variant="subtitle2" sx={{ mt: 1 }}>Password:</Typography>
-                                                    <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
-                                                        {generatedPassword}
-                                                    </Typography>
-                                                </Box>
-                                                <Alert severity="warning" sx={{ mt: 2 }}>
-                                                    <Typography variant="caption">
-                                                        The user will be required to change their password on first login.
-                                                    </Typography>
-                                                </Alert>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Typography variant="body2" color="text.secondary" gutterBottom>
-                                                    User information has been successfully updated in the system.
-                                                </Typography>
-                                                <Typography variant="body2" color="text.secondary">
-                                                    • User permissions may have changed<br/>
-                                                    • Changes take effect immediately
-                                                </Typography>
-                                            </>
-                                        )}
-                                    </Box>
-                                </Grid>
-                            </Grid>
+                            {mode === 'create' && (
+                                <Alert severity="warning" sx={{ mt: 1 }}>
+                                    The user will be required to change their password on first login.
+                                </Alert>
+                            )}
                         </Box>
                     )}
                 </DialogContent>
-                <DialogActions sx={{ p: 3, gap: 1, justifyContent: 'space-between' }}>
+                <DialogActions sx={{ p: 3, gap: 1 }}>
                     <Button 
                         onClick={() => setShowSuccessDialog(false)}
                         variant="outlined"
-                        startIcon={<PersonAddIcon />}
-                        size="large"
                     >
-                        Create Another User
+                        Continue Editing
                     </Button>
                     <Button 
                         onClick={() => setShowSuccessDialog(false)}
                         variant="contained"
-                        startIcon={<CheckCircleIcon />}
-                        size="large"
-                        sx={{ minWidth: 120 }}
+                        startIcon={<PersonAddIcon />}
                     >
-                        Close
+                        Create Another User
                     </Button>
                 </DialogActions>
             </Dialog>

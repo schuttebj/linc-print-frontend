@@ -1432,104 +1432,58 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
                 </Box>
             </Paper>
 
-            {/* Success Dialog - Blue Corporate Style matching PersonFormWrapper */}
+            {/* Success Dialog - Matching PersonFormWrapper Style */}
             <Dialog
                 open={showSuccessDialog}
                 onClose={() => setShowSuccessDialog(false)}
-                maxWidth="md"
+                maxWidth="sm"
                 fullWidth
             >
-                <DialogTitle 
-                    sx={{ 
-                        bgcolor: 'primary.main', 
-                        color: 'white',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1
-                    }}
-                >
-                    <LocationIcon />
-                    Location {isEditMode ? 'Updated' : 'Created'} Successfully!
+                <DialogTitle sx={{ bgcolor: 'success.main', color: 'white' }}>
+                    <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <LocationIcon />
+                        {isEditMode ? 'Location Updated Successfully!' : 'Location Created Successfully!'}
+                    </Typography>
                 </DialogTitle>
-                <DialogContent sx={{ p: 3 }}>
+                <DialogContent sx={{ pt: 3 }}>
                     {createdLocation && (
                         <Box>
-                            <Alert severity="success" sx={{ mb: 3 }}>
-                                Location <strong>{createdLocation.name || createdLocation.location_name}</strong> has been successfully {isEditMode ? 'updated' : 'created'}!
+                            <Typography variant="body1" gutterBottom>
+                                <strong>{createdLocation.name || createdLocation.location_name}</strong> has been successfully {isEditMode ? 'updated' : 'created'} in the system.
+                            </Typography>
+
+                            <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                                <Typography variant="subtitle2" color="text.secondary">Location Code:</Typography>
+                                <Typography variant="body2" sx={{ fontFamily: 'monospace', mt: 0.5 }}>
+                                    {createdLocation.code || createdLocation.location_code}
+                                </Typography>
+                            </Box>
+
+                            <Alert severity="success" sx={{ mt: 2 }}>
+                                The location record is now available for user assignments and system operations.
                             </Alert>
-
-                            <Grid container spacing={3}>
-                                <Grid item xs={12} md={6}>
-                                    <Box 
-                                        sx={{ 
-                                            p: 3, 
-                                            border: '1px solid',
-                                            borderColor: 'primary.main',
-                                            borderRadius: 2,
-                                            bgcolor: 'primary.50'
-                                        }}
-                                    >
-                                        <Typography variant="h6" color="primary.main" gutterBottom>
-                                            📍 Location Information
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary" gutterBottom>
-                                            The location record has been {isEditMode ? 'updated' : 'created'} and is ready for user assignments.
-                                        </Typography>
-                                        <Box sx={{ mt: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
-                                            <Typography variant="subtitle2">Location Code:</Typography>
-                                            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                                                {createdLocation.code || createdLocation.location_code}
-                                            </Typography>
-                                        </Box>
-                                    </Box>
-                                </Grid>
-
-                                <Grid item xs={12} md={6}>
-                                    <Box 
-                                        sx={{ 
-                                            p: 3, 
-                                            border: '1px solid',
-                                            borderColor: 'success.main',
-                                            borderRadius: 2,
-                                            bgcolor: 'success.50'
-                                        }}
-                                    >
-                                        <Typography variant="h6" color="success.main" gutterBottom>
-                                            ✅ Next Steps
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary" gutterBottom>
-                                            Choose your next action to continue the location management workflow.
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary">
-                                            • Create another location for additional offices<br/>
-                                            • Return to location management page
-                                        </Typography>
-                                    </Box>
-                                </Grid>
-                            </Grid>
                         </Box>
                     )}
                 </DialogContent>
-                <DialogActions sx={{ p: 3, gap: 1, justifyContent: 'space-between' }}>
+                <DialogActions sx={{ p: 3, gap: 1 }}>
+                    <Button
+                        onClick={() => {
+                            setShowSuccessDialog(false);
+                            // Don't reset form, let user choose
+                        }}
+                        variant="outlined"
+                    >
+                        Continue Editing
+                    </Button>
                     <Button
                         onClick={() => {
                             setShowSuccessDialog(false);
                             resetForm();
                         }}
-                        variant="outlined"
-                        startIcon={<AddIcon />}
-                        size="large"
-                    >
-                        Create Another Location
-                    </Button>
-                    <Button
-                        onClick={() => setShowSuccessDialog(false)}
                         variant="contained"
                         startIcon={<LocationIcon />}
-                        size="large"
-                        sx={{ minWidth: 120 }}
                     >
-                        Close
+                        Create Another Location
                     </Button>
                 </DialogActions>
             </Dialog>
