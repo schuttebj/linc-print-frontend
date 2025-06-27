@@ -457,26 +457,16 @@ const LocationManagementPage: React.FC = () => {
                         No email
                       </Typography>
                     )}
-                    {location.manager_name && (
-                      <Typography variant="caption" color="text.secondary">
-                        Manager: {location.manager_name}
-                      </Typography>
-                    )}
                   </Stack>
                 </TableCell>
                 
                 <TableCell>
-                  <Stack spacing={0.5}>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {location.max_daily_capacity}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Daily Capacity
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Staff: {location.current_staff_count}/{location.max_staff_capacity}
-                    </Typography>
-                  </Stack>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {location.max_daily_capacity}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Daily Capacity
+                  </Typography>
                 </TableCell>
                 
                 <TableCell>
