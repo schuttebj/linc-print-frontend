@@ -179,6 +179,7 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
     const [filteredUserTypes, setFilteredUserTypes] = useState<UserType[]>([]);
     const [lookupsLoading, setLookupsLoading] = useState(true);
     const [userActualPermissions, setUserActualPermissions] = useState<string[]>([]);
+    const [initialRoleLoaded, setInitialRoleLoaded] = useState(false);
 
     // Form management
     const form = useForm<UserFormData>({
@@ -247,8 +248,9 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
             if (selectedRole) {
                 console.log('📋 Role permissions count:', selectedRole.permissions?.length || 0);
                 
-                // For edit mode, calculate overrides based on user's actual permissions vs role defaults
-                if (mode === 'edit' && userActualPermissions.length > 0) {
+                // For edit mode - distinguish between initial load and role change
+                if (mode === 'edit' && userActualPermissions.length > 0 && !initialRoleLoaded) {
+                    // Initial load: calculate overrides based on user's actual permissions vs role defaults
                     const rolePermissions = selectedRole.permissions?.map(p => p.name) || [];
                     const overrides: { [key: string]: boolean } = {};
                     
@@ -269,20 +271,27 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                     });
                     
                     form.setValue('permission_overrides', overrides);
-                    console.log('✅ Permission overrides calculated for edit mode:', overrides);
+                    console.log('✅ Permission overrides calculated for initial edit load:', overrides);
+                    setInitialRoleLoaded(true);
                 } else {
-                    // For create mode, clear existing permission overrides for new role selection
+                    // Role change (create mode OR edit mode after initial load): clear all custom permissions
                     const newPermissionOverrides: { [key: string]: boolean } = {};
                     form.setValue('permission_overrides', newPermissionOverrides);
-                    console.log('✅ Permission overrides reset for new role');
+                    console.log('🔄 Permission overrides cleared for role change - only role defaults will be active');
+                    
+                    // Mark that we've handled the initial load if this is edit mode
+                    if (mode === 'edit') {
+                        setInitialRoleLoaded(true);
+                    }
                 }
             }
         } else if (!watchedRole) {
             // Clear permissions when no role is selected
             form.setValue('permission_overrides', {});
             console.log('🧹 Cleared permissions - no role selected');
+            setInitialRoleLoaded(false);
         }
-    }, [watchedRole, availableRoles, form, mode, userActualPermissions]);
+    }, [watchedRole, availableRoles, form, mode, userActualPermissions, initialRoleLoaded]);
 
     const loadInitialData = async () => {
         try {
@@ -1130,17 +1139,18 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                                 return (
                                     <Box sx={{ mt: 2 }}>
                                         {Object.entries(groupedAllPermissions).map(([category, categoryPermissions]) => {
-                                            const hasRolePermissionsInCategory = categoryPermissions.some(p => 
-                                                rolePermissions.some(rp => rp.name === p.name)
-                                            );
+                                            const hasActivePermissionsInCategory = categoryPermissions.some(p => {
+                                                const isRoleDefault = rolePermissions.some(rp => rp.name === p.name);
+                                                return getPermissionValue(p.name, isRoleDefault);
+                                            });
                                             
                                             return (
                                                 <Accordion key={category} sx={{ mb: 1 }}>
                                                     <AccordionSummary 
                                                         expandIcon={<ExpandMoreIcon />}
                                                         sx={{ 
-                                                            bgcolor: hasRolePermissionsInCategory ? 'primary.50' : 'grey.50',
-                                                            '&:hover': { bgcolor: hasRolePermissionsInCategory ? 'primary.100' : 'grey.100' }
+                                                            bgcolor: hasActivePermissionsInCategory ? 'primary.50' : 'grey.50',
+                                                            '&:hover': { bgcolor: hasActivePermissionsInCategory ? 'primary.100' : 'grey.100' }
                                                         }}
                                                     >
                                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
@@ -1148,13 +1158,14 @@ const UserFormWrapper: React.FC<UserFormWrapperProps> = ({
                                                                 {category.charAt(0).toUpperCase() + category.slice(1)}
                                                             </Typography>
                                                             <Chip 
-                                                                label={`${categoryPermissions.filter(p => 
-                                                                    rolePermissions.some(rp => rp.name === p.name)
-                                                                ).length}/${categoryPermissions.length}`}
+                                                                label={`${categoryPermissions.filter(p => {
+                                                                    const isRoleDefault = rolePermissions.some(rp => rp.name === p.name);
+                                                                    return getPermissionValue(p.name, isRoleDefault);
+                                                                }).length}/${categoryPermissions.length}`}
                                                                 size="small"
-                                                                color={hasRolePermissionsInCategory ? "primary" : "default"}
+                                                                color={hasActivePermissionsInCategory ? "primary" : "default"}
                                                             />
-                                                            {hasRolePermissionsInCategory && (
+                                                            {hasActivePermissionsInCategory && (
                                                                 <CheckCircleIcon color="primary" fontSize="small" />
                                                             )}
                                                         </Box>
