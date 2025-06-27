@@ -32,7 +32,9 @@ import {
   Alert,
   CircularProgress,
   TablePagination,
-  IconButton
+  IconButton,
+  InputAdornment,
+  Stack,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -40,7 +42,12 @@ import {
   LocationOn as LocationIcon,
   PowerSettingsNew as CloseIcon,
   PowerOff as OpenIcon,
-  Add as AddIcon
+  Add as AddIcon,
+  Search as SearchIcon,
+  FilterList as FilterIcon,
+  CheckCircle as CheckCircleIcon,
+  Warning as WarningIcon,
+  Business as BusinessIcon,
 } from '@mui/icons-material';
 import { API_ENDPOINTS, api } from '../../config/api';
 import lookupService, { OfficeType, Province } from '../../services/lookupService';
@@ -63,8 +70,6 @@ interface Location {
   created_at: string;
   updated_at: string;
 }
-
-
 
 interface LocationListResponse {
   locations: Location[];
@@ -98,9 +103,11 @@ const LocationManagementPage: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   
-  // Delete modal state (only this modal remains)
+  // Delete modal state and success dialog
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   
   // Load initial data - only load lookup data, not locations
   useEffect(() => {
@@ -117,6 +124,7 @@ const LocationManagementPage: React.FC = () => {
   const loadInitialData = async () => {
     try {
       setLoading(true);
+      setError(null);
       
       // Load only lookup data first
       const [provincesRes, officeTypesRes] = await Promise.all([
@@ -166,13 +174,13 @@ const LocationManagementPage: React.FC = () => {
     setPage(0); // Reset to first page when changing rows per page
   };
 
-
-
   const handleDeleteLocation = async () => {
     if (!selectedLocation) return;
     
     try {
       await api.delete(`${API_ENDPOINTS.locationById(selectedLocation.id)}`);
+      setSuccessMessage(`Location ${selectedLocation.location_name} has been deleted successfully.`);
+      setShowSuccessDialog(true);
       setShowDeleteModal(false);
       setSelectedLocation(null);
       await loadLocations();
@@ -186,27 +194,50 @@ const LocationManagementPage: React.FC = () => {
       await api.put(`${API_ENDPOINTS.locationById(location.id)}`, {
         is_operational: !location.is_operational
       });
+      
+      setSuccessMessage(`Location ${location.location_name} has been ${location.is_operational ? 'closed' : 'opened'} successfully.`);
+      setShowSuccessDialog(true);
       await loadLocations();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update location status');
     }
   };
 
-  const getOfficeTypeColor = (type: string): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
+  const getOfficeTypeDisplay = (type: string): { label: string; color: 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' } => {
+    const officeType = officeTypes.find(t => t.value === type);
+    const label = officeType ? officeType.label : type;
+    
     switch (type) {
-      case 'MAIN': return 'primary';
-      case 'BRANCH': return 'secondary';
-      case 'KIOSK': return 'info';
-      case 'MOBILE': return 'warning';
-      default: return 'default';
+      case 'MAIN': return { label, color: 'primary' };
+      case 'BRANCH': return { label, color: 'secondary' };
+      case 'KIOSK': return { label, color: 'info' };
+      case 'MOBILE': return { label, color: 'warning' };
+      case 'TEMPORARY': return { label, color: 'default' };
+      default: return { label, color: 'default' };
     }
   };
 
-  // Equipment status functions removed - using operational toggle instead
+  const getStatusColor = (isOperational: boolean): 'success' | 'error' => {
+    return isOperational ? 'success' : 'error';
+  };
 
   const getProvinceName = (code: string) => {
     const province = provinces.find(p => p.code === code);
     return province ? province.name : code;
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return dateString;
+    }
   };
 
   const handleCreateLocation = () => {
@@ -217,103 +248,63 @@ const LocationManagementPage: React.FC = () => {
     navigate(`/dashboard/admin/locations/edit/${location.id}`);
   };
 
-  if (loading) {
+  if (loading && locations.length === 0) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress size={48} />
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+        <CircularProgress />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: 'auto', p: 3 }}>
+    <Box sx={{ maxWidth: 1400, mx: 'auto', p: 3 }}>
       {/* Header */}
-      <Typography variant="h4" component="h1" gutterBottom>
-        Location Management
-      </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-        Manage office locations, capacity, and operational status
-      </Typography>
-
-      {/* Error Alert */}
-      {error && (
-        <Alert 
-          severity="error" 
-          onClose={() => setError(null)}
-          sx={{ mb: 3 }}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" component="h1">
+          Location Management
+        </Typography>
+        
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={handleCreateLocation}
         >
-          {error}
-        </Alert>
-      )}
+          Create Location
+        </Button>
+      </Box>
 
-      {/* Summary Cards */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Typography variant="h4" color="primary.main">
-                {locations.length}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Total Locations
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Typography variant="h4" color="success.main">
-                {locations.filter(l => l.is_operational).length}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Operational
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Typography variant="h4" color="warning.main">
-                {locations.reduce((sum, l) => sum + l.current_capacity, 0)}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Current Capacity
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Typography variant="h4" color="info.main">
-                {locations.reduce((sum, l) => sum + l.max_capacity, 0)}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Max Capacity
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+      <Typography variant="body1" color="text.secondary" gutterBottom>
+        Manage office locations, capacity, and operational status for the Madagascar LINC Print system.
+      </Typography>
 
-      {/* Filters and Search */}
+      {/* Filters */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} md={2}>
+          <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <FilterIcon />
+            Search & Filters
+          </Typography>
+          
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={4}>
               <TextField
                 fullWidth
-                placeholder="Search locations..."
+                label="Search Locations"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                size="small"
+                placeholder="Location name, code, or address"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon />
+                    </InputAdornment>
+                  ),
+                }}
               />
             </Grid>
             
             <Grid item xs={12} md={2}>
-              <FormControl fullWidth size="small">
+              <FormControl fullWidth>
                 <InputLabel>Province</InputLabel>
                 <Select
                   value={provinceFilter}
@@ -330,13 +321,13 @@ const LocationManagementPage: React.FC = () => {
               </FormControl>
             </Grid>
             
-            <Grid item xs={12} md={2}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Type</InputLabel>
+            <Grid item xs={12} md={3}>
+              <FormControl fullWidth>
+                <InputLabel>Office Type</InputLabel>
                 <Select
                   value={typeFilter}
                   onChange={(e) => setTypeFilter(e.target.value)}
-                  label="Type"
+                  label="Office Type"
                 >
                   <MenuItem value="">All Types</MenuItem>
                   {officeTypes.map(type => (
@@ -348,8 +339,8 @@ const LocationManagementPage: React.FC = () => {
               </FormControl>
             </Grid>
             
-            <Grid item xs={12} md={2}>
-              <FormControl fullWidth size="small">
+            <Grid item xs={12} md={3}>
+              <FormControl fullWidth>
                 <InputLabel>Status</InputLabel>
                 <Select
                   value={statusFilter}
@@ -362,27 +353,23 @@ const LocationManagementPage: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            
-            <Grid item xs={12} md={2}>
-              <Button
-                fullWidth
-                variant="contained"
-                startIcon={<LocationIcon />}
-                onClick={handleCreateLocation}
-              >
-                Add Location
-              </Button>
-            </Grid>
           </Grid>
         </CardContent>
       </Card>
+
+      {/* Error Display */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
 
       {/* Locations Table */}
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
-            <TableRow sx={{ backgroundColor: 'grey.50' }}>
-              <TableCell>Location Details</TableCell>
+            <TableRow>
+              <TableCell>Location</TableCell>
               <TableCell>Office Type</TableCell>
               <TableCell>Province</TableCell>
               <TableCell>Contact Info</TableCell>
@@ -395,29 +382,32 @@ const LocationManagementPage: React.FC = () => {
             {locations.map((location) => (
               <TableRow key={location.id} hover>
                 <TableCell>
-                  <Box>
-                    <Typography variant="body2" fontWeight="medium">
-                      {location.location_name}
-                    </Typography>
-                    <Typography variant="caption" color="primary.main" fontWeight="medium">
-                      {location.location_code}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" display="block">
-                      {location.location_address}
-                    </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <BusinessIcon sx={{ color: 'primary.main' }} />
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                        {location.location_name}
+                      </Typography>
+                      <Typography variant="body2" color="primary.main" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
+                        {location.location_code}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {location.location_address}
+                      </Typography>
+                    </Box>
                   </Box>
                 </TableCell>
                 
                 <TableCell>
                   <Chip
-                    label={officeTypes.find(t => t.value === location.office_type)?.label || location.office_type}
-                    color={getOfficeTypeColor(location.office_type)}
+                    label={getOfficeTypeDisplay(location.office_type).label}
+                    color={getOfficeTypeDisplay(location.office_type).color}
                     size="small"
                   />
                 </TableCell>
 
                 <TableCell>
-                  <Typography variant="body2">
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
                     {getProvinceName(location.province_code)}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
@@ -426,26 +416,33 @@ const LocationManagementPage: React.FC = () => {
                 </TableCell>
                 
                 <TableCell>
-                  <Box>
+                  <Stack spacing={0.5}>
                     {location.contact_phone ? (
-                      <Typography variant="body2">{location.contact_phone}</Typography>
+                      <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                        {location.contact_phone}
+                      </Typography>
                     ) : (
                       <Typography variant="caption" color="text.secondary">No phone</Typography>
                     )}
                     {location.contact_email ? (
-                      <Typography variant="caption" color="text.secondary" display="block">
+                      <Typography variant="caption" color="text.secondary">
                         {location.contact_email}
                       </Typography>
                     ) : (
-                      <Typography variant="caption" color="text.secondary" display="block">
+                      <Typography variant="caption" color="text.secondary">
                         No email
                       </Typography>
                     )}
-                  </Box>
+                    {location.operational_hours && (
+                      <Typography variant="caption" color="text.secondary">
+                        {location.operational_hours}
+                      </Typography>
+                    )}
+                  </Stack>
                 </TableCell>
                 
                 <TableCell>
-                  <Typography variant="body2" fontWeight="medium">
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
                     {location.current_capacity} / {location.max_capacity}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
@@ -456,17 +453,17 @@ const LocationManagementPage: React.FC = () => {
                 <TableCell>
                   <Chip
                     label={location.is_operational ? 'Operational' : 'Closed'}
-                    color={location.is_operational ? 'success' : 'error'}
+                    color={getStatusColor(location.is_operational)}
                     size="small"
                   />
                 </TableCell>
                 
                 <TableCell align="right">
-                  <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                  <Box sx={{ display: 'flex', gap: 0.5 }}>
                     <IconButton
                       size="small"
-                      color="primary"
                       onClick={() => handleEditLocation(location)}
+                      title="Edit Location"
                     >
                       <EditIcon />
                     </IconButton>
@@ -475,6 +472,7 @@ const LocationManagementPage: React.FC = () => {
                       size="small"
                       color={location.is_operational ? 'warning' : 'success'}
                       onClick={() => handleToggleOperational(location)}
+                      title={location.is_operational ? 'Close Location' : 'Open Location'}
                     >
                       {location.is_operational ? <CloseIcon /> : <OpenIcon />}
                     </IconButton>
@@ -486,6 +484,7 @@ const LocationManagementPage: React.FC = () => {
                         setSelectedLocation(location);
                         setShowDeleteModal(true);
                       }}
+                      title="Delete Location"
                     >
                       <DeleteIcon />
                     </IconButton>
@@ -508,23 +507,54 @@ const LocationManagementPage: React.FC = () => {
         onRowsPerPageChange={handleRowsPerPageChange}
       />
 
-
-
       {/* Delete Confirmation Modal */}
       <Dialog open={showDeleteModal} onClose={() => setShowDeleteModal(false)}>
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to delete location <strong>{selectedLocation?.location_name}</strong>? 
-            This action cannot be undone and will affect all associated users.
+        <DialogTitle sx={{ bgcolor: 'error.main', color: 'white' }}>
+          <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <WarningIcon />
+            Confirm Location Deletion
           </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Alert severity="error" sx={{ mb: 2 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+              This action cannot be undone!
+            </Typography>
+          </Alert>
+          
+          {selectedLocation && (
+            <Typography variant="body1">
+              Are you sure you want to delete location <strong>{selectedLocation.location_name}</strong>? 
+              This will affect all associated users and data.
+            </Typography>
+          )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowDeleteModal(false)}>
+        <DialogActions sx={{ p: 3 }}>
+          <Button onClick={() => setShowDeleteModal(false)} variant="outlined">
             Cancel
           </Button>
-          <Button onClick={handleDeleteLocation} color="error" variant="contained">
+          <Button onClick={handleDeleteLocation} variant="contained" color="error">
             Delete Location
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Success Dialog */}
+      <Dialog open={showSuccessDialog} onClose={() => setShowSuccessDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ bgcolor: 'success.main', color: 'white' }}>
+          <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <CheckCircleIcon />
+            Success
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Alert severity="success">
+            {successMessage}
+          </Alert>
+        </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button onClick={() => setShowSuccessDialog(false)} variant="contained">
+            Close
           </Button>
         </DialogActions>
       </Dialog>

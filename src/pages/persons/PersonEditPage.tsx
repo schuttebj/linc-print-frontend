@@ -158,9 +158,19 @@ const PersonEditPage: React.FC = () => {
       {/* Edit Success Dialog - Blue Corporate Style */}
       <Dialog
         open={showEditSuccess}
-        onClose={() => setShowEditSuccess(false)}
+        onClose={() => {}}
+        disableEscapeKeyDown
         maxWidth="md"
         fullWidth
+        slotProps={{
+          backdrop: {
+            onClick: (event) => {
+              console.log('🚨 PersonEditPage SUCCESS DIALOG: Backdrop clicked!', event);
+              event.stopPropagation();
+              event.preventDefault();
+            }
+          }
+        }}
       >
         <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white', py: 3 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
