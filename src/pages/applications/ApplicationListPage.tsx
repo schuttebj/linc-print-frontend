@@ -325,7 +325,7 @@ const ApplicationListPage: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">
-                      {application.license_categories.join(', ')}
+                      {application.license_category}
                     </Typography>
                   </TableCell>
                   <TableCell>

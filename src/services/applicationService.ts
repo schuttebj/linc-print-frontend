@@ -226,16 +226,18 @@ class ApplicationService {
   // Helper methods for business logic
   calculateApplicationFees(
     applicationType: string,
-    licenseCategories: string[],
+    licenseCategories: string | string[],
     feeStructures: FeeStructure[]
   ): FeeStructure[] {
+    // Normalize to array for processing
+    const categories = Array.isArray(licenseCategories) ? licenseCategories : [licenseCategories];
     // Different fee logic based on application type
     switch (applicationType) {
       case 'LEARNERS_PERMIT':
         // Learner's permits: Only theory test fees
         return feeStructures.filter(fee => 
           fee.fee_type.includes('theory_test') && 
-          this.feeAppliesToCategories(fee, licenseCategories) &&
+          this.feeAppliesToCategories(fee, categories) &&
           this.isFeeEffective(fee)
         );
 
@@ -243,7 +245,7 @@ class ApplicationService {
         // Driver's license: Only practical test + card production (no theory since they passed it for learner's)
         return feeStructures.filter(fee => 
           (fee.fee_type.includes('practical_test') || fee.fee_type === 'card_production') &&
-          this.feeAppliesToCategories(fee, licenseCategories) &&
+          this.feeAppliesToCategories(fee, categories) &&
           this.isFeeEffective(fee)
         );
 
@@ -261,13 +263,10 @@ class ApplicationService {
           this.isFeeEffective(fee)
         );
 
-      case 'UPGRADE':
-        // License upgrade: Theory + practical for new categories + card production
+      case 'REPLACEMENT':
+        // License replacement: Only card production fee (same as DUPLICATE)
         return feeStructures.filter(fee => 
-          (fee.fee_type.includes('theory_test') || 
-           fee.fee_type.includes('practical_test') || 
-           fee.fee_type === 'card_production') &&
-          this.feeAppliesToCategories(fee, licenseCategories) &&
+          fee.fee_type === 'card_production' &&
           this.isFeeEffective(fee)
         );
 
@@ -275,7 +274,7 @@ class ApplicationService {
         // Temporary license: Only temporary license fee
         return feeStructures.filter(fee => 
           fee.fee_type.includes('temporary_license') &&
-          this.feeAppliesToCategories(fee, licenseCategories) &&
+          this.feeAppliesToCategories(fee, categories) &&
           this.isFeeEffective(fee)
         );
 
@@ -292,7 +291,7 @@ class ApplicationService {
           const appTypeMatch = fee.applies_to_application_types.includes(applicationType) ||
                                fee.applies_to_application_types.length === 0;
           
-          const categoryMatch = this.feeAppliesToCategories(fee, licenseCategories);
+          const categoryMatch = this.feeAppliesToCategories(fee, categories);
           
           return appTypeMatch && categoryMatch && fee.is_mandatory && this.isFeeEffective(fee);
         });
@@ -338,9 +337,10 @@ class ApplicationService {
   }
 
   // Application validation helpers
-  validateAgeRequirements(birthDate: string, licenseCategories: string[]): string[] {
+  validateAgeRequirements(birthDate: string, licenseCategories: string | string[]): string[] {
     const errors: string[] = [];
     const age = this.calculateAge(birthDate);
+    const categories = Array.isArray(licenseCategories) ? licenseCategories : [licenseCategories];
     
     const ageRequirements = {
       'A′': 16, // Moped
@@ -351,7 +351,7 @@ class ApplicationService {
       'E': 21   // Large Trailers
     };
     
-    licenseCategories.forEach(category => {
+    categories.forEach(category => {
       const minAge = ageRequirements[category as keyof typeof ageRequirements];
       if (minAge && age < minAge) {
         errors.push(`Minimum age for category ${category} is ${minAge} years (applicant is ${age})`);
@@ -375,25 +375,28 @@ class ApplicationService {
   }
 
   // Madagascar-specific business rules
-  requiresMedicalCertificate(age: number, licenseCategories: string[]): boolean {
+  requiresMedicalCertificate(age: number, licenseCategories: string | string[]): boolean {
     // Medical certificate required for:
     // 1. Heavy categories (C, D, E)
     // 2. Applicants 60+ years old
+    const categories = Array.isArray(licenseCategories) ? licenseCategories : [licenseCategories];
     const heavyCategories = ['C', 'D', 'E'];
-    const hasHeavyCategory = licenseCategories.some(cat => heavyCategories.includes(cat));
+    const hasHeavyCategory = categories.some(cat => heavyCategories.includes(cat));
     
     return hasHeavyCategory || age >= 60;
   }
 
-  requiresParentalConsent(age: number, licenseCategories: string[]): boolean {
+  requiresParentalConsent(age: number, licenseCategories: string | string[]): boolean {
     // Parental consent required for A′ category applicants aged 16-17
-    return licenseCategories.includes('A′') && age >= 16 && age < 18;
+    const categories = Array.isArray(licenseCategories) ? licenseCategories : [licenseCategories];
+    return categories.includes('A′') && age >= 16 && age < 18;
   }
 
-  requiresExistingLicense(licenseCategories: string[]): boolean {
+  requiresExistingLicense(licenseCategories: string | string[]): boolean {
     // C, D, E categories require existing B license
+    const categories = Array.isArray(licenseCategories) ? licenseCategories : [licenseCategories];
     const heavyCategories = ['C', 'D', 'E'];
-    return licenseCategories.some(cat => heavyCategories.includes(cat));
+    return categories.some(cat => heavyCategories.includes(cat));
   }
 }
 

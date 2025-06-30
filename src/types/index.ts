@@ -20,6 +20,24 @@ export interface Person {
   updated_at: string;
   created_by?: string;
   updated_by?: string;
+  
+  // License tracking for renewals and printing
+  earned_license_codes?: PersonLicenseCode[];
+  current_license_number?: string;
+  current_license_expiry?: string;
+}
+
+// Track all license codes a person has earned for printing and renewals
+export interface PersonLicenseCode {
+  id: string;
+  person_id: string;
+  license_category: LicenseCategory;
+  earned_date: string;
+  earned_from_application_id: string;
+  theory_test_date?: string;
+  practical_test_date?: string;
+  is_active: boolean;
+  notes?: string;
 }
 
 // Role interface
@@ -92,12 +110,20 @@ export interface Application {
   location_id: string;
   location?: Location;
   application_type: ApplicationType;
-  license_categories: LicenseCategory[];
+  license_category: LicenseCategory;
   status: ApplicationStatus;
   is_urgent: boolean;
   urgency_reason?: string;
   is_temporary_license: boolean;
   validity_period_days?: number;
+  
+  // New hold system fields
+  is_on_hold: boolean;
+  parent_application_id?: string;
+  
+  // Replacement fields
+  replacement_reason?: string;
+  police_report_number?: string;
   
   // Requirements flags
   medical_certificate_required: boolean;
@@ -130,7 +156,6 @@ export interface Application {
   updated_at: string;
   
   // Related applications
-  parent_application_id?: string;
   related_applications?: Application[];
 }
 
@@ -138,15 +163,23 @@ export interface ApplicationCreate {
   person_id: string;
   location_id: string;
   application_type: ApplicationType;
-  license_categories: LicenseCategory[];
+  license_category: LicenseCategory;
   is_urgent: boolean;
   urgency_reason?: string;
   is_temporary_license: boolean;
   validity_period_days?: number;
+  
+  // New hold system fields
+  is_on_hold?: boolean;
+  parent_application_id?: string;
+  
+  // Replacement fields
+  replacement_reason?: string;
+  police_report_number?: string;
 }
 
 export interface ApplicationUpdate {
-  license_categories?: LicenseCategory[];
+  license_category?: LicenseCategory;
   is_urgent?: boolean;
   urgency_reason?: string;
   medical_certificate_provided?: string;
@@ -155,6 +188,14 @@ export interface ApplicationUpdate {
   photo_url?: string;
   signature_url?: string;
   fingerprint_url?: string;
+  
+  // New hold system fields
+  is_on_hold?: boolean;
+  parent_application_id?: string;
+  
+  // Replacement fields
+  replacement_reason?: string;
+  police_report_number?: string;
 }
 
 // Enums for applications
@@ -162,8 +203,7 @@ export enum ApplicationType {
   NEW_LICENSE = 'NEW_LICENSE',
   LEARNERS_PERMIT = 'LEARNERS_PERMIT', 
   RENEWAL = 'RENEWAL',
-  DUPLICATE = 'DUPLICATE',
-  UPGRADE = 'UPGRADE',
+  REPLACEMENT = 'REPLACEMENT',
   TEMPORARY_LICENSE = 'TEMPORARY_LICENSE',
   INTERNATIONAL_PERMIT = 'INTERNATIONAL_PERMIT'
 }
@@ -237,13 +277,21 @@ export interface ApplicationFormData {
   
   // Step 2: Application Details
   application_type: ApplicationType;
-  license_categories: LicenseCategory[];
+  license_category: LicenseCategory;
   is_urgent: boolean;
   urgency_reason?: string;
   is_temporary_license: boolean;
   validity_period_days?: number;
   // Location selection for admin users
   selected_location_id?: string;
+  
+  // New hold system fields
+  is_on_hold?: boolean;
+  parent_application_id?: string;
+  
+  // Replacement fields
+  replacement_reason?: string;
+  police_report_number?: string;
   
   // Step 3: Requirements
   medical_certificate_file?: File;
