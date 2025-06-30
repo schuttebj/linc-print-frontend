@@ -239,7 +239,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           }));
 
           // Set appropriate step based on application status
-          setActiveStep(getStepFromStatus(application.status));
+          setActiveStep(getStepFromStatus(application.status, !!application.person));
         }
 
       } catch (err: any) {
@@ -253,10 +253,10 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
   }, [initialApplicationId, mode]);
 
   // Helper function to determine step from application status
-  const getStepFromStatus = (status: ApplicationStatus): number => {
+  const getStepFromStatus = (status: ApplicationStatus, hasPerson: boolean = false): number => {
     switch (status) {
       case ApplicationStatus.DRAFT:
-        return formData.person ? 1 : 0;
+        return hasPerson ? 1 : 0;
       case ApplicationStatus.SUBMITTED:
         return 2; // Ready for requirements check
       case ApplicationStatus.DOCUMENTS_PENDING:
@@ -682,7 +682,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     }));
 
     // Set appropriate step based on application status
-    setActiveStep(getStepFromStatus(application.status));
+    setActiveStep(getStepFromStatus(application.status, !!application.person));
     setShowDraftDialog(false);
   };
 
