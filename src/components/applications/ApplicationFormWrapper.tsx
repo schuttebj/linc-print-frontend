@@ -375,8 +375,36 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
       return updated;
     });
     
-    // Then handle async validation outside of setState
-    if (field === 'license_categories' && formData.person?.birth_date) {
+    // Clear existing validation errors when making changes
+    setValidationErrors([]);
+    
+    // Force validation check for critical fields that affect requirements
+    const shouldTriggerValidation = field === 'application_type' || 
+                                  field === 'license_categories' || 
+                                  field === 'selected_location_id';
+    
+    if (shouldTriggerValidation && formData.person?.birth_date) {
+      // Get the updated values for validation
+      const updatedAppType = field === 'application_type' ? value : formData.application_type;
+      const updatedCategories = field === 'license_categories' ? value : formData.license_categories;
+      
+      // Reset external form states when application type changes
+      if (field === 'application_type') {
+        setShowExternalLearnerForm(false);
+        setShowExternalLicenseForm(false);
+        setExistingLicenseCheck(null); // Force refresh of license check
+      }
+      
+      // Run validation with updated values
+      await validateLicenseCategories(
+        updatedCategories as LicenseCategory[], 
+        updatedAppType as ApplicationType,
+        formData.person,
+        formData.external_learners_permit,
+        formData.external_existing_license
+      );
+    } else if (field === 'license_categories' && formData.person?.birth_date) {
+      // Original validation for license categories only (fallback)
       await validateLicenseCategories(
         value as LicenseCategory[], 
         formData.application_type,
@@ -385,8 +413,6 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         formData.external_existing_license
       );
     }
-    
-    setValidationErrors([]);
   };
 
   // Validate license categories
@@ -493,12 +519,22 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                                         formData.application_type === ApplicationType.RENEWAL) && 
                                        !existingLicenseCheck?.has_active_licenses;
 
-        // Learner's permit requirement check (moved from step 1)
+        // License requirements check (learner's permits vs existing licenses)
         if (formData.application_type === ApplicationType.NEW_LICENSE) {
-          const categoriesRequiringLearners = formData.license_categories.filter(cat => 
-            LICENSE_CATEGORY_RULES[cat].allows_learners_permit
-          );
+          // Separate categories by their requirements
+          const categoriesRequiringLearners = formData.license_categories.filter(cat => {
+            const rules = LICENSE_CATEGORY_RULES[cat];
+            // Only require learner's permit for categories that explicitly allow them AND don't require existing licenses
+            return rules.allows_learners_permit && rules.requires_existing.length === 0;
+          });
           
+          const categoriesRequiringExisting = formData.license_categories.filter(cat => {
+            const rules = LICENSE_CATEGORY_RULES[cat];
+            // Categories like C, D, E require existing full licenses
+            return rules.requires_existing.length > 0;
+          });
+          
+          // Check learner's permit requirement for base categories (A′, A, B when applied for directly)
           if (categoriesRequiringLearners.length > 0) {
             // Check if system found valid learner's permit
             const hasSystemLearner = existingLicenseCheck?.has_learners_permit && 
@@ -513,7 +549,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
             if (!hasSystemLearner && !hasValidExternalLearner) {
               // Only show error if external form isn't being filled out
               if (!showExternalLearnerForm) {
-                errors.push('Valid learner\'s permit required for selected categories');
+                errors.push(`Valid learner's permit required for categories: ${categoriesRequiringLearners.join(', ')}`);
               } else if (formData.external_learners_permit?.license_number && 
                         !/^\d+$/.test(formData.external_learners_permit.license_number)) {
                 errors.push('Learner\'s permit number must contain only numbers');
@@ -522,6 +558,26 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                 errors.push('Learner\'s permit has expired');
               } else if (!formData.external_learners_permit?.verified_by_clerk) {
                 errors.push('Please verify the learner\'s permit details');
+              }
+            }
+          }
+          
+          // Check existing license requirement for advanced categories (C, D, E)
+          if (categoriesRequiringExisting.length > 0) {
+            const hasSystemLicense = existingLicenseCheck?.has_active_licenses;
+            const hasValidExternalLicense = formData.external_existing_license?.license_number?.trim() &&
+                                          formData.external_existing_license?.verified_by_clerk;
+            
+            if (!hasSystemLicense && !hasValidExternalLicense) {
+              if (!showExternalLicenseForm) {
+                const requiredCategories = categoriesRequiringExisting.map(cat => 
+                  LICENSE_CATEGORY_RULES[cat].requires_existing.join(', ')
+                ).join(', ');
+                errors.push(`Valid existing license required. Categories ${categoriesRequiringExisting.join(', ')} require existing license for: ${requiredCategories}`);
+              } else if (!formData.external_existing_license?.verified_by_clerk) {
+                errors.push('Please verify the external existing license details');
+              } else if (!formData.external_existing_license?.license_number?.trim()) {
+                errors.push('Existing license number is required');
               }
             }
           }
@@ -1166,7 +1222,11 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
 
           {/* Learner's Permit Verification - For Driver's License Applications */}
           {formData.application_type === ApplicationType.NEW_LICENSE && 
-           formData.license_categories.some(cat => LICENSE_CATEGORY_RULES[cat].allows_learners_permit) && (
+           formData.license_categories.some(cat => {
+             const rules = LICENSE_CATEGORY_RULES[cat];
+             // Only show learner's permit section for categories that require them (not those requiring existing licenses)
+             return rules.allows_learners_permit && rules.requires_existing.length === 0;
+           }) && (
             <Grid item xs={12}>
               <Card>
                 <CardHeader 
@@ -1295,6 +1355,162 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                                 }
                                 label="Verified valid permit"
                                 sx={{ color: 'primary.main', mt: 1 }}
+                              />
+                            </Grid>
+                          </Grid>
+                        </Box>
+                      )}
+                    </Box>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
+
+          {/* Existing License Verification - For Advanced Categories (C, D, E) */}
+          {formData.application_type === ApplicationType.NEW_LICENSE && 
+           formData.license_categories.some(cat => {
+             const rules = LICENSE_CATEGORY_RULES[cat];
+             // Categories like C, D, E require existing full licenses
+             return rules.requires_existing.length > 0;
+           }) && (
+            <Grid item xs={12}>
+              <Card>
+                <CardHeader 
+                  title="Existing License Verification" 
+                  subheader="Categories C, D, E require valid existing license for prerequisite categories" 
+                />
+                <CardContent>
+                  {existingLicenseCheck?.has_active_licenses ? (
+                    <Alert severity="success">
+                      <Typography variant="body2" gutterBottom>System Found Valid Existing License:</Typography>
+                      Categories: {existingLicenseCheck.active_licenses?.map(lic => lic.categories.join(', ')).join(', ')}
+                      <br />
+                      {existingLicenseCheck.active_licenses?.map((lic, idx) => (
+                        <span key={idx}>
+                          License {lic.license_number} expires: {new Date(lic.expiry_date).toLocaleDateString()}
+                          {idx < existingLicenseCheck.active_licenses!.length - 1 && <br />}
+                        </span>
+                      ))}
+                    </Alert>
+                  ) : (
+                    <Box>
+                      <Alert severity="warning" sx={{ mb: 2 }}>
+                        No valid existing license found in system. Manual verification required for advanced categories.
+                        {(() => {
+                          const advancedCategories = formData.license_categories.filter(cat => 
+                            LICENSE_CATEGORY_RULES[cat].requires_existing.length > 0
+                          );
+                          const requiredCategories = [...new Set(
+                            advancedCategories.flatMap(cat => LICENSE_CATEGORY_RULES[cat].requires_existing)
+                          )];
+                          return ` Required: ${requiredCategories.join(', ')} license for ${advancedCategories.join(', ')} categories.`;
+                        })()}
+                      </Alert>
+                      
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={showExternalLicenseForm}
+                            onChange={(e) => setShowExternalLicenseForm(e.target.checked)}
+                          />
+                        }
+                        label="Applicant has presented valid existing license"
+                        sx={{ mb: 2 }}
+                      />
+                      
+                      {showExternalLicenseForm && (
+                        <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                          <Typography variant="body2" fontWeight="bold" gutterBottom>
+                            External Existing License Details:
+                          </Typography>
+                          <Grid container spacing={2}>
+                            <Grid item xs={12} md={6}>
+                              <TextField
+                                fullWidth
+                                size="small"
+                                label="License Number"
+                                value={formData.external_existing_license?.license_number || ''}
+                                onChange={(e) => {
+                                  const value = e.target.value.replace(/\D/g, '');
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    external_existing_license: {
+                                      ...prev.external_existing_license,
+                                      license_number: value,
+                                      license_type: 'DRIVERS_LICENSE',
+                                      categories: prev.external_existing_license?.categories || [],
+                                      issue_date: prev.external_existing_license?.issue_date || '',
+                                      expiry_date: prev.external_existing_license?.expiry_date || '',
+                                      issuing_location: prev.external_existing_license?.issuing_location || '',
+                                      verified_by_clerk: prev.external_existing_license?.verified_by_clerk || false
+                                    } as ExternalLicenseDetails
+                                  }));
+                                }}
+                                placeholder="Enter numbers only"
+                                required
+                              />
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                              <TextField
+                                fullWidth
+                                size="small"
+                                label="Expiry Date"
+                                type="date"
+                                value={formData.external_existing_license?.expiry_date || ''}
+                                onChange={(e) => {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    external_existing_license: {
+                                      ...prev.external_existing_license!,
+                                      expiry_date: e.target.value
+                                    }
+                                  }));
+                                }}
+                                InputLabelProps={{ shrink: true }}
+                                inputProps={{
+                                  min: new Date().toISOString().split('T')[0]
+                                }}
+                                required
+                              />
+                            </Grid>
+                            <Grid item xs={12}>
+                              <TextField
+                                fullWidth
+                                size="small"
+                                label="Current License Categories"
+                                value={formData.external_existing_license?.categories?.join(', ') || ''}
+                                onChange={(e) => {
+                                  const categories = e.target.value.split(',').map(cat => cat.trim().toUpperCase()).filter(cat => cat) as LicenseCategory[];
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    external_existing_license: {
+                                      ...prev.external_existing_license!,
+                                      categories: categories
+                                    }
+                                  }));
+                                }}
+                                placeholder="e.g., A, B (comma-separated)"
+                                helperText="Enter current license categories - must include prerequisite categories"
+                                required
+                              />
+                            </Grid>
+                            <Grid item xs={12}>
+                              <FormControlLabel
+                                control={
+                                  <Checkbox
+                                    checked={formData.external_existing_license?.verified_by_clerk || false}
+                                    onChange={(e) => setFormData(prev => ({
+                                      ...prev,
+                                      external_existing_license: {
+                                        ...prev.external_existing_license!,
+                                        verified_by_clerk: e.target.checked
+                                      }
+                                    }))}
+                                  />
+                                }
+                                label="I have verified this license is valid and contains required categories"
+                                sx={{ color: 'primary.main' }}
                               />
                             </Grid>
                           </Grid>
@@ -1479,13 +1695,30 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           )}
 
           {/* No Requirements Message */}
-          {!requiresMedical && !requiresParentalConsent && !requiresExternalLicense && (
-            <Grid item xs={12}>
-              <Alert severity="success">
-                No additional requirements needed for this application. You may proceed to the next step.
-              </Alert>
-            </Grid>
-          )}
+          {(() => {
+            const hasLearnerPermitRequirement = formData.application_type === ApplicationType.NEW_LICENSE && 
+              formData.license_categories.some(cat => {
+                const rules = LICENSE_CATEGORY_RULES[cat];
+                return rules.allows_learners_permit && rules.requires_existing.length === 0;
+              });
+            
+            const hasAdvancedCategoryRequirement = formData.application_type === ApplicationType.NEW_LICENSE && 
+              formData.license_categories.some(cat => {
+                const rules = LICENSE_CATEGORY_RULES[cat];
+                return rules.requires_existing.length > 0;
+              });
+
+            const hasAnyRequirement = requiresMedical || requiresParentalConsent || requiresExternalLicense || 
+                                    hasLearnerPermitRequirement || hasAdvancedCategoryRequirement;
+
+            return !hasAnyRequirement ? (
+              <Grid item xs={12}>
+                <Alert severity="success">
+                  No additional requirements needed for this application. You may proceed to the next step.
+                </Alert>
+              </Grid>
+            ) : null;
+          })()}
         </Grid>
       </Box>
     );
