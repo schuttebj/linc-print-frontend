@@ -247,6 +247,9 @@ export interface ApplicationFormData {
   medical_certificate_file?: File;
   parental_consent_file?: File;
   existing_license_verified?: boolean;
+  // New: External license validation
+  external_learners_permit?: ExternalLicenseDetails;
+  external_existing_license?: ExternalLicenseDetails;
   
   // Step 4: Biometric Data
   biometric_data: BiometricCaptureData;
@@ -255,4 +258,125 @@ export interface ApplicationFormData {
   selected_fees: FeeStructure[];
   total_amount: number;
   notes?: string;
-} 
+}
+
+// New types for Madagascar licensing logic
+export interface ExternalLicenseDetails {
+  license_number: string;
+  license_type: 'LEARNERS_PERMIT' | 'DRIVERS_LICENSE';
+  categories: LicenseCategory[];
+  issue_date: string;
+  expiry_date: string;
+  issuing_location: string;
+  verified_by_clerk: boolean;
+  verification_notes?: string;
+}
+
+export interface LicenseValidationResult {
+  is_valid: boolean;
+  message: string;
+  missing_prerequisites: LicenseCategory[];
+  age_violations: { category: LicenseCategory; required_age: number; current_age: number }[];
+  invalid_combinations: string[];
+}
+
+export interface ExistingLicenseCheck {
+  person_id: string;
+  has_active_licenses: boolean;
+  active_licenses: ActiveLicense[];
+  has_learners_permit: boolean;
+  learners_permit?: ActiveLicense;
+  can_apply_for: LicenseCategory[];
+  must_renew: LicenseCategory[];
+  can_upgrade_to: LicenseCategory[];
+}
+
+export interface ActiveLicense {
+  id: string;
+  license_number: string;
+  categories: LicenseCategory[];
+  license_type: 'LEARNERS_PERMIT' | 'DRIVERS_LICENSE';
+  issue_date: string;
+  expiry_date: string;
+  status: LicenseStatus;
+  is_valid: boolean;
+}
+
+// New enums for licensing validation
+export enum LicenseStatus {
+  ACTIVE = 'ACTIVE',
+  EXPIRED = 'EXPIRED',
+  SUSPENDED = 'SUSPENDED',
+  REVOKED = 'REVOKED',
+  PENDING = 'PENDING'
+}
+
+export enum LicensePrerequisite {
+  REQUIRES_B = 'REQUIRES_B',
+  REQUIRES_B_OR_C_OR_D = 'REQUIRES_B_OR_C_OR_D',
+  REQUIRES_LEARNERS_PERMIT = 'REQUIRES_LEARNERS_PERMIT'
+}
+
+// License category rules configuration
+export const LICENSE_CATEGORY_RULES = {
+  [LicenseCategory.A_PRIME]: {
+    min_age: 16,
+    requires_existing: [],
+    allows_learners_permit: true,
+    allows_temporary_after_practical: true,
+    description: 'Moped'
+  },
+  [LicenseCategory.A]: {
+    min_age: 18,
+    requires_existing: [],
+    allows_learners_permit: true,
+    allows_temporary_after_practical: true,
+    description: 'Full Motorcycle'
+  },
+  [LicenseCategory.B]: {
+    min_age: 18,
+    requires_existing: [],
+    allows_learners_permit: true,
+    allows_temporary_after_practical: true,
+    description: 'Light Vehicle'
+  },
+  [LicenseCategory.C]: {
+    min_age: 21,
+    requires_existing: [LicenseCategory.B],
+    allows_learners_permit: false,
+    allows_temporary_after_practical: true,
+    description: 'Heavy Goods'
+  },
+  [LicenseCategory.D]: {
+    min_age: 21,
+    requires_existing: [LicenseCategory.B],
+    allows_learners_permit: false,
+    allows_temporary_after_practical: true,
+    description: 'Passenger Transport'
+  },
+  [LicenseCategory.E]: {
+    min_age: 21,
+    requires_existing: [LicenseCategory.B, LicenseCategory.C, LicenseCategory.D], // Must have at least one of these
+    allows_learners_permit: false,
+    allows_temporary_after_practical: true,
+    description: 'Large Trailers'
+  }
+} as const;
+
+// Valid license category combinations
+export const VALID_COMBINATIONS = [
+  [LicenseCategory.A_PRIME],
+  [LicenseCategory.A],
+  [LicenseCategory.B],
+  [LicenseCategory.A, LicenseCategory.B],
+  [LicenseCategory.B, LicenseCategory.C],
+  [LicenseCategory.B, LicenseCategory.D],
+  [LicenseCategory.B, LicenseCategory.E],
+  [LicenseCategory.B, LicenseCategory.C, LicenseCategory.E],
+  [LicenseCategory.B, LicenseCategory.C, LicenseCategory.D, LicenseCategory.E],
+  [LicenseCategory.A_PRIME, LicenseCategory.A, LicenseCategory.B, LicenseCategory.C, LicenseCategory.D, LicenseCategory.E]
+];
+
+// Constants
+export const LEARNERS_PERMIT_VALIDITY_MONTHS = 6;
+export const DEFAULT_TEMPORARY_LICENSE_DAYS = 90; 

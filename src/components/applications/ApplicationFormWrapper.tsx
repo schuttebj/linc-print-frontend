@@ -60,6 +60,7 @@ import {
 
 import PersonFormWrapper from '../PersonFormWrapper';
 import { applicationService } from '../../services/applicationService';
+import { licenseValidationService } from '../../services/licenseValidationService';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   Person,
@@ -71,7 +72,13 @@ import {
   ApplicationStatus,
   FeeStructure,
   BiometricCaptureData,
-  ApplicationLookups
+  ApplicationLookups,
+  LICENSE_CATEGORY_RULES,
+  ExternalLicenseDetails,
+  LicenseValidationResult,
+  ExistingLicenseCheck,
+  LEARNERS_PERMIT_VALIDITY_MONTHS,
+  DEFAULT_TEMPORARY_LICENSE_DAYS
 } from '../../types';
 
 interface ApplicationFormWrapperProps {
@@ -106,6 +113,12 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
+  // License validation states
+  const [validationResult, setValidationResult] = useState<LicenseValidationResult | null>(null);
+  const [existingLicenseCheck, setExistingLicenseCheck] = useState<ExistingLicenseCheck | null>(null);
+  const [showExternalLearnerForm, setShowExternalLearnerForm] = useState(false);
+  const [showExternalLicenseForm, setShowExternalLicenseForm] = useState(false);
+
   // Application data
   const [formData, setFormData] = useState<ApplicationFormData>({
     person: null,
@@ -114,7 +127,10 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     is_urgent: false,
     urgency_reason: '',
     is_temporary_license: false,
-    validity_period_days: 90,
+    validity_period_days: DEFAULT_TEMPORARY_LICENSE_DAYS,
+    // External license validation
+    external_learners_permit: undefined,
+    external_existing_license: undefined,
     biometric_data: {},
     selected_fees: [],
     total_amount: 0
@@ -248,7 +264,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
   }, []);
 
   // Application details change handler
-  const handleApplicationDetailsChange = (field: string, value: any) => {
+  const handleApplicationDetailsChange = async (field: string, value: any) => {
     setFormData(prev => {
       const updated = { ...prev, [field]: value };
       
@@ -262,12 +278,79 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         
         updated.selected_fees = fees;
         updated.total_amount = applicationService.calculateTotalAmount(fees);
+
+        // Set default validity for learner's permits (6 months, admin controlled)
+        if (updated.application_type === ApplicationType.LEARNERS_PERMIT) {
+          updated.validity_period_days = LEARNERS_PERMIT_VALIDITY_MONTHS * 30; // 6 months in days
+          updated.is_temporary_license = false; // Learner's permits are not temporary licenses
+        }
+      }
+
+      // Auto-suggest missing prerequisites for license categories
+      if (field === 'license_categories' && formData.person?.birth_date) {
+        const suggestions = licenseValidationService.getSuggestedCategories(value as LicenseCategory[]);
+        if (suggestions.length > 0) {
+          const updatedCategories = [...new Set([...value, ...suggestions])];
+          if (updatedCategories.length !== value.length) {
+            // Add suggested categories with user notification
+            setSuccess(`Added prerequisite categories: ${suggestions.join(', ')}`);
+            setTimeout(() => setSuccess(''), 3000);
+            updated.license_categories = updatedCategories;
+          }
+        }
+
+        // Validate categories in real-time
+        validateLicenseCategories(value as LicenseCategory[], updated.application_type);
       }
       
       return updated;
     });
     
     setValidationErrors([]);
+  };
+
+  // Validate license categories
+  const validateLicenseCategories = async (categories: LicenseCategory[], applicationType: ApplicationType) => {
+    if (!formData.person?.birth_date || categories.length === 0) {
+      setValidationResult(null);
+      return;
+    }
+
+    try {
+      const validation = await licenseValidationService.validateApplication(
+        applicationType,
+        categories,
+        formData.person.birth_date,
+        formData.person.id,
+        formData.external_learners_permit,
+        formData.external_existing_license
+      );
+
+      setValidationResult(validation);
+
+      // Check existing licenses when person is selected
+      if (!existingLicenseCheck) {
+        const existingCheck = await licenseValidationService.checkExistingLicenses(formData.person.id);
+        setExistingLicenseCheck(existingCheck);
+
+        // Show external forms if needed
+        if (applicationType === ApplicationType.NEW_LICENSE && !existingCheck.has_learners_permit) {
+          setShowExternalLearnerForm(true);
+        }
+        if ((applicationType === ApplicationType.UPGRADE || applicationType === ApplicationType.RENEWAL) && !existingCheck.has_active_licenses) {
+          setShowExternalLicenseForm(true);
+        }
+      }
+    } catch (error) {
+      console.error('License validation error:', error);
+      setValidationResult({
+        is_valid: false,
+        message: 'Validation failed - please check requirements',
+        missing_prerequisites: [],
+        age_violations: [],
+        invalid_combinations: []
+      });
+    }
   };
 
   // Validation for each step
@@ -286,12 +369,9 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           errors.push('Please select at least one license category');
         }
         
-        if (formData.person?.birth_date) {
-          const ageErrors = applicationService.validateAgeRequirements(
-            formData.person.birth_date, 
-            formData.license_categories
-          );
-          errors.push(...ageErrors);
+        // Use new validation service for comprehensive checks
+        if (formData.person?.birth_date && validationResult && !validationResult.is_valid) {
+          errors.push(validationResult.message);
         }
         
         if (formData.is_urgent && !formData.urgency_reason?.trim()) {
@@ -300,7 +380,55 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         break;
         
       case 2: // Requirements
-        // Validation handled by individual requirement components
+        const age = formData.person?.birth_date ? licenseValidationService.calculateAge(formData.person.birth_date) : 0;
+        const requiresMedical = age >= 65 || formData.license_categories.some(cat => ['C', 'D', 'E'].includes(cat));
+        const requiresParentalConsent = age < 18;
+        const requiresExternalLearner = formData.application_type === ApplicationType.NEW_LICENSE && 
+                                       !existingLicenseCheck?.has_learners_permit && 
+                                       formData.license_categories.some(cat => LICENSE_CATEGORY_RULES[cat].allows_learners_permit);
+        const requiresExternalLicense = (formData.application_type === ApplicationType.UPGRADE || 
+                                        formData.application_type === ApplicationType.RENEWAL) && 
+                                       !existingLicenseCheck?.has_active_licenses;
+
+        // Medical certificate validation
+        if (requiresMedical && !formData.medical_certificate_file) {
+          errors.push('Medical certificate is required');
+        }
+
+        // Parental consent validation
+        if (requiresParentalConsent && !formData.parental_consent_file) {
+          errors.push('Parental consent document is required for applicants under 18');
+        }
+
+        // External learner's permit validation
+        if (requiresExternalLearner) {
+          if (!showExternalLearnerForm) {
+            errors.push('Please confirm applicant has presented valid learner\'s permit');
+          } else if (!formData.external_learners_permit?.verified_by_clerk) {
+            errors.push('Please verify the external learner\'s permit details');
+          } else if (!formData.external_learners_permit?.license_number?.trim()) {
+            errors.push('Learner\'s permit number is required');
+          } else if (!formData.external_learners_permit?.expiry_date) {
+            errors.push('Learner\'s permit expiry date is required');
+          } else {
+            // Check if learner's permit is not expired
+            const expiryDate = new Date(formData.external_learners_permit.expiry_date);
+            if (expiryDate < new Date()) {
+              errors.push('External learner\'s permit has expired');
+            }
+          }
+        }
+
+        // External existing license validation
+        if (requiresExternalLicense) {
+          if (!showExternalLicenseForm) {
+            errors.push('Please confirm applicant has presented valid existing license');
+          } else if (!formData.external_existing_license?.verified_by_clerk) {
+            errors.push('Please verify the external existing license details');
+          } else if (!formData.external_existing_license?.license_number?.trim()) {
+            errors.push('Existing license number is required');
+          }
+        }
         break;
         
       case 3: // Biometric
@@ -313,7 +441,11 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         break;
         
       case 4: // Review
-        // Final validation
+        // Final validation using license validation service
+        if (validationResult && !validationResult.is_valid) {
+          errors.push('Please resolve validation issues before submitting');
+        }
+        
         if (formData.selected_fees.length === 0) {
           errors.push('No applicable fees found - please review application details');
         }
@@ -495,8 +627,8 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
               onChange={(e) => handleApplicationDetailsChange('application_type', e.target.value)}
               label="Application Type"
             >
-              <MenuItem value={ApplicationType.NEW_LICENSE}>New License</MenuItem>
               <MenuItem value={ApplicationType.LEARNERS_PERMIT}>Learner's Permit</MenuItem>
+              <MenuItem value={ApplicationType.NEW_LICENSE}>Driver's License</MenuItem>
               <MenuItem value={ApplicationType.RENEWAL}>License Renewal</MenuItem>
               <MenuItem value={ApplicationType.DUPLICATE}>Duplicate License</MenuItem>
               <MenuItem value={ApplicationType.UPGRADE}>License Upgrade</MenuItem>
@@ -523,48 +655,19 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                 </Box>
               )}
             >
-              <MenuItem value={LicenseCategory.A_PRIME}>
-                <Checkbox checked={formData.license_categories.includes(LicenseCategory.A_PRIME)} />
-                <ListItemText 
-                  primary="A′ - Moped" 
-                  secondary="Minimum age: 16 years" 
-                />
-              </MenuItem>
-              <MenuItem value={LicenseCategory.A}>
-                <Checkbox checked={formData.license_categories.includes(LicenseCategory.A)} />
-                <ListItemText 
-                  primary="A - Full Motorcycle" 
-                  secondary="Minimum age: 18 years" 
-                />
-              </MenuItem>
-              <MenuItem value={LicenseCategory.B}>
-                <Checkbox checked={formData.license_categories.includes(LicenseCategory.B)} />
-                <ListItemText 
-                  primary="B - Light Vehicle" 
-                  secondary="Minimum age: 18 years" 
-                />
-              </MenuItem>
-              <MenuItem value={LicenseCategory.C}>
-                <Checkbox checked={formData.license_categories.includes(LicenseCategory.C)} />
-                <ListItemText 
-                  primary="C - Heavy Goods" 
-                  secondary="Minimum age: 21 years" 
-                />
-              </MenuItem>
-              <MenuItem value={LicenseCategory.D}>
-                <Checkbox checked={formData.license_categories.includes(LicenseCategory.D)} />
-                <ListItemText 
-                  primary="D - Passenger Transport" 
-                  secondary="Minimum age: 21 years" 
-                />
-              </MenuItem>
-              <MenuItem value={LicenseCategory.E}>
-                <Checkbox checked={formData.license_categories.includes(LicenseCategory.E)} />
-                <ListItemText 
-                  primary="E - Large Trailers" 
-                  secondary="Minimum age: 21 years" 
-                />
-              </MenuItem>
+              {Object.entries(LICENSE_CATEGORY_RULES).map(([category, rules]) => {
+                const isDisabled = formData.application_type === ApplicationType.LEARNERS_PERMIT && !rules.allows_learners_permit;
+                
+                return (
+                  <MenuItem key={category} value={category} disabled={isDisabled}>
+                    <Checkbox checked={formData.license_categories.includes(category as LicenseCategory)} />
+                    <ListItemText 
+                      primary={`${category} - ${rules.description}`} 
+                      secondary={`Min age: ${rules.min_age}${rules.requires_existing.length > 0 ? ` | Requires: ${rules.requires_existing.join(', ')}` : ''}${isDisabled ? ' | Not available for learner\'s permits' : ''}`}
+                    />
+                  </MenuItem>
+                );
+              })}
             </Select>
           </FormControl>
         </Grid>
@@ -595,66 +698,140 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           )}
         </Grid>
 
-        {/* Temporary License Option */}
-        <Grid item xs={12} md={8}>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={formData.is_temporary_license}
-                onChange={(e) => handleApplicationDetailsChange('is_temporary_license', e.target.checked)}
+        {/* Temporary License Option - Only for Driver's License applications */}
+        {formData.application_type === ApplicationType.NEW_LICENSE && (
+          <>
+            <Grid item xs={12} md={8}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={formData.is_temporary_license}
+                    onChange={(e) => handleApplicationDetailsChange('is_temporary_license', e.target.checked)}
+                  />
+                }
+                label="Issue Temporary License"
               />
-            }
-            label="Issue Temporary License"
-          />
-          <Typography variant="caption" display="block" color="text.secondary">
-            Temporary license valid while main application is processed
-          </Typography>
-        </Grid>
+              <Typography variant="caption" display="block" color="text.secondary">
+                Temporary license valid while main application is processed
+              </Typography>
+            </Grid>
 
-        {formData.is_temporary_license && (
-          <Grid item xs={12} md={4}>
-            <TextField
-              fullWidth
-              label="Validity Period (Days)"
-              type="number"
-              value={formData.validity_period_days || 90}
-              onChange={(e) => handleApplicationDetailsChange('validity_period_days', parseInt(e.target.value))}
-              inputProps={{ min: 30, max: 365 }}
-              helperText="Default: 90 days"
-            />
+            {formData.is_temporary_license && (
+              <Grid item xs={12} md={4}>
+                <TextField
+                  fullWidth
+                  label="Validity Period (Days)"
+                  type="number"
+                  value={formData.validity_period_days || DEFAULT_TEMPORARY_LICENSE_DAYS}
+                  onChange={(e) => handleApplicationDetailsChange('validity_period_days', parseInt(e.target.value))}
+                  inputProps={{ min: 30, max: 365 }}
+                  helperText={`Default: ${DEFAULT_TEMPORARY_LICENSE_DAYS} days`}
+                />
+              </Grid>
+            )}
+          </>
+        )}
+
+        {/* Learner's Permit Validity Notice */}
+        {formData.application_type === ApplicationType.LEARNERS_PERMIT && (
+          <Grid item xs={12}>
+            <Alert severity="info">
+              <Typography variant="subtitle2" gutterBottom>
+                Learner's Permit Validity
+              </Typography>
+              Learner's permits are valid for {LEARNERS_PERMIT_VALIDITY_MONTHS} months from issue date. 
+              Validity period is controlled by administrative settings and cannot be modified during application.
+            </Alert>
           </Grid>
         )}
 
-        {/* Age Requirements Validation Display */}
-        {formData.person?.birth_date && formData.license_categories.length > 0 && (
+        {/* Real-time Validation Display */}
+        {validationResult && (
           <Grid item xs={12}>
             <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
               <Typography variant="subtitle2" gutterBottom>
-                Age Requirements Check
+                License Category Validation
               </Typography>
-              {(() => {
-                const ageErrors = applicationService.validateAgeRequirements(
-                  formData.person.birth_date, 
-                  formData.license_categories
-                );
-                if (ageErrors.length > 0) {
-                  return (
-                    <Alert severity="warning">
-                      <ul style={{ margin: 0, paddingLeft: '20px' }}>
-                        {ageErrors.map((error, index) => (
-                          <li key={index}>{error}</li>
-                        ))}
-                      </ul>
-                    </Alert>
-                  );
-                } else {
-                  return (
-                    <Alert severity="success">
-                      Age requirements satisfied for all selected categories
-                    </Alert>
-                  );
-                }
-              })()}
+              <Alert severity={validationResult.is_valid ? "success" : "warning"}>
+                {validationResult.message}
+                
+                {validationResult.age_violations.length > 0 && (
+                  <Box sx={{ mt: 1 }}>
+                    <Typography variant="body2" fontWeight="bold">Age Requirements:</Typography>
+                    <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
+                      {validationResult.age_violations.map((violation, index) => (
+                        <li key={index}>
+                          Category {violation.category}: Required {violation.required_age}+ years (applicant is {violation.current_age})
+                        </li>
+                      ))}
+                    </ul>
+                  </Box>
+                )}
+
+                {validationResult.missing_prerequisites.length > 0 && (
+                  <Box sx={{ mt: 1 }}>
+                    <Typography variant="body2" fontWeight="bold">Missing Prerequisites:</Typography>
+                    <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
+                      {validationResult.missing_prerequisites.map((prereq, index) => (
+                        <li key={index}>Category {prereq} required</li>
+                      ))}
+                    </ul>
+                  </Box>
+                )}
+
+                {validationResult.invalid_combinations.length > 0 && (
+                  <Box sx={{ mt: 1 }}>
+                    <Typography variant="body2" fontWeight="bold">Combination Issues:</Typography>
+                    <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
+                      {validationResult.invalid_combinations.map((issue, index) => (
+                        <li key={index}>{issue}</li>
+                      ))}
+                    </ul>
+                  </Box>
+                )}
+              </Alert>
+            </Paper>
+          </Grid>
+        )}
+
+        {/* Existing License Information */}
+        {existingLicenseCheck && (
+          <Grid item xs={12}>
+            <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Existing License Status
+              </Typography>
+              
+              {existingLicenseCheck.has_active_licenses ? (
+                <Alert severity="info">
+                  <Typography variant="body2" gutterBottom>Active Licenses Found:</Typography>
+                  <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                    {existingLicenseCheck.active_licenses.map((license, index) => (
+                      <li key={index}>
+                        {license.license_number} - Categories: {license.categories.join(', ')} 
+                        (Expires: {new Date(license.expiry_date).toLocaleDateString()})
+                      </li>
+                    ))}
+                  </ul>
+                </Alert>
+              ) : (
+                <Alert severity="warning">
+                  No active licenses found in system. External license verification may be required.
+                </Alert>
+              )}
+
+              {existingLicenseCheck.has_learners_permit && (
+                <Alert severity="success" sx={{ mt: 1 }}>
+                  Valid learner's permit found for categories: {existingLicenseCheck.learners_permit?.categories.join(', ')}
+                </Alert>
+              )}
+
+              {existingLicenseCheck.must_renew.length > 0 && (
+                <Alert severity="warning" sx={{ mt: 1 }}>
+                  <Typography variant="body2" gutterBottom>Renewal Required:</Typography>
+                  Categories {existingLicenseCheck.must_renew.join(', ')} expire within 6 months
+                </Alert>
+              )}
             </Paper>
           </Grid>
         )}
@@ -703,15 +880,334 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     </Box>
   );
 
-  const renderRequirementsStep = () => (
-    <Box>
-      <Typography variant="h6" gutterBottom>Requirements Check</Typography>
-      <Alert severity="info">
-        Requirements validation will be implemented in the next development phase.
-        This includes medical certificate and parental consent uploads.
-      </Alert>
-    </Box>
-  );
+  const renderRequirementsStep = () => {
+    const age = formData.person?.birth_date ? licenseValidationService.calculateAge(formData.person.birth_date) : 0;
+    const requiresMedical = age >= 65 || formData.license_categories.some(cat => ['C', 'D', 'E'].includes(cat));
+    const requiresParentalConsent = age < 18;
+    const requiresExternalLearner = formData.application_type === ApplicationType.NEW_LICENSE && 
+                                   !existingLicenseCheck?.has_learners_permit && 
+                                   formData.license_categories.some(cat => LICENSE_CATEGORY_RULES[cat].allows_learners_permit);
+    const requiresExternalLicense = (formData.application_type === ApplicationType.UPGRADE || 
+                                    formData.application_type === ApplicationType.RENEWAL) && 
+                                   !existingLicenseCheck?.has_active_licenses;
+
+    return (
+      <Box>
+        <Typography variant="h6" gutterBottom>Requirements Check</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          Complete required document uploads and license verification
+        </Typography>
+
+        <Grid container spacing={3}>
+          {/* Medical Certificate */}
+          {requiresMedical && (
+            <Grid item xs={12}>
+              <Card>
+                <CardHeader 
+                  title="Medical Certificate" 
+                  subheader={age >= 65 ? "Required for applicants 65+" : "Required for commercial licenses (C, D, E)"} 
+                />
+                <CardContent>
+                  <input
+                    accept="image/*,.pdf"
+                    style={{ display: 'none' }}
+                    id="medical-certificate-upload"
+                    type="file"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setFormData(prev => ({ ...prev, medical_certificate_file: file }));
+                      }
+                    }}
+                  />
+                  <label htmlFor="medical-certificate-upload">
+                    <Button variant="outlined" component="span" startIcon={<AssignmentIcon />}>
+                      {formData.medical_certificate_file ? 'Change Medical Certificate' : 'Upload Medical Certificate'}
+                    </Button>
+                  </label>
+                  {formData.medical_certificate_file && (
+                    <Typography variant="body2" sx={{ mt: 1 }}>
+                      File: {formData.medical_certificate_file.name}
+                    </Typography>
+                  )}
+                  <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                    Upload medical certificate dated within the last 6 months
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
+
+          {/* Parental Consent */}
+          {requiresParentalConsent && (
+            <Grid item xs={12}>
+              <Card>
+                <CardHeader 
+                  title="Parental Consent" 
+                  subheader="Required for applicants under 18 years" 
+                />
+                <CardContent>
+                  <input
+                    accept="image/*,.pdf"
+                    style={{ display: 'none' }}
+                    id="parental-consent-upload"
+                    type="file"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setFormData(prev => ({ ...prev, parental_consent_file: file }));
+                      }
+                    }}
+                  />
+                  <label htmlFor="parental-consent-upload">
+                    <Button variant="outlined" component="span" startIcon={<AssignmentIcon />}>
+                      {formData.parental_consent_file ? 'Change Parental Consent' : 'Upload Parental Consent'}
+                    </Button>
+                  </label>
+                  {formData.parental_consent_file && (
+                    <Typography variant="body2" sx={{ mt: 1 }}>
+                      File: {formData.parental_consent_file.name}
+                    </Typography>
+                  )}
+                  <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                    Signed consent form from parent or legal guardian
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
+
+          {/* External Learner's Permit Verification */}
+          {requiresExternalLearner && (
+            <Grid item xs={12}>
+              <Card>
+                <CardHeader 
+                  title="Learner's Permit Verification" 
+                  subheader="No valid learner's permit found in system - manual verification required" 
+                />
+                <CardContent>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={showExternalLearnerForm}
+                        onChange={(e) => setShowExternalLearnerForm(e.target.checked)}
+                      />
+                    }
+                    label="Applicant has presented valid learner's permit"
+                  />
+                  
+                  {showExternalLearnerForm && (
+                    <Box sx={{ mt: 2 }}>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} md={6}>
+                          <TextField
+                            fullWidth
+                            label="Learner's Permit Number"
+                            value={formData.external_learners_permit?.license_number || ''}
+                            onChange={(e) => setFormData(prev => ({
+                              ...prev,
+                              external_learners_permit: {
+                                ...prev.external_learners_permit,
+                                license_number: e.target.value,
+                                license_type: 'LEARNERS_PERMIT',
+                                categories: formData.license_categories,
+                                issue_date: '',
+                                expiry_date: '',
+                                issuing_location: '',
+                                verified_by_clerk: false
+                              } as ExternalLicenseDetails
+                            }))}
+                            required
+                          />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                          <TextField
+                            fullWidth
+                            label="Issuing Location"
+                            value={formData.external_learners_permit?.issuing_location || ''}
+                            onChange={(e) => setFormData(prev => ({
+                              ...prev,
+                              external_learners_permit: {
+                                ...prev.external_learners_permit!,
+                                issuing_location: e.target.value
+                              }
+                            }))}
+                            required
+                          />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                          <TextField
+                            fullWidth
+                            label="Issue Date"
+                            type="date"
+                            value={formData.external_learners_permit?.issue_date || ''}
+                            onChange={(e) => setFormData(prev => ({
+                              ...prev,
+                              external_learners_permit: {
+                                ...prev.external_learners_permit!,
+                                issue_date: e.target.value
+                              }
+                            }))}
+                            InputLabelProps={{ shrink: true }}
+                            required
+                          />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                          <TextField
+                            fullWidth
+                            label="Expiry Date"
+                            type="date"
+                            value={formData.external_learners_permit?.expiry_date || ''}
+                            onChange={(e) => setFormData(prev => ({
+                              ...prev,
+                              external_learners_permit: {
+                                ...prev.external_learners_permit!,
+                                expiry_date: e.target.value
+                              }
+                            }))}
+                            InputLabelProps={{ shrink: true }}
+                            required
+                          />
+                        </Grid>
+                        <Grid item xs={12}>
+                          <TextField
+                            fullWidth
+                            label="Verification Notes"
+                            multiline
+                            rows={3}
+                            value={formData.external_learners_permit?.verification_notes || ''}
+                            onChange={(e) => setFormData(prev => ({
+                              ...prev,
+                              external_learners_permit: {
+                                ...prev.external_learners_permit!,
+                                verification_notes: e.target.value
+                              }
+                            }))}
+                            placeholder="Additional notes about the learner's permit verification"
+                          />
+                        </Grid>
+                        <Grid item xs={12}>
+                          <FormControlLabel
+                            control={
+                              <Checkbox
+                                checked={formData.external_learners_permit?.verified_by_clerk || false}
+                                onChange={(e) => setFormData(prev => ({
+                                  ...prev,
+                                  external_learners_permit: {
+                                    ...prev.external_learners_permit!,
+                                    verified_by_clerk: e.target.checked
+                                  }
+                                }))}
+                              />
+                            }
+                            label="I have verified this learner's permit is valid and matches the applicant"
+                            sx={{ color: 'primary.main' }}
+                          />
+                        </Grid>
+                      </Grid>
+                    </Box>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
+
+          {/* External Existing License Verification */}
+          {requiresExternalLicense && (
+            <Grid item xs={12}>
+              <Card>
+                <CardHeader 
+                  title="Existing License Verification" 
+                  subheader="No active licenses found in system - manual verification required for upgrade/renewal" 
+                />
+                <CardContent>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={showExternalLicenseForm}
+                        onChange={(e) => setShowExternalLicenseForm(e.target.checked)}
+                      />
+                    }
+                    label="Applicant has presented valid existing license"
+                  />
+                  
+                  {showExternalLicenseForm && (
+                    <Box sx={{ mt: 2 }}>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} md={6}>
+                          <TextField
+                            fullWidth
+                            label="License Number"
+                            value={formData.external_existing_license?.license_number || ''}
+                            onChange={(e) => setFormData(prev => ({
+                              ...prev,
+                              external_existing_license: {
+                                ...prev.external_existing_license,
+                                license_number: e.target.value,
+                                license_type: 'DRIVERS_LICENSE',
+                                categories: [],
+                                issue_date: '',
+                                expiry_date: '',
+                                issuing_location: '',
+                                verified_by_clerk: false
+                              } as ExternalLicenseDetails
+                            }))}
+                            required
+                          />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                          <TextField
+                            fullWidth
+                            label="Issuing Location"
+                            value={formData.external_existing_license?.issuing_location || ''}
+                            onChange={(e) => setFormData(prev => ({
+                              ...prev,
+                              external_existing_license: {
+                                ...prev.external_existing_license!,
+                                issuing_location: e.target.value
+                              }
+                            }))}
+                            required
+                          />
+                        </Grid>
+                        <Grid item xs={12}>
+                          <FormControlLabel
+                            control={
+                              <Checkbox
+                                checked={formData.external_existing_license?.verified_by_clerk || false}
+                                onChange={(e) => setFormData(prev => ({
+                                  ...prev,
+                                  external_existing_license: {
+                                    ...prev.external_existing_license!,
+                                    verified_by_clerk: e.target.checked
+                                  }
+                                }))}
+                              />
+                            }
+                            label="I have verified this license is valid and matches the applicant"
+                            sx={{ color: 'primary.main' }}
+                          />
+                        </Grid>
+                      </Grid>
+                    </Box>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
+
+          {/* No Requirements Message */}
+          {!requiresMedical && !requiresParentalConsent && !requiresExternalLearner && !requiresExternalLicense && (
+            <Grid item xs={12}>
+              <Alert severity="success">
+                No additional requirements needed for this application. You may proceed to the next step.
+              </Alert>
+            </Grid>
+          )}
+        </Grid>
+      </Box>
+    );
+  };
 
   const renderBiometricStep = () => (
     <Box>
