@@ -41,6 +41,11 @@ import {
   ListItem,
   ListItemText,
   ListItemIcon,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -142,7 +147,12 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     biometric_data: {},
     selected_fees: [],
     total_amount: 0,
-    selected_location_id: undefined
+    selected_location_id: undefined,
+    // Document upload fields
+    medical_certificate_file: undefined,
+    medical_certificate_verified_manually: false,
+    parental_consent_file: undefined,
+    notes: ''
   });
 
   // Lookup data
@@ -165,6 +175,31 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     if (!user) return false;
     const adminRoles = ['SYSTEM_USER', 'NATIONAL_ADMIN', 'PROVINCIAL_ADMIN'];
     return adminRoles.includes(user.user_type || '');
+  };
+
+  // Helper function to get available locations for user
+  const getAvailableLocations = () => {
+    if (!user) return [];
+    
+    switch (user.user_type) {
+      case 'SYSTEM_USER':
+      case 'NATIONAL_ADMIN':
+        // Can select any location
+        return locations;
+        
+      case 'PROVINCIAL_ADMIN':
+        // Can only select locations in their province
+        return locations.filter(loc => loc.province_code === user.scope_province);
+        
+      default:
+        // Location users use their assigned location
+        return [];
+    }
+  };
+
+  // Calculate age helper
+  const calculateAge = (birthDate: string): number => {
+    return Math.floor((Date.now() - new Date(birthDate).getTime()) / (1000 * 60 * 60 * 24 * 365.25));
   };
 
   // Steps configuration
@@ -201,15 +236,22 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     }
   ];
 
-  // Load initial data
+  // Load initial data and calculate fees
   useEffect(() => {
     const loadInitialData = async () => {
       try {
         setLoading(true);
-        const [locationsData] = await Promise.all([
-          lookupService.getLocations()
+        const [locationsData, feesData] = await Promise.all([
+          lookupService.getLocations(),
+          applicationService.getFeeStructures()
         ]);
         setLocations(locationsData);
+        setLookups(prev => ({ ...prev, fee_structures: feesData }));
+        
+        // Calculate initial fees if we have form data
+        if (formData.person && formData.license_category) {
+          calculateFees();
+        }
       } catch (err: any) {
         setError(err.message || 'Failed to load initial data');
       } finally {
@@ -219,6 +261,30 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
 
     loadInitialData();
   }, []);
+
+  // Calculate fees when application details change
+  const calculateFees = useCallback(() => {
+    if (!lookups.fee_structures.length || !formData.license_category) return;
+
+    const applicableFees = applicationService.calculateApplicationFees(
+      formData.application_type,
+      [formData.license_category],
+      lookups.fee_structures
+    );
+
+    const totalAmount = applicationService.calculateTotalAmount(applicableFees);
+    
+    setFormData(prev => ({
+      ...prev,
+      selected_fees: applicableFees,
+      total_amount: totalAmount
+    }));
+  }, [formData.application_type, formData.license_category, lookups.fee_structures]);
+
+  // Recalculate fees when relevant data changes
+  useEffect(() => {
+    calculateFees();
+  }, [calculateFees]);
 
   // Check prerequisites when person and license category change
   const checkPrerequisites = useCallback(async (personId: string, category: LicenseCategory) => {
@@ -493,13 +559,30 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                 <MenuItem value="">
                   <em>Select location for this application</em>
                 </MenuItem>
-                {locations.map((location) => (
+                {getAvailableLocations().map((location) => (
                   <MenuItem key={location.id} value={location.id}>
                     {location.name} ({location.code}) - {location.province_code}
                   </MenuItem>
                 ))}
               </Select>
+              <Typography variant="caption" sx={{ mt: 1, color: 'text.secondary' }}>
+                {user?.user_type === 'PROVINCIAL_ADMIN' 
+                  ? `Showing locations in ${user.scope_province} province`
+                  : 'Select the location where this application will be processed'
+                }
+              </Typography>
             </FormControl>
+          </Grid>
+        )}
+
+        {/* Current Location Display (for location users) */}
+        {!canSelectLocation() && user?.primary_location_id && (
+          <Grid item xs={12}>
+            <Alert severity="info">
+              <Typography variant="body2">
+                <strong>Application Location:</strong> {locations.find(loc => loc.id === user.primary_location_id)?.name || 'Current location'}
+              </Typography>
+            </Alert>
           </Grid>
         )}
 
@@ -706,84 +789,285 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     </Box>
   );
 
-  // Requirements Step (simplified)
-  const renderRequirementsStep = () => (
-    <Box>
-      <Typography variant="h6" gutterBottom>Requirements Verification</Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Verify required documents and prerequisites
-      </Typography>
+  // Requirements Step with comprehensive validation and document uploads
+  const renderRequirementsStep = () => {
+    const age = formData.person?.birth_date ? calculateAge(formData.person.birth_date) : 0;
+    const requiresMedical = age >= 65 || ['C', 'D', 'E'].includes(formData.license_category);
+    const requiresParentalConsent = age < 18;
+    const requiresExternalLicense = prerequisiteCheck?.requiresExternal && !prerequisiteCheck.canProceed;
 
-      <Grid container spacing={3}>
-        {/* Age Requirements */}
-        {formData.person?.birth_date && (
-          <Grid item xs={12}>
-            <Alert severity="info">
-              <Typography variant="body2">
-                Age verification: {Math.floor((Date.now() - new Date(formData.person.birth_date).getTime()) / (1000 * 60 * 60 * 24 * 365.25))} years old
-                (Required: {LICENSE_CATEGORY_RULES[formData.license_category]?.min_age}+ for {formData.license_category})
-              </Typography>
-            </Alert>
-          </Grid>
-        )}
+    return (
+      <Box>
+        <Typography variant="h6" gutterBottom>Requirements Check</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          Complete required document uploads and license verification
+        </Typography>
 
-        {/* External License Verification (if needed) */}
-        {prerequisiteCheck?.requiresExternal && !prerequisiteCheck.canProceed && (
+        <Grid container spacing={3}>
+          {/* Age Requirements Display */}
+          {formData.person?.birth_date && (
+            <Grid item xs={12}>
+              <Alert severity="info">
+                <Typography variant="body2">
+                  <strong>Age verification:</strong> {age} years old
+                  (Required: {LICENSE_CATEGORY_RULES[formData.license_category]?.min_age}+ for {formData.license_category})
+                </Typography>
+              </Alert>
+            </Grid>
+          )}
+
+          {/* Medical Certificate */}
+          {requiresMedical && (
+            <Grid item xs={12}>
+              <Card>
+                <CardHeader 
+                  title="Medical Certificate" 
+                  subheader={age >= 65 ? "Required for applicants 65+" : "Required for commercial licenses (C, D, E)"} 
+                />
+                <CardContent>
+                  <Box sx={{ mb: 2 }}>
+                    <input
+                      accept="image/*,.pdf"
+                      style={{ display: 'none' }}
+                      id="medical-certificate-upload"
+                      type="file"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setFormData(prev => ({ 
+                            ...prev, 
+                            medical_certificate_file: file,
+                            medical_certificate_verified_manually: false // Reset manual verification if file uploaded
+                          }));
+                        }
+                      }}
+                    />
+                    <label htmlFor="medical-certificate-upload">
+                      <Button variant="outlined" component="span" startIcon={<AssignmentIcon />}>
+                        {formData.medical_certificate_file ? 'Change Medical Certificate' : 'Upload Medical Certificate'}
+                      </Button>
+                    </label>
+                    {formData.medical_certificate_file && (
+                      <Typography variant="body2" sx={{ mt: 1 }}>
+                        File: {formData.medical_certificate_file.name}
+                      </Typography>
+                    )}
+                  </Box>
+                  
+                  <Divider sx={{ my: 2 }} />
+                  
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={formData.medical_certificate_verified_manually || false}
+                        onChange={(e) => {
+                          setFormData(prev => ({ 
+                            ...prev, 
+                            medical_certificate_verified_manually: e.target.checked,
+                            medical_certificate_file: e.target.checked ? undefined : prev.medical_certificate_file // Clear file if manual verification
+                          }));
+                        }}
+                      />
+                    }
+                    label="Medical certificate verified manually (no upload needed)"
+                    sx={{ color: 'primary.main' }}
+                  />
+                  
+                  <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                    {formData.medical_certificate_verified_manually ? 
+                      'I have manually verified the medical certificate presented by the applicant' :
+                      'Upload medical certificate dated within the last 6 months, or check manual verification'
+                    }
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
+
+          {/* Parental Consent */}
+          {requiresParentalConsent && (
+            <Grid item xs={12}>
+              <Card>
+                <CardHeader 
+                  title="Parental Consent" 
+                  subheader="Required for applicants under 18 years" 
+                />
+                <CardContent>
+                  <input
+                    accept="image/*,.pdf"
+                    style={{ display: 'none' }}
+                    id="parental-consent-upload"
+                    type="file"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setFormData(prev => ({ ...prev, parental_consent_file: file }));
+                      }
+                    }}
+                  />
+                  <label htmlFor="parental-consent-upload">
+                    <Button variant="outlined" component="span" startIcon={<AssignmentIcon />}>
+                      {formData.parental_consent_file ? 'Change Parental Consent' : 'Upload Parental Consent'}
+                    </Button>
+                  </label>
+                  {formData.parental_consent_file && (
+                    <Typography variant="body2" sx={{ mt: 1 }}>
+                      File: {formData.parental_consent_file.name}
+                    </Typography>
+                  )}
+                  <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                    Signed consent form from parent or legal guardian
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
+
+          {/* External License Verification */}
+          {requiresExternalLicense && (
+            <Grid item xs={12}>
+              <Card>
+                <CardHeader 
+                  title="External License Verification"
+                  subheader={`Category ${formData.license_category} requires existing ${LICENSE_CATEGORY_RULES[formData.license_category]?.requires_existing.join(' or ')} license`}
+                />
+                <CardContent>
+                  <Alert severity="warning" sx={{ mb: 2 }}>
+                    No valid existing license found in system. Manual verification required.
+                  </Alert>
+                  
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={showExternalLicenseForm}
+                        onChange={(e) => setShowExternalLicenseForm(e.target.checked)}
+                      />
+                    }
+                    label="Applicant has presented valid existing license"
+                    sx={{ mb: 2 }}
+                  />
+                  
+                  {showExternalLicenseForm && (
+                    <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                      <Typography variant="body2" fontWeight="bold" gutterBottom>
+                        External License Details:
+                      </Typography>
+                      <Grid container spacing={2} sx={{ mt: 1 }}>
+                        <Grid item xs={12} md={6}>
+                          <TextField
+                            fullWidth
+                            label="License Number"
+                            value={formData.external_existing_license?.license_number || ''}
+                                                         onChange={(e) => setFormData(prev => ({
+                               ...prev,
+                               external_existing_license: {
+                                 license_type: 'DRIVERS_LICENSE' as const,
+                                 issue_date: '',
+                                 expiry_date: '',
+                                 issuing_location: '',
+                                 categories: [],
+                                 verified_by_clerk: true,
+                                 ...prev.external_existing_license,
+                                 license_number: e.target.value
+                               }
+                             }))}
+                            placeholder="Enter existing license number"
+                          />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                          <TextField
+                            fullWidth
+                            label="Issuing Location"
+                            value={formData.external_existing_license?.issuing_location || ''}
+                                                         onChange={(e) => setFormData(prev => ({
+                               ...prev,
+                               external_existing_license: {
+                                 license_type: 'DRIVERS_LICENSE' as const,
+                                 issue_date: '',
+                                 expiry_date: '',
+                                 license_number: '',
+                                 categories: [],
+                                 verified_by_clerk: true,
+                                 ...prev.external_existing_license,
+                                 issuing_location: e.target.value
+                               }
+                             }))}
+                            placeholder="Where was the license issued?"
+                          />
+                        </Grid>
+                        <Grid item xs={12}>
+                          <TextField
+                            fullWidth
+                            label="Categories"
+                            value={formData.external_existing_license?.categories?.join(', ') || ''}
+                                                         onChange={(e) => setFormData(prev => ({
+                               ...prev,
+                               external_existing_license: {
+                                 license_type: 'DRIVERS_LICENSE' as const,
+                                 issue_date: '',
+                                 expiry_date: '',
+                                 license_number: '',
+                                 issuing_location: '',
+                                 verified_by_clerk: true,
+                                 ...prev.external_existing_license,
+                                 categories: e.target.value.split(',').map(c => c.trim() as LicenseCategory)
+                               }
+                             }))}
+                            placeholder="License categories (comma separated)"
+                          />
+                        </Grid>
+                        <Grid item xs={12}>
+                          <FormControlLabel
+                            control={
+                              <Checkbox
+                                checked={formData.external_existing_license?.verified_by_clerk || false}
+                                                                 onChange={(e) => setFormData(prev => ({
+                                   ...prev,
+                                   external_existing_license: {
+                                     license_type: 'DRIVERS_LICENSE' as const,
+                                     issue_date: '',
+                                     expiry_date: '',
+                                     license_number: '',
+                                     issuing_location: '',
+                                     categories: [],
+                                     ...prev.external_existing_license,
+                                     verified_by_clerk: e.target.checked
+                                   }
+                                 }))}
+                              />
+                            }
+                            label="I have manually verified this license and it is valid"
+                          />
+                        </Grid>
+                      </Grid>
+                    </Box>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
+
+          {/* Additional Notes */}
           <Grid item xs={12}>
             <Card>
-              <CardHeader title="External License Verification" />
+              <CardHeader title="Additional Notes" />
               <CardContent>
-                <Typography variant="body2" gutterBottom>
-                  Since no {LICENSE_CATEGORY_RULES[formData.license_category]?.requires_existing.join(' or ')} application was found in the system, 
-                  please verify the applicant's existing license manually:
-                </Typography>
-                
-                <Grid container spacing={2} sx={{ mt: 2 }}>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      label="Existing License Number"
-                      placeholder="Enter license number to verify"
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      label="Issuing Location"
-                      placeholder="Where was the license issued?"
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <FormControlLabel
-                      control={<Checkbox />}
-                      label="I have manually verified the existing license and it is valid"
-                    />
-                  </Grid>
-                </Grid>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  label="Notes (Optional)"
+                  value={formData.notes || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Add any additional notes or comments about this application..."
+                />
               </CardContent>
             </Card>
           </Grid>
-        )}
-
-        {/* Medical Certificate (for drivers 65+ or C/D/E categories) */}
-        {formData.person?.birth_date && (
-          <>
-            {(Math.floor((Date.now() - new Date(formData.person.birth_date).getTime()) / (1000 * 60 * 60 * 24 * 365.25)) >= 65 ||
-              ['C', 'D', 'E'].includes(formData.license_category)) && (
-              <Grid item xs={12}>
-                <Alert severity="warning">
-                  <Typography variant="body2">
-                    Medical certificate required for this application
-                    ({Math.floor((Date.now() - new Date(formData.person.birth_date).getTime()) / (1000 * 60 * 60 * 24 * 365.25)) >= 65 ? 'Age 65+' : `Category ${formData.license_category}`})
-                  </Typography>
-                </Alert>
-              </Grid>
-            )}
-          </>
-        )}
-      </Grid>
-    </Box>
-  );
+        </Grid>
+      </Box>
+    );
+  };
 
   // Biometric Step (placeholder)
   const renderBiometricStep = () => (
@@ -802,51 +1086,271 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     </Box>
   );
 
-  // Review Step
-  const renderReviewStep = () => (
-    <Box>
-      <Typography variant="h6" gutterBottom>Review & Submit</Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Review all application details before submission
-      </Typography>
+  // Review Step with comprehensive display
+  const renderReviewStep = () => {
+    const age = formData.person?.birth_date ? calculateAge(formData.person.birth_date) : 0;
+    const requiresMedical = age >= 65 || ['C', 'D', 'E'].includes(formData.license_category);
+    const requiresParentalConsent = age < 18;
+    const requiresExternalLicense = prerequisiteCheck?.requiresExternal && !prerequisiteCheck.canProceed;
 
-      <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <Card>
-            <CardHeader title="Application Summary" />
-            <CardContent>
-              <Grid container spacing={2}>
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary">Applicant:</Typography>
-                  <Typography variant="body1">
-                    {formData.person ? `${formData.person.first_name} ${formData.person.surname}` : 'N/A'}
-                  </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary">Application Type:</Typography>
-                  <Typography variant="body1">{formData.application_type.replace(/_/g, ' ')}</Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary">License Category:</Typography>
-                  <Typography variant="body1">{formData.license_category}</Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary">Hold for Printing:</Typography>
-                  <Typography variant="body1">{formData.is_on_hold ? 'Yes' : 'No'}</Typography>
-                </Grid>
-                {formData.replacement_reason && (
-                  <Grid item xs={12}>
-                    <Typography variant="body2" color="text.secondary">Replacement Reason:</Typography>
-                    <Typography variant="body1">{formData.replacement_reason}</Typography>
+    return (
+      <Box>
+        <Typography variant="h6" gutterBottom>Review & Submit</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          Review all details, fees, and requirements before submitting your application
+        </Typography>
+
+        <Grid container spacing={3}>
+          {/* Application Summary */}
+          <Grid item xs={12}>
+            <Card>
+              <CardHeader title="Application Summary" />
+              <CardContent>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="body2" color="text.secondary">Applicant:</Typography>
+                    <Typography variant="body1">
+                      {formData.person?.first_name} {formData.person?.surname}
+                    </Typography>
                   </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="body2" color="text.secondary">Application Type:</Typography>
+                    <Typography variant="body1">
+                      {formData.application_type.replace('_', ' ')}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="body2" color="text.secondary">License Category:</Typography>
+                    <Typography variant="body1">
+                      {formData.license_category}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="body2" color="text.secondary">Processing Location:</Typography>
+                    <Typography variant="body1">
+                      {(() => {
+                        const selectedLocationId = formData.selected_location_id || user?.primary_location_id;
+                        const location = locations.find(loc => loc.id === selectedLocationId);
+                        return location ? `${location.name} (${location.code})` : 'Location not found';
+                      })()}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="body2" color="text.secondary">Urgency:</Typography>
+                    <Typography variant="body1">
+                      {formData.is_urgent ? 'Urgent' : 'Standard'}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="body2" color="text.secondary">Hold for Printing:</Typography>
+                    <Typography variant="body1">{formData.is_on_hold ? 'Yes' : 'No'}</Typography>
+                  </Grid>
+                  {formData.replacement_reason && (
+                    <Grid item xs={12}>
+                      <Typography variant="body2" color="text.secondary">Replacement Reason:</Typography>
+                      <Typography variant="body1">{formData.replacement_reason}</Typography>
+                    </Grid>
+                  )}
+                  {formData.notes && (
+                    <Grid item xs={12}>
+                      <Typography variant="body2" color="text.secondary">Notes:</Typography>
+                      <Typography variant="body1">{formData.notes}</Typography>
+                    </Grid>
+                  )}
+                </Grid>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Requirements Checklist */}
+          <Grid item xs={12}>
+            <Card>
+              <CardHeader title="Requirements Checklist" />
+              <CardContent>
+                <List>
+                  {/* Medical Certificate */}
+                  {requiresMedical && (
+                    <ListItem>
+                      <ListItemIcon>
+                        {(formData.medical_certificate_file || formData.medical_certificate_verified_manually) ? 
+                          <CheckCircleIcon color="success" /> : 
+                          <ErrorIcon color="error" />
+                        }
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary="Medical Certificate"
+                        secondary={
+                          formData.medical_certificate_file ? 
+                            `Uploaded: ${formData.medical_certificate_file.name}` : 
+                            formData.medical_certificate_verified_manually ?
+                              "Verified manually by clerk" :
+                              "Required but not provided"
+                        }
+                      />
+                    </ListItem>
+                  )}
+
+                  {/* Parental Consent */}
+                  {requiresParentalConsent && (
+                    <ListItem>
+                      <ListItemIcon>
+                        {formData.parental_consent_file ? 
+                          <CheckCircleIcon color="success" /> : 
+                          <ErrorIcon color="error" />
+                        }
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary="Parental Consent"
+                        secondary={formData.parental_consent_file ? 
+                          `Uploaded: ${formData.parental_consent_file.name}` : 
+                          "Required but not uploaded"
+                        }
+                      />
+                    </ListItem>
+                  )}
+
+                  {/* External License Verification */}
+                  {requiresExternalLicense && (
+                    <ListItem>
+                      <ListItemIcon>
+                        {formData.external_existing_license?.verified_by_clerk ? 
+                          <CheckCircleIcon color="success" /> : 
+                          <ErrorIcon color="error" />
+                        }
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary="Existing License Verification"
+                        secondary={formData.external_existing_license?.verified_by_clerk ? 
+                          `Verified: ${formData.external_existing_license.license_number}` : 
+                          "Required but not verified"
+                        }
+                      />
+                    </ListItem>
+                  )}
+
+                  {/* Prerequisites Check */}
+                  {prerequisiteCheck && (
+                    <ListItem>
+                      <ListItemIcon>
+                        {prerequisiteCheck.canProceed ? 
+                          <CheckCircleIcon color="success" /> : 
+                          <WarningIcon color="warning" />
+                        }
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary="Prerequisite Requirements"
+                        secondary={
+                          prerequisiteCheck.canProceed ?
+                            "All prerequisites satisfied" :
+                            "Manual verification completed"
+                        }
+                      />
+                    </ListItem>
+                  )}
+
+                  {/* No requirements case */}
+                  {!requiresMedical && !requiresParentalConsent && !requiresExternalLicense && (
+                    <ListItem>
+                      <ListItemIcon>
+                        <CheckCircleIcon color="success" />
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary="All Requirements Met"
+                        secondary="No additional requirements needed for this application"
+                      />
+                    </ListItem>
+                  )}
+                </List>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Fee Calculation */}
+          <Grid item xs={12}>
+            <Card>
+              <CardHeader title="Fee Calculation" />
+              <CardContent>
+                {formData.selected_fees.length > 0 ? (
+                  <Box>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Fee Type</TableCell>
+                          <TableCell>Description</TableCell>
+                          <TableCell align="right">Amount</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {formData.selected_fees.map((fee, index) => (
+                          <TableRow key={index}>
+                            <TableCell>{fee.display_name}</TableCell>
+                            <TableCell>{fee.description}</TableCell>
+                            <TableCell align="right">
+                              {fee.amount.toLocaleString()} Ar
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        <TableRow sx={{ '& td': { border: 0 } }}>
+                          <TableCell colSpan={2}>
+                            <Typography variant="h6" sx={{ mt: 2 }}>Total Amount</Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography variant="h6" sx={{ mt: 2 }}>
+                              {formData.total_amount.toLocaleString()} Ar
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                    
+                    {formData.is_urgent && (
+                      <Alert severity="warning" sx={{ mt: 2 }}>
+                        <Typography variant="body2">
+                          <strong>Urgent Processing:</strong> Additional fees may apply for expedited processing.
+                        </Typography>
+                      </Alert>
+                    )}
+                  </Box>
+                ) : (
+                  <Alert severity="info">
+                    Fee calculation will be determined based on your application details and requirements.
+                    Please ensure all previous steps are completed for accurate fee calculation.
+                  </Alert>
                 )}
-              </Grid>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Final Validation */}
+          <Grid item xs={12}>
+            <Card>
+              <CardHeader title="Final Validation" />
+              <CardContent>
+                {validationErrors.length > 0 ? (
+                  <Alert severity="error">
+                    <Typography variant="subtitle2" gutterBottom>
+                      Please fix the following issues before submitting:
+                    </Typography>
+                    <ul>
+                      {validationErrors.map((error, index) => (
+                        <li key={index}>{error}</li>
+                      ))}
+                    </ul>
+                  </Alert>
+                ) : (
+                  <Alert severity="success">
+                    <Typography variant="body2">
+                      ✓ All validation checks passed. Application is ready for submission.
+                    </Typography>
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
         </Grid>
-      </Grid>
-    </Box>
-  );
+      </Box>
+    );
+  };
 
   // Main render
   if (loading) {
