@@ -38,7 +38,12 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemIcon
+  ListItemIcon,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -343,7 +348,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
 
       const applicationData: ApplicationCreate = {
         person_id: formData.person.id,
-        location_id: user?.primary_location_id || '',
+        location_id: user?.primary_location_id || '00000000-0000-0000-0000-000000000000', // Default location if user has no specific location
         application_type: formData.application_type,
         license_categories: formData.license_categories,
         is_urgent: formData.is_urgent,
@@ -394,7 +399,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         // Create application if it doesn't exist
         const applicationData: ApplicationCreate = {
           person_id: formData.person!.id,
-          location_id: user?.primary_location_id || '',
+          location_id: user?.primary_location_id || '00000000-0000-0000-0000-000000000000', // Default location if user has no specific location
           application_type: formData.application_type,
           license_categories: formData.license_categories,
           is_urgent: formData.is_urgent,
@@ -472,14 +477,229 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     }
   };
 
-  // Placeholder step renderers (to be implemented in next phase)
+  // Application Details Form Implementation
   const renderApplicationDetailsStep = () => (
     <Box>
       <Typography variant="h6" gutterBottom>Application Details</Typography>
-      <Alert severity="info">
-        Application details form will be implemented in the next development phase.
-        This will include license type, categories, urgency settings, and fee calculation.
-      </Alert>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        Complete the application details and license category selection
+      </Typography>
+
+      <Grid container spacing={3}>
+        {/* Application Type */}
+        <Grid item xs={12} md={6}>
+          <FormControl fullWidth required>
+            <InputLabel>Application Type</InputLabel>
+            <Select
+              value={formData.application_type}
+              onChange={(e) => handleApplicationDetailsChange('application_type', e.target.value)}
+              label="Application Type"
+            >
+              <MenuItem value={ApplicationType.NEW_LICENSE}>New License</MenuItem>
+              <MenuItem value={ApplicationType.LEARNERS_PERMIT}>Learner's Permit</MenuItem>
+              <MenuItem value={ApplicationType.RENEWAL}>License Renewal</MenuItem>
+              <MenuItem value={ApplicationType.DUPLICATE}>Duplicate License</MenuItem>
+              <MenuItem value={ApplicationType.UPGRADE}>License Upgrade</MenuItem>
+              <MenuItem value={ApplicationType.TEMPORARY_LICENSE}>Temporary License</MenuItem>
+              <MenuItem value={ApplicationType.INTERNATIONAL_PERMIT}>International Permit</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+
+        {/* License Categories */}
+        <Grid item xs={12} md={6}>
+          <FormControl fullWidth required>
+            <InputLabel>License Categories</InputLabel>
+            <Select
+              multiple
+              value={formData.license_categories}
+              onChange={(e) => handleApplicationDetailsChange('license_categories', e.target.value)}
+              label="License Categories"
+              renderValue={(selected) => (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {(selected as LicenseCategory[]).map((value) => (
+                    <Chip key={value} label={value} size="small" />
+                  ))}
+                </Box>
+              )}
+            >
+              <MenuItem value={LicenseCategory.A_PRIME}>
+                <Checkbox checked={formData.license_categories.includes(LicenseCategory.A_PRIME)} />
+                <ListItemText 
+                  primary="A′ - Moped" 
+                  secondary="Minimum age: 16 years" 
+                />
+              </MenuItem>
+              <MenuItem value={LicenseCategory.A}>
+                <Checkbox checked={formData.license_categories.includes(LicenseCategory.A)} />
+                <ListItemText 
+                  primary="A - Full Motorcycle" 
+                  secondary="Minimum age: 18 years" 
+                />
+              </MenuItem>
+              <MenuItem value={LicenseCategory.B}>
+                <Checkbox checked={formData.license_categories.includes(LicenseCategory.B)} />
+                <ListItemText 
+                  primary="B - Light Vehicle" 
+                  secondary="Minimum age: 18 years" 
+                />
+              </MenuItem>
+              <MenuItem value={LicenseCategory.C}>
+                <Checkbox checked={formData.license_categories.includes(LicenseCategory.C)} />
+                <ListItemText 
+                  primary="C - Heavy Goods" 
+                  secondary="Minimum age: 21 years" 
+                />
+              </MenuItem>
+              <MenuItem value={LicenseCategory.D}>
+                <Checkbox checked={formData.license_categories.includes(LicenseCategory.D)} />
+                <ListItemText 
+                  primary="D - Passenger Transport" 
+                  secondary="Minimum age: 21 years" 
+                />
+              </MenuItem>
+              <MenuItem value={LicenseCategory.E}>
+                <Checkbox checked={formData.license_categories.includes(LicenseCategory.E)} />
+                <ListItemText 
+                  primary="E - Large Trailers" 
+                  secondary="Minimum age: 21 years" 
+                />
+              </MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+
+        {/* Urgency Settings */}
+        <Grid item xs={12}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={formData.is_urgent}
+                onChange={(e) => handleApplicationDetailsChange('is_urgent', e.target.checked)}
+              />
+            }
+            label="Urgent Processing Required"
+          />
+          {formData.is_urgent && (
+            <TextField
+              fullWidth
+              label="Urgency Reason"
+              value={formData.urgency_reason || ''}
+              onChange={(e) => handleApplicationDetailsChange('urgency_reason', e.target.value)}
+              placeholder="Please explain why urgent processing is required"
+              multiline
+              rows={2}
+              sx={{ mt: 2 }}
+              required
+            />
+          )}
+        </Grid>
+
+        {/* Temporary License Option */}
+        <Grid item xs={12} md={8}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={formData.is_temporary_license}
+                onChange={(e) => handleApplicationDetailsChange('is_temporary_license', e.target.checked)}
+              />
+            }
+            label="Issue Temporary License"
+          />
+          <Typography variant="caption" display="block" color="text.secondary">
+            Temporary license valid while main application is processed
+          </Typography>
+        </Grid>
+
+        {formData.is_temporary_license && (
+          <Grid item xs={12} md={4}>
+            <TextField
+              fullWidth
+              label="Validity Period (Days)"
+              type="number"
+              value={formData.validity_period_days || 90}
+              onChange={(e) => handleApplicationDetailsChange('validity_period_days', parseInt(e.target.value))}
+              inputProps={{ min: 30, max: 365 }}
+              helperText="Default: 90 days"
+            />
+          </Grid>
+        )}
+
+        {/* Age Requirements Validation Display */}
+        {formData.person?.birth_date && formData.license_categories.length > 0 && (
+          <Grid item xs={12}>
+            <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Age Requirements Check
+              </Typography>
+              {(() => {
+                const ageErrors = applicationService.validateAgeRequirements(
+                  formData.person.birth_date, 
+                  formData.license_categories
+                );
+                if (ageErrors.length > 0) {
+                  return (
+                    <Alert severity="warning">
+                      <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                        {ageErrors.map((error, index) => (
+                          <li key={index}>{error}</li>
+                        ))}
+                      </ul>
+                    </Alert>
+                  );
+                } else {
+                  return (
+                    <Alert severity="success">
+                      Age requirements satisfied for all selected categories
+                    </Alert>
+                  );
+                }
+              })()}
+            </Paper>
+          </Grid>
+        )}
+
+        {/* Fee Calculation Display */}
+        {formData.selected_fees.length > 0 && (
+          <Grid item xs={12}>
+            <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Applicable Fees
+              </Typography>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Fee Type</TableCell>
+                    <TableCell>Description</TableCell>
+                    <TableCell align="right">Amount</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {formData.selected_fees.map((fee, index) => (
+                    <TableRow key={index}>
+                      <TableCell>{fee.display_name}</TableCell>
+                      <TableCell>{fee.description}</TableCell>
+                      <TableCell align="right">
+                        {fee.amount.toLocaleString()} {fee.currency}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow>
+                    <TableCell colSpan={2}>
+                      <Typography variant="subtitle2">Total Amount</Typography>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography variant="subtitle2">
+                        {formData.total_amount.toLocaleString()} Ar
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </Paper>
+          </Grid>
+        )}
+      </Grid>
     </Box>
   );
 
