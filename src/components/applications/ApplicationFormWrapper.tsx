@@ -236,10 +236,10 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
       
       // Check for existing applications for required categories
       const requiredCategories = categoryRules.requires_existing;
-      const personApplications = await applicationService.searchApplicationsByPerson(personId);
+      const personApplications = await applicationService.getApplicationsByPerson(personId);
       
       const prerequisiteApplications = personApplications.filter(app => 
-        requiredCategories.includes(app.license_category) &&
+        requiredCategories.map(String).includes(String(app.license_category)) &&
         ['COMPLETED', 'ON_HOLD'].includes(app.status)
       );
 
@@ -447,10 +447,9 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
       case 0: // Person
         return (
           <PersonFormWrapper
-            mode={mode === 'create' ? 'select' : 'view'}
-            onPersonSelected={handlePersonSelected}
+            mode="application"
+            onComplete={handlePersonSelected}
             initialPersonId={initialPersonId}
-            showCreateNew={true}
             showHeader={false}
           />
         );
