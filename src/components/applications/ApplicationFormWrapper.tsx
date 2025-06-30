@@ -853,16 +853,14 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
             </Grid>
 
             {formData.is_temporary_license && (
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  label="Validity Period (Days)"
-                  type="number"
-                  value={formData.validity_period_days || DEFAULT_TEMPORARY_LICENSE_DAYS}
-                  onChange={(e) => handleApplicationDetailsChange('validity_period_days', parseInt(e.target.value))}
-                  inputProps={{ min: 30, max: 365 }}
-                  helperText={`Default: ${DEFAULT_TEMPORARY_LICENSE_DAYS} days`}
-                />
+              <Grid item xs={12}>
+                <Alert severity="info">
+                  <Typography variant="subtitle2" gutterBottom>
+                    Temporary License Validity
+                  </Typography>
+                  Temporary licenses are issued with a <strong>fixed validity period of {DEFAULT_TEMPORARY_LICENSE_DAYS} days</strong> from the issue date. 
+                  This allows the applicant to drive legally while their main application is being processed.
+                </Alert>
               </Grid>
             )}
           </>
