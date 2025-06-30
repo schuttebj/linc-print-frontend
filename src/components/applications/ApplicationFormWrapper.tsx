@@ -455,7 +455,45 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           errors.push('Please select at least one license category');
         }
         
-        // Check for learner's permit requirement immediately in step 1
+        // Use validation service for age requirements and basic validation
+        if (formData.person?.birth_date && validationResult && !validationResult.is_valid) {
+          // Only add age-related validation errors here (not learner's permit errors)
+          if (validationResult.age_violations.length > 0) {
+            errors.push(...validationResult.age_violations.map(v => 
+              `Minimum age for category ${v.category} is ${v.required_age} years (applicant is ${v.current_age})`
+            ));
+          }
+          
+          // Add other validation errors that aren't about learner's permits or other requirements
+          if (validationResult.invalid_combinations.length > 0 && 
+              !validationResult.message.includes('learner\'s permit') &&
+              !validationResult.message.includes('medical') &&
+              !validationResult.message.includes('consent')) {
+            errors.push(validationResult.message);
+          }
+        }
+        
+        if (formData.is_urgent && !formData.urgency_reason?.trim()) {
+          errors.push('Please provide a reason for urgent processing');
+        }
+        
+        // Location validation
+        if (canSelectLocation() && !formData.selected_location_id) {
+          errors.push('Please select a location for this application');
+        } else if (!canSelectLocation() && !user?.primary_location_id) {
+          errors.push('User location not configured. Please contact administrator.');
+        }
+        break;
+        
+      case 2: // Requirements
+        const age = formData.person?.birth_date ? licenseValidationService.calculateAge(formData.person.birth_date) : 0;
+        const requiresMedical = age >= 65 || formData.license_categories.some(cat => ['C', 'D', 'E'].includes(cat));
+        const requiresParentalConsent = age < 18;
+        const requiresExternalLicense = (formData.application_type === ApplicationType.UPGRADE || 
+                                        formData.application_type === ApplicationType.RENEWAL) && 
+                                       !existingLicenseCheck?.has_active_licenses;
+
+        // Learner's permit requirement check (moved from step 1)
         if (formData.application_type === ApplicationType.NEW_LICENSE) {
           const categoriesRequiringLearners = formData.license_categories.filter(cat => 
             LICENSE_CATEGORY_RULES[cat].allows_learners_permit
@@ -488,42 +526,6 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
             }
           }
         }
-        
-        // Use validation service for other checks (age requirements, etc.)
-        if (formData.person?.birth_date && validationResult && !validationResult.is_valid) {
-          // Only add age-related validation errors here (not learner's permit errors)
-          if (validationResult.age_violations.length > 0) {
-            errors.push(...validationResult.age_violations.map(v => 
-              `Minimum age for category ${v.category} is ${v.required_age} years (applicant is ${v.current_age})`
-            ));
-          }
-          
-          // Add other validation errors that aren't about learner's permits
-          if (validationResult.invalid_combinations.length > 0 && 
-              !validationResult.message.includes('learner\'s permit')) {
-            errors.push(validationResult.message);
-          }
-        }
-        
-        if (formData.is_urgent && !formData.urgency_reason?.trim()) {
-          errors.push('Please provide a reason for urgent processing');
-        }
-        
-        // Location validation
-        if (canSelectLocation() && !formData.selected_location_id) {
-          errors.push('Please select a location for this application');
-        } else if (!canSelectLocation() && !user?.primary_location_id) {
-          errors.push('User location not configured. Please contact administrator.');
-        }
-        break;
-        
-      case 2: // Requirements
-        const age = formData.person?.birth_date ? licenseValidationService.calculateAge(formData.person.birth_date) : 0;
-        const requiresMedical = age >= 65 || formData.license_categories.some(cat => ['C', 'D', 'E'].includes(cat));
-        const requiresParentalConsent = age < 18;
-        const requiresExternalLicense = (formData.application_type === ApplicationType.UPGRADE || 
-                                        formData.application_type === ApplicationType.RENEWAL) && 
-                                       !existingLicenseCheck?.has_active_licenses;
 
         // Medical certificate validation
         if (requiresMedical && !formData.medical_certificate_file) {
