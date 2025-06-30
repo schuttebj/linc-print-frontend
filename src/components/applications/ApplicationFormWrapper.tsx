@@ -296,6 +296,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
 
   // Application details change handler
   const handleApplicationDetailsChange = async (field: string, value: any) => {
+    // First update the form data
     setFormData(prev => {
       const updated = { ...prev, [field]: value };
       
@@ -339,20 +340,34 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
             updated.license_categories = updatedCategories;
           }
         }
-
-        // Validate categories in real-time
-        validateLicenseCategories(value as LicenseCategory[], updated.application_type);
       }
       
       return updated;
     });
     
+    // Then handle async validation outside of setState
+    if (field === 'license_categories' && formData.person?.birth_date) {
+      await validateLicenseCategories(
+        value as LicenseCategory[], 
+        formData.application_type,
+        formData.person,
+        formData.external_learners_permit,
+        formData.external_existing_license
+      );
+    }
+    
     setValidationErrors([]);
   };
 
   // Validate license categories
-  const validateLicenseCategories = async (categories: LicenseCategory[], applicationType: ApplicationType) => {
-    if (!formData.person?.birth_date || categories.length === 0) {
+  const validateLicenseCategories = useCallback(async (
+    categories: LicenseCategory[], 
+    applicationType: ApplicationType,
+    person: Person | null,
+    externalLearnerPermit?: ExternalLicenseDetails,
+    externalExistingLicense?: ExternalLicenseDetails
+  ) => {
+    if (!person?.birth_date || categories.length === 0) {
       setValidationResult(null);
       return;
     }
@@ -361,17 +376,17 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
       const validation = await licenseValidationService.validateApplication(
         applicationType,
         categories,
-        formData.person.birth_date,
-        formData.person.id,
-        formData.external_learners_permit,
-        formData.external_existing_license
+        person.birth_date,
+        person.id,
+        externalLearnerPermit,
+        externalExistingLicense
       );
 
       setValidationResult(validation);
 
       // Check existing licenses when person is selected
       if (!existingLicenseCheck) {
-        const existingCheck = await licenseValidationService.checkExistingLicenses(formData.person.id);
+        const existingCheck = await licenseValidationService.checkExistingLicenses(person.id);
         setExistingLicenseCheck(existingCheck);
 
         // Show external forms if needed
@@ -392,7 +407,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         invalid_combinations: []
       });
     }
-  };
+  }, [existingLicenseCheck]);
 
   // Validation for each step
   const validateStep = (step: number): boolean => {
@@ -1039,7 +1054,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                               }));
                               // Re-validate after expiry date change
                               if (formData.person?.birth_date) {
-                                validateLicenseCategories(formData.license_categories, formData.application_type);
+                                validateLicenseCategories(formData.license_categories, formData.application_type, formData.person);
                               }
                             }}
                             InputLabelProps={{ shrink: true }}
@@ -1095,7 +1110,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                                   }));
                                   // Re-validate after verification status change
                                   if (formData.person?.birth_date) {
-                                    validateLicenseCategories(formData.license_categories, formData.application_type);
+                                    validateLicenseCategories(formData.license_categories, formData.application_type, formData.person);
                                   }
                                 }}
                               />
