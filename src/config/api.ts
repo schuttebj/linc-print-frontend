@@ -85,8 +85,19 @@ export const API_ENDPOINTS = {
     userTypes: `${API_BASE_URL}/api/${API_VERSION}/lookups/user-types`,
     officeTypes: `${API_BASE_URL}/api/${API_VERSION}/lookups/office-types`,
     equipmentStatuses: `${API_BASE_URL}/api/${API_VERSION}/lookups/equipment-statuses`,
+    // Application-related lookups
+    feeStructures: `${API_BASE_URL}/api/${API_VERSION}/lookups/fee-structures`,
+    licenseCategories: `${API_BASE_URL}/api/${API_VERSION}/lookups/license-categories`,
+    applicationTypes: `${API_BASE_URL}/api/${API_VERSION}/lookups/application-types`,
+    applicationStatuses: `${API_BASE_URL}/api/${API_VERSION}/lookups/application-statuses`,
     all: `${API_BASE_URL}/api/${API_VERSION}/lookups/all`,
   },
+
+  // Applications endpoints
+  applications: `${API_BASE_URL}/api/${API_VERSION}/applications`,
+  applicationById: (id: string) => `${API_BASE_URL}/api/${API_VERSION}/applications/${id}`,
+  applicationsByPerson: (personId: string) => `${API_BASE_URL}/api/${API_VERSION}/applications/search/person/${personId}`,
+  applicationsInProgress: `${API_BASE_URL}/api/${API_VERSION}/applications/in-progress`,
 } as const;
 
 /**

@@ -43,6 +43,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { applicationService } from '../../services/applicationService';
 import { Application, ApplicationStatus, ApplicationType } from '../../types';
+import { lookupService, ApplicationStatus as LookupApplicationStatus, ApplicationType as LookupApplicationType } from '../../services/lookupService';
 
 const ApplicationListPage: React.FC = () => {
   const { hasPermission } = useAuth();
@@ -57,6 +58,29 @@ const ApplicationListPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<string>('');
+  
+  // Lookup data state
+  const [statusOptions, setStatusOptions] = useState<LookupApplicationStatus[]>([]);
+  const [typeOptions, setTypeOptions] = useState<LookupApplicationType[]>([]);
+  const [lookupsLoading, setLookupsLoading] = useState(true);
+
+  // Load lookup data
+  const loadLookups = async () => {
+    try {
+      setLookupsLoading(true);
+      const [statuses, types] = await Promise.all([
+        lookupService.getApplicationStatuses(),
+        lookupService.getApplicationTypes()
+      ]);
+      setStatusOptions(statuses);
+      setTypeOptions(types);
+    } catch (err: any) {
+      console.error('Failed to load lookup data:', err);
+      // Use fallback data if lookups fail
+    } finally {
+      setLookupsLoading(false);
+    }
+  };
 
   // Load applications
   const loadApplications = async () => {
@@ -83,9 +107,16 @@ const ApplicationListPage: React.FC = () => {
     }
   };
 
+  // Load data on component mount
   useEffect(() => {
-    loadApplications();
-  }, [page, statusFilter, typeFilter]);
+    loadLookups();
+  }, []);
+
+  useEffect(() => {
+    if (!lookupsLoading) {
+      loadApplications();
+    }
+  }, [page, statusFilter, typeFilter, lookupsLoading]);
 
   // Status color mapping
   const getStatusColor = (status: ApplicationStatus): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
@@ -104,6 +135,18 @@ const ApplicationListPage: React.FC = () => {
       default:
         return 'primary';
     }
+  };
+
+  // Get display label for application type
+  const getApplicationTypeLabel = (value: string): string => {
+    const option = typeOptions.find(type => type.value === value);
+    return option?.label || value.replace(/_/g, ' ');
+  };
+
+  // Get display label for application status
+  const getApplicationStatusLabel = (value: string): string => {
+    const option = statusOptions.find(status => status.value === value);
+    return option?.label || value.replace(/_/g, ' ');
   };
 
   // Handle navigation
@@ -187,13 +230,14 @@ const ApplicationListPage: React.FC = () => {
                   value={statusFilter}
                   label="Status"
                   onChange={(e) => setStatusFilter(e.target.value)}
+                  disabled={lookupsLoading}
                 >
                   <MenuItem value="">All Statuses</MenuItem>
-                  <MenuItem value="DRAFT">Draft</MenuItem>
-                  <MenuItem value="SUBMITTED">Submitted</MenuItem>
-                  <MenuItem value="APPROVED">Approved</MenuItem>
-                  <MenuItem value="COMPLETED">Completed</MenuItem>
-                  <MenuItem value="REJECTED">Rejected</MenuItem>
+                  {statusOptions.map((status) => (
+                    <MenuItem key={status.value} value={status.value}>
+                      {status.label}
+                    </MenuItem>
+                  ))}
                 </Select>
               </FormControl>
             </Grid>
@@ -204,13 +248,14 @@ const ApplicationListPage: React.FC = () => {
                   value={typeFilter}
                   label="Type"
                   onChange={(e) => setTypeFilter(e.target.value)}
+                  disabled={lookupsLoading}
                 >
                   <MenuItem value="">All Types</MenuItem>
-                  <MenuItem value="NEW_LICENSE">New License</MenuItem>
-                  <MenuItem value="RENEWAL">Renewal</MenuItem>
-                  <MenuItem value="DUPLICATE">Duplicate</MenuItem>
-                  <MenuItem value="UPGRADE">Upgrade</MenuItem>
-                  <MenuItem value="TEMPORARY_LICENSE">Temporary</MenuItem>
+                  {typeOptions.map((type) => (
+                    <MenuItem key={type.value} value={type.value}>
+                      {type.label}
+                    </MenuItem>
+                  ))}
                 </Select>
               </FormControl>
             </Grid>
@@ -269,22 +314,23 @@ const ApplicationListPage: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">
-                      {application.person_name || 'N/A'}
+                      {application.person ? 
+                        `${application.person.first_name} ${application.person.surname}` : 'N/A'}
                     </Typography>
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">
-                      {application.application_type}
+                      {getApplicationTypeLabel(application.application_type)}
                     </Typography>
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">
-                      {application.license_category}
+                      {application.license_categories.join(', ')}
                     </Typography>
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={application.status}
+                      label={getApplicationStatusLabel(application.status)}
                       color={getStatusColor(application.status)}
                       size="small"
                     />

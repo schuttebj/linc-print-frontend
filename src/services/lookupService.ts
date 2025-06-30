@@ -62,7 +62,38 @@ export interface OfficeType {
   label: string;
 }
 
-// Equipment status interface removed - no longer needed for location management
+// Application-related lookup interfaces
+export interface LicenseCategory {
+  value: string;
+  label: string;
+  description?: string;
+  minimum_age?: number;
+}
+
+export interface ApplicationType {
+  value: string;
+  label: string;
+  description?: string;
+}
+
+export interface ApplicationStatus {
+  value: string;
+  label: string;
+  description?: string;
+}
+
+export interface FeeStructure {
+  fee_type: string;
+  display_name: string;
+  description: string;
+  amount: number;
+  currency: string;
+  applies_to_categories: string[];
+  applies_to_application_types: string[];
+  is_mandatory: boolean;
+  effective_from?: string;
+  effective_until?: string;
+}
 
 export interface AllLookupData {
   document_types: DocumentType[];
@@ -76,6 +107,11 @@ export interface AllLookupData {
   user_statuses: UserStatus[];
   user_types: UserType[];
   office_types: OfficeType[];
+  // Application-related lookups
+  license_categories: LicenseCategory[];
+  application_types: ApplicationType[];
+  application_statuses: ApplicationStatus[];
+  fee_structures: FeeStructure[];
 }
 
 /**
@@ -372,6 +408,122 @@ class LookupService {
     }
   }
 
+  /**
+   * Get license categories
+   */
+  public async getLicenseCategories(): Promise<LicenseCategory[]> {
+    const cacheKey = 'license_categories';
+    
+    if (this.isCacheValid(cacheKey)) {
+      return this.cache.get(cacheKey);
+    }
+
+    try {
+      const data = await api.get<LicenseCategory[]>(API_ENDPOINTS.lookups.licenseCategories);
+      this.setCache(cacheKey, data);
+      return data;
+    } catch (error) {
+      console.error('Failed to fetch license categories:', error);
+      // Return fallback data
+      return [
+        { value: 'A′', label: 'A′ - Light Motorcycle/Moped (16+ years)', minimum_age: 16 },
+        { value: 'A', label: 'A - Full Motorcycle (18+ years)', minimum_age: 18 },
+        { value: 'B', label: 'B - Light Vehicle/Car (18+ years)', minimum_age: 18 },
+        { value: 'C', label: 'C - Heavy Goods Vehicle (21+ years)', minimum_age: 21 },
+        { value: 'D', label: 'D - Passenger Transport (21+ years)', minimum_age: 21 },
+        { value: 'E', label: 'E - Large Trailers (21+ years)', minimum_age: 21 },
+      ];
+    }
+  }
+
+  /**
+   * Get application types
+   */
+  public async getApplicationTypes(): Promise<ApplicationType[]> {
+    const cacheKey = 'application_types';
+    
+    if (this.isCacheValid(cacheKey)) {
+      return this.cache.get(cacheKey);
+    }
+
+    try {
+      const data = await api.get<ApplicationType[]>(API_ENDPOINTS.lookups.applicationTypes);
+      this.setCache(cacheKey, data);
+      return data;
+    } catch (error) {
+      console.error('Failed to fetch application types:', error);
+      // Return fallback data
+      return [
+        { value: 'NEW_LICENSE', label: 'New License' },
+        { value: 'LEARNERS_PERMIT', label: 'Learners Permit' },
+        { value: 'RENEWAL', label: 'Renewal' },
+        { value: 'DUPLICATE', label: 'Duplicate' },
+        { value: 'UPGRADE', label: 'Upgrade' },
+        { value: 'TEMPORARY_LICENSE', label: 'Temporary License' },
+        { value: 'INTERNATIONAL_PERMIT', label: 'International Permit' },
+      ];
+    }
+  }
+
+  /**
+   * Get application statuses
+   */
+  public async getApplicationStatuses(): Promise<ApplicationStatus[]> {
+    const cacheKey = 'application_statuses';
+    
+    if (this.isCacheValid(cacheKey)) {
+      return this.cache.get(cacheKey);
+    }
+
+    try {
+      const data = await api.get<ApplicationStatus[]>(API_ENDPOINTS.lookups.applicationStatuses);
+      this.setCache(cacheKey, data);
+      return data;
+    } catch (error) {
+      console.error('Failed to fetch application statuses:', error);
+      // Return fallback data
+      return [
+        { value: 'DRAFT', label: 'Draft' },
+        { value: 'SUBMITTED', label: 'Submitted' },
+        { value: 'DOCUMENTS_PENDING', label: 'Documents Pending' },
+        { value: 'THEORY_TEST_REQUIRED', label: 'Theory Test Required' },
+        { value: 'THEORY_PASSED', label: 'Theory Passed' },
+        { value: 'THEORY_FAILED', label: 'Theory Failed' },
+        { value: 'PRACTICAL_TEST_REQUIRED', label: 'Practical Test Required' },
+        { value: 'PRACTICAL_PASSED', label: 'Practical Passed' },
+        { value: 'PRACTICAL_FAILED', label: 'Practical Failed' },
+        { value: 'APPROVED', label: 'Approved' },
+        { value: 'SENT_TO_PRINTER', label: 'Sent to Printer' },
+        { value: 'CARD_PRODUCTION', label: 'Card Production' },
+        { value: 'READY_FOR_COLLECTION', label: 'Ready for Collection' },
+        { value: 'COMPLETED', label: 'Completed' },
+        { value: 'REJECTED', label: 'Rejected' },
+        { value: 'CANCELLED', label: 'Cancelled' },
+      ];
+    }
+  }
+
+  /**
+   * Get fee structures
+   */
+  public async getFeeStructures(): Promise<FeeStructure[]> {
+    const cacheKey = 'fee_structures';
+    
+    if (this.isCacheValid(cacheKey)) {
+      return this.cache.get(cacheKey);
+    }
+
+    try {
+      const data = await api.get<FeeStructure[]>(API_ENDPOINTS.lookups.feeStructures);
+      this.setCache(cacheKey, data);
+      return data;
+    } catch (error) {
+      console.error('Failed to fetch fee structures:', error);
+      // Return fallback data
+      return [];
+    }
+  }
+
   // Equipment status methods removed - no longer needed for location management
 
   /**
@@ -430,7 +582,11 @@ class LookupService {
         provinces,
         user_statuses,
         user_types,
-        office_types
+        office_types,
+        license_categories,
+        application_types,
+        application_statuses,
+        fee_structures
       ] = await Promise.all([
         this.getDocumentTypes(),
         this.getPersonNatures(),
@@ -442,7 +598,11 @@ class LookupService {
         this.getProvinces(),
         this.getUserStatuses(),
         this.getUserTypes(),
-        this.getOfficeTypes()
+        this.getOfficeTypes(),
+        this.getLicenseCategories(),
+        this.getApplicationTypes(),
+        this.getApplicationStatuses(),
+        this.getFeeStructures()
       ]);
 
       return {
@@ -456,7 +616,11 @@ class LookupService {
         provinces,
         user_statuses,
         user_types,
-        office_types
+        office_types,
+        license_categories,
+        application_types,
+        application_statuses,
+        fee_structures
       };
     }
   }
