@@ -247,6 +247,7 @@ export interface ApplicationFormData {
   
   // Step 3: Requirements
   medical_certificate_file?: File;
+  medical_certificate_verified_manually?: boolean;
   parental_consent_file?: File;
   existing_license_verified?: boolean;
   // New: External license validation
