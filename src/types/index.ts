@@ -20,24 +20,6 @@ export interface Person {
   updated_at: string;
   created_by?: string;
   updated_by?: string;
-  
-  // License tracking for renewals and printing
-  earned_license_codes?: PersonLicenseCode[];
-  current_license_number?: string;
-  current_license_expiry?: string;
-}
-
-// Track all license codes a person has earned for printing and renewals
-export interface PersonLicenseCode {
-  id: string;
-  person_id: string;
-  license_category: LicenseCategory;
-  earned_date: string;
-  earned_from_application_id: string;
-  theory_test_date?: string;
-  practical_test_date?: string;
-  is_active: boolean;
-  notes?: string;
 }
 
 // Role interface
@@ -117,13 +99,10 @@ export interface Application {
   is_temporary_license: boolean;
   validity_period_days?: number;
   
-  // New hold system fields
+  // New fields for enhanced workflow
   is_on_hold: boolean;
   parent_application_id?: string;
-  
-  // Replacement fields
   replacement_reason?: string;
-  police_report_number?: string;
   
   // Requirements flags
   medical_certificate_required: boolean;
@@ -168,34 +147,23 @@ export interface ApplicationCreate {
   urgency_reason?: string;
   is_temporary_license: boolean;
   validity_period_days?: number;
-  
-  // New hold system fields
   is_on_hold?: boolean;
   parent_application_id?: string;
-  
-  // Replacement fields
   replacement_reason?: string;
-  police_report_number?: string;
 }
 
 export interface ApplicationUpdate {
   license_category?: LicenseCategory;
   is_urgent?: boolean;
   urgency_reason?: string;
+  is_on_hold?: boolean;
+  replacement_reason?: string;
   medical_certificate_provided?: string;
   parental_consent_provided?: string;
   existing_license_verified?: boolean;
   photo_url?: string;
   signature_url?: string;
   fingerprint_url?: string;
-  
-  // New hold system fields
-  is_on_hold?: boolean;
-  parent_application_id?: string;
-  
-  // Replacement fields
-  replacement_reason?: string;
-  police_report_number?: string;
 }
 
 // Enums for applications
@@ -220,6 +188,7 @@ export enum LicenseCategory {
 export enum ApplicationStatus {
   DRAFT = 'DRAFT',
   SUBMITTED = 'SUBMITTED',
+  ON_HOLD = 'ON_HOLD',
   DOCUMENTS_PENDING = 'DOCUMENTS_PENDING',
   THEORY_TEST_REQUIRED = 'THEORY_TEST_REQUIRED',
   THEORY_PASSED = 'THEORY_PASSED',
@@ -282,16 +251,11 @@ export interface ApplicationFormData {
   urgency_reason?: string;
   is_temporary_license: boolean;
   validity_period_days?: number;
-  // Location selection for admin users
-  selected_location_id?: string;
-  
-  // New hold system fields
   is_on_hold?: boolean;
   parent_application_id?: string;
-  
-  // Replacement fields
   replacement_reason?: string;
-  police_report_number?: string;
+  // Location selection for admin users
+  selected_location_id?: string;
   
   // Step 3: Requirements
   medical_certificate_file?: File;
@@ -430,4 +394,26 @@ export const VALID_COMBINATIONS = [
 
 // Constants
 export const LEARNERS_PERMIT_VALIDITY_MONTHS = 6;
-export const DEFAULT_TEMPORARY_LICENSE_DAYS = 90; 
+export const DEFAULT_TEMPORARY_LICENSE_DAYS = 90;
+
+// New: Person license accumulation system
+export interface PersonLicenseProfile {
+  person_id: string;
+  accumulated_categories: LicenseCategory[];
+  latest_license_number?: string;
+  latest_card_issue_date?: string;
+  latest_card_expiry_date?: string;
+  learners_permit_categories: LicenseCategory[];
+  learners_permit_expiry?: string;
+  updated_at: string;
+}
+
+// New: Replacement reasons
+export enum ReplacementReason {
+  LOST = 'LOST',
+  STOLEN = 'STOLEN', 
+  DAMAGED = 'DAMAGED',
+  NAME_CHANGE = 'NAME_CHANGE',
+  ADDRESS_CHANGE = 'ADDRESS_CHANGE',
+  OTHER = 'OTHER'
+} 
