@@ -63,6 +63,7 @@ import {
 
 import PersonFormWrapper from '../PersonFormWrapper';
 import { applicationService } from '../../services/applicationService';
+import { licenseValidationService } from '../../services/licenseValidationService';
 import lookupService from '../../services/lookupService';
 import type { Location } from '../../services/lookupService';
 import { useAuth } from '../../contexts/AuthContext';
@@ -79,6 +80,8 @@ import {
   ApplicationLookups,
   LICENSE_CATEGORY_RULES,
   ExternalLicenseDetails,
+  LicenseValidationResult,
+  ExistingLicenseCheck,
   LEARNERS_PERMIT_VALIDITY_MONTHS,
   DEFAULT_TEMPORARY_LICENSE_DAYS,
   ReplacementReason
@@ -125,10 +128,19 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
-  // Prerequisite checking states
+  // License validation states
+  const [validationResult, setValidationResult] = useState<LicenseValidationResult | null>(null);
+  const [existingLicenseCheck, setExistingLicenseCheck] = useState<ExistingLicenseCheck | null>(null);
+  const [showExternalLearnerForm, setShowExternalLearnerForm] = useState(false);
+  const [showExternalLicenseForm, setShowExternalLicenseForm] = useState(false);
+  
+  // Prerequisite checking states (keep existing)
   const [prerequisiteCheck, setPrerequisiteCheck] = useState<PrerequisiteCheck | null>(null);
   const [checkingPrerequisites, setCheckingPrerequisites] = useState(false);
-  const [showExternalLicenseForm, setShowExternalLicenseForm] = useState(false);
+  
+  // Draft applications detection
+  const [draftApplications, setDraftApplications] = useState<Application[]>([]);
+  const [showDraftDialog, setShowDraftDialog] = useState(false);
 
   // Application data with single license category
   const [formData, setFormData] = useState<ApplicationFormData>({
@@ -348,23 +360,188 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
 
   // Handle application details changes
   const handleApplicationDetailsChange = async (field: string, value: any) => {
-    const updatedFormData = { ...formData, [field]: value };
-    setFormData(updatedFormData);
+    // First update the form data
+    setFormData(prev => {
+      const updated = { ...prev, [field]: value };
+      
+      // Recalculate fees when application type or categories change
+      if (field === 'application_type' || field === 'license_category') {
+        const fees = applicationService.calculateApplicationFees(
+          field === 'application_type' ? value : updated.application_type,
+          [field === 'license_category' ? value : updated.license_category],
+          lookups.fee_structures
+        );
+        
+        updated.selected_fees = fees;
+        updated.total_amount = applicationService.calculateTotalAmount(fees);
 
-    // Check prerequisites when license category changes
+        // Handle application type specific settings
+        if (field === 'application_type') {
+          if (value === ApplicationType.LEARNERS_PERMIT) {
+            // Learner's permits: Fixed 6 months validity, no temporary license option
+            updated.validity_period_days = LEARNERS_PERMIT_VALIDITY_MONTHS * 30; // 6 months in days
+            updated.is_temporary_license = false;
+          } else if (value === ApplicationType.NEW_LICENSE) {
+            // Driver's license: Allow temporary license option with default period
+            updated.validity_period_days = DEFAULT_TEMPORARY_LICENSE_DAYS;
+          } else {
+            // Other types: Reset temporary license settings
+            updated.is_temporary_license = false;
+            updated.validity_period_days = DEFAULT_TEMPORARY_LICENSE_DAYS;
+          }
+        }
+      }
+      
+      return updated;
+    });
+    
+    // Clear existing validation errors when making changes
+    setValidationErrors([]);
+    
+    // Force validation check for critical fields that affect requirements
+    const shouldTriggerValidation = field === 'application_type' || 
+                                  field === 'license_category' || 
+                                  field === 'selected_location_id';
+    
+    if (shouldTriggerValidation && formData.person?.birth_date) {
+      // Get the updated values for validation
+      const updatedAppType = field === 'application_type' ? value : formData.application_type;
+      const updatedCategory = field === 'license_category' ? value : formData.license_category;
+      
+      // Reset external form states when application type changes
+      if (field === 'application_type') {
+        setShowExternalLearnerForm(false);
+        setShowExternalLicenseForm(false);
+        setExistingLicenseCheck(null); // Force refresh of license check
+      }
+      
+      // Run validation with updated values
+      await validateLicenseCategories(
+        updatedCategory as LicenseCategory, 
+        updatedAppType as ApplicationType,
+        formData.person,
+        formData.external_learners_permit,
+        formData.external_existing_license
+      );
+    }
+
+    // Also run the existing prerequisite check
     if (field === 'license_category' && formData.person?.id) {
-      await checkPrerequisites(formData.person.id, value);
+      await checkPrerequisites(formData.person.id, value as LicenseCategory);
     }
   };
 
   // Handle person selection
-  const handlePersonSelected = async (person: Person | null) => {
+  // Comprehensive license validation function
+  const validateLicenseCategories = useCallback(async (
+    category: LicenseCategory, 
+    applicationType: ApplicationType,
+    person: Person | null,
+    externalLearnerPermit?: ExternalLicenseDetails,
+    externalExistingLicense?: ExternalLicenseDetails
+  ) => {
+    if (!person?.birth_date || !category) {
+      setValidationResult(null);
+      return;
+    }
+
+    try {
+      const validation = await licenseValidationService.validateApplication(
+        applicationType,
+        [category], // Convert single category to array for service
+        person.birth_date,
+        person.id,
+        externalLearnerPermit,
+        externalExistingLicense
+      );
+
+      setValidationResult(validation);
+
+      // Check existing licenses when person is selected or when reset
+      let existingCheck = existingLicenseCheck;
+      if (!existingLicenseCheck) {
+        existingCheck = await licenseValidationService.checkExistingLicenses(person.id);
+        setExistingLicenseCheck(existingCheck);
+      }
+
+      // Show external forms if needed for NEW_LICENSE applications
+      if (applicationType === ApplicationType.NEW_LICENSE && existingCheck) {
+        // Check if we need learner's permit for base categories (especially B)
+        const rules = LICENSE_CATEGORY_RULES[category];
+        const needsLearnerPermit = rules.allows_learners_permit && rules.requires_existing.length === 0;
+        
+        if (needsLearnerPermit && !existingCheck.has_learners_permit) {
+          setShowExternalLearnerForm(true);
+        }
+        
+        // Check if we need existing license for advanced categories
+        const needsExistingLicense = rules.requires_existing.length > 0;
+        
+        if (needsExistingLicense && !existingCheck.has_active_licenses) {
+          setShowExternalLicenseForm(true);
+        }
+      }
+      
+      // For replacements/renewals, check existing licenses
+      if ((applicationType === ApplicationType.REPLACEMENT || applicationType === ApplicationType.RENEWAL) && existingCheck && !existingCheck.has_active_licenses) {
+        setShowExternalLicenseForm(true);
+      }
+    } catch (error) {
+      console.error('License validation error:', error);
+      setValidationResult({
+        is_valid: false,
+        message: 'Validation failed - please check requirements',
+        missing_prerequisites: [],
+        age_violations: [],
+        invalid_combinations: []
+      });
+    }
+  }, [existingLicenseCheck]);
+
+  const handlePersonSelected = useCallback(async (person: Person | null) => {
     setFormData(prev => ({ ...prev, person }));
+    setValidationErrors([]);
     
-    if (person?.id && formData.license_category) {
+    if (!person) return;
+    
+    // Check for existing draft applications for this person
+    try {
+      const existingApplications = await applicationService.searchApplications({
+        person_id: person.id,
+        status: ApplicationStatus.DRAFT
+      });
+      
+      if (existingApplications.length > 0) {
+        setDraftApplications(existingApplications);
+        setShowDraftDialog(true);
+        return; // Don't auto-advance if there are drafts to review
+      }
+    } catch (error) {
+      console.error('Error checking for draft applications:', error);
+      // Continue anyway if check fails
+    }
+
+    // Run license validation if we have both person and category
+    if (formData.license_category) {
+      await validateLicenseCategories(
+        formData.license_category,
+        formData.application_type,
+        person,
+        formData.external_learners_permit,
+        formData.external_existing_license
+      );
+    }
+    
+    // Also run the existing prerequisite check
+    if (formData.license_category) {
       await checkPrerequisites(person.id, formData.license_category);
     }
-  };
+    
+    // Auto-advance to next step if no drafts found
+    setTimeout(() => {
+      setActiveStep(1);
+    }, 500);
+  }, [formData.license_category, formData.application_type, formData.external_learners_permit, formData.external_existing_license, validateLicenseCategories]);
 
   // Validation functions
   const validateStep = (step: number): boolean => {
@@ -514,8 +691,11 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         return (
           <PersonFormWrapper
             mode="application"
-            onComplete={handlePersonSelected}
             initialPersonId={initialPersonId}
+            onComplete={handlePersonSelected}
+            onSuccess={(person) => handlePersonSelected(person)}
+            title=""
+            subtitle="Select existing person or register new applicant"
             showHeader={false}
           />
         );
@@ -923,6 +1103,149 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
             </Grid>
           )}
 
+          {/* External Learner's Permit Verification - for B category */}
+          {formData.license_category === LicenseCategory.B && 
+           formData.application_type === ApplicationType.NEW_LICENSE && 
+           showExternalLearnerForm && (
+            <Grid item xs={12}>
+              <Card>
+                <CardHeader 
+                  title="Learner's Permit Verification"
+                  subheader="Required for new driver's license applications"
+                />
+                <CardContent>
+                  <Alert severity="warning" sx={{ mb: 2 }}>
+                    No valid learner's permit found in system. Manual verification required.
+                  </Alert>
+                  
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={showExternalLearnerForm}
+                        onChange={(e) => setShowExternalLearnerForm(e.target.checked)}
+                      />
+                    }
+                    label="Applicant has presented valid learner's permit"
+                    sx={{ mb: 2 }}
+                  />
+                  
+                  {showExternalLearnerForm && (
+                    <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                      <Typography variant="body2" fontWeight="bold" gutterBottom>
+                        External Learner's Permit Details:
+                      </Typography>
+                      <Grid container spacing={2} sx={{ mt: 1 }}>
+                        <Grid item xs={12} md={6}>
+                          <TextField
+                            fullWidth
+                            label="Learner's Permit Number"
+                            value={formData.external_learners_permit?.license_number || ''}
+                            onChange={(e) => setFormData(prev => ({
+                              ...prev,
+                              external_learners_permit: {
+                                license_type: 'LEARNERS_PERMIT' as const,
+                                issue_date: '',
+                                expiry_date: '',
+                                issuing_location: '',
+                                categories: [formData.license_category],
+                                verified_by_clerk: true,
+                                ...prev.external_learners_permit,
+                                license_number: e.target.value.replace(/\D/g, '')
+                              }
+                            }))}
+                            placeholder="Enter numbers only"
+                          />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                          <TextField
+                            fullWidth
+                            label="Expiry Date"
+                            type="date"
+                            value={formData.external_learners_permit?.expiry_date || ''}
+                            onChange={(e) => setFormData(prev => ({
+                              ...prev,
+                              external_learners_permit: {
+                                license_type: 'LEARNERS_PERMIT' as const,
+                                issue_date: '',
+                                license_number: '',
+                                issuing_location: '',
+                                categories: [formData.license_category],
+                                verified_by_clerk: true,
+                                ...prev.external_learners_permit,
+                                expiry_date: e.target.value
+                              }
+                            }))}
+                            InputLabelProps={{ shrink: true }}
+                            error={formData.external_learners_permit?.expiry_date && 
+                                   new Date(formData.external_learners_permit.expiry_date) < new Date()}
+                            helperText={formData.external_learners_permit?.expiry_date && 
+                                       new Date(formData.external_learners_permit.expiry_date) < new Date() 
+                                       ? "Learner's permit must not be expired" : ""}
+                          />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                          <FormControl fullWidth required>
+                            <InputLabel>Issuing Location</InputLabel>
+                            <Select
+                              value={formData.external_learners_permit?.issuing_location || ''}
+                              onChange={(e) => setFormData(prev => ({
+                                ...prev,
+                                external_learners_permit: {
+                                  license_type: 'LEARNERS_PERMIT' as const,
+                                  issue_date: '',
+                                  expiry_date: '',
+                                  license_number: '',
+                                  categories: [formData.license_category],
+                                  verified_by_clerk: true,
+                                  ...prev.external_learners_permit,
+                                  issuing_location: e.target.value
+                                }
+                              }))}
+                              label="Issuing Location"
+                            >
+                              <MenuItem value="">
+                                <em>Select issuing location</em>
+                              </MenuItem>
+                              {locations.map((location) => (
+                                <MenuItem key={location.id} value={location.name}>
+                                  {location.name} ({location.code})
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                        <Grid item xs={12}>
+                          <FormControlLabel
+                            control={
+                              <Checkbox
+                                checked={formData.external_learners_permit?.verified_by_clerk || false}
+                                onChange={(e) => setFormData(prev => ({
+                                  ...prev,
+                                  external_learners_permit: {
+                                    license_type: 'LEARNERS_PERMIT' as const,
+                                    issue_date: '',
+                                    expiry_date: '',
+                                    license_number: '',
+                                    issuing_location: '',
+                                    categories: [formData.license_category],
+                                    ...prev.external_learners_permit,
+                                    verified_by_clerk: e.target.checked
+                                  }
+                                }))}
+                              />
+                            }
+                            label="I have verified this learner's permit is valid"
+                            sx={{ color: 'primary.main' }}
+                          />
+                        </Grid>
+                      </Grid>
+                    </Box>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
+
           {/* External License Verification */}
           {requiresExternalLicense && (
             <Grid item xs={12}>
@@ -975,25 +1298,35 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                           />
                         </Grid>
                         <Grid item xs={12} md={6}>
-                          <TextField
-                            fullWidth
-                            label="Issuing Location"
-                            value={formData.external_existing_license?.issuing_location || ''}
-                                                         onChange={(e) => setFormData(prev => ({
-                               ...prev,
-                               external_existing_license: {
-                                 license_type: 'DRIVERS_LICENSE' as const,
-                                 issue_date: '',
-                                 expiry_date: '',
-                                 license_number: '',
-                                 categories: [],
-                                 verified_by_clerk: true,
-                                 ...prev.external_existing_license,
-                                 issuing_location: e.target.value
-                               }
-                             }))}
-                            placeholder="Where was the license issued?"
-                          />
+                          <FormControl fullWidth required>
+                            <InputLabel>Issuing Location</InputLabel>
+                            <Select
+                              value={formData.external_existing_license?.issuing_location || ''}
+                              onChange={(e) => setFormData(prev => ({
+                                ...prev,
+                                external_existing_license: {
+                                  license_type: 'DRIVERS_LICENSE' as const,
+                                  issue_date: '',
+                                  expiry_date: '',
+                                  license_number: '',
+                                  categories: [],
+                                  verified_by_clerk: true,
+                                  ...prev.external_existing_license,
+                                  issuing_location: e.target.value
+                                }
+                              }))}
+                              label="Issuing Location"
+                            >
+                              <MenuItem value="">
+                                <em>Select issuing location</em>
+                              </MenuItem>
+                              {locations.map((location) => (
+                                <MenuItem key={location.id} value={location.name}>
+                                  {location.name} ({location.code})
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
                         </Grid>
                         <Grid item xs={12}>
                           <TextField
@@ -1362,7 +1695,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
   }
 
   return (
-    <Box sx={{ maxWidth: 1000, mx: 'auto', p: 3 }}>
+    <Box sx={{ maxWidth: 1400, mx: 'auto', p: 3 }}>
       {showHeader && (
         <Box sx={{ mb: 4 }}>
           <Typography variant="h4" component="h1" gutterBottom>
@@ -1468,6 +1801,88 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           ))}
         </Stepper>
       </Paper>
+
+      {/* Draft Applications Dialog */}
+      <Dialog open={showDraftDialog} onClose={() => setShowDraftDialog(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          Existing Draft Applications Found
+        </DialogTitle>
+        <DialogContent>
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Found {draftApplications.length} draft application(s) for {formData.person?.first_name} {formData.person?.surname}. 
+            You can continue an existing draft or create a new application.
+          </Alert>
+          
+          <Typography variant="h6" gutterBottom>Draft Applications:</Typography>
+          
+          {draftApplications.map((app, index) => (
+            <Card key={app.id} sx={{ mb: 2 }}>
+              <CardContent>
+                <Grid container spacing={2} alignItems="center">
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle1" fontWeight="bold">
+                      {app.application_number || `Draft ${index + 1}`}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Type: {app.application_type.replace('_', ' ')}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Category: {app.license_category}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Created: {new Date(app.created_at).toLocaleDateString()}
+                    </Typography>
+                    {app.is_urgent && (
+                      <Chip label="Urgent" size="small" color="warning" />
+                    )}
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                      <Button 
+                        variant="contained" 
+                        onClick={() => {
+                          // Load the draft application data
+                          setFormData(prev => ({
+                            ...prev,
+                            application_type: app.application_type,
+                            license_category: app.license_category,
+                            is_urgent: app.is_urgent,
+                            urgency_reason: app.urgency_reason || '',
+                            is_temporary_license: app.is_temporary_license,
+                            validity_period_days: app.validity_period_days,
+                            is_on_hold: app.is_on_hold,
+                            parent_application_id: app.parent_application_id,
+                          }));
+                          setCurrentApplication(app);
+                          setShowDraftDialog(false);
+                          setActiveStep(1); // Go to application details step
+                        }}
+                        size="small"
+                      >
+                        Continue Draft
+                      </Button>
+                    </Box>
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </Card>
+          ))}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowDraftDialog(false)} color="secondary">
+            Cancel
+          </Button>
+          <Button 
+            onClick={() => {
+              setShowDraftDialog(false);
+              setActiveStep(1); // Create new application, go to next step
+            }}
+            variant="outlined"
+          >
+            Create New Application
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Confirmation Dialog */}
       <Dialog open={showConfirmDialog} onClose={() => setShowConfirmDialog(false)}>
