@@ -279,10 +279,20 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         updated.selected_fees = fees;
         updated.total_amount = applicationService.calculateTotalAmount(fees);
 
-        // Set default validity for learner's permits (6 months, admin controlled)
-        if (updated.application_type === ApplicationType.LEARNERS_PERMIT) {
-          updated.validity_period_days = LEARNERS_PERMIT_VALIDITY_MONTHS * 30; // 6 months in days
-          updated.is_temporary_license = false; // Learner's permits are not temporary licenses
+        // Handle application type specific settings
+        if (field === 'application_type') {
+          if (value === ApplicationType.LEARNERS_PERMIT) {
+            // Learner's permits: Fixed 6 months validity, no temporary license option
+            updated.validity_period_days = LEARNERS_PERMIT_VALIDITY_MONTHS * 30; // 6 months in days
+            updated.is_temporary_license = false;
+          } else if (value === ApplicationType.NEW_LICENSE) {
+            // Driver's license: Allow temporary license option with default period
+            updated.validity_period_days = DEFAULT_TEMPORARY_LICENSE_DAYS;
+          } else {
+            // Other types: Reset temporary license settings
+            updated.is_temporary_license = false;
+            updated.validity_period_days = DEFAULT_TEMPORARY_LICENSE_DAYS;
+          }
         }
       }
 
@@ -698,7 +708,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           )}
         </Grid>
 
-        {/* Temporary License Option - Only for Driver's License applications */}
+        {/* Temporary License Option - Only for Driver's License applications (not learner's permits) */}
         {formData.application_type === ApplicationType.NEW_LICENSE && (
           <>
             <Grid item xs={12} md={8}>
@@ -732,15 +742,18 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           </>
         )}
 
-        {/* Learner's Permit Validity Notice */}
+        {/* Learner's Permit Fixed Validity Notice */}
         {formData.application_type === ApplicationType.LEARNERS_PERMIT && (
           <Grid item xs={12}>
             <Alert severity="info">
               <Typography variant="subtitle2" gutterBottom>
-                Learner's Permit Validity
+                Learner's Permit Validity Period
               </Typography>
-              Learner's permits are valid for {LEARNERS_PERMIT_VALIDITY_MONTHS} months from issue date. 
-              Validity period is controlled by administrative settings and cannot be modified during application.
+              All learner's permits are issued with a <strong>fixed validity period of {LEARNERS_PERMIT_VALIDITY_MONTHS} months</strong> from the issue date. 
+              This period is set by administrative policy and cannot be modified during application processing.
+              <br /><br />
+              <strong>Note:</strong> Validity period settings are managed by system administrators only and will be available 
+              in the admin settings once the full admin panel is implemented.
             </Alert>
           </Grid>
         )}
@@ -831,6 +844,174 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                   <Typography variant="body2" gutterBottom>Renewal Required:</Typography>
                   Categories {existingLicenseCheck.must_renew.join(', ')} expire within 6 months
                 </Alert>
+              )}
+            </Paper>
+          </Grid>
+        )}
+
+        {/* Learner's Permit Verification - For Driver's License Applications */}
+        {formData.application_type === ApplicationType.NEW_LICENSE && 
+         formData.license_categories.some(cat => LICENSE_CATEGORY_RULES[cat].allows_learners_permit) && (
+          <Grid item xs={12}>
+            <Paper sx={{ p: 2, bgcolor: 'background.default', border: '1px solid', borderColor: 'primary.main' }}>
+              <Typography variant="subtitle2" gutterBottom color="primary">
+                Learner's Permit Verification Required
+              </Typography>
+              
+              {existingLicenseCheck?.has_learners_permit ? (
+                <Alert severity="success">
+                  <Typography variant="body2" gutterBottom>System Found Valid Learner's Permit:</Typography>
+                  Categories: {existingLicenseCheck.learners_permit?.categories.join(', ')}
+                  <br />
+                  Expires: {existingLicenseCheck.learners_permit?.expiry_date ? 
+                    new Date(existingLicenseCheck.learners_permit.expiry_date).toLocaleDateString() : 'Unknown'}
+                </Alert>
+              ) : (
+                <Box>
+                  <Alert severity="warning" sx={{ mb: 2 }}>
+                    No valid learner's permit found in system for selected categories. 
+                    Manual verification required.
+                  </Alert>
+                  
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={showExternalLearnerForm}
+                        onChange={(e) => setShowExternalLearnerForm(e.target.checked)}
+                      />
+                    }
+                    label="Applicant has presented valid learner's permit"
+                    sx={{ mb: 2 }}
+                  />
+                  
+                  {showExternalLearnerForm && (
+                    <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                      <Typography variant="body2" fontWeight="bold" gutterBottom>
+                        External Learner's Permit Details:
+                      </Typography>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} md={6}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Learner's Permit Number"
+                            value={formData.external_learners_permit?.license_number || ''}
+                            onChange={(e) => setFormData(prev => ({
+                              ...prev,
+                              external_learners_permit: {
+                                ...prev.external_learners_permit,
+                                license_number: e.target.value,
+                                license_type: 'LEARNERS_PERMIT',
+                                categories: formData.license_categories,
+                                issue_date: prev.external_learners_permit?.issue_date || '',
+                                expiry_date: prev.external_learners_permit?.expiry_date || '',
+                                issuing_location: prev.external_learners_permit?.issuing_location || '',
+                                verified_by_clerk: prev.external_learners_permit?.verified_by_clerk || false
+                              } as ExternalLicenseDetails
+                            }))}
+                            required
+                          />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Expiry Date"
+                            type="date"
+                            value={formData.external_learners_permit?.expiry_date || ''}
+                            onChange={(e) => {
+                              setFormData(prev => ({
+                                ...prev,
+                                external_learners_permit: {
+                                  ...prev.external_learners_permit!,
+                                  expiry_date: e.target.value
+                                }
+                              }));
+                              // Re-validate after expiry date change
+                              if (formData.person?.birth_date) {
+                                validateLicenseCategories(formData.license_categories, formData.application_type);
+                              }
+                            }}
+                            InputLabelProps={{ shrink: true }}
+                            required
+                          />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Issuing Location"
+                            value={formData.external_learners_permit?.issuing_location || ''}
+                            onChange={(e) => setFormData(prev => ({
+                              ...prev,
+                              external_learners_permit: {
+                                ...prev.external_learners_permit!,
+                                issuing_location: e.target.value
+                              }
+                            }))}
+                            placeholder="e.g., Antananarivo, Toamasina, etc."
+                          />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                          <FormControlLabel
+                            control={
+                              <Checkbox
+                                checked={formData.external_learners_permit?.verified_by_clerk || false}
+                                onChange={(e) => {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    external_learners_permit: {
+                                      ...prev.external_learners_permit!,
+                                      verified_by_clerk: e.target.checked
+                                    }
+                                  }));
+                                  // Re-validate after verification status change
+                                  if (formData.person?.birth_date) {
+                                    validateLicenseCategories(formData.license_categories, formData.application_type);
+                                  }
+                                }}
+                              />
+                            }
+                            label="Verified valid permit"
+                            sx={{ color: 'primary.main', mt: 1 }}
+                          />
+                        </Grid>
+                        
+                        {/* Expiry Warning */}
+                        {formData.external_learners_permit?.expiry_date && (
+                          <Grid item xs={12}>
+                            {(() => {
+                              const expiryDate = new Date(formData.external_learners_permit.expiry_date);
+                              const today = new Date();
+                              const isExpired = expiryDate < today;
+                              const daysUntilExpiry = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                              
+                              if (isExpired) {
+                                return (
+                                  <Alert severity="error">
+                                    Learner's permit expired on {expiryDate.toLocaleDateString()}
+                                  </Alert>
+                                );
+                              } else if (daysUntilExpiry <= 30) {
+                                return (
+                                  <Alert severity="warning">
+                                    Learner's permit expires in {daysUntilExpiry} days ({expiryDate.toLocaleDateString()})
+                                  </Alert>
+                                );
+                              } else {
+                                return (
+                                  <Alert severity="success">
+                                    Learner's permit valid until {expiryDate.toLocaleDateString()}
+                                  </Alert>
+                                );
+                              }
+                            })()}
+                          </Grid>
+                        )}
+                      </Grid>
+                    </Box>
+                  )}
+                </Box>
               )}
             </Paper>
           </Grid>
