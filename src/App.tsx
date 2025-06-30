@@ -16,6 +16,10 @@ import PersonSearchPage from './pages/persons/PersonSearchPage';
 import PersonEditPage from './pages/persons/PersonEditPage';
 import PersonFormTest from './pages/persons/PersonFormTest';
 
+// Application Pages
+import ApplicationListPage from './pages/applications/ApplicationListPage';
+import ApplicationFormPage from './pages/applications/ApplicationFormPage';
+
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
 import UserManagementPage from './pages/admin/UserManagementPage';
@@ -85,6 +89,42 @@ function App() {
                 element={
                   <ProtectedRoute requiredPermission="persons.create">
                     <PersonFormTest />
+                  </ProtectedRoute>
+                } 
+              />
+            </Route>
+
+            {/* Applications - requires application permissions */}
+            <Route path="applications">
+              <Route 
+                index 
+                element={
+                  <ProtectedRoute requiredPermission="applications.read">
+                    <ApplicationListPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="create" 
+                element={
+                  <ProtectedRoute requiredPermission="applications.create">
+                    <ApplicationFormPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="edit/:applicationId" 
+                element={
+                  <ProtectedRoute requiredPermission="applications.update">
+                    <ApplicationFormPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path=":applicationId" 
+                element={
+                  <ProtectedRoute requiredPermission="applications.read">
+                    <ApplicationFormPage />
                   </ProtectedRoute>
                 } 
               />

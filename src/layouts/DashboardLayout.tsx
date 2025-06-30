@@ -34,6 +34,7 @@ import {
   People,
   LocationOn,
   Assessment,
+  Add as AddIcon,
 } from '@mui/icons-material';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -75,6 +76,18 @@ const DashboardLayout: React.FC = () => {
       icon: <Dashboard />,
       path: '/dashboard',
       permission: null,
+    },
+    {
+      text: 'Applications',
+      icon: <Assessment />,
+      path: '/dashboard/applications',
+      permission: 'applications.read',
+    },
+    {
+      text: 'New Application',
+      icon: <AddIcon />,
+      path: '/dashboard/applications/create',
+      permission: 'applications.create',
     },
     {
       text: 'Person Management',
