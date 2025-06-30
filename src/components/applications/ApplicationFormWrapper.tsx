@@ -55,7 +55,8 @@ import {
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon,
   Info as InfoIcon,
-  AttachMoney as MoneyIcon
+  AttachMoney as MoneyIcon,
+  Error as ErrorIcon
 } from '@mui/icons-material';
 
 import PersonFormWrapper from '../PersonFormWrapper';
@@ -88,7 +89,7 @@ interface ApplicationFormWrapperProps {
   mode?: 'create' | 'edit' | 'continue';
   initialPersonId?: string;
   initialApplicationId?: string;
-  onComplete?: (application: Application) => void;
+  onComplete?: (application: Application | null) => void;
   onCancel?: () => void;
   onSuccess?: (application: Application, isEdit: boolean) => void;
   title?: string;
@@ -136,7 +137,9 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     external_existing_license: undefined,
     biometric_data: {},
     selected_fees: [],
-    total_amount: 0
+    total_amount: 0,
+    // Location selection for admin users
+    selected_location_id: undefined
   });
 
   // Lookup data
@@ -159,6 +162,33 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
 
   // Auth context
   const { user } = useAuth();
+
+  // Helper function to determine if user can select location
+  const canSelectLocation = () => {
+    if (!user) return false;
+    const adminRoles = ['SYSTEM_USER', 'NATIONAL_ADMIN', 'PROVINCIAL_ADMIN'];
+    return adminRoles.includes(user.user_type || '');
+  };
+
+  // Helper function to get available locations for user
+  const getAvailableLocations = () => {
+    if (!user) return [];
+    
+    switch (user.user_type) {
+      case 'SYSTEM_USER':
+      case 'NATIONAL_ADMIN':
+        // Can select any location
+        return locations;
+        
+      case 'PROVINCIAL_ADMIN':
+        // Can only select locations in their province
+        return locations.filter(loc => loc.province_code === user.scope_province);
+        
+      default:
+        // Location users use their assigned location
+        return [];
+    }
+  };
 
   // Steps configuration
   const steps = [
@@ -478,6 +508,13 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         if (formData.is_urgent && !formData.urgency_reason?.trim()) {
           errors.push('Please provide a reason for urgent processing');
         }
+        
+        // Location validation
+        if (canSelectLocation() && !formData.selected_location_id) {
+          errors.push('Please select a location for this application');
+        } else if (!canSelectLocation() && !user?.primary_location_id) {
+          errors.push('User location not configured. Please contact administrator.');
+        }
         break;
         
       case 2: // Requirements
@@ -568,9 +605,14 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         throw new Error('Please select an applicant before saving');
       }
 
+      // Ensure we have a valid location_id
+      if (!user?.primary_location_id) {
+        throw new Error('User location not found. Please contact administrator.');
+      }
+
       const applicationData: ApplicationCreate = {
         person_id: formData.person.id,
-        location_id: user?.primary_location_id || '00000000-0000-0000-0000-000000000000', // Default location if user has no specific location
+        location_id: user.primary_location_id,
         application_type: formData.application_type,
         license_categories: formData.license_categories,
         is_urgent: formData.is_urgent,
@@ -619,9 +661,15 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
       
       if (!application) {
         // Create application if it doesn't exist
+        // Ensure we have a valid location_id
+        const selectedLocationId = formData.selected_location_id || user?.primary_location_id;
+        if (!selectedLocationId) {
+          throw new Error('Location not found. Please select a location or contact administrator.');
+        }
+
         const applicationData: ApplicationCreate = {
           person_id: formData.person!.id,
-          location_id: user?.primary_location_id || '00000000-0000-0000-0000-000000000000', // Default location if user has no specific location
+          location_id: selectedLocationId,
           application_type: formData.application_type,
           license_categories: formData.license_categories,
           is_urgent: formData.is_urgent,
@@ -708,7 +756,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
   const handleFinishLater = async () => {
     await handleSaveDraft();
     if (onComplete) {
-      onComplete(currentApplication!);
+      onComplete(currentApplication);
     }
   };
 
@@ -754,6 +802,46 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
       </Typography>
 
       <Grid container spacing={3}>
+        {/* Location Selection (for admin users) */}
+        {canSelectLocation() && (
+          <Grid item xs={12}>
+            <FormControl fullWidth required>
+              <InputLabel>Application Location</InputLabel>
+              <Select
+                value={formData.selected_location_id || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, selected_location_id: e.target.value }))}
+                label="Application Location"
+              >
+                <MenuItem value="">
+                  <em>Select location for this application</em>
+                </MenuItem>
+                {getAvailableLocations().map((location) => (
+                  <MenuItem key={location.id} value={location.id}>
+                    {location.name} ({location.code}) - {location.province_code}
+                  </MenuItem>
+                ))}
+              </Select>
+              <Typography variant="caption" sx={{ mt: 1, color: 'text.secondary' }}>
+                {user?.user_type === 'PROVINCIAL_ADMIN' 
+                  ? `Showing locations in ${user.scope_province} province`
+                  : 'Select the location where this application will be processed'
+                }
+              </Typography>
+            </FormControl>
+          </Grid>
+        )}
+
+        {/* Current Location Display (for location users) */}
+        {!canSelectLocation() && user?.primary_location_id && (
+          <Grid item xs={12}>
+            <Alert severity="info">
+              <Typography variant="body2">
+                <strong>Application Location:</strong> {locations.find(loc => loc.id === user.primary_location_id)?.name || 'Current location'}
+              </Typography>
+            </Alert>
+          </Grid>
+        )}
+
         {/* Application Type */}
         <Grid item xs={12} md={6}>
           <FormControl fullWidth required>
@@ -973,242 +1061,9 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           </Grid>
         )}
 
-        {/* Learner's Permit Verification - For Driver's License Applications */}
-        {formData.application_type === ApplicationType.NEW_LICENSE && 
-         formData.license_categories.some(cat => LICENSE_CATEGORY_RULES[cat].allows_learners_permit) && (
-          <Grid item xs={12}>
-            <Paper sx={{ p: 2, bgcolor: 'background.default', border: '1px solid', borderColor: 'primary.main' }}>
-              <Typography variant="subtitle2" gutterBottom color="primary">
-                Learner's Permit Verification Required
-              </Typography>
-              
-              {existingLicenseCheck?.has_learners_permit ? (
-                <Alert severity="success">
-                  <Typography variant="body2" gutterBottom>System Found Valid Learner's Permit:</Typography>
-                  Categories: {existingLicenseCheck.learners_permit?.categories.join(', ')}
-                  <br />
-                  Expires: {existingLicenseCheck.learners_permit?.expiry_date ? 
-                    new Date(existingLicenseCheck.learners_permit.expiry_date).toLocaleDateString() : 'Unknown'}
-                </Alert>
-              ) : (
-                <Box>
-                  <Alert severity="warning" sx={{ mb: 2 }}>
-                    No valid learner's permit found in system for selected categories. 
-                    Manual verification required.
-                  </Alert>
-                  
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={showExternalLearnerForm}
-                        onChange={(e) => setShowExternalLearnerForm(e.target.checked)}
-                      />
-                    }
-                    label="Applicant has presented valid learner's permit"
-                    sx={{ mb: 2 }}
-                  />
-                  
-                  {showExternalLearnerForm && (
-                    <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                      <Typography variant="body2" fontWeight="bold" gutterBottom>
-                        External Learner's Permit Details:
-                      </Typography>
-                      <Grid container spacing={2}>
-                        <Grid item xs={12} md={6}>
-                          <TextField
-                            fullWidth
-                            size="small"
-                            label="Learner's Permit Number"
-                            value={formData.external_learners_permit?.license_number || ''}
-                            onChange={(e) => {
-                              // Only allow numbers
-                              const value = e.target.value.replace(/\D/g, '');
-                              setFormData(prev => ({
-                                ...prev,
-                                external_learners_permit: {
-                                  ...prev.external_learners_permit,
-                                  license_number: value,
-                                  license_type: 'LEARNERS_PERMIT',
-                                  categories: formData.license_categories,
-                                  issue_date: prev.external_learners_permit?.issue_date || '',
-                                  expiry_date: prev.external_learners_permit?.expiry_date || '',
-                                  issuing_location: prev.external_learners_permit?.issuing_location || '',
-                                  verified_by_clerk: prev.external_learners_permit?.verified_by_clerk || false
-                                } as ExternalLicenseDetails
-                              }));
-                            }}
-                            placeholder="Enter numbers only"
-                            required
-                            error={formData.external_learners_permit?.license_number && 
-                                   !/^\d+$/.test(formData.external_learners_permit.license_number)}
-                            helperText={formData.external_learners_permit?.license_number && 
-                                       !/^\d+$/.test(formData.external_learners_permit.license_number) 
-                                       ? "Numbers only" : ""}
-                          />
-                        </Grid>
-                        <Grid item xs={12} md={6}>
-                          <TextField
-                            fullWidth
-                            size="small"
-                            label="Expiry Date"
-                            type="date"
-                            value={formData.external_learners_permit?.expiry_date || ''}
-                            onChange={(e) => {
-                              setFormData(prev => ({
-                                ...prev,
-                                external_learners_permit: {
-                                  ...prev.external_learners_permit!,
-                                  expiry_date: e.target.value
-                                }
-                              }));
-                              // Re-validate after expiry date change
-                              if (formData.person?.birth_date) {
-                                validateLicenseCategories(formData.license_categories, formData.application_type, formData.person);
-                              }
-                            }}
-                            InputLabelProps={{ shrink: true }}
-                            inputProps={{
-                              min: new Date().toISOString().split('T')[0], // Minimum is today
-                              max: new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // Max is 2 years from now
-                            }}
-                            required
-                            error={formData.external_learners_permit?.expiry_date && 
-                                   new Date(formData.external_learners_permit.expiry_date) < new Date()}
-                            helperText={formData.external_learners_permit?.expiry_date && 
-                                       new Date(formData.external_learners_permit.expiry_date) < new Date() 
-                                       ? "Expiry date must be today or later" : "Select expiry date (must be valid)"}
-                          />
-                        </Grid>
-                        <Grid item xs={12} md={6}>
-                          <FormControl fullWidth size="small" required>
-                            <InputLabel>Issuing Location</InputLabel>
-                            <Select
-                              value={formData.external_learners_permit?.issuing_location || ''}
-                              onChange={(e) => setFormData(prev => ({
-                                ...prev,
-                                external_learners_permit: {
-                                  ...prev.external_learners_permit!,
-                                  issuing_location: e.target.value
-                                }
-                              }))}
-                              label="Issuing Location"
-                            >
-                              <MenuItem value="">
-                                <em>Select issuing location</em>
-                              </MenuItem>
-                              {locations.map((location) => (
-                                <MenuItem key={location.id} value={location.name}>
-                                  {location.name} ({location.code})
-                                </MenuItem>
-                              ))}
-                            </Select>
-                          </FormControl>
-                        </Grid>
-                        <Grid item xs={12} md={6}>
-                          <FormControlLabel
-                            control={
-                              <Checkbox
-                                checked={formData.external_learners_permit?.verified_by_clerk || false}
-                                onChange={(e) => {
-                                  setFormData(prev => ({
-                                    ...prev,
-                                    external_learners_permit: {
-                                      ...prev.external_learners_permit!,
-                                      verified_by_clerk: e.target.checked
-                                    }
-                                  }));
-                                  // Re-validate after verification status change
-                                  if (formData.person?.birth_date) {
-                                    validateLicenseCategories(formData.license_categories, formData.application_type, formData.person);
-                                  }
-                                }}
-                              />
-                            }
-                            label="Verified valid permit"
-                            sx={{ color: 'primary.main', mt: 1 }}
-                          />
-                        </Grid>
-                        
-                        {/* Expiry Warning */}
-                        {formData.external_learners_permit?.expiry_date && (
-                          <Grid item xs={12}>
-                            {(() => {
-                              const expiryDate = new Date(formData.external_learners_permit.expiry_date);
-                              const today = new Date();
-                              const isExpired = expiryDate < today;
-                              const daysUntilExpiry = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-                              
-                              if (isExpired) {
-                                return (
-                                  <Alert severity="error">
-                                    Learner's permit expired on {expiryDate.toLocaleDateString()}
-                                  </Alert>
-                                );
-                              } else if (daysUntilExpiry <= 30) {
-                                return (
-                                  <Alert severity="warning">
-                                    Learner's permit expires in {daysUntilExpiry} days ({expiryDate.toLocaleDateString()})
-                                  </Alert>
-                                );
-                              } else {
-                                return (
-                                  <Alert severity="success">
-                                    Learner's permit valid until {expiryDate.toLocaleDateString()}
-                                  </Alert>
-                                );
-                              }
-                            })()}
-                          </Grid>
-                        )}
-                      </Grid>
-                    </Box>
-                  )}
-                </Box>
-              )}
-            </Paper>
-          </Grid>
-        )}
+        {/* Learner's Permit Verification moved to Requirements step */}
 
-        {/* Fee Calculation Display */}
-        {formData.selected_fees.length > 0 && (
-          <Grid item xs={12}>
-            <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Applicable Fees
-              </Typography>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Fee Type</TableCell>
-                    <TableCell>Description</TableCell>
-                    <TableCell align="right">Amount</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {formData.selected_fees.map((fee, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{fee.display_name}</TableCell>
-                      <TableCell>{fee.description}</TableCell>
-                      <TableCell align="right">
-                        {fee.amount.toLocaleString()} {fee.currency}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  <TableRow>
-                    <TableCell colSpan={2}>
-                      <Typography variant="subtitle2">Total Amount</Typography>
-                    </TableCell>
-                    <TableCell align="right">
-                      <Typography variant="subtitle2">
-                        {formData.total_amount.toLocaleString()} Ar
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </Paper>
-          </Grid>
-        )}
+        {/* Fee Calculation moved to Review step */}
       </Grid>
     </Box>
   );
@@ -1307,7 +1162,150 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
             </Grid>
           )}
 
-          {/* External Existing License Verification */}
+          {/* Learner's Permit Verification - For Driver's License Applications */}
+          {formData.application_type === ApplicationType.NEW_LICENSE && 
+           formData.license_categories.some(cat => LICENSE_CATEGORY_RULES[cat].allows_learners_permit) && (
+            <Grid item xs={12}>
+              <Card>
+                <CardHeader 
+                  title="Learner's Permit Verification" 
+                  subheader="Required for new driver's license applications" 
+                />
+                <CardContent>
+                  {existingLicenseCheck?.has_learners_permit ? (
+                    <Alert severity="success">
+                      <Typography variant="body2" gutterBottom>System Found Valid Learner's Permit:</Typography>
+                      Categories: {existingLicenseCheck.learners_permit?.categories.join(', ')}
+                      <br />
+                      Expires: {existingLicenseCheck.learners_permit?.expiry_date ? 
+                        new Date(existingLicenseCheck.learners_permit.expiry_date).toLocaleDateString() : 'Unknown'}
+                    </Alert>
+                  ) : (
+                    <Box>
+                      <Alert severity="warning" sx={{ mb: 2 }}>
+                        No valid learner's permit found in system for selected categories. 
+                        Manual verification required.
+                      </Alert>
+                      
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={showExternalLearnerForm}
+                            onChange={(e) => setShowExternalLearnerForm(e.target.checked)}
+                          />
+                        }
+                        label="Applicant has presented valid learner's permit"
+                        sx={{ mb: 2 }}
+                      />
+                      
+                      {showExternalLearnerForm && (
+                        <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                          <Typography variant="body2" fontWeight="bold" gutterBottom>
+                            External Learner's Permit Details:
+                          </Typography>
+                          <Grid container spacing={2}>
+                            <Grid item xs={12} md={6}>
+                              <TextField
+                                fullWidth
+                                size="small"
+                                label="Learner's Permit Number"
+                                value={formData.external_learners_permit?.license_number || ''}
+                                onChange={(e) => {
+                                  const value = e.target.value.replace(/\D/g, '');
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    external_learners_permit: {
+                                      ...prev.external_learners_permit,
+                                      license_number: value,
+                                      license_type: 'LEARNERS_PERMIT',
+                                      categories: formData.license_categories,
+                                      issue_date: prev.external_learners_permit?.issue_date || '',
+                                      expiry_date: prev.external_learners_permit?.expiry_date || '',
+                                      issuing_location: prev.external_learners_permit?.issuing_location || '',
+                                      verified_by_clerk: prev.external_learners_permit?.verified_by_clerk || false
+                                    } as ExternalLicenseDetails
+                                  }));
+                                }}
+                                placeholder="Enter numbers only"
+                                required
+                              />
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                              <TextField
+                                fullWidth
+                                size="small"
+                                label="Expiry Date"
+                                type="date"
+                                value={formData.external_learners_permit?.expiry_date || ''}
+                                onChange={(e) => {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    external_learners_permit: {
+                                      ...prev.external_learners_permit!,
+                                      expiry_date: e.target.value
+                                    }
+                                  }));
+                                }}
+                                InputLabelProps={{ shrink: true }}
+                                required
+                              />
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                              <FormControl fullWidth size="small" required>
+                                <InputLabel>Issuing Location</InputLabel>
+                                <Select
+                                  value={formData.external_learners_permit?.issuing_location || ''}
+                                  onChange={(e) => setFormData(prev => ({
+                                    ...prev,
+                                    external_learners_permit: {
+                                      ...prev.external_learners_permit!,
+                                      issuing_location: e.target.value
+                                    }
+                                  }))}
+                                  label="Issuing Location"
+                                >
+                                  <MenuItem value="">
+                                    <em>Select issuing location</em>
+                                  </MenuItem>
+                                  {locations.map((location) => (
+                                    <MenuItem key={location.id} value={location.name}>
+                                      {location.name} ({location.code})
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                              </FormControl>
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                              <FormControlLabel
+                                control={
+                                  <Checkbox
+                                    checked={formData.external_learners_permit?.verified_by_clerk || false}
+                                    onChange={(e) => {
+                                      setFormData(prev => ({
+                                        ...prev,
+                                        external_learners_permit: {
+                                          ...prev.external_learners_permit!,
+                                          verified_by_clerk: e.target.checked
+                                        }
+                                      }));
+                                    }}
+                                  />
+                                }
+                                label="Verified valid permit"
+                                sx={{ color: 'primary.main', mt: 1 }}
+                              />
+                            </Grid>
+                          </Grid>
+                        </Box>
+                      )}
+                    </Box>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
+
+          {/* External Existing License Verification - Enhanced */}
           {requiresExternalLicense && (
             <Grid item xs={12}>
               <Card>
@@ -1327,41 +1325,128 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                   />
                   
                   {showExternalLicenseForm && (
-                    <Box sx={{ mt: 2 }}>
+                    <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                      <Typography variant="body2" fontWeight="bold" gutterBottom>
+                        External Existing License Details:
+                      </Typography>
                       <Grid container spacing={2}>
                         <Grid item xs={12} md={6}>
                           <TextField
                             fullWidth
+                            size="small"
                             label="License Number"
                             value={formData.external_existing_license?.license_number || ''}
-                            onChange={(e) => setFormData(prev => ({
-                              ...prev,
-                              external_existing_license: {
-                                ...prev.external_existing_license,
-                                license_number: e.target.value,
-                                license_type: 'DRIVERS_LICENSE',
-                                categories: [],
-                                issue_date: '',
-                                expiry_date: '',
-                                issuing_location: '',
-                                verified_by_clerk: false
-                              } as ExternalLicenseDetails
-                            }))}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, '');
+                              setFormData(prev => ({
+                                ...prev,
+                                external_existing_license: {
+                                  ...prev.external_existing_license,
+                                  license_number: value,
+                                  license_type: 'DRIVERS_LICENSE',
+                                  categories: prev.external_existing_license?.categories || [],
+                                  issue_date: prev.external_existing_license?.issue_date || '',
+                                  expiry_date: prev.external_existing_license?.expiry_date || '',
+                                  issuing_location: prev.external_existing_license?.issuing_location || '',
+                                  verified_by_clerk: prev.external_existing_license?.verified_by_clerk || false
+                                } as ExternalLicenseDetails
+                              }));
+                            }}
+                            placeholder="Enter numbers only"
                             required
                           />
                         </Grid>
                         <Grid item xs={12} md={6}>
                           <TextField
                             fullWidth
-                            label="Issuing Location"
-                            value={formData.external_existing_license?.issuing_location || ''}
-                            onChange={(e) => setFormData(prev => ({
-                              ...prev,
-                              external_existing_license: {
-                                ...prev.external_existing_license!,
-                                issuing_location: e.target.value
-                              }
-                            }))}
+                            size="small"
+                            label="Issue Date"
+                            type="date"
+                            value={formData.external_existing_license?.issue_date || ''}
+                            onChange={(e) => {
+                              setFormData(prev => ({
+                                ...prev,
+                                external_existing_license: {
+                                  ...prev.external_existing_license!,
+                                  issue_date: e.target.value
+                                }
+                              }));
+                            }}
+                            InputLabelProps={{ shrink: true }}
+                            required
+                          />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Expiry Date"
+                            type="date"
+                            value={formData.external_existing_license?.expiry_date || ''}
+                            onChange={(e) => {
+                              setFormData(prev => ({
+                                ...prev,
+                                external_existing_license: {
+                                  ...prev.external_existing_license!,
+                                  expiry_date: e.target.value
+                                }
+                              }));
+                            }}
+                            InputLabelProps={{ shrink: true }}
+                            inputProps={{
+                              min: new Date().toISOString().split('T')[0]
+                            }}
+                            required
+                            error={formData.external_existing_license?.expiry_date && 
+                                   new Date(formData.external_existing_license.expiry_date) < new Date()}
+                            helperText={formData.external_existing_license?.expiry_date && 
+                                       new Date(formData.external_existing_license.expiry_date) < new Date() 
+                                       ? "License must not be expired" : ""}
+                          />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                          <FormControl fullWidth size="small" required>
+                            <InputLabel>Issuing Location</InputLabel>
+                            <Select
+                              value={formData.external_existing_license?.issuing_location || ''}
+                              onChange={(e) => setFormData(prev => ({
+                                ...prev,
+                                external_existing_license: {
+                                  ...prev.external_existing_license!,
+                                  issuing_location: e.target.value
+                                }
+                              }))}
+                              label="Issuing Location"
+                            >
+                              <MenuItem value="">
+                                <em>Select issuing location</em>
+                              </MenuItem>
+                              {locations.map((location) => (
+                                <MenuItem key={location.id} value={location.name}>
+                                  {location.name} ({location.code})
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                        <Grid item xs={12}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Current License Categories"
+                            value={formData.external_existing_license?.categories?.join(', ') || ''}
+                                                         onChange={(e) => {
+                               const categories = e.target.value.split(',').map(cat => cat.trim().toUpperCase()).filter(cat => cat) as LicenseCategory[];
+                               setFormData(prev => ({
+                                 ...prev,
+                                 external_existing_license: {
+                                   ...prev.external_existing_license!,
+                                   categories: categories
+                                 }
+                               }));
+                             }}
+                            placeholder="e.g., A, B (comma-separated)"
+                            helperText="Enter current license categories (e.g., A, B)"
                             required
                           />
                         </Grid>
@@ -1414,15 +1499,261 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     </Box>
   );
 
-  const renderReviewStep = () => (
-    <Box>
-      <Typography variant="h6" gutterBottom>Review & Submit</Typography>
-      <Alert severity="info">
-        Review and submission will be implemented in the next development phase.
-        This includes fee calculation, final validation, and application submission.
-      </Alert>
-    </Box>
-  );
+  const renderReviewStep = () => {
+    const age = formData.person?.birth_date ? licenseValidationService.calculateAge(formData.person.birth_date) : 0;
+    const requiresMedical = age >= 65 || formData.license_categories.some(cat => ['C', 'D', 'E'].includes(cat));
+    const requiresParentalConsent = age < 18;
+    const requiresExternalLicense = (formData.application_type === ApplicationType.UPGRADE || 
+                                    formData.application_type === ApplicationType.RENEWAL) && 
+                                   !existingLicenseCheck?.has_active_licenses;
+    const requiresExternalLearner = formData.application_type === ApplicationType.NEW_LICENSE && 
+                                   formData.license_categories.some(cat => LICENSE_CATEGORY_RULES[cat].allows_learners_permit) && 
+                                   !existingLicenseCheck?.has_learners_permit;
+
+    return (
+      <Box>
+        <Typography variant="h6" gutterBottom>Review & Submit</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          Review all details, fees, and requirements before submitting your application
+        </Typography>
+
+        <Grid container spacing={3}>
+          {/* Application Summary */}
+          <Grid item xs={12}>
+            <Card>
+              <CardHeader title="Application Summary" />
+              <CardContent>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="body2" color="text.secondary">Applicant:</Typography>
+                    <Typography variant="body1">
+                      {formData.person?.first_name} {formData.person?.surname}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="body2" color="text.secondary">Application Type:</Typography>
+                    <Typography variant="body1">
+                      {formData.application_type.replace('_', ' ')}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="body2" color="text.secondary">License Categories:</Typography>
+                    <Typography variant="body1">
+                      {formData.license_categories.join(', ')}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="body2" color="text.secondary">Processing Location:</Typography>
+                    <Typography variant="body1">
+                      {(() => {
+                        const selectedLocationId = formData.selected_location_id || user?.primary_location_id;
+                        const location = locations.find(loc => loc.id === selectedLocationId);
+                        return location ? `${location.name} (${location.code})` : 'Location not found';
+                      })()}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="body2" color="text.secondary">Urgency:</Typography>
+                    <Typography variant="body1">
+                      {formData.is_urgent ? 'Urgent' : 'Standard'}
+                    </Typography>
+                  </Grid>
+                  {formData.notes && (
+                    <Grid item xs={12}>
+                      <Typography variant="body2" color="text.secondary">Notes:</Typography>
+                      <Typography variant="body1">{formData.notes}</Typography>
+                    </Grid>
+                  )}
+                </Grid>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Requirements Checklist */}
+          <Grid item xs={12}>
+            <Card>
+              <CardHeader title="Requirements Checklist" />
+              <CardContent>
+                <List>
+                  {/* Medical Certificate */}
+                  {requiresMedical && (
+                    <ListItem>
+                      <ListItemIcon>
+                        {formData.medical_certificate_file ? 
+                          <CheckCircleIcon color="success" /> : 
+                          <ErrorIcon color="error" />
+                        }
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary="Medical Certificate"
+                        secondary={formData.medical_certificate_file ? 
+                          `Uploaded: ${formData.medical_certificate_file.name}` : 
+                          "Required but not uploaded"
+                        }
+                      />
+                    </ListItem>
+                  )}
+
+                  {/* Parental Consent */}
+                  {requiresParentalConsent && (
+                    <ListItem>
+                      <ListItemIcon>
+                        {formData.parental_consent_file ? 
+                          <CheckCircleIcon color="success" /> : 
+                          <ErrorIcon color="error" />
+                        }
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary="Parental Consent"
+                        secondary={formData.parental_consent_file ? 
+                          `Uploaded: ${formData.parental_consent_file.name}` : 
+                          "Required but not uploaded"
+                        }
+                      />
+                    </ListItem>
+                  )}
+
+                  {/* Learner's Permit Verification */}
+                  {requiresExternalLearner && (
+                    <ListItem>
+                      <ListItemIcon>
+                        {formData.external_learners_permit?.verified_by_clerk ? 
+                          <CheckCircleIcon color="success" /> : 
+                          <ErrorIcon color="error" />
+                        }
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary="Learner's Permit Verification"
+                        secondary={formData.external_learners_permit?.verified_by_clerk ? 
+                          `Verified: ${formData.external_learners_permit.license_number}` : 
+                          "Required but not verified"
+                        }
+                      />
+                    </ListItem>
+                  )}
+
+                  {/* Existing License Verification */}
+                  {requiresExternalLicense && (
+                    <ListItem>
+                      <ListItemIcon>
+                        {formData.external_existing_license?.verified_by_clerk ? 
+                          <CheckCircleIcon color="success" /> : 
+                          <ErrorIcon color="error" />
+                        }
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary="Existing License Verification"
+                        secondary={formData.external_existing_license?.verified_by_clerk ? 
+                          `Verified: ${formData.external_existing_license.license_number}` : 
+                          "Required but not verified"
+                        }
+                      />
+                    </ListItem>
+                  )}
+
+                  {/* No requirements case */}
+                  {!requiresMedical && !requiresParentalConsent && !requiresExternalLearner && !requiresExternalLicense && (
+                    <ListItem>
+                      <ListItemIcon>
+                        <CheckCircleIcon color="success" />
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary="All Requirements Met"
+                        secondary="No additional requirements needed for this application"
+                      />
+                    </ListItem>
+                  )}
+                </List>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Fee Calculation */}
+          <Grid item xs={12}>
+            <Card>
+              <CardHeader title="Fee Calculation" />
+              <CardContent>
+                {formData.selected_fees.length > 0 ? (
+                  <Box>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Fee Type</TableCell>
+                          <TableCell>Description</TableCell>
+                          <TableCell align="right">Amount</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {formData.selected_fees.map((fee, index) => (
+                          <TableRow key={index}>
+                            <TableCell>{fee.display_name}</TableCell>
+                            <TableCell>{fee.description}</TableCell>
+                            <TableCell align="right">
+                              {fee.amount.toLocaleString()} {fee.currency}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        <TableRow sx={{ '& td': { border: 0 } }}>
+                          <TableCell colSpan={2}>
+                            <Typography variant="h6" sx={{ mt: 2 }}>Total Amount</Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography variant="h6" sx={{ mt: 2 }}>
+                              {formData.total_amount.toLocaleString()} Ar
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                    
+                    {formData.is_urgent && (
+                      <Alert severity="warning" sx={{ mt: 2 }}>
+                        <Typography variant="body2">
+                          <strong>Urgent Processing:</strong> Additional fees may apply for expedited processing.
+                        </Typography>
+                      </Alert>
+                    )}
+                  </Box>
+                ) : (
+                  <Alert severity="info">
+                    Fee calculation will be determined based on your application details and requirements.
+                    Please ensure all previous steps are completed for accurate fee calculation.
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Final Validation */}
+          <Grid item xs={12}>
+            <Card>
+              <CardHeader title="Final Validation" />
+              <CardContent>
+                {validationErrors.length > 0 ? (
+                  <Alert severity="error">
+                    <Typography variant="subtitle2" gutterBottom>
+                      Please fix the following issues before submitting:
+                    </Typography>
+                    <ul>
+                      {validationErrors.map((error, index) => (
+                        <li key={index}>{error}</li>
+                      ))}
+                    </ul>
+                  </Alert>
+                ) : (
+                  <Alert severity="success">
+                    <Typography variant="body2">
+                      ✓ All requirements met and validation passed. Your application is ready to submit.
+                    </Typography>
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      </Box>
+    );
+  };
 
   // Loading state
   if (loading) {

@@ -36,14 +36,24 @@ const ApplicationFormPage: React.FC = () => {
     navigate('/applications');
   };
 
-  const handleComplete = (application: Application) => {
-    // Navigate to application details with success message
-    navigate(`/applications/${application.id}`, {
-      state: { 
-        message: 'Application submitted successfully!',
-        application 
-      }
-    });
+  const handleComplete = (application: Application | null) => {
+    if (application?.id) {
+      // Navigate to application details with success message
+      navigate(`/applications/${application.id}`, {
+        state: { 
+          message: 'Application submitted successfully!',
+          application 
+        }
+      });
+    } else {
+      // Navigate back to applications list if no application provided
+      navigate('/applications', {
+        state: { 
+          message: 'Application saved successfully!',
+          type: 'success'
+        }
+      });
+    }
   };
 
   return (

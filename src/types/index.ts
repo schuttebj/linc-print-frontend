@@ -242,6 +242,8 @@ export interface ApplicationFormData {
   urgency_reason?: string;
   is_temporary_license: boolean;
   validity_period_days?: number;
+  // Location selection for admin users
+  selected_location_id?: string;
   
   // Step 3: Requirements
   medical_certificate_file?: File;
