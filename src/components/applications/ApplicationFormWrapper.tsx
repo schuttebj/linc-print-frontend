@@ -409,8 +409,8 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     }
   }, [existingLicenseCheck]);
 
-  // Validation for each step
-  const validateStep = (step: number): boolean => {
+  // Get validation errors for a step without updating state (for render-time checks)
+  const getStepValidationErrors = (step: number): string[] => {
     const errors: string[] = [];
     
     switch (step) {
@@ -531,8 +531,19 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         break;
     }
     
+    return errors;
+  };
+
+  // Validation for each step (updates state for displaying errors)
+  const validateStep = (step: number): boolean => {
+    const errors = getStepValidationErrors(step);
     setValidationErrors(errors);
     return errors.length === 0;
+  };
+
+  // Check if step is valid without updating state (for disabled props)
+  const isStepValid = (step: number): boolean => {
+    return getStepValidationErrors(step).length === 0;
   };
 
   // Step navigation
@@ -1534,7 +1545,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                     <Button 
                       onClick={handleNext} 
                       variant="contained"
-                      disabled={!validateStep(activeStep)}
+                      disabled={!isStepValid(activeStep)}
                     >
                       Next
                     </Button>
@@ -1543,7 +1554,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                       onClick={() => setShowConfirmDialog(true)} 
                       variant="contained" 
                       color="primary"
-                      disabled={!validateStep(activeStep)}
+                      disabled={!isStepValid(activeStep)}
                     >
                       Submit Application
                     </Button>
