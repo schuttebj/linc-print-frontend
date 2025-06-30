@@ -59,8 +59,10 @@ import {
 } from '@mui/icons-material';
 
 import PersonFormWrapper from '../PersonFormWrapper';
-import { applicationService } from '../../services/applicationService';
+import applicationService from '../../services/applicationService';
 import { licenseValidationService } from '../../services/licenseValidationService';
+import lookupService from '../../services/lookupService';
+import type { Location } from '../../services/lookupService';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   Person,
@@ -80,6 +82,7 @@ import {
   LEARNERS_PERMIT_VALIDITY_MONTHS,
   DEFAULT_TEMPORARY_LICENSE_DAYS
 } from '../../types';
+import type { LookupOption } from '../../types/index';
 
 interface ApplicationFormWrapperProps {
   mode?: 'create' | 'edit' | 'continue';
@@ -144,6 +147,9 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     fee_structures: []
   });
 
+  // Location data for external permit form
+  const [locations, setLocations] = useState<Location[]>([]);
+
   // Current application (for edit/continue mode)
   const [currentApplication, setCurrentApplication] = useState<Application | null>(null);
 
@@ -193,6 +199,10 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         // Load lookup data
         const lookupData = await applicationService.getLookupData();
         setLookups(lookupData);
+
+        // Load locations for external permit forms
+        const locationsData = await lookupService.getLocations(true); // operational only
+        setLocations(locationsData);
 
         // Load existing application if in edit/continue mode
         if (initialApplicationId && (mode === 'edit' || mode === 'continue')) {
@@ -379,9 +389,54 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           errors.push('Please select at least one license category');
         }
         
-        // Use new validation service for comprehensive checks
+        // Check for learner's permit requirement immediately in step 1
+        if (formData.application_type === ApplicationType.NEW_LICENSE) {
+          const categoriesRequiringLearners = formData.license_categories.filter(cat => 
+            LICENSE_CATEGORY_RULES[cat].allows_learners_permit
+          );
+          
+          if (categoriesRequiringLearners.length > 0) {
+            // Check if system found valid learner's permit
+            const hasSystemLearner = existingLicenseCheck?.has_learners_permit && 
+                                   existingLicenseCheck.learners_permit?.is_valid;
+            
+            // Check if external learner's permit is provided and valid
+            const hasValidExternalLearner = formData.external_learners_permit?.license_number?.trim() &&
+                                          formData.external_learners_permit?.expiry_date &&
+                                          formData.external_learners_permit?.verified_by_clerk &&
+                                          new Date(formData.external_learners_permit.expiry_date) >= new Date();
+            
+            if (!hasSystemLearner && !hasValidExternalLearner) {
+              // Only show error if external form isn't being filled out
+              if (!showExternalLearnerForm) {
+                errors.push('Valid learner\'s permit required for selected categories');
+              } else if (formData.external_learners_permit?.license_number && 
+                        !/^\d+$/.test(formData.external_learners_permit.license_number)) {
+                errors.push('Learner\'s permit number must contain only numbers');
+              } else if (formData.external_learners_permit?.expiry_date &&
+                        new Date(formData.external_learners_permit.expiry_date) < new Date()) {
+                errors.push('Learner\'s permit has expired');
+              } else if (!formData.external_learners_permit?.verified_by_clerk) {
+                errors.push('Please verify the learner\'s permit details');
+              }
+            }
+          }
+        }
+        
+        // Use validation service for other checks (age requirements, etc.)
         if (formData.person?.birth_date && validationResult && !validationResult.is_valid) {
-          errors.push(validationResult.message);
+          // Only add age-related validation errors here (not learner's permit errors)
+          if (validationResult.age_violations.length > 0) {
+            errors.push(...validationResult.age_violations.map(v => 
+              `Minimum age for category ${v.category} is ${v.required_age} years (applicant is ${v.current_age})`
+            ));
+          }
+          
+          // Add other validation errors that aren't about learner's permits
+          if (validationResult.invalid_combinations.length > 0 && 
+              !validationResult.message.includes('learner\'s permit')) {
+            errors.push(validationResult.message);
+          }
         }
         
         if (formData.is_urgent && !formData.urgency_reason?.trim()) {
@@ -393,9 +448,6 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         const age = formData.person?.birth_date ? licenseValidationService.calculateAge(formData.person.birth_date) : 0;
         const requiresMedical = age >= 65 || formData.license_categories.some(cat => ['C', 'D', 'E'].includes(cat));
         const requiresParentalConsent = age < 18;
-        const requiresExternalLearner = formData.application_type === ApplicationType.NEW_LICENSE && 
-                                       !existingLicenseCheck?.has_learners_permit && 
-                                       formData.license_categories.some(cat => LICENSE_CATEGORY_RULES[cat].allows_learners_permit);
         const requiresExternalLicense = (formData.application_type === ApplicationType.UPGRADE || 
                                         formData.application_type === ApplicationType.RENEWAL) && 
                                        !existingLicenseCheck?.has_active_licenses;
@@ -410,26 +462,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           errors.push('Parental consent document is required for applicants under 18');
         }
 
-        // External learner's permit validation
-        if (requiresExternalLearner) {
-          if (!showExternalLearnerForm) {
-            errors.push('Please confirm applicant has presented valid learner\'s permit');
-          } else if (!formData.external_learners_permit?.verified_by_clerk) {
-            errors.push('Please verify the external learner\'s permit details');
-          } else if (!formData.external_learners_permit?.license_number?.trim()) {
-            errors.push('Learner\'s permit number is required');
-          } else if (!formData.external_learners_permit?.expiry_date) {
-            errors.push('Learner\'s permit expiry date is required');
-          } else {
-            // Check if learner's permit is not expired
-            const expiryDate = new Date(formData.external_learners_permit.expiry_date);
-            if (expiryDate < new Date()) {
-              errors.push('External learner\'s permit has expired');
-            }
-          }
-        }
-
-        // External existing license validation
+        // External existing license validation (for upgrades/renewals)
         if (requiresExternalLicense) {
           if (!showExternalLicenseForm) {
             errors.push('Please confirm applicant has presented valid existing license');
@@ -896,20 +929,30 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                             size="small"
                             label="Learner's Permit Number"
                             value={formData.external_learners_permit?.license_number || ''}
-                            onChange={(e) => setFormData(prev => ({
-                              ...prev,
-                              external_learners_permit: {
-                                ...prev.external_learners_permit,
-                                license_number: e.target.value,
-                                license_type: 'LEARNERS_PERMIT',
-                                categories: formData.license_categories,
-                                issue_date: prev.external_learners_permit?.issue_date || '',
-                                expiry_date: prev.external_learners_permit?.expiry_date || '',
-                                issuing_location: prev.external_learners_permit?.issuing_location || '',
-                                verified_by_clerk: prev.external_learners_permit?.verified_by_clerk || false
-                              } as ExternalLicenseDetails
-                            }))}
+                            onChange={(e) => {
+                              // Only allow numbers
+                              const value = e.target.value.replace(/\D/g, '');
+                              setFormData(prev => ({
+                                ...prev,
+                                external_learners_permit: {
+                                  ...prev.external_learners_permit,
+                                  license_number: value,
+                                  license_type: 'LEARNERS_PERMIT',
+                                  categories: formData.license_categories,
+                                  issue_date: prev.external_learners_permit?.issue_date || '',
+                                  expiry_date: prev.external_learners_permit?.expiry_date || '',
+                                  issuing_location: prev.external_learners_permit?.issuing_location || '',
+                                  verified_by_clerk: prev.external_learners_permit?.verified_by_clerk || false
+                                } as ExternalLicenseDetails
+                              }));
+                            }}
+                            placeholder="Enter numbers only"
                             required
+                            error={formData.external_learners_permit?.license_number && 
+                                   !/^\d+$/.test(formData.external_learners_permit.license_number)}
+                            helperText={formData.external_learners_permit?.license_number && 
+                                       !/^\d+$/.test(formData.external_learners_permit.license_number) 
+                                       ? "Numbers only" : ""}
                           />
                         </Grid>
                         <Grid item xs={12} md={6}>
@@ -933,24 +976,42 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                               }
                             }}
                             InputLabelProps={{ shrink: true }}
+                            inputProps={{
+                              min: new Date().toISOString().split('T')[0], // Minimum is today
+                              max: new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // Max is 2 years from now
+                            }}
                             required
+                            error={formData.external_learners_permit?.expiry_date && 
+                                   new Date(formData.external_learners_permit.expiry_date) < new Date()}
+                            helperText={formData.external_learners_permit?.expiry_date && 
+                                       new Date(formData.external_learners_permit.expiry_date) < new Date() 
+                                       ? "Expiry date must be today or later" : "Select expiry date (must be valid)"}
                           />
                         </Grid>
                         <Grid item xs={12} md={6}>
-                          <TextField
-                            fullWidth
-                            size="small"
-                            label="Issuing Location"
-                            value={formData.external_learners_permit?.issuing_location || ''}
-                            onChange={(e) => setFormData(prev => ({
-                              ...prev,
-                              external_learners_permit: {
-                                ...prev.external_learners_permit!,
-                                issuing_location: e.target.value
-                              }
-                            }))}
-                            placeholder="e.g., Antananarivo, Toamasina, etc."
-                          />
+                          <FormControl fullWidth size="small" required>
+                            <InputLabel>Issuing Location</InputLabel>
+                            <Select
+                              value={formData.external_learners_permit?.issuing_location || ''}
+                              onChange={(e) => setFormData(prev => ({
+                                ...prev,
+                                external_learners_permit: {
+                                  ...prev.external_learners_permit!,
+                                  issuing_location: e.target.value
+                                }
+                              }))}
+                              label="Issuing Location"
+                            >
+                              <MenuItem value="">
+                                <em>Select issuing location</em>
+                              </MenuItem>
+                              {locations.map((location) => (
+                                <MenuItem key={location.id} value={location.name}>
+                                  {location.name} ({location.code})
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
                         </Grid>
                         <Grid item xs={12} md={6}>
                           <FormControlLabel
@@ -1065,9 +1126,6 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     const age = formData.person?.birth_date ? licenseValidationService.calculateAge(formData.person.birth_date) : 0;
     const requiresMedical = age >= 65 || formData.license_categories.some(cat => ['C', 'D', 'E'].includes(cat));
     const requiresParentalConsent = age < 18;
-    const requiresExternalLearner = formData.application_type === ApplicationType.NEW_LICENSE && 
-                                   !existingLicenseCheck?.has_learners_permit && 
-                                   formData.license_categories.some(cat => LICENSE_CATEGORY_RULES[cat].allows_learners_permit);
     const requiresExternalLicense = (formData.application_type === ApplicationType.UPGRADE || 
                                     formData.application_type === ApplicationType.RENEWAL) && 
                                    !existingLicenseCheck?.has_active_licenses;
@@ -1158,141 +1216,6 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
             </Grid>
           )}
 
-          {/* External Learner's Permit Verification */}
-          {requiresExternalLearner && (
-            <Grid item xs={12}>
-              <Card>
-                <CardHeader 
-                  title="Learner's Permit Verification" 
-                  subheader="No valid learner's permit found in system - manual verification required" 
-                />
-                <CardContent>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={showExternalLearnerForm}
-                        onChange={(e) => setShowExternalLearnerForm(e.target.checked)}
-                      />
-                    }
-                    label="Applicant has presented valid learner's permit"
-                  />
-                  
-                  {showExternalLearnerForm && (
-                    <Box sx={{ mt: 2 }}>
-                      <Grid container spacing={2}>
-                        <Grid item xs={12} md={6}>
-                          <TextField
-                            fullWidth
-                            label="Learner's Permit Number"
-                            value={formData.external_learners_permit?.license_number || ''}
-                            onChange={(e) => setFormData(prev => ({
-                              ...prev,
-                              external_learners_permit: {
-                                ...prev.external_learners_permit,
-                                license_number: e.target.value,
-                                license_type: 'LEARNERS_PERMIT',
-                                categories: formData.license_categories,
-                                issue_date: '',
-                                expiry_date: '',
-                                issuing_location: '',
-                                verified_by_clerk: false
-                              } as ExternalLicenseDetails
-                            }))}
-                            required
-                          />
-                        </Grid>
-                        <Grid item xs={12} md={6}>
-                          <TextField
-                            fullWidth
-                            label="Issuing Location"
-                            value={formData.external_learners_permit?.issuing_location || ''}
-                            onChange={(e) => setFormData(prev => ({
-                              ...prev,
-                              external_learners_permit: {
-                                ...prev.external_learners_permit!,
-                                issuing_location: e.target.value
-                              }
-                            }))}
-                            required
-                          />
-                        </Grid>
-                        <Grid item xs={12} md={6}>
-                          <TextField
-                            fullWidth
-                            label="Issue Date"
-                            type="date"
-                            value={formData.external_learners_permit?.issue_date || ''}
-                            onChange={(e) => setFormData(prev => ({
-                              ...prev,
-                              external_learners_permit: {
-                                ...prev.external_learners_permit!,
-                                issue_date: e.target.value
-                              }
-                            }))}
-                            InputLabelProps={{ shrink: true }}
-                            required
-                          />
-                        </Grid>
-                        <Grid item xs={12} md={6}>
-                          <TextField
-                            fullWidth
-                            label="Expiry Date"
-                            type="date"
-                            value={formData.external_learners_permit?.expiry_date || ''}
-                            onChange={(e) => setFormData(prev => ({
-                              ...prev,
-                              external_learners_permit: {
-                                ...prev.external_learners_permit!,
-                                expiry_date: e.target.value
-                              }
-                            }))}
-                            InputLabelProps={{ shrink: true }}
-                            required
-                          />
-                        </Grid>
-                        <Grid item xs={12}>
-                          <TextField
-                            fullWidth
-                            label="Verification Notes"
-                            multiline
-                            rows={3}
-                            value={formData.external_learners_permit?.verification_notes || ''}
-                            onChange={(e) => setFormData(prev => ({
-                              ...prev,
-                              external_learners_permit: {
-                                ...prev.external_learners_permit!,
-                                verification_notes: e.target.value
-                              }
-                            }))}
-                            placeholder="Additional notes about the learner's permit verification"
-                          />
-                        </Grid>
-                        <Grid item xs={12}>
-                          <FormControlLabel
-                            control={
-                              <Checkbox
-                                checked={formData.external_learners_permit?.verified_by_clerk || false}
-                                onChange={(e) => setFormData(prev => ({
-                                  ...prev,
-                                  external_learners_permit: {
-                                    ...prev.external_learners_permit!,
-                                    verified_by_clerk: e.target.checked
-                                  }
-                                }))}
-                              />
-                            }
-                            label="I have verified this learner's permit is valid and matches the applicant"
-                            sx={{ color: 'primary.main' }}
-                          />
-                        </Grid>
-                      </Grid>
-                    </Box>
-                  )}
-                </CardContent>
-              </Card>
-            </Grid>
-          )}
-
           {/* External Existing License Verification */}
           {requiresExternalLicense && (
             <Grid item xs={12}>
@@ -1378,7 +1301,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           )}
 
           {/* No Requirements Message */}
-          {!requiresMedical && !requiresParentalConsent && !requiresExternalLearner && !requiresExternalLicense && (
+          {!requiresMedical && !requiresParentalConsent && !requiresExternalLicense && (
             <Grid item xs={12}>
               <Alert severity="success">
                 No additional requirements needed for this application. You may proceed to the next step.

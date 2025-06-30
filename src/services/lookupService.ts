@@ -62,6 +62,15 @@ export interface OfficeType {
   label: string;
 }
 
+export interface Location {
+  id: string;
+  name: string;
+  code: string;
+  province_code: string;
+  office_type: string;
+  is_operational: boolean;
+}
+
 // Application-related lookup interfaces
 export interface LicenseCategory {
   value: string;
@@ -524,10 +533,8 @@ class LookupService {
     }
   }
 
-  // Equipment status methods removed - no longer needed for location management
-
   /**
-   * Get provinces
+   * Get provinces for Madagascar
    */
   public async getProvinces(): Promise<Province[]> {
     const cacheKey = 'provinces';
@@ -542,14 +549,43 @@ class LookupService {
       return data;
     } catch (error) {
       console.error('Failed to fetch provinces:', error);
+      // Return fallback data with actual Madagascar provinces
+      return [
+        { code: 'AN', name: 'Antananarivo' },
+        { code: 'FI', name: 'Fianarantsoa' },
+        { code: 'TM', name: 'Toamasina' },
+        { code: 'MJ', name: 'Mahajanga' },
+        { code: 'TD', name: 'Toliara' },
+        { code: 'AS', name: 'Antsiranana' },
+      ];
+    }
+  }
+
+  /**
+   * Get operational locations for dropdowns
+   */
+  public async getLocations(operationalOnly: boolean = true): Promise<Location[]> {
+    const cacheKey = `locations_${operationalOnly ? 'operational' : 'all'}`;
+    
+    if (this.isCacheValid(cacheKey)) {
+      return this.cache.get(cacheKey);
+    }
+
+    try {
+      const params = operationalOnly ? '?operational_only=true' : '';
+      const data = await api.get<Location[]>(`${API_ENDPOINTS.locations}/summary${params}`);
+      this.setCache(cacheKey, data);
+      return data;
+    } catch (error) {
+      console.error('Failed to fetch locations:', error);
       // Return fallback data
       return [
-        { code: 'T', name: 'ANTANANARIVO' },
-        { code: 'D', name: 'ANTSIRANANA (DIEGO SUAREZ)' },
-        { code: 'F', name: 'FIANARANTSOA' },
-        { code: 'M', name: 'MAHAJANGA' },
-        { code: 'A', name: 'TOAMASINA' },
-        { code: 'U', name: 'TOLIARA' },
+        { id: '1', name: 'Antananarivo Central', code: 'AN01', province_code: 'AN', office_type: 'PROVINCIAL_HEADQUARTERS', is_operational: true },
+        { id: '2', name: 'Fianarantsoa Central', code: 'FI01', province_code: 'FI', office_type: 'PROVINCIAL_HEADQUARTERS', is_operational: true },
+        { id: '3', name: 'Toamasina Central', code: 'TM01', province_code: 'TM', office_type: 'PROVINCIAL_HEADQUARTERS', is_operational: true },
+        { id: '4', name: 'Mahajanga Central', code: 'MJ01', province_code: 'MJ', office_type: 'PROVINCIAL_HEADQUARTERS', is_operational: true },
+        { id: '5', name: 'Toliara Central', code: 'TD01', province_code: 'TD', office_type: 'PROVINCIAL_HEADQUARTERS', is_operational: true },
+        { id: '6', name: 'Antsiranana Central', code: 'AS01', province_code: 'AS', office_type: 'PROVINCIAL_HEADQUARTERS', is_operational: true },
       ];
     }
   }

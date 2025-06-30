@@ -229,18 +229,108 @@ class ApplicationService {
     licenseCategories: string[],
     feeStructures: FeeStructure[]
   ): FeeStructure[] {
-    return feeStructures.filter(fee => {
-      // Check if fee applies to this application type
-      const appTypeMatch = fee.applies_to_application_types.includes(applicationType) ||
-                           fee.applies_to_application_types.length === 0;
-      
-      // Check if fee applies to any of the selected license categories
-      const categoryMatch = fee.applies_to_categories.some(cat => 
-        licenseCategories.includes(cat)
-      ) || fee.applies_to_categories.length === 0;
-      
-      return appTypeMatch && categoryMatch && fee.is_mandatory;
-    });
+    // Different fee logic based on application type
+    switch (applicationType) {
+      case 'LEARNERS_PERMIT':
+        // Learner's permits: Only theory test fees
+        return feeStructures.filter(fee => 
+          fee.fee_type.includes('theory_test') && 
+          this.feeAppliesToCategories(fee, licenseCategories) &&
+          this.isFeeEffective(fee)
+        );
+
+      case 'NEW_LICENSE':
+        // Driver's license: Only practical test + card production (no theory since they passed it for learner's)
+        return feeStructures.filter(fee => 
+          (fee.fee_type.includes('practical_test') || fee.fee_type === 'card_production') &&
+          this.feeAppliesToCategories(fee, licenseCategories) &&
+          this.isFeeEffective(fee)
+        );
+
+      case 'RENEWAL':
+        // License renewal: Only card production fee
+        return feeStructures.filter(fee => 
+          fee.fee_type === 'card_production' &&
+          this.isFeeEffective(fee)
+        );
+
+      case 'DUPLICATE':
+        // Duplicate license: Only card production fee
+        return feeStructures.filter(fee => 
+          fee.fee_type === 'card_production' &&
+          this.isFeeEffective(fee)
+        );
+
+      case 'UPGRADE':
+        // License upgrade: Theory + practical for new categories + card production
+        return feeStructures.filter(fee => 
+          (fee.fee_type.includes('theory_test') || 
+           fee.fee_type.includes('practical_test') || 
+           fee.fee_type === 'card_production') &&
+          this.feeAppliesToCategories(fee, licenseCategories) &&
+          this.isFeeEffective(fee)
+        );
+
+      case 'TEMPORARY_LICENSE':
+        // Temporary license: Only temporary license fee
+        return feeStructures.filter(fee => 
+          fee.fee_type.includes('temporary_license') &&
+          this.feeAppliesToCategories(fee, licenseCategories) &&
+          this.isFeeEffective(fee)
+        );
+
+      case 'INTERNATIONAL_PERMIT':
+        // International permit: Only international permit fee
+        return feeStructures.filter(fee => 
+          fee.fee_type === 'international_permit' &&
+          this.isFeeEffective(fee)
+        );
+
+      default:
+        // Fallback: Use existing logic for unknown types
+        return feeStructures.filter(fee => {
+          const appTypeMatch = fee.applies_to_application_types.includes(applicationType) ||
+                               fee.applies_to_application_types.length === 0;
+          
+          const categoryMatch = this.feeAppliesToCategories(fee, licenseCategories);
+          
+          return appTypeMatch && categoryMatch && fee.is_mandatory && this.isFeeEffective(fee);
+        });
+    }
+  }
+
+  private feeAppliesToCategories(fee: FeeStructure, licenseCategories: string[]): boolean {
+    // If fee applies to all categories (empty array), it applies
+    if (fee.applies_to_categories.length === 0) {
+      return true;
+    }
+
+    // Check if fee applies to any of the selected license categories
+    return fee.applies_to_categories.some(cat => 
+      licenseCategories.includes(cat)
+    );
+  }
+
+  private isFeeEffective(fee: FeeStructure): boolean {
+    const now = new Date();
+    
+    // Check if fee has started (effective_from)
+    if (fee.effective_from) {
+      const effectiveFrom = new Date(fee.effective_from);
+      if (now < effectiveFrom) {
+        return false;
+      }
+    }
+    
+    // Check if fee has expired (effective_until)
+    if (fee.effective_until) {
+      const effectiveUntil = new Date(fee.effective_until);
+      if (now > effectiveUntil) {
+        return false;
+      }
+    }
+    
+    return true;
   }
 
   calculateTotalAmount(fees: FeeStructure[]): number {
