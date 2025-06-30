@@ -12,8 +12,7 @@ const getApiBaseUrl = (): string => {
     VITE_API_BASE_URL: env?.VITE_API_BASE_URL,
     DEV: env?.DEV,
     PROD: env?.PROD,
-    MODE: env?.MODE,
-    NODE_ENV: process?.env?.NODE_ENV
+    MODE: env?.MODE
   });
 
   // Check for environment variable first
