@@ -121,6 +121,13 @@ export const API_ENDPOINTS = {
   applicationById: (id: string) => `${API_BASE_URL}/api/${API_VERSION}/applications/${id}`,
   applicationsByPerson: (personId: string) => `${API_BASE_URL}/api/${API_VERSION}/applications/search/person/${personId}`,
   applicationsInProgress: `${API_BASE_URL}/api/${API_VERSION}/applications/in-progress`,
+  applicationStatus: (id: string) => `${API_BASE_URL}/api/${API_VERSION}/applications/${id}/status`,
+  applicationDocuments: (id: string) => `${API_BASE_URL}/api/${API_VERSION}/applications/${id}/documents`,
+  applicationBiometrics: (id: string) => `${API_BASE_URL}/api/${API_VERSION}/applications/${id}/biometric-data`,
+  applicationFees: (id: string) => `${API_BASE_URL}/api/${API_VERSION}/applications/${id}/fees`,
+  applicationFeePayment: (id: string, feeId: string) => `${API_BASE_URL}/api/${API_VERSION}/applications/${id}/fees/${feeId}/pay`,
+  applicationAssociated: (id: string) => `${API_BASE_URL}/api/${API_VERSION}/applications/${id}/associated`,
+  applicationStatistics: `${API_BASE_URL}/api/${API_VERSION}/applications/statistics`,
 } as const;
 
 /**

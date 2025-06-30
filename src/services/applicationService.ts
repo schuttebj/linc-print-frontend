@@ -3,7 +3,7 @@
  * Handles all API calls related to license applications
  */
 
-import { api } from '../config/api';
+import { api, API_ENDPOINTS } from '../config/api';
 import { 
   Application, 
   ApplicationCreate, 
@@ -14,24 +14,21 @@ import {
 } from '../types';
 
 class ApplicationService {
-  private readonly basePath = '/api/v1/applications';
-  private readonly lookupsPath = '/api/v1/lookups';
-
   // Basic CRUD operations
   async createApplication(applicationData: ApplicationCreate): Promise<Application> {
-    return await api.post(this.basePath, applicationData);
+    return await api.post(API_ENDPOINTS.applications, applicationData);
   }
 
   async getApplication(id: string): Promise<Application> {
-    return await api.get(`${this.basePath}/${id}`);
+    return await api.get(API_ENDPOINTS.applicationById(id));
   }
 
   async updateApplication(id: string, applicationData: ApplicationUpdate): Promise<Application> {
-    return await api.put(`${this.basePath}/${id}`, applicationData);
+    return await api.put(API_ENDPOINTS.applicationById(id), applicationData);
   }
 
   async deleteApplication(id: string): Promise<void> {
-    await api.delete(`${this.basePath}/${id}`);
+    await api.delete(API_ENDPOINTS.applicationById(id));
   }
 
   // Search and filtering
@@ -50,7 +47,7 @@ class ApplicationService {
       }
     });
     
-    const url = queryString.toString() ? `${this.basePath}?${queryString}` : this.basePath;
+    const url = queryString.toString() ? `${API_ENDPOINTS.applications}?${queryString}` : API_ENDPOINTS.applications;
     return await api.get(url);
   }
 
@@ -79,13 +76,13 @@ class ApplicationService {
       }
     });
     
-    const url = `${this.basePath}/search?${queryString}`;
+    const url = `${API_ENDPOINTS.applications}/search?${queryString}`;
     return await api.get(url);
   }
 
   // Person-specific searches
   async getApplicationsByPerson(personId: string): Promise<Application[]> {
-    return await api.get(`${this.basePath}/search/person/${personId}`);
+    return await api.get(API_ENDPOINTS.applicationsByPerson(personId));
   }
 
   // In-progress applications for dashboard
@@ -100,7 +97,7 @@ class ApplicationService {
       }
     });
     
-    const url = queryString.toString() ? `${this.basePath}/in-progress?${queryString}` : `${this.basePath}/in-progress`;
+    const url = queryString.toString() ? `${API_ENDPOINTS.applicationsInProgress}?${queryString}` : API_ENDPOINTS.applicationsInProgress;
     return await api.get(url);
   }
 
@@ -111,7 +108,7 @@ class ApplicationService {
     reason?: string,
     notes?: string
   ): Promise<Application> {
-    return await api.post(`${this.basePath}/${id}/status`, {
+    return await api.post(API_ENDPOINTS.applicationStatus(id), {
       new_status: newStatus,
       reason,
       notes
@@ -133,7 +130,7 @@ class ApplicationService {
     }
 
     // Use fetch directly for file uploads as the api helper may not handle FormData properly
-    const url = `${this.basePath}/${applicationId}/documents`;
+    const url = API_ENDPOINTS.applicationDocuments(applicationId);
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -163,7 +160,7 @@ class ApplicationService {
     }
 
     // Use fetch directly for file uploads as the api helper may not handle FormData properly
-    const url = `${this.basePath}/${applicationId}/biometric-data`;
+    const url = API_ENDPOINTS.applicationBiometrics(applicationId);
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -181,7 +178,7 @@ class ApplicationService {
 
   // Fee management
   async getApplicationFees(applicationId: string): Promise<FeeStructure[]> {
-    return await api.get(`${this.basePath}/${applicationId}/fees`);
+    return await api.get(API_ENDPOINTS.applicationFees(applicationId));
   }
 
   async processFeePayment(
@@ -191,7 +188,7 @@ class ApplicationService {
     paymentReference?: string
   ): Promise<any> {
     return await api.post(
-      `${this.basePath}/${applicationId}/fees/${feeId}/pay`,
+      API_ENDPOINTS.applicationFeePayment(applicationId, feeId),
       {
         payment_method: paymentMethod,
         payment_reference: paymentReference
@@ -201,19 +198,19 @@ class ApplicationService {
 
   // Related applications
   async getAssociatedApplications(applicationId: string): Promise<Application[]> {
-    return await api.get(`${this.basePath}/${applicationId}/associated`);
+    return await api.get(API_ENDPOINTS.applicationAssociated(applicationId));
   }
 
   // Statistics
   async getApplicationStatistics(locationId?: string): Promise<any> {
     const queryString = locationId ? `?location_id=${locationId}` : '';
-    const url = `${this.basePath}/statistics${queryString}`;
+    const url = `${API_ENDPOINTS.applicationStatistics}${queryString}`;
     return await api.get(url);
   }
 
   // Lookup data
   async getLookupData(): Promise<ApplicationLookups> {
-    const response = await api.get(`${this.lookupsPath}/all`) as any;
+    const response = await api.get(API_ENDPOINTS.lookups.all) as any;
     return {
       license_categories: response.license_categories || [],
       application_types: response.application_types || [],
@@ -223,7 +220,7 @@ class ApplicationService {
   }
 
   async getFeeStructures(): Promise<FeeStructure[]> {
-    return await api.get(`${this.lookupsPath}/fee-structures`);
+    return await api.get(API_ENDPOINTS.lookups.feeStructures);
   }
 
   // Helper methods for business logic
