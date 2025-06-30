@@ -49,9 +49,9 @@ import {
   ExternalLicense,
   LicenseVerificationData,
   LicenseCategory,
-  LicenseStatus,
-  Location
+  LicenseStatus
 } from '../../types';
+import type { Location } from '../../services/lookupService';
 import { applicationService } from '../../services/applicationService';
 
 interface LicenseVerificationSectionProps {
