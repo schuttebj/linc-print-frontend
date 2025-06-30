@@ -440,18 +440,44 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
 
       setValidationResult(validation);
 
-      // Check existing licenses when person is selected
+      // Check existing licenses when person is selected or when reset
+      let existingCheck = existingLicenseCheck;
       if (!existingLicenseCheck) {
-        const existingCheck = await licenseValidationService.checkExistingLicenses(person.id);
+        console.log('ApplicationFormWrapper: Checking existing licenses for person', person.id);
+        existingCheck = await licenseValidationService.checkExistingLicenses(person.id);
         setExistingLicenseCheck(existingCheck);
+        console.log('ApplicationFormWrapper: Existing license check result:', existingCheck);
+      }
 
-        // Show external forms if needed
-        if (applicationType === ApplicationType.NEW_LICENSE && !existingCheck.has_learners_permit) {
+      // Show external forms if needed (always check, even if existingLicenseCheck was already set)
+      if (applicationType === ApplicationType.NEW_LICENSE && existingCheck) {
+        // Check if we need learner's permit for base categories
+        const needsLearnerPermit = categories.some(cat => {
+          const rules = LICENSE_CATEGORY_RULES[cat];
+          return rules.allows_learners_permit && rules.requires_existing.length === 0;
+        });
+        
+        console.log('ApplicationFormWrapper: Needs learner permit?', needsLearnerPermit, 'Has learner permit?', existingCheck.has_learners_permit);
+        if (needsLearnerPermit && !existingCheck.has_learners_permit) {
           setShowExternalLearnerForm(true);
+          console.log('ApplicationFormWrapper: Showing external learner form');
         }
-        if ((applicationType === ApplicationType.UPGRADE || applicationType === ApplicationType.RENEWAL) && !existingCheck.has_active_licenses) {
+        
+        // Check if we need existing license for advanced categories
+        const needsExistingLicense = categories.some(cat => {
+          const rules = LICENSE_CATEGORY_RULES[cat];
+          return rules.requires_existing.length > 0;
+        });
+        
+        console.log('ApplicationFormWrapper: Needs existing license?', needsExistingLicense, 'Has active licenses?', existingCheck.has_active_licenses);
+        if (needsExistingLicense && !existingCheck.has_active_licenses) {
           setShowExternalLicenseForm(true);
+          console.log('ApplicationFormWrapper: Showing external license form');
         }
+      }
+      
+      if ((applicationType === ApplicationType.UPGRADE || applicationType === ApplicationType.RENEWAL) && existingCheck && !existingCheck.has_active_licenses) {
+        setShowExternalLicenseForm(true);
       }
     } catch (error) {
       console.error('License validation error:', error);
@@ -468,6 +494,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
   // Get validation errors for a step without updating state (for render-time checks)
   const getStepValidationErrors = (step: number): string[] => {
     const errors: string[] = [];
+    console.log(`ApplicationFormWrapper: Validating step ${step}`);
     
     switch (step) {
       case 0: // Person step
@@ -481,22 +508,21 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           errors.push('Please select at least one license category');
         }
         
-        // Use validation service for age requirements and basic validation
+        // Use validation service for age requirements ONLY in Step 1
+        console.log('ApplicationFormWrapper: Step 1 - validationResult:', validationResult);
         if (formData.person?.birth_date && validationResult && !validationResult.is_valid) {
-          // Only add age-related validation errors here (not learner's permit errors)
+          console.log('ApplicationFormWrapper: Step 1 - validation failed, checking age violations only');
+          // Only add age-related validation errors here (all other errors belong in Step 2)
           if (validationResult.age_violations.length > 0) {
+            console.log('ApplicationFormWrapper: Step 1 - adding age violations:', validationResult.age_violations);
             errors.push(...validationResult.age_violations.map(v => 
               `Minimum age for category ${v.category} is ${v.required_age} years (applicant is ${v.current_age})`
             ));
           }
           
-          // Add other validation errors that aren't about learner's permits or other requirements
-          if (validationResult.invalid_combinations.length > 0 && 
-              !validationResult.message.includes('learner\'s permit') &&
-              !validationResult.message.includes('medical') &&
-              !validationResult.message.includes('consent')) {
-            errors.push(validationResult.message);
-          }
+          // DO NOT add any other validation errors in Step 1 - they all belong in Step 2 (Requirements)
+          // This includes: learner's permit, existing license, medical, consent, etc.
+          console.log('ApplicationFormWrapper: Step 1 - ignoring non-age validation errors');
         }
         
         if (formData.is_urgent && !formData.urgency_reason?.trim()) {
@@ -626,6 +652,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         break;
     }
     
+    console.log(`ApplicationFormWrapper: Step ${step} validation errors:`, errors);
     return errors;
   };
 
