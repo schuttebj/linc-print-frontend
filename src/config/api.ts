@@ -5,22 +5,46 @@
 
 // Environment-based API configuration
 const getApiBaseUrl = (): string => {
+  const env = (import.meta as any).env;
+  
+  // Debug logging
+  console.log('🔧 Environment Detection:', {
+    VITE_API_BASE_URL: env?.VITE_API_BASE_URL,
+    DEV: env?.DEV,
+    PROD: env?.PROD,
+    MODE: env?.MODE,
+    NODE_ENV: process?.env?.NODE_ENV
+  });
+
   // Check for environment variable first
-  if ((import.meta as any).env?.VITE_API_BASE_URL) {
-    return (import.meta as any).env.VITE_API_BASE_URL;
+  if (env?.VITE_API_BASE_URL) {
+    console.log('✅ Using VITE_API_BASE_URL:', env.VITE_API_BASE_URL);
+    return env.VITE_API_BASE_URL;
   }
 
-  // Default to local development backend
-  if ((import.meta as any).env?.DEV) {
+  // Check if we're in development mode
+  if (env?.DEV || env?.MODE === 'development') {
+    console.log('🔧 Development mode detected, using localhost');
     return 'http://localhost:8000'; // Local backend development server
   }
 
   // Production backend URL - Madagascar Render deployment
+  console.log('🚀 Production mode detected, using Render backend');
   return 'https://linc-print-backend.onrender.com'; // Madagascar backend
 };
 
 export const API_BASE_URL = getApiBaseUrl();
 export const API_VERSION = 'v1';
+
+// Additional safeguard - log the final API base URL
+console.log('🎯 Final API_BASE_URL:', API_BASE_URL);
+
+// Validate that we're not accidentally using the frontend URL
+if (API_BASE_URL.includes('linc-print-frontend') || API_BASE_URL.includes('vercel.app')) {
+  console.error('❌ CRITICAL ERROR: API_BASE_URL is pointing to frontend instead of backend!');
+  console.error('❌ Current URL:', API_BASE_URL);
+  console.error('❌ Expected backend URL: https://linc-print-backend.onrender.com');
+}
 export const API_ENDPOINTS = {
   // Authentication
   auth: `${API_BASE_URL}/api/${API_VERSION}/auth`,
