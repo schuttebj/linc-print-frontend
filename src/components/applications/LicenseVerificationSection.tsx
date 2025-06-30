@@ -49,7 +49,8 @@ import {
   ExternalLicense,
   LicenseVerificationData,
   LicenseCategory,
-  LicenseStatus
+  LicenseStatus,
+  Location
 } from '../../types';
 import { applicationService } from '../../services/applicationService';
 
@@ -57,6 +58,7 @@ interface LicenseVerificationSectionProps {
   personId: string | null;
   value: LicenseVerificationData | null;
   onChange: (data: LicenseVerificationData | null) => void;
+  locations: Location[];
   disabled?: boolean;
 }
 
@@ -64,6 +66,7 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
   personId,
   value,
   onChange,
+  locations,
   disabled = false
 }) => {
   const [loading, setLoading] = useState(false);
@@ -428,14 +431,22 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
 
                 {/* Issuing Location */}
                 <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Issuing Location"
-                    value={license.issuing_location}
-                    onChange={(e) => updateExternalLicense(index, 'issuing_location', e.target.value)}
-                    disabled={disabled}
-                    required
-                  />
+                  <FormControl fullWidth>
+                    <InputLabel>Issuing Location</InputLabel>
+                    <Select
+                      value={license.issuing_location}
+                      label="Issuing Location"
+                      onChange={(e) => updateExternalLicense(index, 'issuing_location', e.target.value)}
+                      disabled={disabled}
+                    >
+                      {locations.map((location) => (
+                        <MenuItem key={location.id} value={location.name}>
+                          {location.name} ({location.code})
+                        </MenuItem>
+                      ))}
+                      <MenuItem value="Other">Other (Non-Madagascar)</MenuItem>
+                    </Select>
+                  </FormControl>
                 </Grid>
 
                 {/* Issue Date */}

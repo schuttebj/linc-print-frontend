@@ -168,11 +168,20 @@ export class LicenseValidationService {
 
     // Check existing learner's permit in system
     if (existingLearnerPermit && existingLearnerPermit.is_valid) {
-      const hasRequiredCategories = categoriesRequiringLearners.every(cat =>
-        existingLearnerPermit.categories.includes(cat)
-      );
+      // A', A, B categories share the same learner's permit
+      // Any learner's permit containing A', A, or B is valid for all three
+      const baseCategories = [LicenseCategory.A_PRIME, LicenseCategory.A, LicenseCategory.B];
+      const requestingBaseCategories = categoriesRequiringLearners.filter(cat => baseCategories.includes(cat));
+      const hasBaseLearnerPermit = existingLearnerPermit.categories.some(cat => baseCategories.includes(cat));
+      
+      // For base categories (A', A, B), any base learner's permit is valid
+      const baseRequirementMet = requestingBaseCategories.length === 0 || hasBaseLearnerPermit;
+      
+      // For other categories, exact match is required
+      const otherCategories = categoriesRequiringLearners.filter(cat => !baseCategories.includes(cat));
+      const otherRequirementMet = otherCategories.every(cat => existingLearnerPermit.categories.includes(cat));
 
-      if (hasRequiredCategories) {
+      if (baseRequirementMet && otherRequirementMet) {
         return {
           is_valid: true,
           message: 'Valid learner\'s permit found in system',
@@ -186,11 +195,20 @@ export class LicenseValidationService {
     // Check external learner's permit
     if (externalLearnerPermit && externalLearnerPermit.verified_by_clerk) {
       const isValid = this.isLearnerPermitValid(externalLearnerPermit.expiry_date);
-      const hasRequiredCategories = categoriesRequiringLearners.every(cat =>
-        externalLearnerPermit.categories.includes(cat)
-      );
+      
+      // A', A, B categories share the same learner's permit
+      const baseCategories = [LicenseCategory.A_PRIME, LicenseCategory.A, LicenseCategory.B];
+      const requestingBaseCategories = categoriesRequiringLearners.filter(cat => baseCategories.includes(cat));
+      const hasBaseLearnerPermit = externalLearnerPermit.categories.some(cat => baseCategories.includes(cat));
+      
+      // For base categories (A', A, B), any base learner's permit is valid
+      const baseRequirementMet = requestingBaseCategories.length === 0 || hasBaseLearnerPermit;
+      
+      // For other categories, exact match is required
+      const otherCategories = categoriesRequiringLearners.filter(cat => !baseCategories.includes(cat));
+      const otherRequirementMet = otherCategories.every(cat => externalLearnerPermit.categories.includes(cat));
 
-      if (isValid && hasRequiredCategories) {
+      if (isValid && baseRequirementMet && otherRequirementMet) {
         return {
           is_valid: true,
           message: 'Valid external learner\'s permit verified',
