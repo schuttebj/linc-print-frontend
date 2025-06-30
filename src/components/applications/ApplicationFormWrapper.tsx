@@ -150,6 +150,10 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
   // Location data for external permit form
   const [locations, setLocations] = useState<Location[]>([]);
 
+  // Draft applications for selected person
+  const [draftApplications, setDraftApplications] = useState<Application[]>([]);
+  const [showDraftDialog, setShowDraftDialog] = useState(false);
+
   // Current application (for edit/continue mode)
   const [currentApplication, setCurrentApplication] = useState<Application | null>(null);
 
@@ -263,11 +267,28 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
   };
 
   // Person selection handler
-  const handlePersonSelected = useCallback((person: Person) => {
+  const handlePersonSelected = useCallback(async (person: Person) => {
     setFormData(prev => ({ ...prev, person }));
     setValidationErrors([]);
     
-    // Auto-advance to next step
+    // Check for existing draft applications for this person
+    try {
+      const existingApplications = await applicationService.searchApplications({
+        person_id: person.id,
+        status: ApplicationStatus.DRAFT
+      });
+      
+      if (existingApplications.length > 0) {
+        setDraftApplications(existingApplications);
+        setShowDraftDialog(true);
+        return; // Don't auto-advance if there are drafts to review
+      }
+    } catch (error) {
+      console.error('Error checking for draft applications:', error);
+      // Continue anyway if check fails
+    }
+    
+    // Auto-advance to next step if no drafts found
     setTimeout(() => {
       setActiveStep(1);
     }, 500);
@@ -617,6 +638,52 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
   const handleConfirmSubmit = () => {
     setShowConfirmDialog(false);
     handleSubmit();
+  };
+
+  // Draft dialog handlers
+  const handleContinueDraft = (application: Application) => {
+    setCurrentApplication(application);
+    setFormData(prev => ({
+      ...prev,
+      application_type: application.application_type,
+      license_categories: application.license_categories,
+      is_urgent: application.is_urgent,
+      urgency_reason: application.urgency_reason || '',
+      is_temporary_license: application.is_temporary_license,
+      validity_period_days: application.validity_period_days || DEFAULT_TEMPORARY_LICENSE_DAYS
+    }));
+    
+    // Calculate fees for existing application
+    const fees = applicationService.calculateApplicationFees(
+      application.application_type,
+      application.license_categories,
+      lookups.fee_structures
+    );
+    
+    setFormData(prev => ({
+      ...prev,
+      selected_fees: fees,
+      total_amount: applicationService.calculateTotalAmount(fees)
+    }));
+
+    // Set appropriate step based on application status
+    setActiveStep(getStepFromStatus(application.status));
+    setShowDraftDialog(false);
+  };
+
+  const handleCreateNewApplication = () => {
+    setShowDraftDialog(false);
+    // Auto-advance to next step for new application
+    setTimeout(() => {
+      setActiveStep(1);
+    }, 500);
+  };
+
+  const handleFinishLater = async () => {
+    await handleSaveDraft();
+    if (onComplete) {
+      onComplete(currentApplication!);
+    }
   };
 
   // Render step content
@@ -1418,37 +1485,52 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                 </Box>
                 
                 {/* Step navigation */}
-                <Box sx={{ mt: 3, display: 'flex', gap: 1 }}>
-                  <Button
-                    disabled={index === 0}
-                    onClick={handleBack}
-                  >
-                    Back
-                  </Button>
+                <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                  {activeStep > 0 && (
+                    <Button onClick={handleBack} variant="outlined">
+                      Back
+                    </Button>
+                  )}
                   
                   <Button
-                    variant="outlined"
-                    startIcon={<SaveIcon />}
                     onClick={handleSaveDraft}
                     disabled={saving || !formData.person}
+                    startIcon={saving ? <CircularProgress size={20} /> : <SaveIcon />}
+                    variant="outlined"
+                    color="secondary"
                   >
                     {saving ? 'Saving...' : 'Save Draft'}
                   </Button>
-                  
-                  {index === steps.length - 1 ? (
+
+                  {formData.person && (
                     <Button
-                      variant="contained"
-                      onClick={() => setShowConfirmDialog(true)}
-                      disabled={validationErrors.length > 0 || loading}
+                      onClick={handleFinishLater}
+                      disabled={saving}
+                      variant="outlined"
+                      color="warning"
                     >
-                      Submit Application
+                      Finish Later
                     </Button>
-                  ) : (
-                    <Button
+                  )}
+                  
+                  <Box sx={{ flexGrow: 1 }} />
+                  
+                  {activeStep < steps.length - 1 ? (
+                    <Button 
+                      onClick={handleNext} 
                       variant="contained"
-                      onClick={handleNext}
+                      disabled={!validateStep(activeStep)}
                     >
                       Next
+                    </Button>
+                  ) : (
+                    <Button 
+                      onClick={() => setShowConfirmDialog(true)} 
+                      variant="contained" 
+                      color="primary"
+                      disabled={!validateStep(activeStep)}
+                    >
+                      Submit Application
                     </Button>
                   )}
                 </Box>
@@ -1470,6 +1552,66 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           </Paper>
         )}
       </Paper>
+
+      {/* Draft Applications Dialog */}
+      <Dialog open={showDraftDialog} onClose={() => setShowDraftDialog(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          Existing Draft Applications Found
+        </DialogTitle>
+        <DialogContent>
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Found {draftApplications.length} draft application(s) for {formData.person?.first_name} {formData.person?.surname}. 
+            You can continue an existing draft or create a new application.
+          </Alert>
+          
+          <Typography variant="h6" gutterBottom>Draft Applications:</Typography>
+          
+          {draftApplications.map((app, index) => (
+            <Card key={app.id} sx={{ mb: 2 }}>
+              <CardContent>
+                <Grid container spacing={2} alignItems="center">
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle1" fontWeight="bold">
+                      {app.application_number || `Draft ${index + 1}`}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Type: {app.application_type.replace('_', ' ')}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Categories: {app.license_categories.join(', ')}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Created: {new Date(app.created_at).toLocaleDateString()}
+                    </Typography>
+                    {app.is_urgent && (
+                      <Chip label="Urgent" size="small" color="warning" />
+                    )}
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                      <Button 
+                        variant="contained" 
+                        onClick={() => handleContinueDraft(app)}
+                        size="small"
+                      >
+                        Continue Draft
+                      </Button>
+                    </Box>
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </Card>
+          ))}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowDraftDialog(false)} color="secondary">
+            Cancel
+          </Button>
+          <Button onClick={handleCreateNewApplication} variant="outlined">
+            Create New Application
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Confirmation Dialog */}
       <Dialog open={showConfirmDialog} onClose={() => setShowConfirmDialog(false)}>

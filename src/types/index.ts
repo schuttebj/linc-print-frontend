@@ -169,7 +169,7 @@ export enum ApplicationType {
 }
 
 export enum LicenseCategory {
-  A_PRIME = 'A′',  // Moped (16+)
+  A_PRIME = "A'",  // Moped (16+)
   A = 'A',         // Full Motorcycle (18+)
   B = 'B',         // Light Vehicle (18+)
   C = 'C',         // Heavy Goods (21+)
