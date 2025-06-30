@@ -239,7 +239,47 @@ export interface BiometricCaptureData {
   fingerprint?: File;
 }
 
-// Form data interfaces for multi-step form
+// License verification types
+export interface SystemLicense {
+  id: string;
+  license_number: string;
+  license_type: 'LEARNERS_PERMIT' | 'DRIVERS_LICENSE';
+  categories: LicenseCategory[];
+  issue_date: string;
+  expiry_date: string;
+  status: LicenseStatus;
+  issuing_location: string;
+  application_id: string;
+  // System licenses are always trusted
+  verified: true;
+  verification_source: 'SYSTEM';
+}
+
+export interface ExternalLicense {
+  id?: string; // temp ID for form management
+  license_number: string;
+  license_type: 'LEARNERS_PERMIT' | 'DRIVERS_LICENSE';
+  categories: LicenseCategory[];
+  issue_date: string;
+  expiry_date: string;
+  issuing_location: string;
+  // External licenses require manual verification
+  verified: boolean;
+  verification_source: 'MANUAL';
+  verification_notes?: string;
+  verified_by?: string;
+  verified_at?: string;
+}
+
+export interface LicenseVerificationData {
+  person_id: string;
+  system_licenses: SystemLicense[];
+  external_licenses: ExternalLicense[];
+  all_license_categories: LicenseCategory[]; // Combined from all licenses
+  requires_verification: boolean; // True if any external licenses exist
+}
+
+// Form data interfaces for multi-step form (update existing)
 export interface ApplicationFormData {
   // Step 1: Person (handled by PersonFormWrapper)
   person: Person | null;
@@ -262,9 +302,9 @@ export interface ApplicationFormData {
   medical_certificate_verified_manually?: boolean;
   parental_consent_file?: File;
   existing_license_verified?: boolean;
-  // New: External license validation
-  external_learners_permit?: ExternalLicenseDetails;
-  external_existing_license?: ExternalLicenseDetails;
+  // Updated: License verification data
+  license_verification: LicenseVerificationData | null;
+  // Removed old external license fields - replaced by license_verification
   
   // Step 4: Biometric Data
   biometric_data: BiometricCaptureData;
