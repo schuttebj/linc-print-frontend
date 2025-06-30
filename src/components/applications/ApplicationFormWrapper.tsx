@@ -549,8 +549,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         formData.license_category,
         formData.application_type,
         person,
-        formData.external_learners_permit,
-        formData.external_existing_license
+        formData.license_verification
       );
     }
     
@@ -563,7 +562,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     setTimeout(() => {
       setActiveStep(1);
     }, 500);
-  }, [formData.license_category, formData.application_type, formData.external_learners_permit, formData.external_existing_license, validateLicenseCategories]);
+  }, [formData.license_category, formData.application_type, formData.license_verification, validateLicenseCategories]);
 
   // Validation functions
   const validateStep = (step: number): boolean => {
@@ -604,24 +603,20 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           }
         }
 
-        // Prerequisite validation
+        // License verification validation
+        if (formData.license_verification?.requires_verification) {
+          errors.push('External licenses require verification before proceeding');
+        }
+
+        // Prerequisite validation using license verification data
         const categoryRules = LICENSE_CATEGORY_RULES[formData.license_category];
-        if (categoryRules?.requires_existing?.length && prerequisiteCheck && !prerequisiteCheck.canProceed && !formData.external_existing_license) {
-          errors.push(`Category ${formData.license_category} requires existing license: ${categoryRules.requires_existing.join(', ')}`);
-        }
-
-        // Existing license categories validation
-        if (formData.existing_license_categories.length === 0) {
-          errors.push('Please select all existing license categories that should be printed on the new card');
-        }
-
-        // Validate that required prerequisites are included in existing categories
         if (categoryRules?.requires_existing?.length) {
+          const allLicenseCategories = formData.license_verification?.all_license_categories || [];
           const missingRequired = categoryRules.requires_existing.filter(req => 
-            !formData.existing_license_categories.includes(req)
+            !allLicenseCategories.includes(req as LicenseCategory)
           );
           if (missingRequired.length > 0) {
-            errors.push(`Required license categories must be included: ${missingRequired.join(', ')}`);
+            errors.push(`Category ${formData.license_category} requires existing license: ${missingRequired.join(', ')}`);
           }
         }
         break;
@@ -1149,100 +1144,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
               disabled={false}
             />
           </Grid>
-          {/* Existing License Categories - For Card Printing */}
-          <Grid item xs={12}>
-            <Card>
-              <CardHeader 
-                title="Existing License Categories" 
-                subheader="Select ALL license categories the applicant currently holds (these will be printed on the new card)"
-              />
-              <CardContent>
-                <Alert severity="info" sx={{ mb: 3 }}>
-                  <Typography variant="body2" fontWeight="bold" gutterBottom>
-                    Important: License Card Printing
-                  </Typography>
-                  <Typography variant="body2">
-                    Select all license categories that the applicant currently holds. These will be printed on the new license card along with the new category being applied for.
-                    {LICENSE_CATEGORY_RULES[formData.license_category]?.requires_existing?.length > 0 && (
-                      <> The required categories ({LICENSE_CATEGORY_RULES[formData.license_category].requires_existing.join(', ')}) must be included.</>
-                    )}
-                  </Typography>
-                </Alert>
 
-                <FormControl fullWidth required error={formData.existing_license_categories.length === 0}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Select Existing License Categories:
-                  </Typography>
-                  <FormGroup row>
-                    {Object.entries(LICENSE_CATEGORY_RULES).map(([category, rules]) => {
-                      const isRequired = LICENSE_CATEGORY_RULES[formData.license_category]?.requires_existing?.includes(category as LicenseCategory);
-                      const isSelected = formData.existing_license_categories.includes(category as LicenseCategory);
-                      const isNewCategory = category === formData.license_category;
-                      
-                      return (
-                        <FormControlLabel
-                          key={category}
-                          control={
-                            <Checkbox
-                              checked={isSelected}
-                              onChange={(e) => {
-                                const categoryToUpdate = category as LicenseCategory;
-                                setFormData(prev => ({
-                                  ...prev,
-                                  existing_license_categories: e.target.checked
-                                    ? [...prev.existing_license_categories, categoryToUpdate]
-                                    : prev.existing_license_categories.filter(cat => cat !== categoryToUpdate)
-                                }));
-                              }}
-                              disabled={isNewCategory} // Can't select the category they're applying for
-                            />
-                          }
-                          label={
-                            <Box>
-                              <Typography variant="body2" fontWeight={isRequired ? 'bold' : 'normal'}>
-                                {category} - {rules.description}
-                                {isRequired && <span style={{ color: 'red' }}> *</span>}
-                                {isNewCategory && <span style={{ color: 'green' }}> (New)</span>}
-                              </Typography>
-                            </Box>
-                          }
-                          sx={{ 
-                            mr: 3, 
-                            mb: 1,
-                            '& .MuiFormControlLabel-label': {
-                              color: isRequired ? 'primary.main' : 'text.primary'
-                            }
-                          }}
-                        />
-                      );
-                    })}
-                  </FormGroup>
-                  
-                  {formData.existing_license_categories.length === 0 && (
-                    <Typography variant="caption" color="error" sx={{ mt: 1 }}>
-                      Please select at least one existing license category
-                    </Typography>
-                  )}
-
-                  {/* Show what will be printed on the card */}
-                  {formData.existing_license_categories.length > 0 && (
-                    <Alert severity="success" sx={{ mt: 2 }}>
-                      <Typography variant="body2" fontWeight="bold" gutterBottom>
-                        License Card Will Show:
-                      </Typography>
-                                             <Typography variant="body2">
-                         Categories: {(() => {
-                           const allCategories = [...formData.existing_license_categories, formData.license_category];
-                           const uniqueCategories = Array.from(new Set(allCategories));
-                           return uniqueCategories.sort().join(', ');
-                         })()}
-                       </Typography>
-                    </Alert>
-                  )}
-                </FormControl>
-              </CardContent>
-            </Card>
-          </Grid>
 
           {/* Additional Notes */}
           <Grid item xs={12}>
@@ -1326,13 +1228,14 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                     <Typography variant="body2" color="text.secondary">License Card Will Show:</Typography>
                     <Typography variant="body1" fontWeight="bold">
                       {(() => {
-                        const allCategories = [...formData.existing_license_categories, formData.license_category];
+                        const existingCategories = formData.license_verification?.all_license_categories || [];
+                        const allCategories = [...existingCategories, formData.license_category];
                         const uniqueCategories = Array.from(new Set(allCategories));
                         return uniqueCategories.sort().join(', ');
                       })()}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      ({formData.existing_license_categories.length} existing + 1 new category)
+                      ({(formData.license_verification?.all_license_categories || []).length} existing + 1 new category)
                     </Typography>
                   </Grid>
                   <Grid item xs={12} md={6}>
@@ -1419,20 +1322,21 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                     </ListItem>
                   )}
 
-                  {/* External License Verification */}
-                  {requiresExternalLicense && (
+                  {/* License Verification */}
+                  {formData.license_verification && (
                     <ListItem>
                       <ListItemIcon>
-                        {formData.external_existing_license?.verified_by_clerk ? 
+                        {!formData.license_verification.requires_verification ? 
                           <CheckCircleIcon color="success" /> : 
-                          <ErrorIcon color="error" />
+                          <WarningIcon color="warning" />
                         }
                       </ListItemIcon>
                       <ListItemText 
-                        primary="Existing License Verification"
-                        secondary={formData.external_existing_license?.verified_by_clerk ? 
-                          `Verified: ${formData.external_existing_license.license_number}` : 
-                          "Required but not verified"
+                        primary="License Verification"
+                        secondary={
+                          formData.license_verification.requires_verification ? 
+                            `${formData.license_verification.external_licenses.filter(l => !l.verified).length} external licenses need verification` :
+                            `${formData.license_verification.system_licenses.length} system licenses + ${formData.license_verification.external_licenses.filter(l => l.verified).length} verified external licenses`
                         }
                       />
                     </ListItem>
