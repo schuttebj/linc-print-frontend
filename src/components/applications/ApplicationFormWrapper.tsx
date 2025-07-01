@@ -87,13 +87,22 @@ import {
   BiometricCaptureData,
   ApplicationLookups,
   LICENSE_CATEGORY_RULES,
+  LICENSE_SUPERSEDING_MATRIX,
+  TransmissionType,
+  LicenseRestriction,
   ExternalLicenseDetails,
   LicenseValidationResult,
   ExistingLicenseCheck,
   LicenseVerificationData,
   LEARNERS_PERMIT_VALIDITY_MONTHS,
   DEFAULT_TEMPORARY_LICENSE_DAYS,
-  ReplacementReason
+  ReplacementReason,
+  getAuthorizedCategories,
+  getSupersededCategories,
+  isCommercialLicense,
+  requiresMedical60Plus,
+  requiresMedicalAlways,
+  getCategoryFamily
 } from '../../types';
 
 interface ApplicationFormWrapperProps {
@@ -165,7 +174,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     replacement_reason: '',
     selected_location_id: undefined,
     // Vehicle type selection
-    vehicle_transmission: 'MANUAL',
+    vehicle_transmission: TransmissionType.MANUAL,
     modified_vehicle_for_disability: false,
     // License verification data
     license_verification: null,
@@ -470,9 +479,11 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
 
       const validation = await licenseValidationService.validateApplication(
         applicationType,
-        [category], // Convert single category to array for service
+        category, // Single category for new validation service
         person.birth_date,
         person.id,
+        formData.vehicle_transmission,
+        formData.modified_vehicle_for_disability,
         externalLearnerPermit ? {
           license_number: externalLearnerPermit.license_number,
           license_type: externalLearnerPermit.license_type,
@@ -650,7 +661,8 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
 
       case 3: // Medical Assessment
         const age = formData.person?.birth_date ? calculateAge(formData.person.birth_date) : 0;
-        const isMedicalMandatory = age >= 60 || ['C', 'D', 'E'].includes(formData.license_category);
+        const isMedicalMandatory = requiresMedicalAlways(formData.license_category) || 
+                                 (age >= 60 && requiresMedical60Plus(formData.license_category));
 
         if (isMedicalMandatory) {
           if (!formData.medical_information) {
@@ -918,8 +930,8 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           </Grid>
         )}
 
-        {/* License Category - Single Select */}
-        <Grid item xs={12} md={6}>
+        {/* License Category - Single Select with Enhanced Information */}
+        <Grid item xs={12}>
           <FormControl fullWidth required>
             <InputLabel>License Category</InputLabel>
             <Select
@@ -929,17 +941,91 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
             >
               {Object.entries(LICENSE_CATEGORY_RULES).map(([category, rules]) => {
                 const isDisabled = formData.application_type === ApplicationType.LEARNERS_PERMIT && !rules.allows_learners_permit;
+                const supersededCategories = getSupersededCategories(category as LicenseCategory);
+                const categoryFamily = getCategoryFamily(category as LicenseCategory);
+                const isCommercial = isCommercialLicense(category as LicenseCategory);
                 
                 return (
                   <MenuItem key={category} value={category} disabled={isDisabled}>
-                    {category} - {rules.description} (Min age: {rules.min_age}
-                    {rules.requires_existing.length > 0 && `, Requires: ${rules.requires_existing.join(', ')}`})
+                    <Box sx={{ display: 'flex', flexDirection: 'column', py: 1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="body1" fontWeight="bold">
+                          {category}
+                        </Typography>
+                        {isCommercial && (
+                          <Chip label="Commercial" size="small" color="warning" variant="outlined" />
+                        )}
+                        <Chip label={`Family ${categoryFamily}`} size="small" color="default" variant="outlined" />
+                      </Box>
+                      <Typography variant="body2" color="text.secondary">
+                        {rules.description} (Min age: {rules.min_age})
+                      </Typography>
+                      {rules.requires_existing.length > 0 && (
+                        <Typography variant="caption" color="warning.main">
+                          Requires: {rules.requires_existing.join(', ')}
+                        </Typography>
+                      )}
+                      {supersededCategories.length > 0 && (
+                        <Typography variant="caption" color="success.main">
+                          Also authorizes: {supersededCategories.join(', ')}
+                        </Typography>
+                      )}
+                    </Box>
                   </MenuItem>
                 );
               })}
             </Select>
+            <Typography variant="caption" sx={{ mt: 1, color: 'text.secondary' }}>
+              Select the specific category you want to apply for. Higher categories automatically include authorization for lower categories.
+            </Typography>
           </FormControl>
         </Grid>
+
+        {/* Authorized Categories Preview */}
+        {formData.license_category && (
+          <Grid item xs={12}>
+            <Card variant="outlined" sx={{ bgcolor: 'success.50' }}>
+              <CardContent sx={{ py: 2 }}>
+                <Typography variant="subtitle2" gutterBottom sx={{ color: 'success.main', fontWeight: 600 }}>
+                  <CheckCircleIcon sx={{ mr: 1, fontSize: 20 }} />
+                  Categories You Will Be Authorized For:
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                  {getAuthorizedCategories(formData.license_category).map((category) => (
+                    <Chip 
+                      key={category}
+                      label={category}
+                      color={category === formData.license_category ? 'primary' : 'success'}
+                      variant={category === formData.license_category ? 'filled' : 'outlined'}
+                      size="small"
+                    />
+                  ))}
+                </Box>
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                  Your license card will show ALL these categories. You can drive any vehicle type covered by these categories.
+                </Typography>
+                {isCommercialLicense(formData.license_category) && (
+                  <Alert severity="info" sx={{ mt: 2 }}>
+                    <Typography variant="body2">
+                      🚛 <strong>Commercial License:</strong> This category requires additional medical clearance and may have enhanced testing requirements.
+                    </Typography>
+                  </Alert>
+                )}
+                {(requiresMedicalAlways(formData.license_category) || (formData.person && calculateAge(formData.person.birth_date) >= 60 && requiresMedical60Plus(formData.license_category))) && (
+                  <Alert severity="warning" sx={{ mt: 1 }}>
+                    <Typography variant="body2">
+                      🏥 <strong>Medical Assessment Required:</strong> {
+                        requiresMedicalAlways(formData.license_category) 
+                          ? 'Always required for this category'
+                          : 'Required due to age (60+) for commercial license'
+                      }
+                    </Typography>
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
 
         {/* Vehicle Transmission Type */}
         <Grid item xs={12}>
@@ -950,8 +1036,8 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
               onChange={(e) => handleApplicationDetailsChange('vehicle_transmission', e.target.value)}
               label="Vehicle Transmission"
             >
-              <MenuItem value="MANUAL">Manual Transmission</MenuItem>
-              <MenuItem value="AUTOMATIC">Automatic Transmission</MenuItem>
+              <MenuItem value={TransmissionType.MANUAL}>Manual Transmission</MenuItem>
+              <MenuItem value={TransmissionType.AUTOMATIC}>Automatic Transmission</MenuItem>
             </Select>
             <Typography variant="caption" sx={{ mt: 1, color: 'text.secondary' }}>
               This will be noted as a restriction on the license if automatic is selected
@@ -1127,7 +1213,8 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
   // Medical Assessment Step
   const renderMedicalStep = () => {
     const age = formData.person?.birth_date ? calculateAge(formData.person.birth_date) : 0;
-    const isMedicalMandatory = age >= 60 || ['C', 'D', 'E'].includes(formData.license_category);
+    const isMedicalMandatory = requiresMedicalAlways(formData.license_category) || 
+                             (age >= 60 && requiresMedical60Plus(formData.license_category));
 
     return (
       <Box>
@@ -1566,7 +1653,8 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
   // Review Step with comprehensive display
   const renderReviewStep = () => {
     const age = formData.person?.birth_date ? calculateAge(formData.person.birth_date) : 0;
-    const requiresMedical = age >= 65 || ['C', 'D', 'E'].includes(formData.license_category);
+    const requiresMedical = requiresMedicalAlways(formData.license_category) || 
+                          (age >= 60 && requiresMedical60Plus(formData.license_category));
     const requiresParentalConsent = age < 18;
     const requiresExternalLicense = prerequisiteCheck?.requiresExternal && !prerequisiteCheck.canProceed;
 

@@ -179,12 +179,27 @@ export enum ApplicationType {
 }
 
 export enum LicenseCategory {
-  A_PRIME = "A'",  // Moped (16+)
-  A = 'A',         // Full Motorcycle (18+)
-  B = 'B',         // Light Vehicle (18+)
-  C = 'C',         // Heavy Goods (21+)
-  D = 'D',         // Passenger Transport (21+)
-  E = 'E'          // Large Trailers (21+)
+  // Motorcycles and Mopeds
+  A1 = 'A1',       // Small motorcycles and mopeds (<125cc, 16+)
+  A2 = 'A2',       // Mid-range motorcycles (power limited, up to 35kW, 18+)
+  A = 'A',         // Unlimited motorcycles (large motorcycles, 20+)
+  
+  // Light Vehicles
+  B1 = 'B1',       // Light quadricycles (motorized tricycles/quadricycles, 16+)
+  B = 'B',         // Standard passenger cars and light vehicles (up to 3.5t, 18+)
+  B2 = 'B2',       // Taxis or commercial passenger vehicles (21+)
+  BE = 'BE',       // Category B with trailer exceeding 750kg (18+)
+  
+  // Heavy Goods Vehicles
+  C1 = 'C1',       // Medium-sized goods vehicles (3.5-7.5t, 18+)
+  C = 'C',         // Heavy goods vehicles (over 7.5t, 21+)
+  C1E = 'C1E',     // C1 category vehicles with heavy trailer (18+)
+  CE = 'CE',       // Full heavy combination vehicles (21+)
+  
+  // Passenger Transport (Public Transport)
+  D1 = 'D1',       // Small buses (up to 16 passengers, 21+)
+  D = 'D',         // Standard buses and coaches (over 16 passengers, 24+)
+  D2 = 'D2'        // Specialized public transport (articulated buses, 24+)
 }
 
 export enum ApplicationStatus {
@@ -417,7 +432,7 @@ export interface ApplicationFormData {
   // Location selection for admin users
   selected_location_id?: string;
   // Vehicle type selection
-  vehicle_transmission: 'AUTOMATIC' | 'MANUAL';
+  vehicle_transmission: TransmissionType;
   modified_vehicle_for_disability: boolean;
   
   // Step 3: Requirements
@@ -497,64 +512,197 @@ export enum LicensePrerequisite {
   REQUIRES_LEARNERS_PERMIT = 'REQUIRES_LEARNERS_PERMIT'
 }
 
+// Superseding Matrix - Which licenses are automatically included when you have a higher license
+export const LICENSE_SUPERSEDING_MATRIX: Record<LicenseCategory, LicenseCategory[]> = {
+  // Motorcycles
+  [LicenseCategory.A1]: [LicenseCategory.A1],
+  [LicenseCategory.A2]: [LicenseCategory.A1, LicenseCategory.A2],
+  [LicenseCategory.A]: [LicenseCategory.A1, LicenseCategory.A2, LicenseCategory.A],
+  
+  // Light Vehicles
+  [LicenseCategory.B1]: [LicenseCategory.B1],
+  [LicenseCategory.B]: [LicenseCategory.B1, LicenseCategory.B],
+  [LicenseCategory.B2]: [LicenseCategory.B1, LicenseCategory.B, LicenseCategory.B2],
+  [LicenseCategory.BE]: [LicenseCategory.B1, LicenseCategory.B, LicenseCategory.BE],
+  
+  // Heavy Goods
+  [LicenseCategory.C1]: [LicenseCategory.B1, LicenseCategory.B, LicenseCategory.B2, LicenseCategory.C1],
+  [LicenseCategory.C]: [LicenseCategory.B1, LicenseCategory.B, LicenseCategory.B2, LicenseCategory.C1, LicenseCategory.C],
+  [LicenseCategory.C1E]: [LicenseCategory.B1, LicenseCategory.B, LicenseCategory.B2, LicenseCategory.C1, LicenseCategory.BE, LicenseCategory.C1E],
+  [LicenseCategory.CE]: [LicenseCategory.B1, LicenseCategory.B, LicenseCategory.B2, LicenseCategory.C1, LicenseCategory.C, LicenseCategory.BE, LicenseCategory.CE],
+  
+  // Passenger Transport
+  [LicenseCategory.D1]: [LicenseCategory.B1, LicenseCategory.B, LicenseCategory.B2, LicenseCategory.C1, LicenseCategory.C, LicenseCategory.D1],
+  [LicenseCategory.D]: [LicenseCategory.B1, LicenseCategory.B, LicenseCategory.B2, LicenseCategory.C1, LicenseCategory.C, LicenseCategory.D1, LicenseCategory.D],
+  [LicenseCategory.D2]: [LicenseCategory.B1, LicenseCategory.B, LicenseCategory.B2, LicenseCategory.C1, LicenseCategory.C, LicenseCategory.D1, LicenseCategory.D, LicenseCategory.BE, LicenseCategory.CE, LicenseCategory.C1E, LicenseCategory.D2]
+} as const;
+
 // License category rules configuration
 export const LICENSE_CATEGORY_RULES = {
-  [LicenseCategory.A_PRIME]: {
+  // Motorcycles and Mopeds
+  [LicenseCategory.A1]: {
     min_age: 16,
     requires_existing: [],
     allows_learners_permit: true,
     allows_temporary_after_practical: true,
-    description: 'Moped'
+    description: 'Small motorcycles and mopeds (<125cc)',
+    vehicle_types: ['Moped', 'Small motorcycle', 'Scooter']
   },
-  [LicenseCategory.A]: {
+  [LicenseCategory.A2]: {
     min_age: 18,
     requires_existing: [],
     allows_learners_permit: true,
     allows_temporary_after_practical: true,
-    description: 'Full Motorcycle'
+    description: 'Mid-range motorcycles (power limited to 35kW)',
+    vehicle_types: ['Medium motorcycle', 'Power-limited motorcycle']
+  },
+  [LicenseCategory.A]: {
+    min_age: 20,
+    requires_existing: [],
+    allows_learners_permit: true,
+    allows_temporary_after_practical: true,
+    description: 'Unlimited motorcycles (all motorcycles)',
+    vehicle_types: ['All motorcycles', 'High-power motorcycle']
+  },
+  
+  // Light Vehicles
+  [LicenseCategory.B1]: {
+    min_age: 16,
+    requires_existing: [],
+    allows_learners_permit: true,
+    allows_temporary_after_practical: true,
+    description: 'Light quadricycles',
+    vehicle_types: ['Motorized tricycle', 'Light quadricycle']
   },
   [LicenseCategory.B]: {
     min_age: 18,
     requires_existing: [],
     allows_learners_permit: true,
     allows_temporary_after_practical: true,
-    description: 'Light Vehicle'
+    description: 'Standard passenger cars and light vehicles (up to 3.5t)',
+    vehicle_types: ['Passenger car', 'Light van', 'Small truck']
+  },
+  [LicenseCategory.B2]: {
+    min_age: 21,
+    requires_existing: [LicenseCategory.B],
+    allows_learners_permit: false,
+    allows_temporary_after_practical: true,
+    description: 'Taxis and commercial passenger vehicles',
+    vehicle_types: ['Taxi', 'Commercial passenger vehicle']
+  },
+  [LicenseCategory.BE]: {
+    min_age: 18,
+    requires_existing: [LicenseCategory.B],
+    allows_learners_permit: false,
+    allows_temporary_after_practical: true,
+    description: 'Category B vehicles with heavy trailer (>750kg)',
+    vehicle_types: ['Car with trailer', 'Van with trailer']
+  },
+  
+  // Heavy Goods Vehicles
+  [LicenseCategory.C1]: {
+    min_age: 18,
+    requires_existing: [LicenseCategory.B],
+    allows_learners_permit: false,
+    allows_temporary_after_practical: true,
+    description: 'Medium-sized goods vehicles (3.5-7.5t)',
+    vehicle_types: ['Medium truck', 'Delivery truck']
   },
   [LicenseCategory.C]: {
     min_age: 21,
     requires_existing: [LicenseCategory.B],
     allows_learners_permit: false,
     allows_temporary_after_practical: true,
-    description: 'Heavy Goods'
+    description: 'Heavy goods vehicles (over 7.5t)',
+    vehicle_types: ['Heavy truck', 'Lorry', 'Freight vehicle']
   },
-  [LicenseCategory.D]: {
+  [LicenseCategory.C1E]: {
+    min_age: 18,
+    requires_existing: [LicenseCategory.C1],
+    allows_learners_permit: false,
+    allows_temporary_after_practical: true,
+    description: 'C1 vehicles with heavy trailer',
+    vehicle_types: ['Medium truck with trailer']
+  },
+  [LicenseCategory.CE]: {
+    min_age: 21,
+    requires_existing: [LicenseCategory.C],
+    allows_learners_permit: false,
+    allows_temporary_after_practical: true,
+    description: 'Full heavy combination vehicles',
+    vehicle_types: ['Tractor-trailer', 'Semi-trailer', 'Articulated truck']
+  },
+  
+  // Passenger Transport
+  [LicenseCategory.D1]: {
     min_age: 21,
     requires_existing: [LicenseCategory.B],
     allows_learners_permit: false,
     allows_temporary_after_practical: true,
-    description: 'Passenger Transport'
+    description: 'Small buses (up to 16 passengers)',
+    vehicle_types: ['Minibus', 'Small public transport']
   },
-  [LicenseCategory.E]: {
-    min_age: 21,
-    requires_existing: [LicenseCategory.B, LicenseCategory.C, LicenseCategory.D], // Must have at least one of these
+  [LicenseCategory.D]: {
+    min_age: 24,
+    requires_existing: [LicenseCategory.B],
     allows_learners_permit: false,
     allows_temporary_after_practical: true,
-    description: 'Large Trailers'
+    description: 'Standard buses and coaches (over 16 passengers)',
+    vehicle_types: ['Bus', 'Coach', 'Public transport']
+  },
+  [LicenseCategory.D2]: {
+    min_age: 24,
+    requires_existing: [LicenseCategory.D],
+    allows_learners_permit: false,
+    allows_temporary_after_practical: true,
+    description: 'Specialized public transport vehicles',
+    vehicle_types: ['Articulated bus', 'Interurban bus', 'Specialized transport']
   }
 } as const;
 
-// Valid license category combinations
+// Helper function to get all authorized categories including superseded ones
+export const getAuthorizedCategories = (appliedCategory: LicenseCategory): LicenseCategory[] => {
+  return LICENSE_SUPERSEDING_MATRIX[appliedCategory];
+};
+
+// Helper function to check if category requires specific transmission
+export const getTransmissionRestrictions = (
+  categories: LicenseCategory[], 
+  appliedTransmission: TransmissionType,
+  hasDisabilityModification: boolean = false
+): LicenseRestriction[] => {
+  const restrictions: LicenseRestriction[] = [];
+  
+  // Transmission restrictions
+  if (appliedTransmission === TransmissionType.AUTOMATIC) {
+    restrictions.push(LicenseRestriction.AUTOMATIC_ONLY);
+  }
+  
+  // Disability restrictions override other restrictions
+  if (hasDisabilityModification) {
+    restrictions.push(LicenseRestriction.MODIFIED_VEHICLE_ONLY);
+  }
+  
+  return restrictions;
+};
+
+// Valid license category combinations - now supports all categories individually
 export const VALID_COMBINATIONS = [
-  [LicenseCategory.A_PRIME],
+  // Individual categories (all are now valid to apply for individually)
+  [LicenseCategory.A1],
+  [LicenseCategory.A2], 
   [LicenseCategory.A],
+  [LicenseCategory.B1],
   [LicenseCategory.B],
-  [LicenseCategory.A, LicenseCategory.B],
-  [LicenseCategory.B, LicenseCategory.C],
-  [LicenseCategory.B, LicenseCategory.D],
-  [LicenseCategory.B, LicenseCategory.E],
-  [LicenseCategory.B, LicenseCategory.C, LicenseCategory.E],
-  [LicenseCategory.B, LicenseCategory.C, LicenseCategory.D, LicenseCategory.E],
-  [LicenseCategory.A_PRIME, LicenseCategory.A, LicenseCategory.B, LicenseCategory.C, LicenseCategory.D, LicenseCategory.E]
+  [LicenseCategory.B2],
+  [LicenseCategory.BE],
+  [LicenseCategory.C1],
+  [LicenseCategory.C],
+  [LicenseCategory.C1E],
+  [LicenseCategory.CE],
+  [LicenseCategory.D1],
+  [LicenseCategory.D],
+  [LicenseCategory.D2]
 ];
 
 // Constants
@@ -581,4 +729,63 @@ export enum ReplacementReason {
   NAME_CHANGE = 'NAME_CHANGE',
   ADDRESS_CHANGE = 'ADDRESS_CHANGE',
   OTHER = 'OTHER'
-} 
+}
+
+// Transmission types
+export enum TransmissionType {
+  MANUAL = 'MANUAL',
+  AUTOMATIC = 'AUTOMATIC'
+}
+
+// License restriction types
+export enum LicenseRestriction {
+  AUTOMATIC_ONLY = 'AUTOMATIC_ONLY',
+  MODIFIED_VEHICLE_ONLY = 'MODIFIED_VEHICLE_ONLY',
+  CORRECTIVE_LENSES = 'CORRECTIVE_LENSES',
+  VISION_RESTRICTED = 'VISION_RESTRICTED'
+}
+
+// Helper functions for the new license system
+export const isCommercialLicense = (category: LicenseCategory): boolean => {
+  return [
+    LicenseCategory.B2,   // Taxi/commercial passenger
+    LicenseCategory.C1,   // Medium goods
+    LicenseCategory.C,    // Heavy goods  
+    LicenseCategory.C1E,  // Medium goods with trailer
+    LicenseCategory.CE,   // Heavy combination
+    LicenseCategory.D1,   // Small buses
+    LicenseCategory.D,    // Standard buses
+    LicenseCategory.D2    // Specialized transport
+  ].includes(category);
+};
+
+export const requiresMedical60Plus = (category: LicenseCategory): boolean => {
+  // All commercial licenses require medical for 60+
+  return isCommercialLicense(category);
+};
+
+export const requiresMedicalAlways = (category: LicenseCategory): boolean => {
+  // These categories always require medical regardless of age
+  return [
+    LicenseCategory.D1,   // Small buses
+    LicenseCategory.D,    // Standard buses  
+    LicenseCategory.D2    // Specialized transport
+  ].includes(category);
+};
+
+export const getSupersededCategories = (category: LicenseCategory): LicenseCategory[] => {
+  return LICENSE_SUPERSEDING_MATRIX[category].filter(cat => cat !== category);
+};
+
+export const getCategoryFamily = (category: LicenseCategory): 'A' | 'B' | 'C' | 'D' => {
+  if ([LicenseCategory.A1, LicenseCategory.A2, LicenseCategory.A].includes(category)) {
+    return 'A';
+  }
+  if ([LicenseCategory.B1, LicenseCategory.B, LicenseCategory.B2, LicenseCategory.BE].includes(category)) {
+    return 'B';
+  }
+  if ([LicenseCategory.C1, LicenseCategory.C, LicenseCategory.C1E, LicenseCategory.CE].includes(category)) {
+    return 'C';
+  }
+  return 'D';
+};
