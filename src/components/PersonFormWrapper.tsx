@@ -252,6 +252,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     const [currentPersonId, setCurrentPersonId] = useState<string | null>(null);
     const [isNewPerson, setIsNewPerson] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
+    const [personDataWasIncomplete, setPersonDataWasIncomplete] = useState(false);
     const [lookupLoading, setLookupLoading] = useState(false);
     const [submitLoading, setSubmitLoading] = useState(false);
     const [stepValidation, setStepValidation] = useState<boolean[]>(new Array(steps.length).fill(false));
@@ -544,18 +545,23 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     // Populate form with existing person data
                     populateFormWithExistingPerson(existingPerson);
                     
-                    // For application mode, immediately complete the person selection
+                    // For application mode, check if person data is complete
                     if (mode === 'application') {
-                        // Mark lookup step as valid
-                        markStepValid(0, true);
+                        markStepValid(0, true); // Lookup step is always valid
                         
-                        // Immediately trigger completion callback for application mode
-                        // Let the ApplicationFormWrapper handle the next steps
-                        if (onComplete) {
-                            onComplete(existingPerson);
-                        }
-                        if (onSuccess) {
-                            onSuccess(existingPerson, true); // true indicates this is an edit/existing person
+                        const isComplete = isPersonDataComplete(existingPerson);
+                        setPersonDataWasIncomplete(!isComplete);
+                        
+                        if (isComplete) {
+                            // Person has complete information - jump to review step
+                            markStepValid(1, true); // Personal info step
+                            markStepValid(2, true); // Contact details step
+                            markStepValid(3, true); // ID documents step
+                            markStepValid(4, true); // Address step
+                            setCurrentStep(5); // Jump to review step for confirmation
+                        } else {
+                            // Person has incomplete information - start at personal info step
+                            setCurrentStep(1);
                         }
                     } else {
                         // For standalone mode, proceed to personal information step
@@ -667,6 +673,48 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 }
             }
         }
+    };
+
+    // Check if person has complete required information for applications
+    const isPersonDataComplete = (person: ExistingPerson): boolean => {
+        // Core identity fields
+        if (!person.surname || !person.first_name || !person.person_nature || 
+            !person.nationality_code || !person.preferred_language) {
+            return false;
+        }
+
+        // At least one valid ID document
+        if (!person.aliases || person.aliases.length === 0) {
+            return false;
+        }
+
+        // Check if at least one document is current and has required fields
+        const hasValidDocument = person.aliases.some(alias => 
+            alias.is_current && alias.document_type && alias.document_number
+        );
+        if (!hasValidDocument) {
+            return false;
+        }
+
+        // At least one address
+        if (!person.addresses || person.addresses.length === 0) {
+            return false;
+        }
+
+        // Check if at least one address has required fields
+        const hasValidAddress = person.addresses.some(address => 
+            address.locality && address.town && address.country
+        );
+        if (!hasValidAddress) {
+            return false;
+        }
+
+        // At least one contact method (email or phone)
+        if (!person.email_address && !person.cell_phone) {
+            return false;
+        }
+
+        return true;
     };
 
     const populateFormWithExistingPerson = (existingPerson: ExistingPerson) => {
@@ -1179,6 +1227,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         setCurrentPersonId(null);
         setIsNewPerson(false);
         setIsEditMode(false);
+        setPersonDataWasIncomplete(false);
         setStepValidation(new Array(steps.length).fill(false));
         setShowSuccessDialog(false);
         setCreatedPerson(null);
@@ -1310,6 +1359,19 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 <Typography variant="h6" gutterBottom>
                     Personal Information
                 </Typography>
+
+                {/* Show alert when person was found but has incomplete information */}
+                {mode === 'application' && !isNewPerson && personDataWasIncomplete && (
+                    <Alert severity="warning" sx={{ mb: 3 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                            Incomplete Person Information
+                        </Typography>
+                        <Typography variant="body2">
+                            This person exists in the system but has missing required information for license applications. 
+                            Please complete all missing fields to proceed with the application.
+                        </Typography>
+                    </Alert>
+                )}
 
                 <Grid container spacing={3}>
                     <Grid item xs={12} md={6}>
@@ -2055,9 +2117,15 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     </Typography>
 
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                        <Alert severity="info" sx={{ flex: 1, mr: 2 }}>
-                            Please review all information before creating the person record.
-                        </Alert>
+                        {mode === 'application' && !isNewPerson ? (
+                            <Alert severity="success" sx={{ flex: 1, mr: 2 }}>
+                                Person information is complete and ready for license application.
+                            </Alert>
+                        ) : (
+                            <Alert severity="info" sx={{ flex: 1, mr: 2 }}>
+                                Please review all information before creating the person record.
+                            </Alert>
+                        )}
                         {!isNewPerson && mode === 'application' && (
                             <Button
                                 variant="outlined"
@@ -2306,14 +2374,34 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                 {currentStep === 0 ? 'Search' : 'Next'}
                             </Button>
                         ) : (
-                            <Button
-                                variant="contained"
-                                onClick={handleSubmit}
-                                disabled={submitLoading || duplicateCheckLoading}
-                                startIcon={<PersonAddIcon />}
-                            >
-                                {duplicateCheckLoading ? 'Checking for Duplicates...' : submitLoading ? (isEditMode ? 'Updating...' : 'Submitting...') : (isEditMode ? 'Update Person' : 'Submit')}
-                            </Button>
+                            // Special handling for review step in application mode
+                            mode === 'application' && !isNewPerson ? (
+                                <Button
+                                    variant="contained"
+                                    onClick={() => {
+                                        // Trigger completion callback for application mode
+                                        const formData = personForm.getValues();
+                                        if (onComplete) {
+                                            onComplete(formData);
+                                        }
+                                        if (onSuccess) {
+                                            onSuccess(formData, true); // true indicates this is an edit/existing person
+                                        }
+                                    }}
+                                    startIcon={<ArrowForwardIcon />}
+                                >
+                                    Confirm and Continue
+                                </Button>
+                            ) : (
+                                <Button
+                                    variant="contained"
+                                    onClick={handleSubmit}
+                                    disabled={submitLoading || duplicateCheckLoading}
+                                    startIcon={<PersonAddIcon />}
+                                >
+                                    {duplicateCheckLoading ? 'Checking for Duplicates...' : submitLoading ? (isEditMode ? 'Updating...' : 'Submitting...') : (isEditMode ? 'Update Person' : 'Submit')}
+                                </Button>
+                            )
                         )}
                     </Box>
                 </Box>

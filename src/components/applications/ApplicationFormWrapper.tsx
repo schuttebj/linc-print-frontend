@@ -566,11 +566,20 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
       await checkPrerequisites(person.id, formData.license_category);
     }
     
-    // Auto-advance to next step if no drafts found
-    setTimeout(() => {
-      setActiveStep(1);
-    }, 500);
+    // Let PersonFormWrapper handle step progression instead of auto-advancing
+    // This allows the user to review person details before continuing to application
   }, [formData.license_category, formData.application_type, formData.license_verification, validateLicenseCategories]);
+
+  // Handle person confirmation (when user clicks "Confirm and Continue")
+  const handlePersonConfirmed = useCallback(async (person: Person | null) => {
+    // First run the normal person selection logic
+    await handlePersonSelected(person);
+    
+    // Then advance to the next step
+    if (person) {
+      setActiveStep(1);
+    }
+  }, [handlePersonSelected]);
 
   // Validation functions
   const validateStep = (step: number): boolean => {
@@ -761,7 +770,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           <PersonFormWrapper
             mode="application"
             initialPersonId={initialPersonId}
-            onComplete={handlePersonSelected}
+            onComplete={handlePersonConfirmed}
             onSuccess={(person) => handlePersonSelected(person)}
             title=""
             subtitle="Select existing person or register new applicant"
