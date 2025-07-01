@@ -58,11 +58,16 @@ import {
   Warning as WarningIcon,
   Info as InfoIcon,
   AttachMoney as MoneyIcon,
-  Error as ErrorIcon
+  Error as ErrorIcon,
+  Create as CreateIcon,
+  Fingerprint as FingerprintIcon
 } from '@mui/icons-material';
 
 import PersonFormWrapper from '../PersonFormWrapper';
 import LicenseVerificationSection from './LicenseVerificationSection';
+import WebcamCapture from './WebcamCapture';
+import SignatureCapture from './SignatureCapture';
+import FingerprintCapture from './FingerprintCapture';
 import { applicationService } from '../../services/applicationService';
 import { licenseValidationService } from '../../services/licenseValidationService';
 import lookupService from '../../services/lookupService';
@@ -622,7 +627,10 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         break;
 
       case 3: // Biometric
-        // Optional validation for biometric data
+        // Photo is required for license production
+        if (!formData.biometric_data.photo) {
+          errors.push('License photo is required for card production');
+        }
         break;
 
       case 4: // Review
@@ -1171,22 +1179,191 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     );
   };
 
-  // Biometric Step (placeholder)
-  const renderBiometricStep = () => (
-    <Box>
-      <Typography variant="h6" gutterBottom>Biometric Data Capture</Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Capture applicant photo and signature
-      </Typography>
-      
-      <Alert severity="info">
-        <Typography variant="body2">
-          Biometric capture component will be integrated here.
-          This will reuse the existing WebcamCapture.tsx functionality.
+  // Biometric Step with photo, signature, and fingerprint capture
+  const renderBiometricStep = () => {
+    const handlePhotoCapture = (photoFile: File) => {
+      setFormData(prev => ({
+        ...prev,
+        biometric_data: {
+          ...prev.biometric_data,
+          photo: photoFile
+        }
+      }));
+      setSuccess('Photo captured successfully!');
+      setTimeout(() => setSuccess(''), 3000);
+    };
+
+    const handleSignatureCapture = (signatureFile: File) => {
+      setFormData(prev => ({
+        ...prev,
+        biometric_data: {
+          ...prev.biometric_data,
+          signature: signatureFile
+        }
+      }));
+      setSuccess('Signature captured successfully!');
+      setTimeout(() => setSuccess(''), 3000);
+    };
+
+    const handleFingerprintCapture = (fingerprintFile: File) => {
+      setFormData(prev => ({
+        ...prev,
+        biometric_data: {
+          ...prev.biometric_data,
+          fingerprint: fingerprintFile
+        }
+      }));
+      setSuccess('Fingerprint captured successfully!');
+      setTimeout(() => setSuccess(''), 3000);
+    };
+
+    return (
+      <Box>
+        <Typography variant="h6" gutterBottom>Biometric Data Capture</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          Capture applicant photo, signature, and fingerprint data for license production
         </Typography>
-      </Alert>
-    </Box>
-  );
+
+        {success && (
+          <Alert severity="success" sx={{ mb: 3 }}>
+            {success}
+          </Alert>
+        )}
+
+        <Grid container spacing={3}>
+          {/* Photo Capture */}
+          <Grid item xs={12}>
+            <Card>
+              <CardHeader
+                title={
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <CameraIcon />
+                    <Typography variant="h6">License Photo</Typography>
+                    {formData.biometric_data.photo && (
+                      <Chip label="Captured" color="success" size="small" icon={<CheckCircleIcon />} />
+                    )}
+                  </Box>
+                }
+                subheader="ISO-compliant photo for license card production"
+              />
+              <CardContent>
+                <Grid container spacing={2} alignItems="center">
+                  <Grid item xs={12} md={6}>
+                    <WebcamCapture
+                      onPhotoCapture={handlePhotoCapture}
+                      disabled={saving}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    {formData.biometric_data.photo ? (
+                      <Alert severity="success">
+                        <Typography variant="body2">
+                          <strong>Photo Status:</strong> Captured successfully
+                          <br />
+                          <strong>File:</strong> {formData.biometric_data.photo.name}
+                          <br />
+                          <strong>Size:</strong> {Math.round(formData.biometric_data.photo.size / 1024)} KB
+                        </Typography>
+                      </Alert>
+                    ) : (
+                      <Alert severity="info">
+                        <Typography variant="body2">
+                          <strong>Required:</strong> License photo is required for card production.
+                          Use the webcam capture to take an ISO-compliant photo.
+                        </Typography>
+                      </Alert>
+                    )}
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Signature Capture */}
+          <Grid item xs={12}>
+            <Box sx={{ position: 'relative' }}>
+              {formData.biometric_data.signature && (
+                <Chip 
+                  label="Signature Captured" 
+                  color="success" 
+                  size="small" 
+                  icon={<CheckCircleIcon />}
+                  sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}
+                />
+              )}
+                             <SignatureCapture
+                 onSignatureCapture={handleSignatureCapture}
+                 disabled={saving}
+               />
+            </Box>
+          </Grid>
+
+          {/* Fingerprint Capture */}
+          <Grid item xs={12}>
+            <Box sx={{ position: 'relative' }}>
+              {formData.biometric_data.fingerprint && (
+                <Chip 
+                  label="Fingerprint Captured" 
+                  color="success" 
+                  size="small" 
+                  icon={<CheckCircleIcon />}
+                  sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}
+                />
+              )}
+                             <FingerprintCapture
+                 onFingerprintCapture={handleFingerprintCapture}
+                 disabled={saving}
+               />
+            </Box>
+          </Grid>
+
+          {/* Biometric Summary */}
+          <Grid item xs={12}>
+            <Card variant="outlined">
+              <CardHeader title="Biometric Data Summary" />
+              <CardContent>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={4}>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <CameraIcon color={formData.biometric_data.photo ? "success" : "disabled"} />
+                      <Typography variant="body2">
+                        Photo: {formData.biometric_data.photo ? "✓ Captured" : "⚠ Required"}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <CreateIcon color={formData.biometric_data.signature ? "success" : "action"} />
+                      <Typography variant="body2">
+                        Signature: {formData.biometric_data.signature ? "✓ Captured" : "Optional"}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <FingerprintIcon color={formData.biometric_data.fingerprint ? "success" : "action"} />
+                      <Typography variant="body2">
+                        Fingerprint: {formData.biometric_data.fingerprint ? "✓ Captured" : "Optional"}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
+                
+                {!formData.biometric_data.photo && (
+                  <Alert severity="warning" sx={{ mt: 2 }}>
+                    <Typography variant="body2">
+                      <strong>Note:</strong> License photo is required to proceed to the next step.
+                      Signature and fingerprint are optional but recommended for enhanced security.
+                    </Typography>
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      </Box>
+    );
+  };
 
   // Review Step with comprehensive display
   const renderReviewStep = () => {
@@ -1364,6 +1541,55 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                       />
                     </ListItem>
                   )}
+
+                  {/* Biometric Data */}
+                  <ListItem>
+                    <ListItemIcon>
+                      {formData.biometric_data.photo ? 
+                        <CheckCircleIcon color="success" /> : 
+                        <ErrorIcon color="error" />
+                      }
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="License Photo"
+                      secondary={formData.biometric_data.photo ? 
+                        `Captured: ${formData.biometric_data.photo.name}` : 
+                        "Required for license card production"
+                      }
+                    />
+                  </ListItem>
+
+                  <ListItem>
+                    <ListItemIcon>
+                      {formData.biometric_data.signature ? 
+                        <CheckCircleIcon color="success" /> : 
+                        <InfoIcon color="action" />
+                      }
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="Digital Signature"
+                      secondary={formData.biometric_data.signature ? 
+                        `Captured: ${formData.biometric_data.signature.name}` : 
+                        "Optional - can be added for enhanced security"
+                      }
+                    />
+                  </ListItem>
+
+                  <ListItem>
+                    <ListItemIcon>
+                      {formData.biometric_data.fingerprint ? 
+                        <CheckCircleIcon color="success" /> : 
+                        <InfoIcon color="action" />
+                      }
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="Fingerprint"
+                      secondary={formData.biometric_data.fingerprint ? 
+                        `Captured: ${formData.biometric_data.fingerprint.name}` : 
+                        "Optional - hardware integration pending"
+                      }
+                    />
+                  </ListItem>
 
                   {/* No requirements case */}
                   {!requiresMedical && !requiresParentalConsent && !requiresExternalLicense && (
