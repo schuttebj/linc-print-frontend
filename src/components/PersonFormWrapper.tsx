@@ -544,15 +544,23 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     // Populate form with existing person data
                     populateFormWithExistingPerson(existingPerson);
                     
-                    // For application mode, jump directly to review step if person is found
+                    // For application mode, immediately complete the person selection
                     if (mode === 'application') {
-                        // Mark all steps as valid since we have existing person data
-                        markStepValid(0, true); // Lookup step
-                        markStepValid(1, true); // Personal info step
-                        markStepValid(2, true); // Contact details step
-                        markStepValid(3, true); // ID documents step
-                        markStepValid(4, true); // Address step
-                        setCurrentStep(5); // Jump to review step
+                        // Mark lookup step as valid
+                        markStepValid(0, true);
+                        
+                        // Immediately trigger completion callback for application mode
+                        // Let the ApplicationFormWrapper handle the next steps
+                        if (onComplete) {
+                            onComplete(existingPerson);
+                        }
+                        if (onSuccess) {
+                            onSuccess(existingPerson, true); // true indicates this is an edit/existing person
+                        }
+                    } else {
+                        // For standalone mode, proceed to personal information step
+                        markStepValid(0, true);
+                        setCurrentStep(1);
                     }
                 } else {
                     // No person found - setup for new person creation
@@ -562,10 +570,9 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     setIsNewPerson(true);
                     setIsEditMode(false);
                     setupNewPersonForm(data);
+                    markStepValid(0, true);
+                    setCurrentStep(1);
                 }
-
-                markStepValid(0, true);
-                setCurrentStep(1);
             } else {
                 console.error('Search failed with status:', response.status);
                 const errorText = await response.text();
