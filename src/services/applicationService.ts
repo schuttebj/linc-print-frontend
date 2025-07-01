@@ -85,6 +85,11 @@ class ApplicationService {
     return await api.get(API_ENDPOINTS.applicationsByPerson(personId));
   }
 
+  // Get person's existing licenses for verification
+  async getPersonLicenses(personId: string): Promise<{ system_licenses: any[] }> {
+    return await api.get(API_ENDPOINTS.personLicenses(personId));
+  }
+
   // In-progress applications for dashboard
   async getInProgressApplications(params: {
     date?: string;

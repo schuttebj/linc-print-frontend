@@ -81,16 +81,37 @@ const WebcamCapture: React.FC<WebcamCaptureProps> = ({
       setLoading(true);
       setError('');
       
-      // Detect webcams using browser WebRTC
-      if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+      // Check for browser support
+      if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+        setError('Your browser does not support webcam access. Please use a modern browser like Chrome, Firefox, or Edge.');
+        return;
+      }
+
+      // First, request camera permission to get device labels
+      let permissionStream: MediaStream | null = null;
+      try {
+        console.log('Requesting camera permission to enumerate devices...');
+        permissionStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        console.log('Camera permission granted');
+      } catch (permissionError) {
+        console.warn('Camera permission denied or no camera available:', permissionError);
+        setError('Camera permission is required to detect webcams. Please allow camera access and try again.');
+        return;
+      }
+
+      // Enumerate devices after permission is granted
+      try {
         const devices = await navigator.mediaDevices.enumerateDevices();
+        console.log('All devices:', devices);
+        
         const videoDevices = devices.filter(device => device.kind === 'videoinput');
+        console.log('Video devices found:', videoDevices);
         
         if (videoDevices.length > 0) {
           // Convert browser-detected webcams to our format
           const detectedWebcams: WebcamDevice[] = videoDevices.map((device, index) => ({
             id: 9000 + index, // Use high numeric IDs
-            name: device.label || `Webcam ${index + 1}`,
+            name: device.label || `Camera ${index + 1}`,
             deviceId: device.deviceId
           }));
           
@@ -101,17 +122,20 @@ const WebcamCapture: React.FC<WebcamCaptureProps> = ({
             setSelectedWebcam(detectedWebcams[0].id);
           }
           
-          console.info(`Detected ${detectedWebcams.length} local webcam(s)`);
+          console.info(`✅ Detected ${detectedWebcams.length} webcam(s):`, detectedWebcams);
         } else {
-          setError('No webcams detected. Please ensure webcams are connected and camera permissions are granted.');
+          setError('No video input devices detected. Please ensure webcams are connected and try refreshing.');
         }
-      } else {
-        setError('Your browser does not support webcam access.');
+      } finally {
+        // Clean up permission stream
+        if (permissionStream) {
+          permissionStream.getTracks().forEach(track => track.stop());
+        }
       }
       
     } catch (err: any) {
       console.error('Error loading webcams:', err);
-      setError(err.message || 'Failed to load available webcams');
+      setError(`Failed to detect webcams: ${err.message}. Please check camera permissions and connections.`);
     } finally {
       setLoading(false);
     }
@@ -126,23 +150,57 @@ const WebcamCapture: React.FC<WebcamCaptureProps> = ({
 
     try {
       setError('');
-      console.log('Starting webcam preview for device:', selectedWebcamData.deviceId);
+      console.log('Starting webcam preview for device:', selectedWebcamData.name, selectedWebcamData.deviceId);
       
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          deviceId: { exact: selectedWebcamData.deviceId },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
-        }
-      });
+      // Try with exact device first
+      let mediaStream: MediaStream;
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            deviceId: { exact: selectedWebcamData.deviceId },
+            width: { ideal: 1920, min: 640 },
+            height: { ideal: 1080, min: 480 },
+            frameRate: { ideal: 30, min: 15 }
+          }
+        });
+      } catch (exactError) {
+        console.warn('Failed with exact device constraint, trying ideal:', exactError);
+        // Fallback to ideal constraint if exact fails
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            deviceId: { ideal: selectedWebcamData.deviceId },
+            width: { ideal: 1280, min: 640 },
+            height: { ideal: 720, min: 480 }
+          }
+        });
+      }
 
-      console.log('Media stream obtained:', mediaStream);
+      console.log('✅ Media stream obtained:', {
+        active: mediaStream.active,
+        tracks: mediaStream.getVideoTracks().length,
+        settings: mediaStream.getVideoTracks()[0]?.getSettings()
+      });
+      
       setStream(mediaStream);
       setPreviewActive(true);
       
     } catch (error: any) {
-      console.error('Error starting preview:', error);
-      setError(error.message || 'Failed to start webcam preview');
+      console.error('❌ Error starting preview:', error);
+      let errorMessage = 'Failed to start webcam preview';
+      
+      if (error.name === 'NotAllowedError') {
+        errorMessage = 'Camera permission denied. Please allow camera access in your browser.';
+      } else if (error.name === 'NotFoundError') {
+        errorMessage = 'Selected camera not found. Please refresh and try again.';
+      } else if (error.name === 'NotReadableError') {
+        errorMessage = 'Camera is being used by another application. Please close other apps using the camera.';
+      } else if (error.name === 'OverconstrainedError') {
+        errorMessage = 'Camera does not support required settings. Try a different camera.';
+      } else if (error.message) {
+        errorMessage = `Camera error: ${error.message}`;
+      }
+      
+      setError(errorMessage);
     }
   };
 

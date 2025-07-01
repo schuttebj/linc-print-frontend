@@ -99,42 +99,48 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
     setError('');
     
     try {
-      // TODO: Replace with actual API call to get person's existing licenses
-      // For now, mock some system licenses based on applications
-      const mockSystemLicenses: SystemLicense[] = [
-        // Example: Person has a learner's permit from previous application
-        // {
-        //   id: 'sys-001',
-        //   license_number: 'LP12345678',
-        //   license_type: 'LEARNERS_PERMIT',
-        //   categories: [LicenseCategory.B],
-        //   issue_date: '2024-01-15',
-        //   expiry_date: '2025-01-15',
-        //   status: LicenseStatus.ACTIVE,
-        //   issuing_location: 'Antananarivo Central',
-        //   application_id: 'app-001',
-        //   verified: true,
-        //   verification_source: 'SYSTEM'
-        // }
-      ];
+      // Call the actual API to get person's existing licenses
+      const response = await applicationService.getPersonLicenses(personId);
+      const systemLicenses: SystemLicense[] = response.system_licenses || [];
+
+      console.log('Loaded system licenses:', systemLicenses);
 
       // Auto-populate external licenses for missing prerequisites
       const autoPopulatedExternalLicenses = createAutoPopulatedExternalLicenses(
-        mockSystemLicenses,
+        systemLicenses,
+        licenseData.external_licenses
+      );
+
+      console.log('Auto-populated external licenses:', autoPopulatedExternalLicenses);
+
+      updateLicenseData({
+        ...licenseData,
+        person_id: personId,
+        system_licenses: systemLicenses,
+        external_licenses: autoPopulatedExternalLicenses,
+        all_license_categories: getAllCategories(systemLicenses, autoPopulatedExternalLicenses)
+      });
+
+    } catch (err: any) {
+      console.error('Error loading system licenses:', err);
+      // If API call fails, still try to auto-populate based on requirements
+      const autoPopulatedExternalLicenses = createAutoPopulatedExternalLicenses(
+        [],
         licenseData.external_licenses
       );
 
       updateLicenseData({
         ...licenseData,
         person_id: personId,
-        system_licenses: mockSystemLicenses,
+        system_licenses: [],
         external_licenses: autoPopulatedExternalLicenses,
-        all_license_categories: getAllCategories(mockSystemLicenses, autoPopulatedExternalLicenses)
+        all_license_categories: getAllCategories([], autoPopulatedExternalLicenses)
       });
 
-    } catch (err) {
-      setError('Failed to load existing licenses');
-      console.error('Error loading system licenses:', err);
+      // Only show error if it's not a 404 (person has no licenses)
+      if (err.response?.status !== 404) {
+        setError('Failed to load existing licenses. Auto-populating requirements based on license category.');
+      }
     } finally {
       setLoading(false);
     }
