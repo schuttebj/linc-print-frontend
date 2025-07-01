@@ -51,7 +51,8 @@ import {
   LicenseCategory,
   LicenseStatus,
   LICENSE_CATEGORY_RULES,
-  ApplicationType
+  ApplicationType,
+  getAuthorizedCategories
 } from '../../types';
 import type { Location } from '../../services/lookupService';
 import { applicationService } from '../../services/applicationService';
@@ -323,26 +324,46 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
       license.categories.forEach(cat => manualExternalCategories.add(cat));
     });
 
-    // Find missing required categories - special handling for A'/A/B sharing
+    // Find missing required categories using new superseding logic
     const missingCategories: LicenseCategory[] = [];
-    const baseCategories = [LicenseCategory.A_PRIME, LicenseCategory.A, LicenseCategory.B];
     
     categoryRules.requires_existing.forEach(requiredCat => {
-      const isBaseCategory = baseCategories.includes(requiredCat as LicenseCategory);
+      // Check if the required category is available directly
+      const hasDirectCategory = systemCategories.has(requiredCat as LicenseCategory) || 
+                               manualExternalCategories.has(requiredCat as LicenseCategory);
       
-      if (isBaseCategory) {
-        // For base categories, check if any A'/A/B is available
-        const hasAnyBase = baseCategories.some(baseCat => 
-          systemCategories.has(baseCat) || manualExternalCategories.has(baseCat)
-        );
-        if (!hasAnyBase && !missingCategories.some(cat => baseCategories.includes(cat))) {
-          // Add the most common one (B) if no base category exists
-          missingCategories.push(LicenseCategory.B);
+      if (!hasDirectCategory) {
+        // Check if any existing license supersedes this required category
+        let hasSupersedingLicense = false;
+        
+        // Check system licenses
+        for (const license of systemLicenses) {
+          for (const licenseCat of license.categories) {
+            const authorizedCategories = getAuthorizedCategories(licenseCat);
+            if (authorizedCategories.includes(requiredCat as LicenseCategory)) {
+              hasSupersedingLicense = true;
+              break;
+            }
+          }
+          if (hasSupersedingLicense) break;
         }
-      } else {
-        // For non-base categories, exact match required
-        if (!systemCategories.has(requiredCat as LicenseCategory) && 
-            !manualExternalCategories.has(requiredCat as LicenseCategory)) {
+        
+        // Check manual external licenses if not found in system
+        if (!hasSupersedingLicense) {
+          for (const license of manualExternalLicenses) {
+            for (const licenseCat of license.categories) {
+              const authorizedCategories = getAuthorizedCategories(licenseCat);
+              if (authorizedCategories.includes(requiredCat as LicenseCategory)) {
+                hasSupersedingLicense = true;
+                break;
+              }
+            }
+            if (hasSupersedingLicense) break;
+          }
+        }
+        
+        // If still not found, add to missing categories
+        if (!hasSupersedingLicense && !missingCategories.includes(requiredCat as LicenseCategory)) {
           missingCategories.push(requiredCat as LicenseCategory);
         }
       }
@@ -359,10 +380,10 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
         // For NEW_LICENSE applications, check if the missing category allows learner's permit
         const categoryRules = LICENSE_CATEGORY_RULES[category];
         if (categoryRules.allows_learners_permit) {
-          // Base categories (A', A, B) need learner's permit first
+          // Categories that allow learner's permit need learner's permit first
           licenseType = 'LEARNERS_PERMIT';
         } else {
-          // Advanced categories (C, D, E) need existing driver's license
+          // Advanced categories (C, D families) need existing driver's license
           licenseType = 'DRIVERS_LICENSE';
         }
       } else {
