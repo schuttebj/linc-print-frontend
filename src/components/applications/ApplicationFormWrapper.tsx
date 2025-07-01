@@ -611,6 +611,30 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           }
         }
 
+        // Medical information validation
+        if (!formData.medical_information) {
+          errors.push('Medical assessment is required for all license applications');
+        } else {
+          // Check if vision test is complete
+          if (!formData.medical_information.vision_test.visual_acuity_binocular) {
+            errors.push('Visual acuity test (binocular vision) is required');
+          }
+          
+          // Check if medical clearance has been determined
+          if (formData.medical_information.medical_clearance === undefined || formData.medical_information.medical_clearance === null) {
+            errors.push('Medical clearance status must be determined');
+          }
+          
+          // Check if examiner details are provided
+          if (!formData.medical_information.examined_by?.trim()) {
+            errors.push('Medical examiner name is required');
+          }
+          
+          if (!formData.medical_information.examination_date) {
+            errors.push('Medical examination date is required');
+          }
+        }
+
         // License verification validation
         if (formData.license_verification?.requires_verification) {
           errors.push('External licenses require verification before proceeding');
@@ -1553,6 +1577,28 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                     </ListItem>
                   )}
 
+                  {/* Medical Information */}
+                  <ListItem>
+                    <ListItemIcon>
+                      {formData.medical_information?.medical_clearance ? 
+                        <CheckCircleIcon color="success" /> : 
+                        formData.medical_information ? 
+                          <WarningIcon color="warning" /> :
+                          <ErrorIcon color="error" />
+                      }
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="Medical Assessment"
+                      secondary={
+                        formData.medical_information 
+                          ? formData.medical_information.medical_clearance
+                            ? `Medical clearance approved${formData.medical_information.examined_by ? ` by ${formData.medical_information.examined_by}` : ''}`
+                            : `Medical restrictions apply${formData.medical_information.medical_restrictions.length > 0 ? `: ${formData.medical_information.medical_restrictions.join(', ')}` : ''}`
+                          : "Medical assessment required but not completed"
+                      }
+                    />
+                  </ListItem>
+
                   {/* Biometric Data */}
                   <ListItem>
                     <ListItemIcon>
@@ -1618,6 +1664,64 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
               </CardContent>
             </Card>
           </Grid>
+
+          {/* Medical Information Summary */}
+          {formData.medical_information && (
+            <Grid item xs={12}>
+              <Card>
+                <CardHeader title="Medical Assessment Summary" />
+                <CardContent>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="body2" color="text.secondary">Medical Clearance:</Typography>
+                      <Typography variant="body1" sx={{ 
+                        fontWeight: 'bold',
+                        color: formData.medical_information.medical_clearance ? 'success.main' : 'warning.main'
+                      }}>
+                        {formData.medical_information.medical_clearance ? 'APPROVED' : 'CONDITIONAL/RESTRICTED'}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="body2" color="text.secondary">Examined By:</Typography>
+                      <Typography variant="body1">
+                        {formData.medical_information.examined_by || 'Not specified'}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="body2" color="text.secondary">Examination Date:</Typography>
+                      <Typography variant="body1">
+                        {formData.medical_information.examination_date ? 
+                          new Date(formData.medical_information.examination_date).toLocaleDateString() : 
+                          'Not specified'
+                        }
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="body2" color="text.secondary">Vision Test (Binocular):</Typography>
+                      <Typography variant="body1">
+                        {formData.medical_information.vision_test.visual_acuity_binocular || 'Not tested'}
+                      </Typography>
+                    </Grid>
+                    {formData.medical_information.medical_restrictions.length > 0 && (
+                      <Grid item xs={12}>
+                        <Typography variant="body2" color="text.secondary">Medical Restrictions:</Typography>
+                        <Typography variant="body1" color="warning.main">
+                          {formData.medical_information.medical_restrictions.join(', ')}
+                        </Typography>
+                      </Grid>
+                    )}
+                    {formData.medical_information.vision_test.requires_corrective_lenses && (
+                      <Grid item xs={12}>
+                        <Typography variant="body2" color="warning.main">
+                          ⚠️ Requires corrective lenses for driving
+                        </Typography>
+                      </Grid>
+                    )}
+                  </Grid>
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
 
           {/* Fee Calculation */}
           <Grid item xs={12}>

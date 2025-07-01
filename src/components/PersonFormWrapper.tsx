@@ -543,6 +543,17 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
                     // Populate form with existing person data
                     populateFormWithExistingPerson(existingPerson);
+                    
+                    // For application mode, jump directly to review step if person is found
+                    if (mode === 'application') {
+                        // Mark all steps as valid since we have existing person data
+                        markStepValid(0, true); // Lookup step
+                        markStepValid(1, true); // Personal info step
+                        markStepValid(2, true); // Contact details step
+                        markStepValid(3, true); // ID documents step
+                        markStepValid(4, true); // Address step
+                        setCurrentStep(5); // Jump to review step
+                    }
                 } else {
                     // No person found - setup for new person creation
                     console.log('No person found, creating new');
@@ -2036,9 +2047,21 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                         Review & Submit
                     </Typography>
 
-                    <Alert severity="info" sx={{ mb: 3 }}>
-                        Please review all information before creating the person record.
-                    </Alert>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                        <Alert severity="info" sx={{ flex: 1, mr: 2 }}>
+                            Please review all information before creating the person record.
+                        </Alert>
+                        {!isNewPerson && mode === 'application' && (
+                            <Button
+                                variant="outlined"
+                                startIcon={<EditIcon />}
+                                onClick={() => setCurrentStep(1)}
+                                size="small"
+                            >
+                                Edit Details
+                            </Button>
+                        )}
+                    </Box>
 
                     {/* Personal Information Summary */}
                     <Box sx={{ mb: 4, p: 3, border: '1px solid #e0e0e0', borderRadius: 2, backgroundColor: '#fafafa' }}>
