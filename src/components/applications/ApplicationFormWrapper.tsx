@@ -697,7 +697,8 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         validity_period_days: formData.validity_period_days,
         is_on_hold: formData.is_on_hold,
         parent_application_id: formData.parent_application_id,
-        replacement_reason: formData.replacement_reason
+        replacement_reason: formData.replacement_reason,
+        medical_information: formData.medical_information
       };
 
       const application = await applicationService.createApplication(applicationData);
@@ -730,7 +731,8 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         validity_period_days: formData.validity_period_days,
         is_on_hold: formData.is_on_hold,
         parent_application_id: formData.parent_application_id,
-        replacement_reason: formData.replacement_reason
+        replacement_reason: formData.replacement_reason,
+        medical_information: formData.medical_information
       };
 
       const application = await applicationService.createApplication(applicationData);
@@ -1710,7 +1712,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                         </Typography>
                       </Grid>
                     )}
-                    {formData.medical_information.vision_test.requires_corrective_lenses && (
+                    {formData.medical_information.vision_test.corrective_lenses_required && (
                       <Grid item xs={12}>
                         <Typography variant="body2" color="warning.main">
                           ⚠️ Requires corrective lenses for driving

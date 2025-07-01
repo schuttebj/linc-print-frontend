@@ -150,6 +150,8 @@ export interface ApplicationCreate {
   is_on_hold?: boolean;
   parent_application_id?: string;
   replacement_reason?: string;
+  // Medical information for this specific application
+  medical_information?: MedicalInformation;
 }
 
 export interface ApplicationUpdate {
