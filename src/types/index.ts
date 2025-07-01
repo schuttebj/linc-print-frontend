@@ -269,6 +269,9 @@ export interface ExternalLicense {
   verification_notes?: string;
   verified_by?: string;
   verified_at?: string;
+  // Auto-population fields
+  is_auto_populated?: boolean; // True if auto-populated for prerequisites
+  required_for_category?: LicenseCategory; // Category this license is required for
 }
 
 export interface LicenseVerificationData {

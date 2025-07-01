@@ -177,7 +177,9 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
       issuing_location: '',
       verified: false,
       verification_source: 'MANUAL',
-      verification_notes: ''
+      verification_notes: '',
+      // Manual license - not auto-populated
+      is_auto_populated: false
     };
 
     updateLicenseData({
@@ -217,6 +219,44 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
     return new Date(expiryDate) < new Date();
   };
 
+  /**
+   * Validate and format date to ensure YYYY-MM-DD format with 4-digit year
+   */
+  const validateAndFormatDate = (dateValue: string): string => {
+    if (!dateValue) return '';
+    
+    // If date is in invalid format or has wrong year length, return empty
+    const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+    if (!datePattern.test(dateValue)) return '';
+    
+    const year = parseInt(dateValue.substring(0, 4));
+    const currentYear = new Date().getFullYear();
+    
+    // Year must be between 1900 and current year + 50
+    if (year < 1900 || year > currentYear + 50) return '';
+    
+    return dateValue;
+  };
+
+  /**
+   * Handle date input changes with validation
+   */
+  const handleDateChange = (index: number, field: 'issue_date' | 'expiry_date', value: string) => {
+    const validatedDate = validateAndFormatDate(value);
+    updateExternalLicense(index, field, validatedDate);
+  };
+
+  /**
+   * Get min/max dates for date inputs
+   */
+  const getDateConstraints = () => {
+    const currentYear = new Date().getFullYear();
+    return {
+      min: '1900-01-01',
+      max: `${currentYear + 50}-12-31`
+    };
+  };
+
   const getLicenseStatusColor = (license: SystemLicense): 'success' | 'warning' | 'error' => {
     if (license.status === LicenseStatus.ACTIVE && !isLicenseExpired(license.expiry_date)) {
       return 'success';
@@ -241,9 +281,7 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
     const categoryRules = LICENSE_CATEGORY_RULES[currentLicenseCategory];
     if (!categoryRules?.requires_existing?.length) {
       // No requirements - keep only manually added licenses (remove auto-populated ones)
-      return existingExternalLicenses.filter(license => 
-        !license.verification_notes?.startsWith('Auto-added:')
-      );
+      return existingExternalLicenses.filter(license => !license.is_auto_populated);
     }
 
     // Get categories available from system licenses
@@ -253,9 +291,7 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
     });
 
     // Separate manually added from auto-populated external licenses
-    const manualExternalLicenses = existingExternalLicenses.filter(license => 
-      !license.verification_notes?.startsWith('Auto-added:')
-    );
+    const manualExternalLicenses = existingExternalLicenses.filter(license => !license.is_auto_populated);
 
     // Get categories available from manual external licenses
     const manualExternalCategories = new Set<LicenseCategory>();
@@ -301,11 +337,36 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
         issuing_location: '',
         verified: false,
         verification_source: 'MANUAL' as const,
-        verification_notes: `Auto-added: Required for ${currentLicenseCategory} license`
+        verification_notes: '',
+        // Auto-population fields
+        is_auto_populated: true,
+        required_for_category: currentLicenseCategory
       };
     });
 
     return [...manualExternalLicenses, ...autoPopulatedLicenses];
+  };
+
+  /**
+   * Validate date logic (expiry after issue)
+   */
+  const validateDateLogic = (license: ExternalLicense): { hasError: boolean; message: string } => {
+    if (!license.issue_date || !license.expiry_date) {
+      return { hasError: false, message: '' };
+    }
+
+    const issueDate = new Date(license.issue_date);
+    const expiryDate = new Date(license.expiry_date);
+
+    if (expiryDate <= issueDate) {
+      return { hasError: true, message: 'Expiry date must be after issue date' };
+    }
+
+    if (isLicenseExpired(license.expiry_date)) {
+      return { hasError: true, message: 'License is expired' };
+    }
+
+    return { hasError: false, message: 'Format: YYYY-MM-DD (must be future date for valid licenses)' };
   };
 
   if (loading) {
@@ -445,7 +506,7 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                 <Box>
                   <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                     External License #{index + 1}
-                    {license.verification_notes?.startsWith('Auto-added:') && (
+                    {license.is_auto_populated && (
                       <Chip 
                         label="REQUIRED" 
                         size="small" 
@@ -464,9 +525,9 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                       />
                     )}
                   </Typography>
-                  {license.verification_notes?.startsWith('Auto-added:') && (
+                  {license.is_auto_populated && (
                     <Typography variant="caption" color="warning.main" sx={{ display: 'block', mt: 0.5 }}>
-                      ⚠️ This license is required for {currentLicenseCategory} category
+                      ⚠️ This license is required for {license.required_for_category} category
                     </Typography>
                   )}
                 </Box>
@@ -475,7 +536,7 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                   size="small"
                   onClick={() => removeExternalLicense(index)}
                   disabled={disabled}
-                  title={license.verification_notes?.startsWith('Auto-added:') ? 
+                  title={license.is_auto_populated ? 
                     "Remove auto-populated license (you can add it back manually)" : 
                     "Remove external license"
                   }
@@ -497,7 +558,7 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                   />
                 </Grid>
 
-                {/* License Type */}
+                {/* License Type - LOCKED for auto-populated */}
                 <Grid item xs={12} md={6}>
                   <FormControl fullWidth>
                     <InputLabel>License Type</InputLabel>
@@ -505,15 +566,26 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                       value={license.license_type}
                       label="License Type"
                       onChange={(e) => updateExternalLicense(index, 'license_type', e.target.value)}
-                      disabled={disabled}
+                      disabled={disabled || license.is_auto_populated}
+                      sx={{
+                        backgroundColor: license.is_auto_populated ? '#f5f5f5' : 'inherit',
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderColor: license.is_auto_populated ? '#ffa726' : 'inherit'
+                        }
+                      }}
                     >
                       <MenuItem value="LEARNERS_PERMIT">Learner's Permit</MenuItem>
                       <MenuItem value="DRIVERS_LICENSE">Driver's License</MenuItem>
                     </Select>
+                    {license.is_auto_populated && (
+                      <Typography variant="caption" color="warning.main" sx={{ mt: 0.5, fontWeight: 600 }}>
+                        🔒 Type locked for required license
+                      </Typography>
+                    )}
                   </FormControl>
                 </Grid>
 
-                {/* Categories */}
+                {/* Categories - LOCKED for auto-populated */}
                 <Grid item xs={12} md={6}>
                   <FormControl fullWidth>
                     <InputLabel>Categories</InputLabel>
@@ -522,7 +594,13 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                       value={license.categories}
                       label="Categories"
                       onChange={(e) => updateExternalLicense(index, 'categories', e.target.value)}
-                      disabled={disabled}
+                      disabled={disabled || license.is_auto_populated}
+                      sx={{
+                        backgroundColor: license.is_auto_populated ? '#f5f5f5' : 'inherit',
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderColor: license.is_auto_populated ? '#ffa726' : 'inherit'
+                        }
+                      }}
                       renderValue={(selected) => (
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                           {(selected as LicenseCategory[]).map((value) => (
@@ -537,6 +615,11 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                         </MenuItem>
                       ))}
                     </Select>
+                    {license.is_auto_populated && (
+                      <Typography variant="caption" color="warning.main" sx={{ mt: 0.5, fontWeight: 600 }}>
+                        🔒 Category locked for required license
+                      </Typography>
+                    )}
                   </FormControl>
                 </Grid>
 
@@ -567,27 +650,41 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                     label="Issue Date"
                     type="date"
                     value={license.issue_date}
-                    onChange={(e) => updateExternalLicense(index, 'issue_date', e.target.value)}
+                    onChange={(e) => handleDateChange(index, 'issue_date', e.target.value)}
                     InputLabelProps={{ shrink: true }}
+                    inputProps={{
+                      min: getDateConstraints().min,
+                      max: getDateConstraints().max
+                    }}
                     disabled={disabled}
                     required
+                    helperText="Format: YYYY-MM-DD (between 1900 and current year)"
                   />
                 </Grid>
 
                 {/* Expiry Date */}
                 <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Expiry Date"
-                    type="date"
-                    value={license.expiry_date}
-                    onChange={(e) => updateExternalLicense(index, 'expiry_date', e.target.value)}
-                    InputLabelProps={{ shrink: true }}
-                    disabled={disabled}
-                    required
-                    error={license.expiry_date && isLicenseExpired(license.expiry_date)}
-                    helperText={license.expiry_date && isLicenseExpired(license.expiry_date) ? 'License is expired' : ''}
-                  />
+                  {(() => {
+                    const dateValidation = validateDateLogic(license);
+                    return (
+                      <TextField
+                        fullWidth
+                        label="Expiry Date"
+                        type="date"
+                        value={license.expiry_date}
+                        onChange={(e) => handleDateChange(index, 'expiry_date', e.target.value)}
+                        InputLabelProps={{ shrink: true }}
+                        inputProps={{
+                          min: getDateConstraints().min,
+                          max: getDateConstraints().max
+                        }}
+                        disabled={disabled}
+                        required
+                        error={dateValidation.hasError}
+                        helperText={dateValidation.message || 'Format: YYYY-MM-DD (must be future date for valid licenses)'}
+                      />
+                    );
+                  })()}
                 </Grid>
 
                 {/* Verification */}
