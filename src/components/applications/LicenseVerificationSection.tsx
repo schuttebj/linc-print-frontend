@@ -49,7 +49,8 @@ import {
   ExternalLicense,
   LicenseVerificationData,
   LicenseCategory,
-  LicenseStatus
+  LicenseStatus,
+  LICENSE_CATEGORY_RULES
 } from '../../types';
 import type { Location } from '../../services/lookupService';
 import { applicationService } from '../../services/applicationService';
@@ -59,6 +60,7 @@ interface LicenseVerificationSectionProps {
   value: LicenseVerificationData | null;
   onChange: (data: LicenseVerificationData | null) => void;
   locations: Location[];
+  currentLicenseCategory: LicenseCategory | null; // Current category being applied for
   disabled?: boolean;
 }
 
@@ -67,6 +69,7 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
   value,
   onChange,
   locations,
+  currentLicenseCategory,
   disabled = false
 }) => {
   const [loading, setLoading] = useState(false);
@@ -81,12 +84,12 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
     requires_verification: false
   };
 
-  // Load system licenses when person changes
+  // Load system licenses when person or license category changes
   useEffect(() => {
     if (personId) {
       loadSystemLicenses(personId);
     }
-  }, [personId]);
+  }, [personId, currentLicenseCategory]);
 
   const loadSystemLicenses = async (personId: string) => {
     setLoading(true);
@@ -112,11 +115,18 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
         // }
       ];
 
+      // Auto-populate external licenses for missing prerequisites
+      const autoPopulatedExternalLicenses = createAutoPopulatedExternalLicenses(
+        mockSystemLicenses,
+        licenseData.external_licenses
+      );
+
       updateLicenseData({
         ...licenseData,
         person_id: personId,
         system_licenses: mockSystemLicenses,
-        all_license_categories: getAllCategories(mockSystemLicenses, licenseData.external_licenses)
+        external_licenses: autoPopulatedExternalLicenses,
+        all_license_categories: getAllCategories(mockSystemLicenses, autoPopulatedExternalLicenses)
       });
 
     } catch (err) {
@@ -215,6 +225,87 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
     } else {
       return 'error';
     }
+  };
+
+  /**
+   * Auto-populate external licenses for missing prerequisites
+   */
+  const createAutoPopulatedExternalLicenses = (
+    systemLicenses: SystemLicense[], 
+    existingExternalLicenses: ExternalLicense[]
+  ): ExternalLicense[] => {
+    if (!currentLicenseCategory) {
+      return existingExternalLicenses;
+    }
+
+    const categoryRules = LICENSE_CATEGORY_RULES[currentLicenseCategory];
+    if (!categoryRules?.requires_existing?.length) {
+      // No requirements - keep only manually added licenses (remove auto-populated ones)
+      return existingExternalLicenses.filter(license => 
+        !license.verification_notes?.startsWith('Auto-added:')
+      );
+    }
+
+    // Get categories available from system licenses
+    const systemCategories = new Set<LicenseCategory>();
+    systemLicenses.forEach(license => {
+      license.categories.forEach(cat => systemCategories.add(cat));
+    });
+
+    // Separate manually added from auto-populated external licenses
+    const manualExternalLicenses = existingExternalLicenses.filter(license => 
+      !license.verification_notes?.startsWith('Auto-added:')
+    );
+
+    // Get categories available from manual external licenses
+    const manualExternalCategories = new Set<LicenseCategory>();
+    manualExternalLicenses.forEach(license => {
+      license.categories.forEach(cat => manualExternalCategories.add(cat));
+    });
+
+    // Find missing required categories - special handling for A'/A/B sharing
+    const missingCategories: LicenseCategory[] = [];
+    const baseCategories = [LicenseCategory.A_PRIME, LicenseCategory.A, LicenseCategory.B];
+    
+    categoryRules.requires_existing.forEach(requiredCat => {
+      const isBaseCategory = baseCategories.includes(requiredCat as LicenseCategory);
+      
+      if (isBaseCategory) {
+        // For base categories, check if any A'/A/B is available
+        const hasAnyBase = baseCategories.some(baseCat => 
+          systemCategories.has(baseCat) || manualExternalCategories.has(baseCat)
+        );
+        if (!hasAnyBase && !missingCategories.some(cat => baseCategories.includes(cat))) {
+          // Add the most common one (B) if no base category exists
+          missingCategories.push(LicenseCategory.B);
+        }
+      } else {
+        // For non-base categories, exact match required
+        if (!systemCategories.has(requiredCat as LicenseCategory) && 
+            !manualExternalCategories.has(requiredCat as LicenseCategory)) {
+          missingCategories.push(requiredCat as LicenseCategory);
+        }
+      }
+    });
+
+    // Create external license entries for missing categories
+    const autoPopulatedLicenses = missingCategories.map((category, index) => {
+      const tempId = `auto-${Date.now()}-${index}`;
+      return {
+        id: tempId,
+        license_number: '',
+        license_type: 'DRIVERS_LICENSE' as const,
+        categories: [category],
+        issue_date: '',
+        expiry_date: '',
+        issuing_location: '',
+        verified: false,
+        verification_source: 'MANUAL' as const,
+        verification_notes: `Auto-added: Required for ${currentLicenseCategory} license`
+      };
+    });
+
+    return [...manualExternalLicenses, ...autoPopulatedLicenses];
   };
 
   if (loading) {
@@ -351,23 +442,43 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
               }}
             >
               <Box display="flex" justifyContent="between" alignItems="start" sx={{ mb: 2 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                  External License #{index + 1}
-                  {license.verified && (
-                    <Chip 
-                      label="VERIFIED" 
-                      size="small" 
-                      color="success" 
-                      icon={<CheckCircleIcon />}
-                      sx={{ ml: 1 }}
-                    />
+                <Box>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    External License #{index + 1}
+                    {license.verification_notes?.startsWith('Auto-added:') && (
+                      <Chip 
+                        label="REQUIRED" 
+                        size="small" 
+                        color="warning" 
+                        icon={<InfoIcon />}
+                        sx={{ ml: 1 }}
+                      />
+                    )}
+                    {license.verified && (
+                      <Chip 
+                        label="VERIFIED" 
+                        size="small" 
+                        color="success" 
+                        icon={<CheckCircleIcon />}
+                        sx={{ ml: 1 }}
+                      />
+                    )}
+                  </Typography>
+                  {license.verification_notes?.startsWith('Auto-added:') && (
+                    <Typography variant="caption" color="warning.main" sx={{ display: 'block', mt: 0.5 }}>
+                      ⚠️ This license is required for {currentLicenseCategory} category
+                    </Typography>
                   )}
-                </Typography>
+                </Box>
                 <IconButton 
                   color="error" 
                   size="small"
                   onClick={() => removeExternalLicense(index)}
                   disabled={disabled}
+                  title={license.verification_notes?.startsWith('Auto-added:') ? 
+                    "Remove auto-populated license (you can add it back manually)" : 
+                    "Remove external license"
+                  }
                 >
                   <DeleteIcon />
                 </IconButton>

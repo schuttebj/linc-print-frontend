@@ -1142,6 +1142,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
               value={formData.license_verification}
               onChange={(data) => setFormData(prev => ({ ...prev, license_verification: data }))}
               locations={locations}
+              currentLicenseCategory={formData.license_category}
               disabled={false}
             />
           </Grid>
