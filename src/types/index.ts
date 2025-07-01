@@ -239,6 +239,124 @@ export interface BiometricCaptureData {
   fingerprint?: File;
 }
 
+// Medical Information for Driver's License Applications
+export interface MedicalInformation {
+  // Vision Tests
+  vision_test: VisionTestData;
+  
+  // Medical Conditions
+  medical_conditions: MedicalConditions;
+  
+  // Physical Assessments
+  physical_assessment: PhysicalAssessment;
+  
+  // Medical Certificates
+  medical_certificate_file?: File;
+  eye_test_certificate_file?: File;
+  
+  // Overall medical clearance
+  medical_clearance: boolean;
+  medical_restrictions: string[];
+  medical_notes?: string;
+  examined_by?: string;
+  examination_date?: string;
+}
+
+export interface VisionTestData {
+  // Visual Acuity
+  visual_acuity_right_eye: string; // e.g., "20/20", "6/6"
+  visual_acuity_left_eye: string;
+  visual_acuity_binocular: string;
+  corrective_lenses_required: boolean;
+  corrective_lenses_type?: 'GLASSES' | 'CONTACT_LENSES' | 'BOTH';
+  
+  // Color Vision
+  color_vision_normal: boolean;
+  color_vision_deficiency_type?: 'RED_GREEN' | 'BLUE_YELLOW' | 'COMPLETE' | 'NONE';
+  
+  // Visual Field
+  visual_field_normal: boolean;
+  visual_field_horizontal_degrees?: number;
+  visual_field_vertical_degrees?: number;
+  visual_field_defects?: string;
+  
+  // Night Vision & Contrast
+  night_vision_adequate: boolean;
+  contrast_sensitivity_adequate: boolean;
+  glare_sensitivity_issues: boolean;
+  
+  // Overall vision status
+  vision_meets_standards: boolean;
+  vision_restrictions: string[];
+}
+
+export interface MedicalConditions {
+  // Neurological Conditions
+  epilepsy: boolean;
+  epilepsy_controlled: boolean;
+  epilepsy_medication?: string;
+  seizures_last_occurrence?: string;
+  
+  // Mental Health
+  mental_illness: boolean;
+  mental_illness_type?: string;
+  mental_illness_controlled: boolean;
+  mental_illness_medication?: string;
+  
+  // Cardiovascular
+  heart_condition: boolean;
+  heart_condition_type?: string;
+  blood_pressure_controlled: boolean;
+  
+  // Diabetes
+  diabetes: boolean;
+  diabetes_type?: 'TYPE_1' | 'TYPE_2' | 'GESTATIONAL';
+  diabetes_controlled: boolean;
+  diabetes_medication?: string;
+  
+  // Substance Use
+  alcohol_dependency: boolean;
+  drug_dependency: boolean;
+  substance_treatment_program: boolean;
+  
+  // Other conditions
+  fainting_episodes: boolean;
+  dizziness_episodes: boolean;
+  muscle_coordination_issues: boolean;
+  
+  // Medications that may affect driving
+  medications_affecting_driving: boolean;
+  current_medications: string[];
+  
+  // Overall medical fitness
+  medically_fit_to_drive: boolean;
+  conditions_requiring_monitoring: string[];
+}
+
+export interface PhysicalAssessment {
+  // Hearing
+  hearing_adequate: boolean;
+  hearing_aid_required: boolean;
+  
+  // Physical disabilities
+  limb_disabilities: boolean;
+  limb_disability_details?: string;
+  adaptive_equipment_required: boolean;
+  adaptive_equipment_type?: string[];
+  
+  // Mobility
+  mobility_impairment: boolean;
+  mobility_aid_required: boolean;
+  mobility_aid_type?: string;
+  
+  // Reaction time
+  reaction_time_adequate: boolean;
+  
+  // Overall physical fitness
+  physically_fit_to_drive: boolean;
+  physical_restrictions: string[];
+}
+
 // License verification types
 export interface SystemLicense {
   id: string;
@@ -307,7 +425,8 @@ export interface ApplicationFormData {
   existing_license_verified?: boolean;
   // Updated: License verification data
   license_verification: LicenseVerificationData | null;
-  // Removed old external license fields - replaced by license_verification
+  // Medical information for comprehensive health assessment
+  medical_information: MedicalInformation | null;
   
   // Step 4: Biometric Data
   biometric_data: BiometricCaptureData;

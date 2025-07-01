@@ -99,15 +99,22 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
     setError('');
     
     try {
-      // Call the actual API to get person's existing licenses
-      const response = await applicationService.getPersonLicenses(personId);
-      const systemLicenses: SystemLicense[] = response.system_licenses || [];
+      // Get current issued licenses (separate from applications)
+      const [licensesResponse, applicationsResponse] = await Promise.all([
+        applicationService.getPersonLicenses(personId), // Current system for backward compatibility
+        applicationService.getApplicationsByPerson(personId) // Current applications
+      ]);
 
-      console.log('Loaded system licenses:', systemLicenses);
+      // Separate current licenses from applications for better clarity
+      const currentLicenses: SystemLicense[] = licensesResponse.system_licenses || [];
+      const currentApplications = applicationsResponse || [];
+
+      console.log('Loaded current licenses:', currentLicenses);
+      console.log('Loaded current applications:', currentApplications);
 
       // Auto-populate external licenses for missing prerequisites
       const autoPopulatedExternalLicenses = createAutoPopulatedExternalLicenses(
-        systemLicenses,
+        currentLicenses,
         licenseData.external_licenses
       );
 
@@ -116,13 +123,13 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
       updateLicenseData({
         ...licenseData,
         person_id: personId,
-        system_licenses: systemLicenses,
+        system_licenses: currentLicenses,
         external_licenses: autoPopulatedExternalLicenses,
-        all_license_categories: getAllCategories(systemLicenses, autoPopulatedExternalLicenses)
+        all_license_categories: getAllCategories(currentLicenses, autoPopulatedExternalLicenses)
       });
 
     } catch (err: any) {
-      console.error('Error loading system licenses:', err);
+      console.error('Error loading licenses and applications:', err);
       // If API call fails, still try to auto-populate based on requirements
       const autoPopulatedExternalLicenses = createAutoPopulatedExternalLicenses(
         [],
@@ -139,7 +146,7 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
 
       // Only show error if it's not a 404 (person has no licenses)
       if (err.response?.status !== 404) {
-        setError('Failed to load existing licenses. Auto-populating requirements based on license category.');
+        setError('Failed to load existing data. Auto-populating requirements based on license category.');
       }
     } finally {
       setLoading(false);
@@ -418,10 +425,10 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
   return (
     <Box>
       <Typography variant="h6" gutterBottom>
-        License Verification
+        License Verification & Prerequisites
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        System records are trusted and don't require verification. External licenses require clerk verification.
+        This section shows current licenses, pending applications, and allows adding external licenses for prerequisite verification.
       </Typography>
 
       {error && (
@@ -430,18 +437,18 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
         </Alert>
       )}
 
-      {/* System Licenses (Trusted) */}
+      {/* Current Licenses (Issued & Active) */}
       <Card sx={{ mb: 3 }}>
         <CardHeader 
           title={
             <Box display="flex" alignItems="center" gap={1}>
               <VerifiedIcon color="success" />
               <Typography variant="h6">
-                System Licenses ({licenseData.system_licenses.length})
+                Current Licenses ({licenseData.system_licenses.length})
               </Typography>
             </Box>
           }
-          subheader="Licenses found in the system - trusted and verified"
+          subheader="Active licenses issued by the system - trusted and verified"
         />
         <CardContent>
           {licenseData.system_licenses.length === 0 ? (
@@ -510,6 +517,26 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
               </TableBody>
             </Table>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Current Applications (In Progress) */}
+      <Card sx={{ mb: 3 }}>
+        <CardHeader 
+          title={
+            <Box display="flex" alignItems="center" gap={1}>
+              <InfoIcon color="info" />
+              <Typography variant="h6">
+                Current Applications (0)
+              </Typography>
+            </Box>
+          }
+          subheader="Applications in progress - will become licenses when approved"
+        />
+        <CardContent>
+          <Alert severity="info">
+            No pending applications found for this person. Current applications would show here when they exist.
+          </Alert>
         </CardContent>
       </Card>
 

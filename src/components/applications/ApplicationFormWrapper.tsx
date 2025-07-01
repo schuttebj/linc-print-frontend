@@ -65,6 +65,7 @@ import {
 
 import PersonFormWrapper from '../PersonFormWrapper';
 import LicenseVerificationSection from './LicenseVerificationSection';
+import MedicalInformationSection from './MedicalInformationSection';
 import WebcamCapture from './WebcamCapture';
 import SignatureCapture from './SignatureCapture';
 import FingerprintCapture from './FingerprintCapture';
@@ -163,6 +164,8 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     replacement_reason: '',
     // Updated: License verification data
     license_verification: null,
+    // Medical information for comprehensive health assessment
+    medical_information: null,
     biometric_data: {},
     selected_fees: [],
     total_amount: 0,
@@ -1156,6 +1159,14 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
             />
           </Grid>
 
+          {/* Medical Information Section */}
+          <Grid item xs={12}>
+            <MedicalInformationSection
+              value={formData.medical_information}
+              onChange={(data) => setFormData(prev => ({ ...prev, medical_information: data }))}
+              disabled={false}
+            />
+          </Grid>
 
           {/* Additional Notes */}
           <Grid item xs={12}>

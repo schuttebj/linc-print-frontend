@@ -129,6 +129,20 @@ export const API_ENDPOINTS = {
   applicationFeePayment: (id: string, feeId: string) => `${API_BASE_URL}/api/${API_VERSION}/applications/${id}/fees/${feeId}/pay`,
   applicationAssociated: (id: string) => `${API_BASE_URL}/api/${API_VERSION}/applications/${id}/associated`,
   applicationStatistics: `${API_BASE_URL}/api/${API_VERSION}/applications/statistics`,
+
+  // License endpoints (issued licenses management)
+  licenses: `${API_BASE_URL}/api/${API_VERSION}/licenses`,
+  licenseById: (id: string) => `${API_BASE_URL}/api/${API_VERSION}/licenses/${id}`,
+  activeLicenses: `${API_BASE_URL}/api/${API_VERSION}/licenses/active`,
+  pendingActivationLicenses: `${API_BASE_URL}/api/${API_VERSION}/licenses/pending-activation`,
+  personCurrentLicenses: (personId: string) => `${API_BASE_URL}/api/${API_VERSION}/licenses/person/${personId}/current`,
+  personAllLicenses: (personId: string) => `${API_BASE_URL}/api/${API_VERSION}/licenses/person/${personId}`,
+  activateLicense: (applicationId: string) => `${API_BASE_URL}/api/${API_VERSION}/licenses/activate/${applicationId}`,
+  suspendLicense: (licenseId: string) => `${API_BASE_URL}/api/${API_VERSION}/licenses/${licenseId}/suspend`,
+  reactivateLicense: (licenseId: string) => `${API_BASE_URL}/api/${API_VERSION}/licenses/${licenseId}/reactivate`,
+  renewLicense: (licenseId: string) => `${API_BASE_URL}/api/${API_VERSION}/licenses/${licenseId}/renew`,
+  licenseStatistics: `${API_BASE_URL}/api/${API_VERSION}/licenses/statistics/summary`,
+  licensePreview: (applicationId: string) => `${API_BASE_URL}/api/${API_VERSION}/licenses/applications/${applicationId}/preview`,
 } as const;
 
 /**
