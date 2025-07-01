@@ -153,17 +153,25 @@ class ApplicationService {
 
   async uploadBiometricData(
     applicationId: string,
-    file: File,
-    dataType: 'PHOTO' | 'SIGNATURE' | 'FINGERPRINT',
-    captureMethod?: string
-  ): Promise<{ status: string; message: string }> {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('data_type', dataType);
-    if (captureMethod) {
-      formData.append('capture_method', captureMethod);
-    }
-
+    formData: FormData
+  ): Promise<{
+    status: string;
+    message: string;
+    data_type: string;
+    file_info: {
+      filename: string;
+      file_size: number;
+      dimensions: string;
+      format: string;
+    };
+    processing_info: {
+      iso_compliant: boolean;
+      cropped_automatically: boolean;
+      enhanced: boolean;
+      compression_ratio: number;
+    };
+    original_filename: string;
+  }> {
     // Use fetch directly for file uploads as the api helper may not handle FormData properly
     const url = API_ENDPOINTS.applicationBiometrics(applicationId);
     const response = await fetch(url, {
@@ -175,7 +183,8 @@ class ApplicationService {
     });
 
     if (!response.ok) {
-      throw new Error(`Upload failed: ${response.statusText}`);
+      const errorData = await response.json();
+      throw new Error(errorData.detail || `Upload failed: ${response.statusText}`);
     }
 
     return await response.json();

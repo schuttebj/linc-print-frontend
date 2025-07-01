@@ -35,6 +35,7 @@ import {
   MenuItem,
   FormControlLabel,
   Checkbox,
+  Switch,
   TextField,
   FormGroup,
   List,
@@ -940,49 +941,6 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           </FormControl>
         </Grid>
 
-        {/* Hold for Printing Checkbox */}
-        <Grid item xs={12}>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={formData.is_on_hold || false}
-                onChange={(e) => handleApplicationDetailsChange('is_on_hold', e.target.checked)}
-              />
-            }
-            label="Hold application (do not send to printer)"
-          />
-          <Typography variant="caption" display="block" color="text.secondary">
-            Check this to prevent the license from being sent to the printer. 
-            This is useful when you want to accumulate multiple categories before printing a combined card.
-          </Typography>
-        </Grid>
-
-        {/* Urgency Settings */}
-        <Grid item xs={12}>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={formData.is_urgent}
-                onChange={(e) => handleApplicationDetailsChange('is_urgent', e.target.checked)}
-              />
-            }
-            label="Urgent Processing Required"
-          />
-          {formData.is_urgent && (
-            <TextField
-              fullWidth
-              label="Urgency Reason"
-              value={formData.urgency_reason || ''}
-              onChange={(e) => handleApplicationDetailsChange('urgency_reason', e.target.value)}
-              placeholder="Please explain why urgent processing is required"
-              multiline
-              rows={2}
-              sx={{ mt: 2 }}
-              required
-            />
-          )}
-        </Grid>
-
         {/* Vehicle Transmission Type */}
         <Grid item xs={12} md={6}>
           <FormControl fullWidth required>
@@ -1002,21 +960,82 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         </Grid>
 
         {/* Modified Vehicle for Disability */}
-        <Grid item xs={12} md={6}>
-          <FormControlLabel
-            control={
-              <Checkbox
+        <Grid item xs={12}>
+          <Card variant="outlined" sx={{ p: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  Modified Vehicle for Disability
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Check if the applicant drives a specially modified vehicle due to a disability
+                </Typography>
+              </Box>
+              <Switch
                 checked={formData.modified_vehicle_for_disability}
                 onChange={(e) => handleApplicationDetailsChange('modified_vehicle_for_disability', e.target.checked)}
+                color="primary"
               />
-            }
-            label="Modified vehicle for disability"
-            sx={{ mt: 2 }}
-          />
-          <Typography variant="caption" display="block" color="text.secondary">
-            Check if the applicant drives a specially modified vehicle due to a disability
-          </Typography>
+            </Box>
+          </Card>
         </Grid>
+
+        {/* Hold for Printing */}
+        <Grid item xs={12}>
+          <Card variant="outlined" sx={{ p: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  Hold Application (Do Not Send to Printer)
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Prevent the license from being sent to the printer. 
+                  Useful when accumulating multiple categories before printing a combined card.
+                </Typography>
+              </Box>
+              <Switch
+                checked={formData.is_on_hold || false}
+                onChange={(e) => handleApplicationDetailsChange('is_on_hold', e.target.checked)}
+                color="warning"
+              />
+            </Box>
+          </Card>
+        </Grid>
+
+        {/* Urgency Settings */}
+        <Grid item xs={12}>
+          <Card variant="outlined" sx={{ p: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: formData.is_urgent ? 2 : 0 }}>
+              <Box>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  Urgent Processing Required
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Request expedited processing for this application
+                </Typography>
+              </Box>
+              <Switch
+                checked={formData.is_urgent}
+                onChange={(e) => handleApplicationDetailsChange('is_urgent', e.target.checked)}
+                color="error"
+              />
+            </Box>
+            {formData.is_urgent && (
+              <TextField
+                fullWidth
+                label="Urgency Reason"
+                value={formData.urgency_reason || ''}
+                onChange={(e) => handleApplicationDetailsChange('urgency_reason', e.target.value)}
+                placeholder="Please explain why urgent processing is required"
+                multiline
+                rows={2}
+                required
+              />
+            )}
+          </Card>
+        </Grid>
+
+
 
         {/* Temporary License Option */}
         <Grid item xs={12}>
@@ -1126,6 +1145,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
             setFormData(prev => ({ ...prev, medical_information: medicalInfo }));
           }}
           disabled={false}
+          isRequired={isMedicalMandatory}
         />
       </Box>
     );
@@ -1134,7 +1154,6 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
   // Requirements Step with comprehensive validation and document uploads
   const renderRequirementsStep = () => {
     const age = formData.person?.birth_date ? calculateAge(formData.person.birth_date) : 0;
-    const requiresMedical = age >= 65 || ['C', 'D', 'E'].includes(formData.license_category);
     const requiresParentalConsent = age < 18;
     const requiresExternalLicense = prerequisiteCheck?.requiresExternal && !prerequisiteCheck.canProceed;
 
@@ -1142,7 +1161,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
       <Box>
         <Typography variant="h6" gutterBottom>Requirements Check</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Complete required document uploads and license verification
+          Verify age requirements, upload required documents, and confirm license prerequisites
         </Typography>
 
         <Grid container spacing={3}>
@@ -1158,73 +1177,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
             </Grid>
           )}
 
-          {/* Medical Certificate */}
-          {requiresMedical && (
-            <Grid item xs={12}>
-              <Card>
-                <CardHeader 
-                  title="Medical Certificate" 
-                  subheader={age >= 65 ? "Required for applicants 65+" : "Required for commercial licenses (C, D, E)"} 
-                />
-                <CardContent>
-                  <Box sx={{ mb: 2 }}>
-                    <input
-                      accept="image/*,.pdf"
-                      style={{ display: 'none' }}
-                      id="medical-certificate-upload"
-                      type="file"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          setFormData(prev => ({ 
-                            ...prev, 
-                            medical_certificate_file: file,
-                            medical_certificate_verified_manually: false // Reset manual verification if file uploaded
-                          }));
-                        }
-                      }}
-                    />
-                    <label htmlFor="medical-certificate-upload">
-                      <Button variant="outlined" component="span" startIcon={<AssignmentIcon />}>
-                        {formData.medical_certificate_file ? 'Change Medical Certificate' : 'Upload Medical Certificate'}
-                      </Button>
-                    </label>
-                    {formData.medical_certificate_file && (
-                      <Typography variant="body2" sx={{ mt: 1 }}>
-                        File: {formData.medical_certificate_file.name}
-                      </Typography>
-                    )}
-                  </Box>
-                  
-                  <Divider sx={{ my: 2 }} />
-                  
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={formData.medical_certificate_verified_manually || false}
-                        onChange={(e) => {
-                          setFormData(prev => ({ 
-                            ...prev, 
-                            medical_certificate_verified_manually: e.target.checked,
-                            medical_certificate_file: e.target.checked ? undefined : prev.medical_certificate_file // Clear file if manual verification
-                          }));
-                        }}
-                      />
-                    }
-                    label="Medical certificate verified manually (no upload needed)"
-                    sx={{ color: 'primary.main' }}
-                  />
-                  
-                  <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                    {formData.medical_certificate_verified_manually ? 
-                      'I have manually verified the medical certificate presented by the applicant' :
-                      'Upload medical certificate dated within the last 6 months, or check manual verification'
-                    }
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          )}
+
 
           {/* Parental Consent */}
           {requiresParentalConsent && (
@@ -1278,14 +1231,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
             />
           </Grid>
 
-          {/* Medical Information Section */}
-          <Grid item xs={12}>
-            <MedicalInformationSection
-              value={formData.medical_information}
-              onChange={(data) => setFormData(prev => ({ ...prev, medical_information: data }))}
-              disabled={false}
-            />
-          </Grid>
+
 
           {/* Additional Notes */}
           <Grid item xs={12}>
@@ -1311,16 +1257,53 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
 
   // Biometric Step with photo, signature, and fingerprint capture
   const renderBiometricStep = () => {
-    const handlePhotoCapture = (photoFile: File) => {
-      setFormData(prev => ({
-        ...prev,
-        biometric_data: {
-          ...prev.biometric_data,
-          photo: photoFile
+    const handlePhotoCapture = async (photoFile: File) => {
+      if (!currentApplication?.id) {
+        setError('Application must be saved before uploading biometric data');
+        return;
+      }
+
+      try {
+        setSaving(true);
+        
+        // Upload to backend for ISO processing
+        const formData = new FormData();
+        formData.append('file', photoFile);
+        formData.append('data_type', 'PHOTO');
+        formData.append('capture_method', 'WEBCAM');
+
+        const response = await applicationService.uploadBiometricData(
+          currentApplication.id,
+          formData
+        );
+
+        if (response.status === 'success') {
+          // Store the processed photo info
+          setFormData(prev => ({
+            ...prev,
+            biometric_data: {
+              ...prev.biometric_data,
+              photo: {
+                filename: response.file_info.filename,
+                file_size: response.file_info.file_size,
+                dimensions: response.file_info.dimensions,
+                format: response.file_info.format,
+                iso_compliant: response.processing_info.iso_compliant,
+                processed_url: `/api/v1/files/biometric/${currentApplication.id}/${response.file_info.filename}`
+              }
+            }
+          }));
+          
+          setSuccess(`Photo processed successfully! ${response.processing_info.iso_compliant ? 'ISO-compliant and' : ''} ready for license production.`);
+          setTimeout(() => setSuccess(''), 3000);
         }
-      }));
-      setSuccess('Photo captured successfully!');
-      setTimeout(() => setSuccess(''), 3000);
+      } catch (error) {
+        console.error('Error uploading photo:', error);
+        setError('Failed to process photo. Please try again.');
+        setTimeout(() => setError(''), 5000);
+      } finally {
+        setSaving(false);
+      }
     };
 
     const handleSignatureCapture = (signatureFile: File) => {
@@ -1361,9 +1344,9 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         )}
 
         <Grid container spacing={3}>
-          {/* Photo Capture */}
-          <Grid item xs={12}>
-            <Card>
+          {/* Photo and Signature Capture - Side by Side */}
+          <Grid item xs={12} md={6}>
+            <Card sx={{ height: '100%' }}>
               <CardHeader
                 title={
                   <Box display="flex" alignItems="center" gap={1}>
@@ -1374,123 +1357,150 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                     )}
                   </Box>
                 }
-                subheader="ISO-compliant photo for license card production"
+                subheader="ISO-compliant photo (3:4 ratio)"
               />
               <CardContent>
-                <Grid container spacing={3} alignItems="center">
-                  <Grid item xs={12} md={6}>
-                    <WebcamCapture
-                      onPhotoCapture={handlePhotoCapture}
-                      disabled={saving}
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    {formData.biometric_data.photo ? (
-                      <Box>
-                        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
-                          Captured Photo Preview
-                        </Typography>
-                        <Box
-                          sx={{
-                            border: '2px solid',
-                            borderColor: 'success.main',
-                            borderRadius: 2,
-                            p: 1,
-                            mb: 2,
-                            backgroundColor: 'background.paper'
-                          }}
-                        >
-                          <img
-                            src={URL.createObjectURL(formData.biometric_data.photo)}
-                            alt="License Photo Preview"
-                            style={{
-                              width: '100%',
-                              maxWidth: '200px',
-                              height: 'auto',
-                              borderRadius: '4px'
-                            }}
-                          />
-                        </Box>
-                        <Alert severity="success">
-                          <Typography variant="body2">
-                            <strong>Photo Status:</strong> Captured successfully
-                            <br />
-                            <strong>File:</strong> {formData.biometric_data.photo.name}
-                            <br />
-                            <strong>Size:</strong> {Math.round(formData.biometric_data.photo.size / 1024)} KB
-                          </Typography>
-                        </Alert>
-                      </Box>
-                    ) : (
-                      <Alert severity="info">
-                        <Typography variant="body2">
-                          <strong>Required:</strong> License photo is required for card production.
-                          Use the webcam capture to take an ISO-compliant photo.
-                        </Typography>
-                      </Alert>
-                    )}
-                  </Grid>
-                </Grid>
+                <Box sx={{ mb: 2 }}>
+                  <WebcamCapture
+                    onPhotoCapture={handlePhotoCapture}
+                    disabled={saving}
+                  />
+                </Box>
+                
+                {formData.biometric_data.photo ? (
+                  <Box>
+                    <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
+                      {(formData.biometric_data.photo as any).iso_compliant ? 'ISO-Processed Preview' : 'Photo Preview'}
+                    </Typography>
+                    <Box
+                      sx={{
+                        border: '2px solid',
+                        borderColor: 'success.main',
+                        borderRadius: 2,
+                        p: 1,
+                        mb: 2,
+                        backgroundColor: 'background.paper',
+                        display: 'flex',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <img
+                        src={
+                          (formData.biometric_data.photo as any).processed_url
+                            ? (formData.biometric_data.photo as any).processed_url
+                            : URL.createObjectURL(formData.biometric_data.photo as File)
+                        }
+                        alt="License Photo Preview"
+                        style={{
+                          width: '150px',
+                          height: '200px',
+                          objectFit: 'cover',
+                          borderRadius: '4px'
+                        }}
+                      />
+                    </Box>
+                    <Alert severity="success" sx={{ fontSize: '0.875rem' }}>
+                      <Typography variant="body2">
+                        {(formData.biometric_data.photo as any).iso_compliant 
+                          ? `✓ Photo processed to ISO standards (${(formData.biometric_data.photo as any).dimensions || '300x400px'})`
+                          : '✓ Photo captured successfully'
+                        }
+                      </Typography>
+                    </Alert>
+                  </Box>
+                ) : (
+                  <Alert severity="info">
+                    <Typography variant="body2">
+                      <strong>Required:</strong> Position face within guides and capture photo.
+                      Image will be automatically cropped to ISO standards.
+                    </Typography>
+                  </Alert>
+                )}
               </CardContent>
             </Card>
           </Grid>
 
-          {/* Signature Capture */}
-          <Grid item xs={12}>
-            <Box sx={{ position: 'relative' }}>
-              {formData.biometric_data.signature && (
-                <Chip 
-                  label="Signature Captured" 
-                  color="success" 
-                  size="small" 
-                  icon={<CheckCircleIcon />}
-                  sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}
+          <Grid item xs={12} md={6}>
+            <Card sx={{ height: '100%' }}>
+              <CardHeader
+                title={
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <CreateIcon />
+                    <Typography variant="h6">Digital Signature</Typography>
+                    {formData.biometric_data.signature && (
+                      <Chip label="Captured" color="success" size="small" icon={<CheckCircleIcon />} />
+                    )}
+                  </Box>
+                }
+                subheader="Applicant's digital signature"
+              />
+              <CardContent sx={{ '& > *': { minHeight: '200px' } }}>
+                <SignatureCapture
+                  onSignatureCapture={handleSignatureCapture}
+                  disabled={saving}
                 />
-              )}
-                             <SignatureCapture
-                 onSignatureCapture={handleSignatureCapture}
-                 disabled={saving}
-               />
-            </Box>
+                {formData.biometric_data.signature && (
+                  <Alert severity="success" sx={{ mt: 2, fontSize: '0.875rem' }}>
+                    <Typography variant="body2">
+                      ✓ Signature captured successfully
+                    </Typography>
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
           </Grid>
 
           {/* Fingerprint Capture */}
           <Grid item xs={12}>
-            <Box sx={{ position: 'relative' }}>
-              {formData.biometric_data.fingerprint && (
-                <Chip 
-                  label="Fingerprint Captured" 
-                  color="success" 
-                  size="small" 
-                  icon={<CheckCircleIcon />}
-                  sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}
+            <Card>
+              <CardHeader
+                title={
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <FingerprintIcon />
+                    <Typography variant="h6">Fingerprint Scan</Typography>
+                    {formData.biometric_data.fingerprint && (
+                      <Chip label="Captured" color="success" size="small" icon={<CheckCircleIcon />} />
+                    )}
+                  </Box>
+                }
+                subheader="Digital fingerprint for enhanced security (optional)"
+              />
+              <CardContent>
+                <FingerprintCapture
+                  onFingerprintCapture={handleFingerprintCapture}
+                  disabled={saving}
                 />
-              )}
-                             <FingerprintCapture
-                 onFingerprintCapture={handleFingerprintCapture}
-                 disabled={saving}
-               />
-            </Box>
+                {formData.biometric_data.fingerprint && (
+                  <Alert severity="success" sx={{ mt: 2 }}>
+                    <Typography variant="body2">
+                      ✓ Fingerprint captured successfully for enhanced security
+                    </Typography>
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
           </Grid>
 
-          {/* Biometric Summary */}
+          {/* Completion Status */}
           <Grid item xs={12}>
-            <Card variant="outlined">
-              <CardHeader title="Biometric Data Summary" />
+            <Card variant="outlined" sx={{ bgcolor: 'background.default' }}>
               <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Biometric Data Status
+                </Typography>
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={4}>
                     <Box display="flex" alignItems="center" gap={1}>
-                      <CameraIcon color={formData.biometric_data.photo ? "success" : "disabled"} />
-                      <Typography variant="body2">
-                        Photo: {formData.biometric_data.photo ? "✓ Captured" : "⚠ Required"}
+                      <CameraIcon color={formData.biometric_data.photo ? "success" : "error"} />
+                      <Typography variant="body1" sx={{ fontWeight: formData.biometric_data.photo ? 600 : 400 }}>
+                        Photo: {formData.biometric_data.photo ? "✓ Captured (ISO)" : "⚠ Required"}
                       </Typography>
                     </Box>
                   </Grid>
                   <Grid item xs={12} sm={4}>
                     <Box display="flex" alignItems="center" gap={1}>
                       <CreateIcon color={formData.biometric_data.signature ? "success" : "action"} />
-                      <Typography variant="body2">
+                      <Typography variant="body1" sx={{ fontWeight: formData.biometric_data.signature ? 600 : 400 }}>
                         Signature: {formData.biometric_data.signature ? "✓ Captured" : "Optional"}
                       </Typography>
                     </Box>
@@ -1498,18 +1508,27 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                   <Grid item xs={12} sm={4}>
                     <Box display="flex" alignItems="center" gap={1}>
                       <FingerprintIcon color={formData.biometric_data.fingerprint ? "success" : "action"} />
-                      <Typography variant="body2">
+                      <Typography variant="body1" sx={{ fontWeight: formData.biometric_data.fingerprint ? 600 : 400 }}>
                         Fingerprint: {formData.biometric_data.fingerprint ? "✓ Captured" : "Optional"}
                       </Typography>
                     </Box>
                   </Grid>
                 </Grid>
                 
-                {!formData.biometric_data.photo && (
-                  <Alert severity="warning" sx={{ mt: 2 }}>
+                {!formData.biometric_data.photo ? (
+                  <Alert severity="error" sx={{ mt: 2 }}>
                     <Typography variant="body2">
-                      <strong>Note:</strong> License photo is required to proceed to the next step.
-                      Signature and fingerprint are optional but recommended for enhanced security.
+                      <strong>Action Required:</strong> License photo must be captured to proceed. 
+                      The photo will be automatically cropped to ISO standards (3:4 ratio).
+                    </Typography>
+                  </Alert>
+                ) : (
+                  <Alert severity="success" sx={{ mt: 2 }}>
+                    <Typography variant="body2">
+                      <strong>Ready to proceed!</strong> All required biometric data has been captured.
+                      {!formData.biometric_data.signature && !formData.biometric_data.fingerprint && 
+                        " Consider adding signature and fingerprint for enhanced security."
+                      }
                     </Typography>
                   </Alert>
                 )}
@@ -1731,7 +1750,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                     <ListItemText 
                       primary="License Photo"
                       secondary={formData.biometric_data.photo ? 
-                        `Captured: ${formData.biometric_data.photo.name}` : 
+                        `Captured: ${(formData.biometric_data.photo as any).filename || (formData.biometric_data.photo as File).name || 'Photo file'}` : 
                         "Required for license card production"
                       }
                     />

@@ -21,6 +21,8 @@ import {
   MenuItem,
   InputLabel,
   Alert,
+  Chip,
+  Switch,
   Divider,
   Button
 } from '@mui/material';
@@ -38,12 +40,14 @@ interface MedicalInformationSectionProps {
   value: MedicalInformation | null;
   onChange: (data: MedicalInformation) => void;
   disabled?: boolean;
+  isRequired?: boolean;
 }
 
 const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
   value,
   onChange,
-  disabled = false
+  disabled = false,
+  isRequired = false
 }) => {
   // Initialize empty data if null
   const medicalData: MedicalInformation = value || {
@@ -354,17 +358,37 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
       </Card>
 
       {/* Medical Certificate Section */}
-      <Card>
+      <Card sx={{ border: isRequired ? '2px solid' : '1px solid', borderColor: isRequired ? 'warning.main' : 'divider' }}>
         <CardHeader 
           title={
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <MedicalIcon />
               <Typography variant="h6">Medical Certificate</Typography>
+              {isRequired && (
+                <Chip 
+                  label="REQUIRED" 
+                  color="warning" 
+                  size="small" 
+                  sx={{ fontWeight: 600 }}
+                />
+              )}
             </Box>
           }
-          subheader="Medical practitioner assessment and certification"
+          subheader={isRequired 
+            ? "Medical assessment is mandatory for this application" 
+            : "Optional medical assessment (recommended for all drivers)"
+          }
         />
         <CardContent>
+          {isRequired && (
+            <Alert severity="warning" sx={{ mb: 3 }}>
+              <Typography variant="body2">
+                <strong>Medical assessment is required</strong> for this application type. 
+                All fields must be completed to proceed.
+              </Typography>
+            </Alert>
+          )}
+
           <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
               <TextField
@@ -373,6 +397,7 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
                 value={medicalData.medical_practitioner_name}
                 onChange={(e) => updateMedicalInfo('medical_practitioner_name', e.target.value)}
                 disabled={disabled}
+                required={isRequired}
               />
             </Grid>
 
@@ -383,6 +408,7 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
                 value={medicalData.practice_number}
                 onChange={(e) => updateMedicalInfo('practice_number', e.target.value)}
                 disabled={disabled}
+                required={isRequired}
               />
             </Grid>
 
@@ -393,6 +419,7 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
                 value={medicalData.examined_by}
                 onChange={(e) => updateMedicalInfo('examined_by', e.target.value)}
                 disabled={disabled}
+                required={isRequired}
               />
             </Grid>
 
@@ -405,20 +432,32 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
                 onChange={(e) => updateMedicalInfo('examination_date', e.target.value)}
                 InputLabelProps={{ shrink: true }}
                 disabled={disabled}
+                required={isRequired}
               />
             </Grid>
 
             <Grid item xs={12}>
-              <FormControlLabel
-                control={
-                  <Checkbox
+              <Card variant="outlined" sx={{ p: 2, bgcolor: isRequired ? 'warning.50' : 'background.default' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Box>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                      Medical Certificate Passed
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {isRequired 
+                        ? "Required: Confirm medical certificate has been passed"
+                        : "Optional: Check if medical certificate has been obtained"
+                      }
+                    </Typography>
+                  </Box>
+                  <Switch
                     checked={medicalData.medical_certificate_passed}
                     onChange={(e) => updateMedicalInfo('medical_certificate_passed', e.target.checked)}
                     disabled={disabled}
+                    color={isRequired ? "warning" : "primary"}
                   />
-                }
-                label="Medical certificate passed"
-              />
+                </Box>
+              </Card>
             </Grid>
 
             {/* Medical Certificate Upload */}
@@ -439,7 +478,7 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
                     startIcon={<UploadIcon />}
                     disabled={disabled}
                   >
-                    {medicalData.medical_certificate_file ? 'Change Medical Certificate' : 'Upload Medical Certificate'}
+                    {medicalData.medical_certificate_file ? 'Change Medical Certificate' : 'Upload Medical Certificate (Optional)'}
                   </Button>
                 </label>
                 {medicalData.medical_certificate_file && (
@@ -453,16 +492,18 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
             {/* Overall Medical Clearance */}
             <Grid item xs={12}>
               <Alert 
-                severity={medicalData.medical_clearance ? "success" : "warning"}
+                severity={medicalData.medical_clearance ? "success" : (isRequired ? "error" : "info")}
                 sx={{ mt: 2 }}
               >
                 <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                  Medical Clearance: {medicalData.medical_clearance ? "APPROVED" : "PENDING"}
+                  Medical Clearance: {medicalData.medical_clearance ? "APPROVED" : (isRequired ? "REQUIRED" : "OPTIONAL")}
                 </Typography>
                 <Typography variant="body2">
                   {medicalData.medical_clearance 
                     ? "Medical assessment completed and approved for driving"
-                    : "Complete all medical requirements for clearance"
+                    : isRequired 
+                      ? "Complete all required medical assessments to proceed"
+                      : "Medical assessment available but not required for this application"
                   }
                 </Typography>
               </Alert>

@@ -235,8 +235,17 @@ export interface ApplicationLookups {
 }
 
 // Biometric capture data
+export interface ProcessedBiometricFile {
+  filename: string;
+  file_size: number;
+  dimensions: string;
+  format: string;
+  iso_compliant?: boolean;
+  processed_url: string;
+}
+
 export interface BiometricCaptureData {
-  photo?: File;
+  photo?: File | ProcessedBiometricFile;
   signature?: File;
   fingerprint?: File;
 }
