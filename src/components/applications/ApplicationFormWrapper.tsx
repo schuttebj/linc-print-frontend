@@ -162,18 +162,21 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     is_on_hold: false,
     parent_application_id: undefined,
     replacement_reason: '',
-    // Updated: License verification data
+    selected_location_id: undefined,
+    // Vehicle type selection
+    vehicle_transmission: 'MANUAL',
+    modified_vehicle_for_disability: false,
+    // License verification data
     license_verification: null,
+    // Document upload fields
+    medical_certificate_file: undefined,
+    medical_certificate_verified_manually: false,
+    parental_consent_file: undefined,
     // Medical information for comprehensive health assessment
     medical_information: null,
     biometric_data: {},
     selected_fees: [],
     total_amount: 0,
-    selected_location_id: undefined,
-    // Document upload fields
-    medical_certificate_file: undefined,
-    medical_certificate_verified_manually: false,
-    parental_consent_file: undefined,
     notes: ''
   });
 
@@ -234,7 +237,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     },
     {
       label: 'Application Details',
-      description: 'Select license category and application type',
+      description: 'Select license category and vehicle type',
       icon: <AssignmentIcon />,
       component: 'application'
     },
@@ -243,6 +246,12 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
       description: 'Verify documents and prerequisites',
       icon: <VerifiedUserIcon />,
       component: 'requirements'
+    },
+    {
+      label: 'Medical Assessment',
+      description: 'Complete vision test and medical clearance',
+      icon: <VerifiedUserIcon />,
+      component: 'medical'
     },
     {
       label: 'Biometric Data',
@@ -620,30 +629,6 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           }
         }
 
-        // Medical information validation
-        if (!formData.medical_information) {
-          errors.push('Medical assessment is required for all license applications');
-        } else {
-          // Check if vision test is complete
-          if (!formData.medical_information.vision_test.visual_acuity_binocular) {
-            errors.push('Visual acuity test (binocular vision) is required');
-          }
-          
-          // Check if medical clearance has been determined
-          if (formData.medical_information.medical_clearance === undefined || formData.medical_information.medical_clearance === null) {
-            errors.push('Medical clearance status must be determined');
-          }
-          
-          // Check if examiner details are provided
-          if (!formData.medical_information.examined_by?.trim()) {
-            errors.push('Medical examiner name is required');
-          }
-          
-          if (!formData.medical_information.examination_date) {
-            errors.push('Medical examination date is required');
-          }
-        }
-
         // License verification validation
         if (formData.license_verification?.requires_verification) {
           errors.push('External licenses require verification before proceeding');
@@ -662,14 +647,44 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         }
         break;
 
-      case 3: // Biometric
+      case 3: // Medical Assessment
+        const age = formData.person?.birth_date ? calculateAge(formData.person.birth_date) : 0;
+        const isMedicalMandatory = age >= 60 || ['C', 'D', 'E'].includes(formData.license_category);
+
+        if (isMedicalMandatory) {
+          if (!formData.medical_information) {
+            errors.push('Medical assessment is mandatory for this application');
+          } else {
+            // Check if vision test is complete
+            if (!formData.medical_information.vision_test.visual_acuity_binocular) {
+              errors.push('Visual acuity test (binocular vision) is required');
+            }
+            
+            // Check if medical clearance has been determined
+            if (formData.medical_information.medical_clearance === undefined || formData.medical_information.medical_clearance === null) {
+              errors.push('Medical clearance status must be determined');
+            }
+            
+            // Check if examiner details are provided
+            if (!formData.medical_information.examined_by?.trim()) {
+              errors.push('Medical examiner name is required');
+            }
+            
+            if (!formData.medical_information.examination_date) {
+              errors.push('Medical examination date is required');
+            }
+          }
+        }
+        break;
+
+      case 4: // Biometric
         // Photo is required for license production
         if (!formData.biometric_data.photo) {
           errors.push('License photo is required for card production');
         }
         break;
 
-      case 4: // Review
+      case 5: // Review
         if (formData.selected_fees.length === 0) {
           errors.push('Please select applicable fees');
         }
@@ -784,10 +799,13 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
       case 2: // Requirements
         return renderRequirementsStep();
 
-      case 3: // Biometric
+      case 3: // Medical Assessment
+        return renderMedicalStep();
+
+      case 4: // Biometric
         return renderBiometricStep();
 
-      case 4: // Review
+      case 5: // Review
         return renderReviewStep();
 
       default:
@@ -965,6 +983,41 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           )}
         </Grid>
 
+        {/* Vehicle Transmission Type */}
+        <Grid item xs={12} md={6}>
+          <FormControl fullWidth required>
+            <InputLabel>Vehicle Transmission</InputLabel>
+            <Select
+              value={formData.vehicle_transmission}
+              onChange={(e) => handleApplicationDetailsChange('vehicle_transmission', e.target.value)}
+              label="Vehicle Transmission"
+            >
+              <MenuItem value="MANUAL">Manual Transmission</MenuItem>
+              <MenuItem value="AUTOMATIC">Automatic Transmission</MenuItem>
+            </Select>
+            <Typography variant="caption" sx={{ mt: 1, color: 'text.secondary' }}>
+              This will be noted as a restriction on the license if automatic is selected
+            </Typography>
+          </FormControl>
+        </Grid>
+
+        {/* Modified Vehicle for Disability */}
+        <Grid item xs={12} md={6}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={formData.modified_vehicle_for_disability}
+                onChange={(e) => handleApplicationDetailsChange('modified_vehicle_for_disability', e.target.checked)}
+              />
+            }
+            label="Modified vehicle for disability"
+            sx={{ mt: 2 }}
+          />
+          <Typography variant="caption" display="block" color="text.secondary">
+            Check if the applicant drives a specially modified vehicle due to a disability
+          </Typography>
+        </Grid>
+
         {/* Temporary License Option */}
         <Grid item xs={12}>
           <FormControlLabel
@@ -1046,6 +1099,37 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
       </Grid>
     </Box>
   );
+
+  // Medical Assessment Step
+  const renderMedicalStep = () => {
+    const age = formData.person?.birth_date ? calculateAge(formData.person.birth_date) : 0;
+    const isMedicalMandatory = age >= 60 || ['C', 'D', 'E'].includes(formData.license_category);
+
+    return (
+      <Box>
+        <Typography variant="h6" gutterBottom>Medical Assessment</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          Complete vision test and medical clearance requirements
+        </Typography>
+
+        {isMedicalMandatory && (
+          <Alert severity="info" sx={{ mb: 3 }}>
+            <Typography variant="body2">
+              <strong>Medical assessment is mandatory</strong> for {age >= 60 ? 'applicants 60+ years' : 'commercial license categories (C, D, E)'}
+            </Typography>
+          </Alert>
+        )}
+
+        <MedicalInformationSection
+          value={formData.medical_information}
+          onChange={(medicalInfo) => {
+            setFormData(prev => ({ ...prev, medical_information: medicalInfo }));
+          }}
+          disabled={false}
+        />
+      </Box>
+    );
+  };
 
   // Requirements Step with comprehensive validation and document uploads
   const renderRequirementsStep = () => {
@@ -1293,7 +1377,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                 subheader="ISO-compliant photo for license card production"
               />
               <CardContent>
-                <Grid container spacing={2} alignItems="center">
+                <Grid container spacing={3} alignItems="center">
                   <Grid item xs={12} md={6}>
                     <WebcamCapture
                       onPhotoCapture={handlePhotoCapture}
@@ -1302,15 +1386,41 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                   </Grid>
                   <Grid item xs={12} md={6}>
                     {formData.biometric_data.photo ? (
-                      <Alert severity="success">
-                        <Typography variant="body2">
-                          <strong>Photo Status:</strong> Captured successfully
-                          <br />
-                          <strong>File:</strong> {formData.biometric_data.photo.name}
-                          <br />
-                          <strong>Size:</strong> {Math.round(formData.biometric_data.photo.size / 1024)} KB
+                      <Box>
+                        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
+                          Captured Photo Preview
                         </Typography>
-                      </Alert>
+                        <Box
+                          sx={{
+                            border: '2px solid',
+                            borderColor: 'success.main',
+                            borderRadius: 2,
+                            p: 1,
+                            mb: 2,
+                            backgroundColor: 'background.paper'
+                          }}
+                        >
+                          <img
+                            src={URL.createObjectURL(formData.biometric_data.photo)}
+                            alt="License Photo Preview"
+                            style={{
+                              width: '100%',
+                              maxWidth: '200px',
+                              height: 'auto',
+                              borderRadius: '4px'
+                            }}
+                          />
+                        </Box>
+                        <Alert severity="success">
+                          <Typography variant="body2">
+                            <strong>Photo Status:</strong> Captured successfully
+                            <br />
+                            <strong>File:</strong> {formData.biometric_data.photo.name}
+                            <br />
+                            <strong>Size:</strong> {Math.round(formData.biometric_data.photo.size / 1024)} KB
+                          </Typography>
+                        </Alert>
+                      </Box>
                     ) : (
                       <Alert severity="info">
                         <Typography variant="body2">

@@ -246,15 +246,11 @@ export interface MedicalInformation {
   // Vision Tests
   vision_test: VisionTestData;
   
-  // Medical Conditions
-  medical_conditions: MedicalConditions;
-  
-  // Physical Assessments
-  physical_assessment: PhysicalAssessment;
-  
   // Medical Certificates
   medical_certificate_file?: File;
-  eye_test_certificate_file?: File;
+  medical_certificate_passed: boolean;
+  medical_practitioner_name?: string;
+  practice_number?: string;
   
   // Overall medical clearance
   medical_clearance: boolean;
@@ -265,31 +261,23 @@ export interface MedicalInformation {
 }
 
 export interface VisionTestData {
-  // Visual Acuity
-  visual_acuity_right_eye: string; // e.g., "20/20", "6/6"
+  // Visual Acuity (6/12 minimum each eye, or 6/9 if one eye impaired)
+  visual_acuity_right_eye: string; // e.g., "6/6", "6/9", "6/12"
   visual_acuity_left_eye: string;
   visual_acuity_binocular: string;
-  corrective_lenses_required: boolean;
-  corrective_lenses_type?: 'GLASSES' | 'CONTACT_LENSES' | 'BOTH';
   
-  // Color Vision
-  color_vision_normal: boolean;
-  color_vision_deficiency_type?: 'RED_GREEN' | 'BLUE_YELLOW' | 'COMPLETE' | 'NONE';
+  // Visual Field (120 degrees horizontal minimum, or 115 degrees if one eye impaired)
+  visual_field_horizontal_degrees: number;
+  visual_field_left_eye_degrees?: number;
+  visual_field_right_eye_degrees?: number;
   
-  // Visual Field
-  visual_field_normal: boolean;
-  visual_field_horizontal_degrees?: number;
-  visual_field_vertical_degrees?: number;
-  visual_field_defects?: string;
-  
-  // Night Vision & Contrast
-  night_vision_adequate: boolean;
-  contrast_sensitivity_adequate: boolean;
-  glare_sensitivity_issues: boolean;
+  // Corrective Lenses
+  corrective_lenses_required: boolean; // Auto-determined based on acuity
+  corrective_lenses_already_used: boolean; // Manual check by clerk
   
   // Overall vision status
-  vision_meets_standards: boolean;
-  vision_restrictions: string[];
+  vision_meets_standards: boolean; // Auto-determined
+  vision_restrictions: string[]; // Auto-populated based on requirements
 }
 
 export interface MedicalConditions {
@@ -419,6 +407,9 @@ export interface ApplicationFormData {
   replacement_reason?: string;
   // Location selection for admin users
   selected_location_id?: string;
+  // Vehicle type selection
+  vehicle_transmission: 'AUTOMATIC' | 'MANUAL';
+  modified_vehicle_for_disability: boolean;
   
   // Step 3: Requirements
   medical_certificate_file?: File;
@@ -427,13 +418,14 @@ export interface ApplicationFormData {
   existing_license_verified?: boolean;
   // Updated: License verification data
   license_verification: LicenseVerificationData | null;
-  // Medical information for comprehensive health assessment
+  
+  // Step 4: Medical Information
   medical_information: MedicalInformation | null;
   
-  // Step 4: Biometric Data
+  // Step 5: Biometric Data
   biometric_data: BiometricCaptureData;
   
-  // Step 5: Review & Submit
+  // Step 6: Review & Submit
   selected_fees: FeeStructure[];
   total_amount: number;
   notes?: string;

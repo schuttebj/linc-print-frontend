@@ -1,11 +1,11 @@
 /**
  * MedicalInformationSection Component
  * 
- * Captures comprehensive medical information for driver's license applications
- * including vision tests, medical conditions, and physical assessments.
+ * Simplified medical assessment for driver's license applications
+ * Focuses on vision tests and medical clearance only
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -17,28 +17,22 @@ import {
   FormControl,
   FormControlLabel,
   Checkbox,
-  RadioGroup,
-  Radio,
   Select,
   MenuItem,
   InputLabel,
   Alert,
-  Chip,
   Divider,
-  Stack,
-  Button,
-  FormHelperText
+  Button
 } from '@mui/material';
 import {
   Visibility as VisionIcon,
   LocalHospital as MedicalIcon,
-  Accessibility as AccessibilityIcon,
   CloudUpload as UploadIcon,
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon
 } from '@mui/icons-material';
 
-import { MedicalInformation, VisionTestData, MedicalConditions, PhysicalAssessment } from '../../types';
+import { MedicalInformation, VisionTestData } from '../../types';
 
 interface MedicalInformationSectionProps {
   value: MedicalInformation | null;
@@ -51,280 +45,278 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
   onChange,
   disabled = false
 }) => {
-  const [medicalCertificateUploaded, setMedicalCertificateUploaded] = useState(false);
-  const [eyeTestCertificateUploaded, setEyeTestCertificateUploaded] = useState(false);
-
   // Initialize empty data if null
   const medicalData: MedicalInformation = value || {
     vision_test: {
       visual_acuity_right_eye: '',
       visual_acuity_left_eye: '',
       visual_acuity_binocular: '',
+      visual_field_horizontal_degrees: 0,
+      visual_field_left_eye_degrees: 0,
+      visual_field_right_eye_degrees: 0,
       corrective_lenses_required: false,
-      color_vision_normal: true,
-      visual_field_normal: true,
-      night_vision_adequate: true,
-      contrast_sensitivity_adequate: true,
-      glare_sensitivity_issues: false,
-      vision_meets_standards: true,
+      corrective_lenses_already_used: false,
+      vision_meets_standards: false,
       vision_restrictions: []
     },
-    medical_conditions: {
-      epilepsy: false,
-      epilepsy_controlled: false,
-      mental_illness: false,
-      mental_illness_controlled: false,
-      heart_condition: false,
-      blood_pressure_controlled: true,
-      diabetes: false,
-      diabetes_controlled: false,
-      alcohol_dependency: false,
-      drug_dependency: false,
-      substance_treatment_program: false,
-      fainting_episodes: false,
-      dizziness_episodes: false,
-      muscle_coordination_issues: false,
-      medications_affecting_driving: false,
-      current_medications: [],
-      medically_fit_to_drive: true,
-      conditions_requiring_monitoring: []
-    },
-    physical_assessment: {
-      hearing_adequate: true,
-      hearing_aid_required: false,
-      limb_disabilities: false,
-      adaptive_equipment_required: false,
-      adaptive_equipment_type: [],
-      mobility_impairment: false,
-      mobility_aid_required: false,
-      reaction_time_adequate: true,
-      physically_fit_to_drive: true,
-      physical_restrictions: []
-    },
-    medical_clearance: true,
+    medical_certificate_file: undefined,
+    medical_certificate_passed: false,
+    medical_practitioner_name: '',
+    practice_number: '',
+    medical_clearance: false,
     medical_restrictions: [],
     examined_by: '',
     examination_date: ''
   };
 
+  // Vision test standards validation
+  const validateVisionStandards = (visionTest: VisionTestData): { passes: boolean; restrictions: string[] } => {
+    const restrictions: string[] = [];
+    
+    // Parse visual acuity values (format: "6/X")
+    const parseAcuity = (acuity: string): number => {
+      if (!acuity || !acuity.includes('/')) return 0;
+      const [, denominator] = acuity.split('/');
+      return parseInt(denominator) || 0;
+    };
+
+    const rightAcuity = parseAcuity(visionTest.visual_acuity_right_eye);
+    const leftAcuity = parseAcuity(visionTest.visual_acuity_left_eye);
+    
+    // Standard: 6/12 minimum each eye, or 6/9 if one eye impaired
+    const isRightEyeGood = rightAcuity > 0 && rightAcuity <= 12;
+    const isLeftEyeGood = leftAcuity > 0 && leftAcuity <= 12;
+    
+    let visionPasses = false;
+    
+    if (isRightEyeGood && isLeftEyeGood) {
+      // Both eyes meet 6/12 standard
+      visionPasses = true;
+    } else if ((isRightEyeGood && leftAcuity <= 9) || (isLeftEyeGood && rightAcuity <= 9)) {
+      // One eye meets 6/9 standard with other impaired
+      visionPasses = true;
+    } else if (!isRightEyeGood && leftAcuity <= 9) {
+      // Left eye meets 6/9 with right eye blind/impaired
+      visionPasses = true;
+      restrictions.push('Right eye vision impaired - restricted to daytime driving');
+    } else if (!isLeftEyeGood && rightAcuity <= 9) {
+      // Right eye meets 6/9 with left eye blind/impaired
+      visionPasses = true;
+      restrictions.push('Left eye vision impaired - restricted to daytime driving');
+    }
+
+    // Visual field validation: 120 degrees minimum, or 115 degrees if one eye impaired
+    const totalFieldDegrees = visionTest.visual_field_horizontal_degrees;
+    const leftFieldDegrees = visionTest.visual_field_left_eye_degrees || 0;
+    const rightFieldDegrees = visionTest.visual_field_right_eye_degrees || 0;
+    
+    if (totalFieldDegrees >= 120) {
+      // Meets standard field requirement
+    } else if (totalFieldDegrees >= 115 && (leftFieldDegrees < 70 || rightFieldDegrees < 70)) {
+      // Meets reduced requirement with one eye impaired
+      restrictions.push('Reduced visual field - restricted to familiar routes');
+    } else {
+      visionPasses = false;
+    }
+
+    // Corrective lenses requirement
+    if (visionTest.corrective_lenses_required || visionTest.corrective_lenses_already_used) {
+      restrictions.push('Must wear corrective lenses while driving');
+    }
+
+    return { passes: visionPasses, restrictions };
+  };
+
   const updateVisionTest = (field: keyof VisionTestData, value: any) => {
+    const updatedVisionTest = {
+      ...medicalData.vision_test,
+      [field]: value
+    };
+
+    // Auto-validate vision standards
+    const validation = validateVisionStandards(updatedVisionTest);
+    updatedVisionTest.vision_meets_standards = validation.passes;
+    updatedVisionTest.vision_restrictions = validation.restrictions;
+
+    // Auto-determine corrective lenses requirement
+    if (field === 'visual_acuity_right_eye' || field === 'visual_acuity_left_eye') {
+      const rightAcuity = parseFloat(updatedVisionTest.visual_acuity_right_eye.split('/')[1] || '0');
+      const leftAcuity = parseFloat(updatedVisionTest.visual_acuity_left_eye.split('/')[1] || '0');
+      
+      // Require corrective lenses if either eye is worse than 6/12 without correction
+      updatedVisionTest.corrective_lenses_required = rightAcuity > 12 || leftAcuity > 12;
+    }
+
     const updated = {
       ...medicalData,
-      vision_test: {
-        ...medicalData.vision_test,
-        [field]: value
-      }
+      vision_test: updatedVisionTest,
+      medical_clearance: validation.passes && medicalData.medical_certificate_passed,
+      medical_restrictions: [...validation.restrictions]
     };
     
-    // Auto-determine if vision meets standards
-    if (field === 'visual_acuity_binocular' || field === 'color_vision_normal' || field === 'visual_field_normal') {
-      updated.vision_test.vision_meets_standards = 
-        updated.vision_test.visual_acuity_binocular !== '' &&
-        updated.vision_test.color_vision_normal &&
-        updated.vision_test.visual_field_normal;
+    onChange(updated);
+  };
+
+  const updateMedicalInfo = (field: keyof MedicalInformation, value: any) => {
+    const updated = {
+      ...medicalData,
+      [field]: value
+    };
+
+    // Update overall medical clearance
+    if (field === 'medical_certificate_passed') {
+      updated.medical_clearance = value && medicalData.vision_test.vision_meets_standards;
     }
     
     onChange(updated);
   };
 
-  const updateMedicalConditions = (field: keyof MedicalConditions, value: any) => {
-    const updated = {
-      ...medicalData,
-      medical_conditions: {
-        ...medicalData.medical_conditions,
-        [field]: value
-      }
-    };
-    
-    // Auto-determine medical fitness
-    const conditions = updated.medical_conditions;
-    updated.medical_conditions.medically_fit_to_drive = 
-      (!conditions.epilepsy || conditions.epilepsy_controlled) &&
-      (!conditions.diabetes || conditions.diabetes_controlled) &&
-      (!conditions.mental_illness || conditions.mental_illness_controlled) &&
-      !conditions.alcohol_dependency &&
-      !conditions.drug_dependency &&
-      !conditions.fainting_episodes &&
-      !conditions.muscle_coordination_issues;
-    
-    onChange(updated);
-  };
-
-  const updatePhysicalAssessment = (field: keyof PhysicalAssessment, value: any) => {
-    const updated = {
-      ...medicalData,
-      physical_assessment: {
-        ...medicalData.physical_assessment,
-        [field]: value
-      }
-    };
-    
-    // Auto-determine physical fitness
-    const physical = updated.physical_assessment;
-    updated.physical_assessment.physically_fit_to_drive = 
-      physical.hearing_adequate &&
-      physical.reaction_time_adequate &&
-      (!physical.limb_disabilities || physical.adaptive_equipment_required);
-    
-    onChange(updated);
-  };
-
-  const updateMedicalClearance = () => {
-    const overall_clearance = 
-      medicalData.vision_test.vision_meets_standards &&
-      medicalData.medical_conditions.medically_fit_to_drive &&
-      medicalData.physical_assessment.physically_fit_to_drive;
-    
-    onChange({
-      ...medicalData,
-      medical_clearance: overall_clearance
-    });
-  };
-
-  // Auto-update overall clearance when component data changes
-  React.useEffect(() => {
-    updateMedicalClearance();
-  }, [
-    medicalData.vision_test.vision_meets_standards,
-    medicalData.medical_conditions.medically_fit_to_drive,
-    medicalData.physical_assessment.physically_fit_to_drive
-  ]);
-
-  const handleFileUpload = (fileType: 'medical' | 'eye_test') => (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (fileType === 'medical') {
-        setMedicalCertificateUploaded(true);
-        onChange({
-          ...medicalData,
-          medical_certificate_file: file
-        });
-      } else {
-        setEyeTestCertificateUploaded(true);
-        onChange({
-          ...medicalData,
-          eye_test_certificate_file: file
-        });
-      }
+      updateMedicalInfo('medical_certificate_file', file);
     }
   };
 
   return (
     <Box>
-      <Typography variant="h6" gutterBottom>
-        Medical Assessment
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Complete medical assessment is required for all driver's license applications to ensure road safety.
-      </Typography>
-
-      {/* Overall Medical Status */}
-      <Alert 
-        severity={medicalData.medical_clearance ? 'success' : 'warning'} 
-        sx={{ mb: 3 }}
-        icon={medicalData.medical_clearance ? <CheckCircleIcon /> : <WarningIcon />}
-      >
-        {medicalData.medical_clearance 
-          ? 'Medical assessment indicates fitness to drive'
-          : 'Medical assessment requires attention - restrictions may apply'
-        }
-      </Alert>
-
       {/* Vision Test Section */}
       <Card sx={{ mb: 3 }}>
         <CardHeader 
           title={
-            <Box display="flex" alignItems="center" gap={1}>
-              <VisionIcon color="primary" />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <VisionIcon />
               <Typography variant="h6">Vision Test</Typography>
             </Box>
           }
-          subheader="Visual acuity, color vision, and field tests"
+          subheader="Complete visual acuity and field tests according to Madagascar standards"
         />
         <CardContent>
           <Grid container spacing={3}>
-            {/* Visual Acuity */}
+            {/* Visual Acuity Tests */}
             <Grid item xs={12}>
-              <Typography variant="subtitle2" gutterBottom>Visual Acuity</Typography>
+              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
+                Visual Acuity (Required: 6/12 minimum each eye)
+              </Typography>
             </Grid>
+            
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth>
+                <InputLabel>Right Eye Visual Acuity</InputLabel>
+                <Select
+                  value={medicalData.vision_test.visual_acuity_right_eye}
+                  onChange={(e) => updateVisionTest('visual_acuity_right_eye', e.target.value)}
+                  label="Right Eye Visual Acuity"
+                  disabled={disabled}
+                >
+                  <MenuItem value="6/6">6/6 (Perfect)</MenuItem>
+                  <MenuItem value="6/9">6/9 (Good)</MenuItem>
+                  <MenuItem value="6/12">6/12 (Minimum Standard)</MenuItem>
+                  <MenuItem value="6/18">6/18 (Below Standard)</MenuItem>
+                  <MenuItem value="6/24">6/24 (Poor)</MenuItem>
+                  <MenuItem value="6/60">6/60 (Very Poor)</MenuItem>
+                  <MenuItem value="BLIND">Blind</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth>
+                <InputLabel>Left Eye Visual Acuity</InputLabel>
+                <Select
+                  value={medicalData.vision_test.visual_acuity_left_eye}
+                  onChange={(e) => updateVisionTest('visual_acuity_left_eye', e.target.value)}
+                  label="Left Eye Visual Acuity"
+                  disabled={disabled}
+                >
+                  <MenuItem value="6/6">6/6 (Perfect)</MenuItem>
+                  <MenuItem value="6/9">6/9 (Good)</MenuItem>
+                  <MenuItem value="6/12">6/12 (Minimum Standard)</MenuItem>
+                  <MenuItem value="6/18">6/18 (Below Standard)</MenuItem>
+                  <MenuItem value="6/24">6/24 (Poor)</MenuItem>
+                  <MenuItem value="6/60">6/60 (Very Poor)</MenuItem>
+                  <MenuItem value="BLIND">Blind</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth>
+                <InputLabel>Binocular Visual Acuity</InputLabel>
+                <Select
+                  value={medicalData.vision_test.visual_acuity_binocular}
+                  onChange={(e) => updateVisionTest('visual_acuity_binocular', e.target.value)}
+                  label="Binocular Visual Acuity"
+                  disabled={disabled}
+                >
+                  <MenuItem value="6/6">6/6 (Perfect)</MenuItem>
+                  <MenuItem value="6/9">6/9 (Good)</MenuItem>
+                  <MenuItem value="6/12">6/12 (Minimum Standard)</MenuItem>
+                  <MenuItem value="6/18">6/18 (Below Standard)</MenuItem>
+                  <MenuItem value="6/24">6/24 (Poor)</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+
+            {/* Visual Field Tests */}
+            <Grid item xs={12}>
+              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, mt: 2 }}>
+                Visual Field (Required: 120° horizontal minimum)
+              </Typography>
+            </Grid>
+
             <Grid item xs={12} md={4}>
               <TextField
                 fullWidth
-                label="Right Eye"
-                placeholder="e.g., 20/20, 6/6"
-                value={medicalData.vision_test.visual_acuity_right_eye}
-                onChange={(e) => updateVisionTest('visual_acuity_right_eye', e.target.value)}
+                type="number"
+                label="Total Horizontal Visual Field (degrees)"
+                value={medicalData.vision_test.visual_field_horizontal_degrees}
+                onChange={(e) => updateVisionTest('visual_field_horizontal_degrees', parseInt(e.target.value) || 0)}
+                inputProps={{ min: 0, max: 180 }}
                 disabled={disabled}
-                helperText="Snellen chart reading"
               />
             </Grid>
+
             <Grid item xs={12} md={4}>
               <TextField
                 fullWidth
-                label="Left Eye"
-                placeholder="e.g., 20/20, 6/6"
-                value={medicalData.vision_test.visual_acuity_left_eye}
-                onChange={(e) => updateVisionTest('visual_acuity_left_eye', e.target.value)}
+                type="number"
+                label="Left Eye Field (degrees)"
+                value={medicalData.vision_test.visual_field_left_eye_degrees}
+                onChange={(e) => updateVisionTest('visual_field_left_eye_degrees', parseInt(e.target.value) || 0)}
+                inputProps={{ min: 0, max: 90 }}
                 disabled={disabled}
-                helperText="Snellen chart reading"
               />
             </Grid>
+
             <Grid item xs={12} md={4}>
               <TextField
                 fullWidth
-                label="Binocular Vision"
-                placeholder="e.g., 20/20, 6/6"
-                value={medicalData.vision_test.visual_acuity_binocular}
-                onChange={(e) => updateVisionTest('visual_acuity_binocular', e.target.value)}
+                type="number"
+                label="Right Eye Field (degrees)"
+                value={medicalData.vision_test.visual_field_right_eye_degrees}
+                onChange={(e) => updateVisionTest('visual_field_right_eye_degrees', parseInt(e.target.value) || 0)}
+                inputProps={{ min: 0, max: 90 }}
                 disabled={disabled}
-                helperText="Both eyes together"
               />
             </Grid>
 
             {/* Corrective Lenses */}
             <Grid item xs={12}>
+              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, mt: 2 }}>
+                Corrective Lenses
+              </Typography>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
               <FormControlLabel
                 control={
                   <Checkbox
                     checked={medicalData.vision_test.corrective_lenses_required}
-                    onChange={(e) => updateVisionTest('corrective_lenses_required', e.target.checked)}
-                    disabled={disabled}
+                    disabled={true} // Auto-determined
                   />
                 }
-                label="Corrective lenses required for driving"
-              />
-            </Grid>
-
-            {medicalData.vision_test.corrective_lenses_required && (
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Corrective Lens Type</InputLabel>
-                  <Select
-                    value={medicalData.vision_test.corrective_lenses_type || ''}
-                    onChange={(e) => updateVisionTest('corrective_lenses_type', e.target.value)}
-                    disabled={disabled}
-                  >
-                    <MenuItem value="GLASSES">Glasses</MenuItem>
-                    <MenuItem value="CONTACT_LENSES">Contact Lenses</MenuItem>
-                    <MenuItem value="BOTH">Both</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-            )}
-
-            <Grid item xs={12}><Divider /></Grid>
-
-            {/* Color Vision & Field Tests */}
-            <Grid item xs={12} md={6}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={medicalData.vision_test.color_vision_normal}
-                    onChange={(e) => updateVisionTest('color_vision_normal', e.target.checked)}
-                    disabled={disabled}
-                  />
-                }
-                label="Color vision normal"
+                label="Corrective lenses required (auto-determined)"
               />
             </Grid>
 
@@ -332,296 +324,66 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
               <FormControlLabel
                 control={
                   <Checkbox
-                    checked={medicalData.vision_test.visual_field_normal}
-                    onChange={(e) => updateVisionTest('visual_field_normal', e.target.checked)}
+                    checked={medicalData.vision_test.corrective_lenses_already_used}
+                    onChange={(e) => updateVisionTest('corrective_lenses_already_used', e.target.checked)}
                     disabled={disabled}
                   />
                 }
-                label="Visual field normal"
+                label="Already uses corrective lenses"
               />
             </Grid>
 
-            <Grid item xs={12} md={6}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={medicalData.vision_test.night_vision_adequate}
-                    onChange={(e) => updateVisionTest('night_vision_adequate', e.target.checked)}
-                    disabled={disabled}
-                  />
-                }
-                label="Night vision adequate"
-              />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={medicalData.vision_test.glare_sensitivity_issues}
-                    onChange={(e) => updateVisionTest('glare_sensitivity_issues', e.target.checked)}
-                    disabled={disabled}
-                  />
-                }
-                label="Glare sensitivity issues"
-              />
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
-
-      {/* Medical Conditions Section */}
-      <Card sx={{ mb: 3 }}>
-        <CardHeader 
-          title={
-            <Box display="flex" alignItems="center" gap={1}>
-              <MedicalIcon color="primary" />
-              <Typography variant="h6">Medical Conditions</Typography>
-            </Box>
-          }
-          subheader="Medical history that may affect driving ability"
-        />
-        <CardContent>
-          <Grid container spacing={2}>
-            {/* Neurological Conditions */}
+            {/* Vision Standards Result */}
             <Grid item xs={12}>
-              <Typography variant="subtitle2" gutterBottom>Neurological Conditions</Typography>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={medicalData.medical_conditions.epilepsy}
-                    onChange={(e) => updateMedicalConditions('epilepsy', e.target.checked)}
-                    disabled={disabled}
-                  />
-                }
-                label="Epilepsy or seizure disorder"
-              />
-            </Grid>
-
-            {medicalData.medical_conditions.epilepsy && (
-              <>
-                <Grid item xs={12} md={6}>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={medicalData.medical_conditions.epilepsy_controlled}
-                        onChange={(e) => updateMedicalConditions('epilepsy_controlled', e.target.checked)}
-                        disabled={disabled}
-                      />
-                    }
-                    label="Epilepsy controlled with medication"
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Last seizure occurrence"
-                    type="date"
-                    value={medicalData.medical_conditions.seizures_last_occurrence || ''}
-                    onChange={(e) => updateMedicalConditions('seizures_last_occurrence', e.target.value)}
-                    disabled={disabled}
-                    InputLabelProps={{ shrink: true }}
-                  />
-                </Grid>
-              </>
-            )}
-
-            <Grid item xs={12}><Divider /></Grid>
-
-            {/* Other Conditions */}
-            <Grid item xs={12}>
-              <Typography variant="subtitle2" gutterBottom>Other Medical Conditions</Typography>
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={medicalData.medical_conditions.diabetes}
-                    onChange={(e) => updateMedicalConditions('diabetes', e.target.checked)}
-                    disabled={disabled}
-                  />
-                }
-                label="Diabetes"
-              />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={medicalData.medical_conditions.heart_condition}
-                    onChange={(e) => updateMedicalConditions('heart_condition', e.target.checked)}
-                    disabled={disabled}
-                  />
-                }
-                label="Heart condition"
-              />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={medicalData.medical_conditions.fainting_episodes}
-                    onChange={(e) => updateMedicalConditions('fainting_episodes', e.target.checked)}
-                    disabled={disabled}
-                  />
-                }
-                label="Fainting episodes"
-              />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={medicalData.medical_conditions.dizziness_episodes}
-                    onChange={(e) => updateMedicalConditions('dizziness_episodes', e.target.checked)}
-                    disabled={disabled}
-                  />
-                }
-                label="Frequent dizziness"
-              />
+              <Alert 
+                severity={medicalData.vision_test.vision_meets_standards ? "success" : "error"}
+                sx={{ mt: 2 }}
+              >
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  Vision Standards: {medicalData.vision_test.vision_meets_standards ? "PASS" : "FAIL"}
+                </Typography>
+                {medicalData.vision_test.vision_restrictions.length > 0 && (
+                  <Typography variant="body2">
+                    Restrictions: {medicalData.vision_test.vision_restrictions.join(', ')}
+                  </Typography>
+                )}
+              </Alert>
             </Grid>
           </Grid>
         </CardContent>
       </Card>
 
-      {/* Physical Assessment Section */}
-      <Card sx={{ mb: 3 }}>
-        <CardHeader 
-          title={
-            <Box display="flex" alignItems="center" gap={1}>
-              <AccessibilityIcon color="primary" />
-              <Typography variant="h6">Physical Assessment</Typography>
-            </Box>
-          }
-          subheader="Physical capabilities and any required accommodations"
-        />
-        <CardContent>
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={6}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={medicalData.physical_assessment.hearing_adequate}
-                    onChange={(e) => updatePhysicalAssessment('hearing_adequate', e.target.checked)}
-                    disabled={disabled}
-                  />
-                }
-                label="Hearing adequate"
-              />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={medicalData.physical_assessment.hearing_aid_required}
-                    onChange={(e) => updatePhysicalAssessment('hearing_aid_required', e.target.checked)}
-                    disabled={disabled}
-                  />
-                }
-                label="Hearing aid required"
-              />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={medicalData.physical_assessment.limb_disabilities}
-                    onChange={(e) => updatePhysicalAssessment('limb_disabilities', e.target.checked)}
-                    disabled={disabled}
-                  />
-                }
-                label="Limb disabilities"
-              />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={medicalData.physical_assessment.adaptive_equipment_required}
-                    onChange={(e) => updatePhysicalAssessment('adaptive_equipment_required', e.target.checked)}
-                    disabled={disabled}
-                  />
-                }
-                label="Adaptive equipment required"
-              />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={medicalData.physical_assessment.reaction_time_adequate}
-                    onChange={(e) => updatePhysicalAssessment('reaction_time_adequate', e.target.checked)}
-                    disabled={disabled}
-                  />
-                }
-                label="Reaction time adequate"
-              />
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
-
-      {/* Medical Certificates Upload */}
+      {/* Medical Certificate Section */}
       <Card>
         <CardHeader 
           title={
-            <Box display="flex" alignItems="center" gap={1}>
-              <UploadIcon color="primary" />
-              <Typography variant="h6">Medical Certificates</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <MedicalIcon />
+              <Typography variant="h6">Medical Certificate</Typography>
             </Box>
           }
-          subheader="Upload required medical documentation"
+          subheader="Medical practitioner assessment and certification"
         />
         <CardContent>
           <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
-              <Button
-                component="label"
-                variant="outlined"
-                startIcon={medicalCertificateUploaded ? <CheckCircleIcon /> : <UploadIcon />}
+              <TextField
                 fullWidth
-                sx={{ height: 56 }}
-                color={medicalCertificateUploaded ? 'success' : 'primary'}
+                label="Medical Practitioner Name"
+                value={medicalData.medical_practitioner_name}
+                onChange={(e) => updateMedicalInfo('medical_practitioner_name', e.target.value)}
                 disabled={disabled}
-              >
-                {medicalCertificateUploaded ? 'Medical Certificate Uploaded' : 'Upload Medical Certificate'}
-                <input
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  hidden
-                  onChange={handleFileUpload('medical')}
-                />
-              </Button>
+              />
             </Grid>
 
             <Grid item xs={12} md={6}>
-              <Button
-                component="label"
-                variant="outlined"
-                startIcon={eyeTestCertificateUploaded ? <CheckCircleIcon /> : <UploadIcon />}
+              <TextField
                 fullWidth
-                sx={{ height: 56 }}
-                color={eyeTestCertificateUploaded ? 'success' : 'primary'}
+                label="Practice Number"
+                value={medicalData.practice_number}
+                onChange={(e) => updateMedicalInfo('practice_number', e.target.value)}
                 disabled={disabled}
-              >
-                {eyeTestCertificateUploaded ? 'Eye Test Certificate Uploaded' : 'Upload Eye Test Certificate'}
-                <input
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  hidden
-                  onChange={handleFileUpload('eye_test')}
-                />
-              </Button>
+              />
             </Grid>
 
             <Grid item xs={12} md={6}>
@@ -629,35 +391,81 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
                 fullWidth
                 label="Examined By"
                 value={medicalData.examined_by}
-                onChange={(e) => onChange({ ...medicalData, examined_by: e.target.value })}
+                onChange={(e) => updateMedicalInfo('examined_by', e.target.value)}
                 disabled={disabled}
-                placeholder="Medical practitioner name"
               />
             </Grid>
 
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                label="Examination Date"
                 type="date"
-                value={medicalData.examination_date || ''}
-                onChange={(e) => onChange({ ...medicalData, examination_date: e.target.value })}
-                disabled={disabled}
+                label="Examination Date"
+                value={medicalData.examination_date}
+                onChange={(e) => updateMedicalInfo('examination_date', e.target.value)}
                 InputLabelProps={{ shrink: true }}
+                disabled={disabled}
               />
             </Grid>
 
             <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Medical Notes"
-                multiline
-                rows={3}
-                value={medicalData.medical_notes || ''}
-                onChange={(e) => onChange({ ...medicalData, medical_notes: e.target.value })}
-                disabled={disabled}
-                placeholder="Additional medical notes or restrictions..."
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={medicalData.medical_certificate_passed}
+                    onChange={(e) => updateMedicalInfo('medical_certificate_passed', e.target.checked)}
+                    disabled={disabled}
+                  />
+                }
+                label="Medical certificate passed"
               />
+            </Grid>
+
+            {/* Medical Certificate Upload */}
+            <Grid item xs={12}>
+              <Box sx={{ mb: 2 }}>
+                <input
+                  accept="image/*,.pdf"
+                  style={{ display: 'none' }}
+                  id="medical-certificate-upload"
+                  type="file"
+                  onChange={handleFileUpload}
+                  disabled={disabled}
+                />
+                <label htmlFor="medical-certificate-upload">
+                  <Button 
+                    variant="outlined" 
+                    component="span" 
+                    startIcon={<UploadIcon />}
+                    disabled={disabled}
+                  >
+                    {medicalData.medical_certificate_file ? 'Change Medical Certificate' : 'Upload Medical Certificate'}
+                  </Button>
+                </label>
+                {medicalData.medical_certificate_file && (
+                  <Typography variant="body2" sx={{ mt: 1 }}>
+                    File: {medicalData.medical_certificate_file.name}
+                  </Typography>
+                )}
+              </Box>
+            </Grid>
+
+            {/* Overall Medical Clearance */}
+            <Grid item xs={12}>
+              <Alert 
+                severity={medicalData.medical_clearance ? "success" : "warning"}
+                sx={{ mt: 2 }}
+              >
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  Medical Clearance: {medicalData.medical_clearance ? "APPROVED" : "PENDING"}
+                </Typography>
+                <Typography variant="body2">
+                  {medicalData.medical_clearance 
+                    ? "Medical assessment completed and approved for driving"
+                    : "Complete all medical requirements for clearance"
+                  }
+                </Typography>
+              </Alert>
             </Grid>
           </Grid>
         </CardContent>
