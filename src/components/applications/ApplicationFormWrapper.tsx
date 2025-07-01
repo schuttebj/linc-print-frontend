@@ -942,7 +942,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         </Grid>
 
         {/* Vehicle Transmission Type */}
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12}>
           <FormControl fullWidth required>
             <InputLabel>Vehicle Transmission</InputLabel>
             <Select
@@ -1039,18 +1039,23 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
 
         {/* Temporary License Option */}
         <Grid item xs={12}>
-          <FormControlLabel
-            control={
-              <Checkbox
+          <Card variant="outlined" sx={{ p: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  Issue Temporary License
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Temporary license can be issued independently of application status ({DEFAULT_TEMPORARY_LICENSE_DAYS} days validity)
+                </Typography>
+              </Box>
+              <Switch
                 checked={formData.is_temporary_license}
                 onChange={(e) => handleApplicationDetailsChange('is_temporary_license', e.target.checked)}
+                color="info"
               />
-            }
-            label="Issue Temporary License"
-          />
-          <Typography variant="caption" display="block" color="text.secondary">
-            Temporary license can be issued independently of application status ({DEFAULT_TEMPORARY_LICENSE_DAYS} days validity)
-          </Typography>
+            </Box>
+          </Card>
         </Grid>
 
         {/* Prerequisite Check Display */}
@@ -1258,23 +1263,31 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
   // Biometric Step with photo, signature, and fingerprint capture
   const renderBiometricStep = () => {
     const handlePhotoCapture = async (photoFile: File) => {
-      if (!currentApplication?.id) {
-        setError('Application must be saved before uploading biometric data');
-        return;
-      }
-
       try {
         setSaving(true);
         
+        // Ensure application is saved as draft first
+        let applicationId = currentApplication?.id;
+        if (!applicationId) {
+          console.log('No application ID found, saving draft first...');
+          await handleSaveDraft();
+          applicationId = currentApplication?.id;
+          
+          if (!applicationId) {
+            setError('Could not create application draft. Please ensure all required fields are complete.');
+            return;
+          }
+        }
+
         // Upload to backend for ISO processing
-        const formData = new FormData();
-        formData.append('file', photoFile);
-        formData.append('data_type', 'PHOTO');
-        formData.append('capture_method', 'WEBCAM');
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', photoFile);
+        uploadFormData.append('data_type', 'PHOTO');
+        uploadFormData.append('capture_method', 'WEBCAM');
 
         const response = await applicationService.uploadBiometricData(
-          currentApplication.id,
-          formData
+          applicationId,
+          uploadFormData
         );
 
         if (response.status === 'success') {
@@ -1289,7 +1302,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                 dimensions: response.file_info.dimensions,
                 format: response.file_info.format,
                 iso_compliant: response.processing_info.iso_compliant,
-                processed_url: `/api/v1/files/biometric/${currentApplication.id}/${response.file_info.filename}`
+                processed_url: `/api/v1/files/biometric/${applicationId}/${response.file_info.filename}`
               }
             }
           }));
@@ -1299,7 +1312,17 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         }
       } catch (error) {
         console.error('Error uploading photo:', error);
-        setError('Failed to process photo. Please try again.');
+        
+        // Store photo locally as fallback
+        setFormData(prev => ({
+          ...prev,
+          biometric_data: {
+            ...prev.biometric_data,
+            photo: photoFile
+          }
+        }));
+        
+        setError('Backend processing unavailable. Photo saved locally - will be processed on submission.');
         setTimeout(() => setError(''), 5000);
       } finally {
         setSaving(false);
@@ -1432,7 +1455,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                     )}
                   </Box>
                 }
-                subheader="Applicant's digital signature"
+                subheader="Draw your signature using mouse or touch"
               />
               <CardContent sx={{ '& > *': { minHeight: '200px' } }}>
                 <SignatureCapture

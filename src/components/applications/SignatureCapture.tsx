@@ -189,81 +189,70 @@ const SignatureCapture: React.FC<SignatureCaptureProps> = ({
   };
 
   return (
-    <Card>
-      <CardHeader 
-        title={
-          <Box display="flex" alignItems="center" gap={1}>
-            <CreateIcon />
-            <Typography variant="h6">Digital Signature</Typography>
-          </Box>
-        }
-        subheader="Draw your signature using mouse or touch"
-      />
-      <CardContent>
-        <Box sx={{ mb: 2 }}>
-          <Paper
-            elevation={2}
-            sx={{
-              display: 'inline-block',
-              border: '2px solid #e0e0e0',
-              borderRadius: 1,
-              overflow: 'hidden',
-              cursor: disabled ? 'not-allowed' : 'crosshair'
+    <>
+      <Box sx={{ mb: 2 }}>
+        <Paper
+          elevation={2}
+          sx={{
+            display: 'inline-block',
+            border: '2px solid #e0e0e0',
+            borderRadius: 1,
+            overflow: 'hidden',
+            cursor: disabled ? 'not-allowed' : 'crosshair'
+          }}
+        >
+          <canvas
+            ref={canvasRef}
+            style={{
+              display: 'block',
+              maxWidth: '100%',
+              height: 'auto',
+              backgroundColor: '#ffffff'
             }}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          />
+        </Paper>
+      </Box>
+
+      <Grid container spacing={2}>
+        <Grid item xs={12} sm={4}>
+          <Button
+            fullWidth
+            variant="outlined"
+            startIcon={<ClearIcon />}
+            onClick={clearSignature}
+            disabled={disabled || !hasSignature}
           >
-            <canvas
-              ref={canvasRef}
-              style={{
-                display: 'block',
-                maxWidth: '100%',
-                height: 'auto',
-                backgroundColor: '#ffffff'
-              }}
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-            />
-          </Paper>
-        </Box>
-
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={4}>
-            <Button
-              fullWidth
-              variant="outlined"
-              startIcon={<ClearIcon />}
-              onClick={clearSignature}
-              disabled={disabled || !hasSignature}
-            >
-              Clear
-            </Button>
-          </Grid>
-          <Grid item xs={12} sm={8}>
-            <Button
-              fullWidth
-              variant="contained"
-              startIcon={<SaveIcon />}
-              onClick={saveSignature}
-              disabled={disabled || !hasSignature}
-            >
-              Save Signature
-            </Button>
-          </Grid>
+            Clear
+          </Button>
         </Grid>
+        <Grid item xs={12} sm={8}>
+          <Button
+            fullWidth
+            variant="contained"
+            startIcon={<SaveIcon />}
+            onClick={saveSignature}
+            disabled={disabled || !hasSignature}
+          >
+            Save Signature
+          </Button>
+        </Grid>
+      </Grid>
 
-        <Alert severity="info" sx={{ mt: 2 }}>
-          <Typography variant="body2">
-            <TouchIcon sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'middle' }} />
-            <strong>Instructions:</strong> Use your mouse to draw your signature in the box above. 
-            On touch devices, use your finger to sign. Click "Clear" to start over or "Save Signature" when finished.
-          </Typography>
-        </Alert>
-      </CardContent>
-    </Card>
+      <Alert severity="info" sx={{ mt: 2 }}>
+        <Typography variant="body2">
+          <TouchIcon sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'middle' }} />
+          <strong>Instructions:</strong> Use your mouse to draw your signature in the box above. 
+          On touch devices, use your finger to sign. Click "Clear" to start over or "Save Signature" when finished.
+        </Typography>
+      </Alert>
+    </>
   );
 };
 
