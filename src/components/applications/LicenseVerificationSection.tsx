@@ -50,7 +50,8 @@ import {
   LicenseVerificationData,
   LicenseCategory,
   LicenseStatus,
-  LICENSE_CATEGORY_RULES
+  LICENSE_CATEGORY_RULES,
+  ApplicationType
 } from '../../types';
 import type { Location } from '../../services/lookupService';
 import { applicationService } from '../../services/applicationService';
@@ -61,6 +62,7 @@ interface LicenseVerificationSectionProps {
   onChange: (data: LicenseVerificationData | null) => void;
   locations: Location[];
   currentLicenseCategory: LicenseCategory | null; // Current category being applied for
+  currentApplicationType: ApplicationType | null; // Current application type being applied for
   disabled?: boolean;
 }
 
@@ -70,6 +72,7 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
   onChange,
   locations,
   currentLicenseCategory,
+  currentApplicationType,
   disabled = false
 }) => {
   const [loading, setLoading] = useState(false);
@@ -202,6 +205,14 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
   };
 
   const removeExternalLicense = (index: number) => {
+    // Only allow deletion of manually added licenses
+    // Auto-populated licenses should not have delete buttons
+    const license = licenseData.external_licenses[index];
+    if (license.is_auto_populated) {
+      console.warn('Attempted to delete auto-populated license - this should not be possible');
+      return;
+    }
+    
     const updatedExternalLicenses = licenseData.external_licenses.filter((_, i) => i !== index);
     
     updateLicenseData({
@@ -327,10 +338,29 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
     // Create external license entries for missing categories
     const autoPopulatedLicenses = missingCategories.map((category, index) => {
       const tempId = `auto-${Date.now()}-${index}`;
+      
+      // Determine correct license type based on what's needed
+      let licenseType: 'LEARNERS_PERMIT' | 'DRIVERS_LICENSE';
+      
+      if (currentApplicationType === ApplicationType.NEW_LICENSE) {
+        // For NEW_LICENSE applications, check if the missing category allows learner's permit
+        const categoryRules = LICENSE_CATEGORY_RULES[category];
+        if (categoryRules.allows_learners_permit) {
+          // Base categories (A', A, B) need learner's permit first
+          licenseType = 'LEARNERS_PERMIT';
+        } else {
+          // Advanced categories (C, D, E) need existing driver's license
+          licenseType = 'DRIVERS_LICENSE';
+        }
+      } else {
+        // For other application types (RENEWAL, REPLACEMENT), they need existing driver's license
+        licenseType = 'DRIVERS_LICENSE';
+      }
+      
       return {
         id: tempId,
         license_number: '',
-        license_type: 'DRIVERS_LICENSE' as const,
+        license_type: licenseType,
         categories: [category],
         issue_date: '',
         expiry_date: '',
@@ -531,18 +561,17 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                     </Typography>
                   )}
                 </Box>
-                <IconButton 
-                  color="error" 
-                  size="small"
-                  onClick={() => removeExternalLicense(index)}
-                  disabled={disabled}
-                  title={license.is_auto_populated ? 
-                    "Remove auto-populated license (you can add it back manually)" : 
-                    "Remove external license"
-                  }
-                >
-                  <DeleteIcon />
-                </IconButton>
+                {!license.is_auto_populated && (
+                  <IconButton 
+                    color="error" 
+                    size="small"
+                    onClick={() => removeExternalLicense(index)}
+                    disabled={disabled}
+                    title="Remove external license"
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                )}
               </Box>
 
               <Grid container spacing={2}>
