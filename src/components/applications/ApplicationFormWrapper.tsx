@@ -989,154 +989,18 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
             </Card>
           </Grid>
 
-          {/* License Verification Results */}
-          {formData.license_verification && (
-            <Grid item xs={12}>
-              <Card variant="outlined">
-                <CardHeader title="License Verification" />
-                <CardContent>
-                  {formData.license_verification.requires_verification ? (
-                    <Alert severity="warning" sx={{ mb: 2 }}>
-                      <Typography variant="body2" gutterBottom>
-                        The selected license category requires prerequisite licenses. 
-                        Please provide details of your existing licenses below.
-                      </Typography>
-                    </Alert>
-                  ) : (
-                    <Alert severity="success" sx={{ mb: 2 }}>
-                      <Typography variant="body2">
-                        No additional license verification required for this category.
-                      </Typography>
-                    </Alert>
-                  )}
-
-                  {/* External License Capture */}
-                  {formData.license_verification.external_licenses.map((extLicense, index) => (
-                    <Card key={index} variant="outlined" sx={{ mt: 2 }}>
-                      <CardHeader 
-                        title={`Required License: ${extLicense.license_category}`}
-                        avatar={
-                          <Chip 
-                            label="Required" 
-                            color="error" 
-                            size="small"
-                          />
-                        }
-                      />
-                      <CardContent>
-                        <Grid container spacing={2}>
-                          <Grid item xs={12} md={6}>
-                            <TextField
-                              fullWidth
-                              label="License Number"
-                              value={extLicense.license_number}
-                              onChange={(e) => {
-                                const updated = { ...formData.license_verification };
-                                updated.external_licenses[index].license_number = e.target.value;
-                                setFormData(prev => ({ ...prev, license_verification: updated }));
-                              }}
-                              required
-                            />
-                          </Grid>
-                          <Grid item xs={12} md={6}>
-                            <TextField
-                              fullWidth
-                              label="Issuing Authority"
-                              value={extLicense.issuing_authority}
-                              onChange={(e) => {
-                                const updated = { ...formData.license_verification };
-                                updated.external_licenses[index].issuing_authority = e.target.value;
-                                setFormData(prev => ({ ...prev, license_verification: updated }));
-                              }}
-                              required
-                            />
-                          </Grid>
-                          <Grid item xs={12} md={6}>
-                            <TextField
-                              fullWidth
-                              type="date"
-                              label="Issue Date"
-                              value={extLicense.issue_date}
-                              onChange={(e) => {
-                                const updated = { ...formData.license_verification };
-                                updated.external_licenses[index].issue_date = e.target.value;
-                                setFormData(prev => ({ ...prev, license_verification: updated }));
-                              }}
-                              InputLabelProps={{ shrink: true }}
-                              required
-                            />
-                          </Grid>
-                          <Grid item xs={12} md={6}>
-                            <TextField
-                              fullWidth
-                              type="date"
-                              label="Expiry Date"
-                              value={extLicense.expiry_date}
-                              onChange={(e) => {
-                                const updated = { ...formData.license_verification };
-                                updated.external_licenses[index].expiry_date = e.target.value;
-                                setFormData(prev => ({ ...prev, license_verification: updated }));
-                              }}
-                              InputLabelProps={{ shrink: true }}
-                              required
-                            />
-                          </Grid>
-                          <Grid item xs={12}>
-                            <TextField
-                              fullWidth
-                              multiline
-                              rows={2}
-                              label="Restrictions (if any)"
-                              value={extLicense.restrictions}
-                              onChange={(e) => {
-                                const updated = { ...formData.license_verification };
-                                updated.external_licenses[index].restrictions = e.target.value;
-                                setFormData(prev => ({ ...prev, license_verification: updated }));
-                              }}
-                              placeholder="e.g., Automatic transmission only, Corrective lenses required"
-                            />
-                          </Grid>
-                        </Grid>
-                      </CardContent>
-                    </Card>
-                  ))}
-
-                  {/* Optional External Licenses */}
-                  {!formData.license_verification.requires_verification && (
-                    <Box sx={{ mt: 2 }}>
-                      <Typography variant="body2" color="text.secondary" gutterBottom>
-                        Do you have any existing licenses to add to your record? (Optional)
-                      </Typography>
-                      <Button
-                        variant="outlined"
-                        onClick={() => {
-                          // Add optional external license
-                          const updated = { ...formData.license_verification };
-                          updated.external_licenses.push({
-                            license_category: LicenseCategory.B,
-                            license_type: 'DRIVERS_LICENSE' as const,
-                            categories: [LicenseCategory.B],
-                            license_number: '',
-                            issue_date: '',
-                            expiry_date: '',
-                            issuing_authority: '',
-                            issuing_location: '',
-                            restrictions: '',
-                            verified: false,
-                            verification_source: 'MANUAL' as const,
-                            is_required: false
-                          });
-                          setFormData(prev => ({ ...prev, license_verification: updated }));
-                        }}
-                      >
-                        Add Existing License
-                      </Button>
-                    </Box>
-                  )}
-                </CardContent>
-              </Card>
-            </Grid>
-          )}
+          {/* License Verification Section - Comprehensive External License Form */}
+          <Grid item xs={12}>
+            <LicenseVerificationSection
+              personId={formData.person?.id || null}
+              value={formData.license_verification}
+              onChange={(data) => setFormData(prev => ({ ...prev, license_verification: data }))}
+              locations={locations}
+              currentLicenseCategory={formData.license_category}
+              currentApplicationType={formData.application_type}
+              disabled={false}
+            />
+          </Grid>
         </Grid>
       </Box>
     );
