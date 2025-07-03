@@ -188,13 +188,17 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
       id: tempId,
       license_number: '',
       license_type: 'LEARNERS_PERMIT',
+      license_category: LicenseCategory.B,
       categories: [LicenseCategory.B],
       issue_date: '',
       expiry_date: '',
+      issuing_authority: '',
       issuing_location: '',
+      restrictions: '',
       verified: false,
       verification_source: 'MANUAL',
       verification_notes: '',
+      is_required: false,
       // Manual license - not auto-populated
       is_auto_populated: false
     };
@@ -395,16 +399,19 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
         id: tempId,
         license_number: '',
         license_type: licenseType,
+        license_category: category,
         categories: [category],
         issue_date: '',
         expiry_date: '',
+        issuing_authority: '',
         issuing_location: '',
+        restrictions: '',
         verified: false,
         verification_source: 'MANUAL' as const,
         verification_notes: '',
+        is_required: true,
         // Auto-population fields
-        is_auto_populated: true,
-        required_for_category: currentLicenseCategory
+        is_auto_populated: true
       };
     });
 
