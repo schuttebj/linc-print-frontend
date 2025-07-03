@@ -187,7 +187,7 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
     const newExternalLicense: ExternalLicense = {
       id: tempId,
       license_number: '',
-      license_type: 'LEARNERS_PERMIT',
+      license_type: 'DRIVERS_LICENSE',
       license_category: LicenseCategory.B,
       categories: [LicenseCategory.B],
       issue_date: '',
@@ -699,11 +699,21 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                         </Box>
                       )}
                     >
-                      {Object.values(LicenseCategory).map((cat) => (
-                        <MenuItem key={cat} value={cat}>
-                          {cat}
-                        </MenuItem>
-                      ))}
+                      {Object.values(LicenseCategory).map((cat) => {
+                        const categoryRule = LICENSE_CATEGORY_RULES[cat];
+                        return (
+                          <MenuItem key={cat} value={cat}>
+                            <Box>
+                              <Typography variant="body2" fontWeight="bold">
+                                {cat}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {categoryRule?.description || 'License category'}
+                              </Typography>
+                            </Box>
+                          </MenuItem>
+                        );
+                      })}
                     </Select>
                     {license.is_auto_populated && (
                       <Typography variant="caption" color="warning.main" sx={{ mt: 0.5, fontWeight: 600 }}>
@@ -809,6 +819,126 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
               </Grid>
             </Box>
           ))}
+
+          {/* License Count Summary */}
+          <Box sx={{ mt: 2, mb: 2, p: 2, bgcolor: 'background.paper', border: '1px solid #e0e0e0', borderRadius: 1 }}>
+            <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+              License Summary for this Person
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={4}>
+                <Box sx={{ textAlign: 'center', p: 1, bgcolor: 'success.light', borderRadius: 1 }}>
+                  <Typography variant="h4" color="success.contrastText" fontWeight="bold">
+                    {licenseData.system_licenses.length}
+                  </Typography>
+                  <Typography variant="body2" color="success.contrastText">
+                    System Licenses (Verified)
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Box sx={{ textAlign: 'center', p: 1, bgcolor: 'warning.light', borderRadius: 1 }}>
+                  <Typography variant="h4" color="warning.contrastText" fontWeight="bold">
+                    {licenseData.external_licenses.length}
+                  </Typography>
+                  <Typography variant="body2" color="warning.contrastText">
+                    External Licenses (Manual)
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Box sx={{ textAlign: 'center', p: 1, bgcolor: 'primary.light', borderRadius: 1 }}>
+                  <Typography variant="h4" color="primary.contrastText" fontWeight="bold">
+                    {licenseData.all_license_categories.length}
+                  </Typography>
+                  <Typography variant="body2" color="primary.contrastText">
+                    Total Categories
+                  </Typography>
+                </Box>
+              </Grid>
+              
+              {/* Categories breakdown */}
+              {licenseData.all_license_categories.length > 0 && (
+                <Grid item xs={12}>
+                  <Typography variant="body2" fontWeight="bold" sx={{ mt: 1 }}>
+                    Authorized Categories:
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
+                    {licenseData.all_license_categories.sort().map((category) => {
+                      const categoryRule = LICENSE_CATEGORY_RULES[category];
+                      return (
+                        <Tooltip 
+                          key={category} 
+                          title={categoryRule?.description || 'License category'}
+                          arrow
+                        >
+                          <Chip 
+                            label={category} 
+                            size="small" 
+                            color="primary" 
+                            variant="outlined"
+                          />
+                        </Tooltip>
+                      );
+                    })}
+                  </Box>
+                </Grid>
+              )}
+              
+              {/* All available categories */}
+              <Grid item xs={12}>
+                <Typography variant="body2" fontWeight="bold" sx={{ mt: 1 }}>
+                  All Available License Categories ({Object.values(LicenseCategory).length}):
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
+                  {Object.values(LicenseCategory).sort().map((category) => {
+                    const categoryRule = LICENSE_CATEGORY_RULES[category];
+                    const hasCategory = licenseData.all_license_categories.includes(category);
+                    
+                    return (
+                      <Tooltip 
+                        key={category} 
+                        title={
+                          <Box>
+                            <Typography variant="caption" fontWeight="bold">
+                              {category}: {categoryRule?.description || 'License category'}
+                            </Typography>
+                            <br />
+                            <Typography variant="caption">
+                              Min Age: {categoryRule?.minimum_age || 'N/A'}
+                            </Typography>
+                            {categoryRule?.prerequisites && categoryRule.prerequisites.length > 0 && (
+                              <>
+                                <br />
+                                <Typography variant="caption">
+                                  Requires: {categoryRule.prerequisites.join(', ')}
+                                </Typography>
+                              </>
+                            )}
+                          </Box>
+                        }
+                        arrow
+                      >
+                        <Chip 
+                          label={category} 
+                          size="small" 
+                          color={hasCategory ? "success" : "default"}
+                          variant={hasCategory ? "filled" : "outlined"}
+                          sx={{ 
+                            opacity: hasCategory ? 1 : 0.6,
+                            fontWeight: hasCategory ? 'bold' : 'normal'
+                          }}
+                        />
+                      </Tooltip>
+                    );
+                  })}
+                </Box>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                  Highlighted categories are currently authorized for this person. Hover for details.
+                </Typography>
+              </Grid>
+            </Grid>
+          </Box>
 
           {/* Add External License Button */}
           <Button
