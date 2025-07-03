@@ -771,7 +771,7 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                 </Grid>
 
                 {/* Categories - LOCKED for auto-populated */}
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12}>
                   <FormControl fullWidth>
                     <InputLabel>Categories</InputLabel>
                     <Select
@@ -786,68 +786,58 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                           borderColor: license.is_auto_populated ? '#ffa726' : 'inherit'
                         }
                       }}
-                      renderValue={(selected) => (
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                          {(selected as LicenseCategory[]).map((value) => (
-                            <Chip key={value} label={value} size="small" />
-                          ))}
-                        </Box>
-                      )}
                     >
-                      {(() => {
-                        // Show appropriate categories based on license type
-                        if (license.license_type === 'LEARNERS_PERMIT') {
-                          // For learner's permits, show learner's permit codes (1, 2, 3)
-                          return [
-                            LicenseCategory.LEARNERS_1,
-                            LicenseCategory.LEARNERS_2, 
-                            LicenseCategory.LEARNERS_3
-                          ].map((cat) => {
-                            const learnerRule = LEARNERS_PERMIT_RULES[cat.toString()];
-                            return (
-                              <MenuItem key={cat} value={cat}>
-                                <Box>
-                                  <Typography variant="body2" fontWeight="bold">
-                                    Code {cat}
-                                  </Typography>
-                                  <Typography variant="caption" color="text.secondary">
-                                    {learnerRule?.description || 'Learner\'s permit category'}
-                                  </Typography>
-                                </Box>
-                              </MenuItem>
-                            );
-                          });
-                        } else {
-                          // For driver's licenses, show regular license categories (exclude learner's codes)
-                          return Object.values(LicenseCategory)
-                            .filter(cat => !['1', '2', '3'].includes(cat.toString()))
-                            .map((cat) => {
-                              const categoryRule = LICENSE_CATEGORY_RULES[cat];
-                              return (
-                                <MenuItem key={cat} value={cat}>
-                                  <Box>
-                                    <Typography variant="body2" fontWeight="bold">
-                                      {cat}
-                                    </Typography>
-                                    <Typography variant="caption" color="text.secondary">
-                                      {categoryRule?.description || 'License category'}
-                                    </Typography>
-                                  </Box>
-                                </MenuItem>
-                              );
-                            });
-                        }
-                      })()}
+                      {license.license_type === 'LEARNERS_PERMIT' ? (
+                        // Show learner's permit codes for learner's permits
+                        <>
+                          <MenuItem value={LicenseCategory.LEARNERS_1}>
+                            <Box>
+                              <Typography variant="body2" fontWeight="bold">Code 1</Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                Motor cycles, motor tricycles and motor quadricycles with engine of any capacity
+                              </Typography>
+                            </Box>
+                          </MenuItem>
+                          <MenuItem value={LicenseCategory.LEARNERS_2}>
+                            <Box>
+                              <Typography variant="body2" fontWeight="bold">Code 2</Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                Light motor vehicles, other than motor cycles, motor tricycles or motor quadricycles
+                              </Typography>
+                            </Box>
+                          </MenuItem>
+                          <MenuItem value={LicenseCategory.LEARNERS_3}>
+                            <Box>
+                              <Typography variant="body2" fontWeight="bold">Code 3</Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                Any motor vehicle other than motor cycles, motor tricycles or motor quadricycles
+                              </Typography>
+                            </Box>
+                          </MenuItem>
+                        </>
+                      ) : (
+                        // Show regular license categories for driver's licenses
+                        Object.values(LicenseCategory).filter(cat => !['1', '2', '3'].includes(cat)).map((category) => (
+                          <MenuItem key={category} value={category}>
+                            <Box>
+                              <Typography variant="body2" fontWeight="bold">{category}</Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {LICENSE_CATEGORY_RULES[category]?.description || 'Standard license category'}
+                              </Typography>
+                            </Box>
+                          </MenuItem>
+                        ))
+                      )}
                     </Select>
                     {license.is_auto_populated && (
                       <Typography variant="caption" color="warning.main" sx={{ mt: 0.5, fontWeight: 600 }}>
-                        🔒 Category locked for required license
+                        🔒 Categories locked for required license: {license.required_for_category ? `Required for ${license.required_for_category}` : 'System required'}
                       </Typography>
                     )}
                   </FormControl>
                 </Grid>
 
-                {/* Issue Date */}
+                {/* Date fields side by side */}
                 <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
@@ -861,34 +851,23 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                       max: getDateConstraints().max
                     }}
                     disabled={disabled}
-                    required
-                    helperText="Format: YYYY-MM-DD (between 1900 and current year)"
                   />
                 </Grid>
 
-                {/* Expiry Date */}
                 <Grid item xs={12} md={6}>
-                  {(() => {
-                    const dateValidation = validateDateLogic(license);
-                    return (
-                      <TextField
-                        fullWidth
-                        label="Expiry Date"
-                        type="date"
-                        value={license.expiry_date}
-                        onChange={(e) => handleDateChange(index, 'expiry_date', e.target.value)}
-                        InputLabelProps={{ shrink: true }}
-                        inputProps={{
-                          min: getDateConstraints().min,
-                          max: getDateConstraints().max
-                        }}
-                        disabled={disabled}
-                        required
-                        error={dateValidation.hasError}
-                        helperText={dateValidation.message || 'Format: YYYY-MM-DD (must be future date for valid licenses)'}
-                      />
-                    );
-                  })()}
+                  <TextField
+                    fullWidth
+                    label="Expiry Date"
+                    type="date"
+                    value={license.expiry_date}
+                    onChange={(e) => handleDateChange(index, 'expiry_date', e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{
+                      min: getDateConstraints().min,
+                      max: getDateConstraints().max
+                    }}
+                    disabled={disabled}
+                  />
                 </Grid>
 
                 {/* License Restrictions - Multi-select with only specific options */}
