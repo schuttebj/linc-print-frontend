@@ -117,35 +117,55 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
       console.log('Loaded current applications:', currentApplications);
 
       // Auto-populate external licenses for missing prerequisites
-      const autoPopulatedExternalLicenses = createAutoPopulatedExternalLicenses(
-        currentLicenses,
-        licenseData.external_licenses
-      );
-
-      console.log('Auto-populated external licenses:', autoPopulatedExternalLicenses);
+      // But preserve any external licenses already created by ApplicationFormWrapper
+      const hasAutoPopulatedLicenses = licenseData.external_licenses.some(license => license.is_auto_populated);
+      
+      let finalExternalLicenses: ExternalLicense[];
+      if (hasAutoPopulatedLicenses) {
+        // Keep existing auto-populated licenses from ApplicationFormWrapper
+        console.log('Preserving auto-populated licenses from ApplicationFormWrapper:', licenseData.external_licenses);
+        finalExternalLicenses = licenseData.external_licenses;
+      } else {
+        // No auto-populated licenses exist, create them based on system requirements
+        finalExternalLicenses = createAutoPopulatedExternalLicenses(
+          currentLicenses,
+          licenseData.external_licenses
+        );
+        console.log('Auto-populated external licenses:', finalExternalLicenses);
+      }
 
       updateLicenseData({
         ...licenseData,
         person_id: personId,
         system_licenses: currentLicenses,
-        external_licenses: autoPopulatedExternalLicenses,
-        all_license_categories: getAllCategories(currentLicenses, autoPopulatedExternalLicenses)
+        external_licenses: finalExternalLicenses,
+        all_license_categories: getAllCategories(currentLicenses, finalExternalLicenses)
       });
 
     } catch (err: any) {
       console.error('Error loading licenses and applications:', err);
-      // If API call fails, still try to auto-populate based on requirements
-      const autoPopulatedExternalLicenses = createAutoPopulatedExternalLicenses(
-        [],
-        licenseData.external_licenses
-      );
+      
+      // If API call fails, still preserve auto-populated licenses or create new ones
+      const hasAutoPopulatedLicenses = licenseData.external_licenses.some(license => license.is_auto_populated);
+      
+      let finalExternalLicenses: ExternalLicense[];
+      if (hasAutoPopulatedLicenses) {
+        // Keep existing auto-populated licenses from ApplicationFormWrapper
+        finalExternalLicenses = licenseData.external_licenses;
+      } else {
+        // If API call fails, still try to auto-populate based on requirements
+        finalExternalLicenses = createAutoPopulatedExternalLicenses(
+          [],
+          licenseData.external_licenses
+        );
+      }
 
       updateLicenseData({
         ...licenseData,
         person_id: personId,
         system_licenses: [],
-        external_licenses: autoPopulatedExternalLicenses,
-        all_license_categories: getAllCategories([], autoPopulatedExternalLicenses)
+        external_licenses: finalExternalLicenses,
+        all_license_categories: getAllCategories([], finalExternalLicenses)
       });
 
       // Only show error if it's not a 404 (person has no licenses)
