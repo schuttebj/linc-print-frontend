@@ -1495,9 +1495,9 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         )}
 
         <Grid container spacing={3}>
-          {/* Photo and Signature Capture - Side by Side */}
-          <Grid item xs={12} md={6}>
-            <Card sx={{ height: '100%' }}>
+          {/* License Photo - Full Width */}
+          <Grid item xs={12}>
+            <Card sx={{ mb: 3 }}>
               <CardHeader
                 title={
                   <Box display="flex" alignItems="center" gap={1}>
@@ -1548,6 +1548,13 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                           objectFit: 'cover',
                           borderRadius: '4px'
                         }}
+                        onError={(e) => {
+                          console.error('Image preview error:', e);
+                          // If processed_url fails, try the blob URL
+                          if ((formData.biometric_data.photo as any).processed_url) {
+                            e.currentTarget.src = URL.createObjectURL(formData.biometric_data.photo as File);
+                          }
+                        }}
                       />
                     </Box>
                     <Alert severity="success" sx={{ fontSize: '0.875rem' }}>
@@ -1571,8 +1578,9 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={6}>
-            <Card sx={{ height: '100%' }}>
+          {/* Digital Signature - Full Width */}
+          <Grid item xs={12}>
+            <Card>
               <CardHeader
                 title={
                   <Box display="flex" alignItems="center" gap={1}>

@@ -371,13 +371,29 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
     // Special check for NEW_LICENSE applications that require learner's permit
     if (currentApplicationType === ApplicationType.NEW_LICENSE && categoryRules.requires_learners_permit) {
       // Get the corresponding learner's permit code for this category
-      const learnerCode = LICENSE_TO_LEARNERS_MAPPING[currentLicenseCategory];
+      const learnerCodeString = LICENSE_TO_LEARNERS_MAPPING[currentLicenseCategory];
       
-      if (learnerCode) {
-        // Check if person has valid learner's permit for this category (using the learner's code)
+      if (learnerCodeString) {
+        // Map the string code to the correct LicenseCategory enum
+        let learnerCategory: LicenseCategory;
+        switch (learnerCodeString) {
+          case '1':
+            learnerCategory = LicenseCategory.LEARNERS_1;
+            break;
+          case '2':
+            learnerCategory = LicenseCategory.LEARNERS_2;
+            break;
+          case '3':
+            learnerCategory = LicenseCategory.LEARNERS_3;
+            break;
+          default:
+            learnerCategory = LicenseCategory.LEARNERS_2; // Default fallback
+        }
+        
+        // Check if person has valid learner's permit for this category
         const hasSystemLearnerPermit = systemLicenses.some(license => 
           license.license_type === 'LEARNERS_PERMIT' && 
-          (license.categories.includes(learnerCode as LicenseCategory) || 
+          (license.categories.includes(learnerCategory) || 
            license.categories.includes(currentLicenseCategory)) &&
           license.status === 'ACTIVE' &&
           !isLicenseExpired(license.expiry_date)
@@ -385,7 +401,7 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
         
         const hasExternalLearnerPermit = manualExternalLicenses.some(license =>
           license.license_type === 'LEARNERS_PERMIT' &&
-          (license.categories.includes(learnerCode as LicenseCategory) ||
+          (license.categories.includes(learnerCategory) ||
            license.categories.includes(currentLicenseCategory)) &&
           license.verified &&
           !isLicenseExpired(license.expiry_date)
@@ -393,7 +409,7 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
         
         // If no valid learner's permit found, require external verification using learner's code
         if (!hasSystemLearnerPermit && !hasExternalLearnerPermit) {
-          missingCategories.push(learnerCode as LicenseCategory);
+          missingCategories.push(learnerCategory);
         }
       }
     }

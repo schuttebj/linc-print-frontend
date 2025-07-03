@@ -63,7 +63,7 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
       visual_acuity_right_eye: '',
       visual_acuity_left_eye: '',
       visual_acuity_binocular: '',
-      visual_field_horizontal_degrees: 0,
+      visual_field_horizontal_degrees: 120,
       visual_field_left_eye_degrees: 0,
       visual_field_right_eye_degrees: 0,
       corrective_lenses_required: false,
