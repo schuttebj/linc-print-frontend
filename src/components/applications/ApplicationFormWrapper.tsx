@@ -1162,11 +1162,11 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                   police_reference_number: ''
                 }))}
               >
-                <MenuItem value="theft">Theft (Diefstal)</MenuItem>
-                <MenuItem value="loss">Loss (Verlies)</MenuItem>
-                <MenuItem value="destruction">Destruction (Vernietiging)</MenuItem>
-                <MenuItem value="recovery">Recovery (Terugvinding)</MenuItem>
-                <MenuItem value="new_card">New Card (Nuwe kaart)</MenuItem>
+                <MenuItem value="theft">Theft</MenuItem>
+                <MenuItem value="loss">Loss</MenuItem>
+                <MenuItem value="destruction">Destruction</MenuItem>
+                <MenuItem value="recovery">Recovery</MenuItem>
+                <MenuItem value="new_card">New Card</MenuItem>
                 <MenuItem value="change_particulars">Change of Particulars (ID, name, address)</MenuItem>
               </Select>
             </FormControl>
@@ -1176,7 +1176,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
-              label="Office of Issue (Kantoor van uitreiking)"
+              label="Office of Issue"
               value={formData.office_of_issue || ''}
               onChange={(e) => setFormData(prev => ({ 
                 ...prev, 
@@ -1191,7 +1191,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
             <TextField
               fullWidth
               type="date"
-              label="Date of Change (Datum van verandering)"
+              label="Date of Change"
               value={formData.date_of_change || ''}
               onChange={(e) => setFormData(prev => ({ 
                 ...prev, 
@@ -1221,7 +1221,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                       }))}
                     />
                   }
-                  label={`${formData.replacement_reason === 'theft' ? 'Theft' : 'Loss'} reported to Police (${formData.replacement_reason === 'theft' ? 'Diefstal' : 'Verlies'} gerapporteer aan Polisie)`}
+                  label={`${formData.replacement_reason === 'theft' ? 'Theft' : 'Loss'} reported to Police`}
                 />
               </Grid>
 
@@ -1230,7 +1230,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                   <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
-                      label="Police Station (at/te)"
+                      label="Police Station"
                       value={formData.police_station || ''}
                       onChange={(e) => setFormData(prev => ({ 
                         ...prev, 
@@ -1242,7 +1242,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                   <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
-                      label="Reference Number (CAS no./Verwysingsnr. MAS nr.)"
+                      label="Reference Number (CAS no.)"
                       value={formData.police_reference_number || ''}
                       onChange={(e) => setFormData(prev => ({ 
                         ...prev, 
