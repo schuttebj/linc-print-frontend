@@ -801,27 +801,31 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
 
     // Check if selected category requires prerequisite licenses
     const getRequiredLicenses = (category: LicenseCategory): LicenseCategory[] => {
-      const requirements: Record<string, LicenseCategory[]> = {
-        [LicenseCategory.A]: [LicenseCategory.A1],
-        [LicenseCategory.C1]: [LicenseCategory.B],
-        [LicenseCategory.C]: [LicenseCategory.C1],
-        [LicenseCategory.C1E]: [LicenseCategory.C1],
-        [LicenseCategory.CE]: [LicenseCategory.C],
-        [LicenseCategory.D1]: [LicenseCategory.B],
-        [LicenseCategory.D]: [LicenseCategory.D1],
-        [LicenseCategory.D2]: [LicenseCategory.D],
-        [LicenseCategory.BE]: [LicenseCategory.B]
-      };
-      return requirements[category] || [];
+      // Use the comprehensive license category rules
+      const categoryRule = LICENSE_CATEGORY_RULES[category];
+      return categoryRule?.prerequisites || [];
     };
 
     // Check license verification status
     const checkLicenseRequirements = async (selectedCategory: LicenseCategory) => {
       if (!formData.person) return;
 
-      const requiredLicenses = getRequiredLicenses(selectedCategory);
+      const categoryRule = LICENSE_CATEGORY_RULES[selectedCategory];
+      const requiredLicenses = categoryRule?.prerequisites || [];
+      
+      // Special case: For NEW_LICENSE applications, check if learner's permit is required
+      if (formData.application_type === ApplicationType.NEW_LICENSE && categoryRule?.requires_learners_permit) {
+        // Add learner's permit requirement for full license applications
+        const learnerCategory = selectedCategory; // Same category but as learner's permit
+        if (!requiredLicenses.includes(learnerCategory)) {
+          // Check if person has a learner's permit for this category
+          // This would be checked against existing licenses in the system
+          console.log(`Checking for learner's permit requirement for category ${selectedCategory}`);
+        }
+      }
+
       if (requiredLicenses.length === 0) {
-        // No prerequisites required
+        // No prerequisites required - but still may need learner's permit for full licenses
         setFormData(prev => ({
           ...prev,
           license_verification: {
@@ -829,9 +833,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
             requires_verification: false,
             system_licenses: [],
             external_licenses: [],
-            all_license_categories: [selectedCategory],
-            missing_prerequisites: [],
-            can_proceed: true
+            all_license_categories: [selectedCategory]
           }
         }));
         return;
@@ -849,26 +851,32 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         !systemLicenses.some(sys => sys.license_category === req)
       );
 
+      // Create external license forms for missing prerequisites
+      const externalLicenses = missingRequired.map(cat => {
+        const catRule = LICENSE_CATEGORY_RULES[cat];
+        return {
+          license_category: cat,
+          license_type: catRule?.requires_learners_permit ? 'LEARNERS_PERMIT' as const : 'DRIVERS_LICENSE' as const,
+          categories: [cat],
+          license_number: '',
+          issue_date: '',
+          expiry_date: '',
+          issuing_authority: '',
+          issuing_location: '',
+          restrictions: '',
+          verified: false,
+          verification_source: 'MANUAL' as const,
+          is_required: true
+        };
+      });
+
       setFormData(prev => ({
         ...prev,
         license_verification: {
           person_id: formData.person!.id,
           requires_verification: missingRequired.length > 0,
           system_licenses: systemLicenses,
-          external_licenses: missingRequired.map(cat => ({
-            license_category: cat,
-            license_type: 'DRIVERS_LICENSE' as const,
-            categories: [cat],
-            license_number: '',
-            issue_date: '',
-            expiry_date: '',
-            issuing_authority: '',
-            issuing_location: '',
-            restrictions: '',
-            verified: false,
-            verification_source: 'MANUAL' as const,
-            is_required: true
-          })),
+          external_licenses: externalLicenses,
           all_license_categories: [...systemLicenses.map((l: any) => l.license_category), selectedCategory]
         }
       }));
