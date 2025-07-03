@@ -116,7 +116,18 @@ import {
   isCommercialLicense,
   requiresMedical60Plus,
   requiresMedicalAlways,
-  getCategoryFamily
+  getCategoryFamily,
+  LEARNERS_PERMIT_RULES,
+  LEARNERS_PERMIT_MAPPING,
+  LICENSE_TO_LEARNERS_MAPPING,
+  ExternalLicense,
+  SystemLicense,
+  ActiveLicense,
+  LicenseStatus,
+  MedicalInformation,
+  VisionTestData,
+  MedicalConditions,
+  ProcessedBiometricFile
 } from '../../types';
 
 interface ApplicationFormWrapperProps {
@@ -538,7 +549,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
   const getStepValidationErrors = (step: number): string[] => {
     const errors: string[] = [];
     const currentStep = steps[step];
-    
+
     switch (currentStep?.component) {
       case 'person': // Person
         if (!formData.person) {
@@ -567,7 +578,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           // Validate parental consent for under 18
           if (age < 18 && !formData.parental_consent_file) {
             errors.push('Parental consent file is required for applicants under 18');
-          }
+        }
         }
         // License verification validation
         if (formData.license_verification?.requires_verification) {
@@ -772,22 +783,50 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     };
 
     const getAvailableLicenseCategories = () => {
-      // Return ALL 14 license categories with comprehensive descriptions
-      // The system will handle validation and prerequisites automatically
-      return Object.values(LicenseCategory).map(category => {
-        const categoryRule = LICENSE_CATEGORY_RULES[category];
-        return {
-          value: category,
-          label: `${category} - ${categoryRule?.description || 'License category'}`,
-          minAge: categoryRule?.minimum_age || 18,
-          prerequisites: categoryRule?.prerequisites || [],
-          allowsLearners: categoryRule?.allows_learners_permit || false
-        };
-      }).sort((a, b) => {
-        // Sort by category order (A1, A2, A, B1, B, B2, BE, C1, C, C1E, CE, D1, D, D2)
-        const order = ['A1', 'A2', 'A', 'B1', 'B', 'B2', 'BE', 'C1', 'C', 'C1E', 'CE', 'D1', 'D', 'D2'];
-        return order.indexOf(a.value) - order.indexOf(b.value);
-      });
+      // For learner's permit applications, show only learner's permit codes
+      if (formData.application_type === ApplicationType.LEARNERS_PERMIT) {
+        return [
+          {
+            value: LicenseCategory.LEARNERS_1,
+            label: `Code 1 - ${LEARNERS_PERMIT_RULES['1']?.description || 'Learner\'s permit for motorcycles'}`,
+            minAge: LEARNERS_PERMIT_RULES['1']?.minimum_age || 16,
+            prerequisites: [],
+            allowsLearners: true
+          },
+          {
+            value: LicenseCategory.LEARNERS_2,
+            label: `Code 2 - ${LEARNERS_PERMIT_RULES['2']?.description || 'Learner\'s permit for light vehicles'}`,
+            minAge: LEARNERS_PERMIT_RULES['2']?.minimum_age || 17,
+            prerequisites: [],
+            allowsLearners: true
+          },
+          {
+            value: LicenseCategory.LEARNERS_3,
+            label: `Code 3 - ${LEARNERS_PERMIT_RULES['3']?.description || 'Learner\'s permit for any motor vehicle'}`,
+            minAge: LEARNERS_PERMIT_RULES['3']?.minimum_age || 18,
+            prerequisites: [],
+            allowsLearners: true
+          }
+        ];
+      }
+      
+      // For other application types (NEW_LICENSE, RENEWAL, etc.), show regular license categories
+      return Object.values(LicenseCategory)
+        .filter(category => !['1', '2', '3'].includes(category)) // Exclude learner's permit codes
+        .map(category => {
+          const categoryRule = LICENSE_CATEGORY_RULES[category];
+          return {
+            value: category,
+            label: `${category} - ${categoryRule?.description || 'License category'}`,
+            minAge: categoryRule?.minimum_age || 18,
+            prerequisites: categoryRule?.prerequisites || [],
+            allowsLearners: categoryRule?.allows_learners_permit || false
+          };
+        }).sort((a, b) => {
+          // Sort by category order (A1, A2, A, B1, B, B2, BE, C1, C, C1E, CE, D1, D, D2)
+          const order = ['A1', 'A2', 'A', 'B1', 'B', 'B2', 'BE', 'C1', 'C', 'C1E', 'CE', 'D1', 'D', 'D2'];
+          return order.indexOf(a.value) - order.indexOf(b.value);
+        });
     };
 
     // Check if selected category requires prerequisite licenses
@@ -802,21 +841,53 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
       if (!formData.person) return;
 
       const categoryRule = LICENSE_CATEGORY_RULES[selectedCategory];
+      if (!categoryRule) return;
+
       const requiredLicenses = categoryRule?.prerequisites || [];
-      
-      // Special case: For NEW_LICENSE applications, check if learner's permit is required
-      if (formData.application_type === ApplicationType.NEW_LICENSE && categoryRule?.requires_learners_permit) {
-        // Add learner's permit requirement for full license applications
-        const learnerCategory = selectedCategory; // Same category but as learner's permit
-        if (!requiredLicenses.includes(learnerCategory)) {
-          // Check if person has a learner's permit for this category
-          // This would be checked against existing licenses in the system
-          console.log(`Checking for learner's permit requirement for category ${selectedCategory}`);
+      const requiresLearners = categoryRule?.requires_learners_permit || false;
+
+      // Special handling for NEW_LICENSE applications that require learner's permits
+      if (formData.application_type === ApplicationType.NEW_LICENSE && requiresLearners) {
+        // Get the corresponding learner's permit code for this category
+        const learnerCode = LICENSE_TO_LEARNERS_MAPPING[selectedCategory];
+        
+        if (learnerCode) {
+          // Create auto-populated external license for the required learner's permit
+          const externalLicenses: ExternalLicense[] = [{
+            id: `auto-learners-${selectedCategory}`,
+            license_category: learnerCode as LicenseCategory, // Use the learner's code (1, 2, or 3)
+            license_type: 'LEARNERS_PERMIT' as const,
+            categories: [learnerCode as LicenseCategory],
+            license_number: '',
+            issue_date: '',
+            expiry_date: '',
+            issuing_authority: '',
+            issuing_location: '',
+            restrictions: '',
+            verified: false,
+            verification_source: 'MANUAL' as const,
+            is_auto_populated: true,
+            required_for_category: selectedCategory,
+            is_required: true
+          }];
+
+          setFormData(prev => ({
+            ...prev,
+            license_verification: {
+              person_id: formData.person!.id,
+              requires_verification: true,
+              system_licenses: [],
+              external_licenses: externalLicenses,
+              all_license_categories: [selectedCategory]
+            }
+          }));
+          return;
         }
       }
 
-      if (requiredLicenses.length === 0) {
-        // No prerequisites required - but still may need learner's permit for full licenses
+      // Handle regular prerequisite requirements
+      if (requiredLicenses.length === 0 && !requiresLearners) {
+        // No prerequisites required
         setFormData(prev => ({
           ...prev,
           license_verification: {
@@ -877,15 +948,15 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
       <Box>
         <Typography variant="h6" gutterBottom>
           Section B: Application Details
-        </Typography>
-        
+              </Typography>
+
         <Grid container spacing={3}>
           {/* Application Type Selection */}
-          <Grid item xs={12} md={6}>
-            <FormControl fullWidth required>
-              <InputLabel>Application Type</InputLabel>
-              <Select
-                value={formData.application_type}
+        <Grid item xs={12} md={6}>
+          <FormControl fullWidth required>
+            <InputLabel>Application Type</InputLabel>
+            <Select
+              value={formData.application_type}
                 onChange={async (e) => {
                   const newType = e.target.value as ApplicationType;
                   setFormData(prev => ({ 
@@ -894,23 +965,23 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                     license_category: '' as LicenseCategory // Reset category when type changes
                   }));
                 }}
-              >
-                <MenuItem value={ApplicationType.LEARNERS_PERMIT}>Learner's Permit</MenuItem>
-                <MenuItem value={ApplicationType.NEW_LICENSE}>Driver's License</MenuItem>
-                <MenuItem value={ApplicationType.RENEWAL}>License Renewal</MenuItem>
-                <MenuItem value={ApplicationType.REPLACEMENT}>Replacement License</MenuItem>
-                <MenuItem value={ApplicationType.TEMPORARY_LICENSE}>Temporary License</MenuItem>
-                <MenuItem value={ApplicationType.INTERNATIONAL_PERMIT}>International Permit</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
+            >
+              <MenuItem value={ApplicationType.LEARNERS_PERMIT}>Learner's Permit</MenuItem>
+              <MenuItem value={ApplicationType.NEW_LICENSE}>Driver's License</MenuItem>
+              <MenuItem value={ApplicationType.RENEWAL}>License Renewal</MenuItem>
+              <MenuItem value={ApplicationType.REPLACEMENT}>Replacement License</MenuItem>
+              <MenuItem value={ApplicationType.TEMPORARY_LICENSE}>Temporary License</MenuItem>
+              <MenuItem value={ApplicationType.INTERNATIONAL_PERMIT}>International Permit</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
 
           {/* Application Location (for admin users) */}
           {canSelectLocation() && (
             <Grid item xs={12} md={6}>
-              <FormControl fullWidth required>
+            <FormControl fullWidth required>
                 <InputLabel>Application Location</InputLabel>
-                <Select
+              <Select
                   value={formData.selected_location_id || ''}
                   onChange={(e) => handleApplicationDetailsChange('selected_location_id', e.target.value)}
                 >
@@ -919,17 +990,17 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                       {location.name} ({location.code})
                     </MenuItem>
                   ))}
-                </Select>
-              </FormControl>
-            </Grid>
-          )}
+              </Select>
+            </FormControl>
+          </Grid>
+        )}
 
           {/* License Category Selection */}
-          <Grid item xs={12}>
-            <FormControl fullWidth required>
-              <InputLabel>License Category</InputLabel>
-              <Select
-                value={formData.license_category}
+        <Grid item xs={12}>
+          <FormControl fullWidth required>
+            <InputLabel>License Category</InputLabel>
+            <Select
+              value={formData.license_category}
                 onChange={async (e) => {
                   const selectedCategory = e.target.value as LicenseCategory;
                   setFormData(prev => ({ ...prev, license_category: selectedCategory }));
@@ -943,7 +1014,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                     <Box>
                       <Typography variant="body2" fontWeight="bold">
                         {category.label}
-                      </Typography>
+                        </Typography>
                       <Typography variant="caption" color="text.secondary">
                         Min age: {category.minAge} years
                         {category.prerequisites.length > 0 && ` • Requires: ${category.prerequisites.join(', ')}`}
@@ -952,9 +1023,9 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                     </Box>
                   </MenuItem>
                 ))}
-              </Select>
-            </FormControl>
-          </Grid>
+            </Select>
+          </FormControl>
+        </Grid>
 
           {/* Never Been Refused Declaration */}
           <Grid item xs={12}>
@@ -994,7 +1065,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           </Grid>
 
           {/* License Verification Section - Comprehensive External License Form */}
-          <Grid item xs={12}>
+        <Grid item xs={12}>
             <LicenseVerificationSection
               personId={formData.person?.id || null}
               value={formData.license_verification}
@@ -1004,11 +1075,11 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
               currentApplicationType={formData.application_type}
               disabled={false}
             />
-          </Grid>
+        </Grid>
 
           {/* Parental Consent - For applicants under 18 */}
           {formData.person?.birth_date && calculateAge(formData.person.birth_date) < 18 && (
-            <Grid item xs={12}>
+        <Grid item xs={12}>
               <Card>
                 <CardHeader 
                   title="Parental Consent" 
@@ -1035,18 +1106,18 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                   {formData.parental_consent_file && (
                     <Typography variant="body2" sx={{ mt: 1 }}>
                       File: {formData.parental_consent_file.name}
-                    </Typography>
+                </Typography>
                   )}
                   <Typography variant="caption" display="block" sx={{ mt: 1 }}>
                     Signed consent form from parent or legal guardian
-                  </Typography>
+                </Typography>
                 </CardContent>
-              </Card>
-            </Grid>
+          </Card>
+        </Grid>
           )}
 
           {/* Additional Notes */}
-          <Grid item xs={12}>
+        <Grid item xs={12}>
             <Card>
               <CardHeader title="Additional Notes" />
               <CardContent>
@@ -1060,8 +1131,8 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                   placeholder="Add any additional notes or comments about this application..."
                 />
               </CardContent>
-            </Card>
-          </Grid>
+          </Card>
+        </Grid>
         </Grid>
       </Box>
     );
@@ -1071,10 +1142,10 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
   // Section C Step - Notice/Replacement Details
   const renderSectionCStep = () => {
     return (
-      <Box>
+              <Box>
         <Typography variant="h6" gutterBottom>
           Section C: Notice/Replacement Details
-        </Typography>
+                </Typography>
         
         <Grid container spacing={3}>
           {/* Replacement Reason */}
@@ -1118,8 +1189,8 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
 
           {/* Date of Change */}
           <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
+              <TextField
+                fullWidth
               type="date"
               label="Date of Change"
               value={formData.date_of_change || ''}
@@ -1128,14 +1199,14 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                 date_of_change: e.target.value 
               }))}
               InputLabelProps={{ shrink: true }}
-              required
-            />
-          </Grid>
+                required
+              />
+        </Grid>
 
           {/* Police Report Section - Only for theft/loss */}
           {(formData.replacement_reason === 'theft' || formData.replacement_reason === 'loss') && (
             <>
-              <Grid item xs={12}>
+        <Grid item xs={12}>
                 <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
                   Police Report Details
                 </Typography>
@@ -1153,7 +1224,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                   }
                   label={`${formData.replacement_reason === 'theft' ? 'Theft' : 'Loss'} reported to Police`}
                 />
-              </Grid>
+        </Grid>
 
               {formData.police_reported && (
                 <>
@@ -1168,7 +1239,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                       }))}
                       required
                     />
-                  </Grid>
+          </Grid>
                   <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
@@ -1193,13 +1264,13 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                 <Typography variant="body2" color="text.secondary">
                   <strong>Section C:</strong> This section applies to replacement licenses and notices of change. 
                   All fields marked as required must be completed before proceeding.
-                </Typography>
+              </Typography>
               </CardContent>
             </Card>
           </Grid>
-        </Grid>
-      </Box>
-    );
+      </Grid>
+    </Box>
+  );
   };
 
   const renderMedicalStep = () => {
@@ -1621,7 +1692,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                         secondary={
                           formData.medical_certificate_file ? 
                             `Uploaded: ${formData.medical_certificate_file.name}` : 
-                            "Required but not provided"
+                              "Required but not provided"
                         }
                       />
                     </ListItem>

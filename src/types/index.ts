@@ -197,7 +197,12 @@ export enum LicenseCategory {
   // Passenger Transport (Public Transport)
   D1 = 'D1',       // Small buses (up to 16 passengers, 21+)
   D = 'D',         // Standard buses and coaches (over 16 passengers, 24+)
-  D2 = 'D2'        // Specialized public transport (articulated buses, 24+)
+  D2 = 'D2',       // Specialized public transport (articulated buses, 24+)
+  
+  // Learner's Permit Codes (used only for LEARNERS_PERMIT applications)
+  LEARNERS_1 = '1', // Motor cycle without a sidecar, motor tricycle or motor quadrucycle, with engine of any capacity
+  LEARNERS_2 = '2', // Light motor vehicle, other than a motor cycle, motor tricycle or motor quadrucycle
+  LEARNERS_3 = '3'  // Any motor vehicle other than a motor cycle, motor tricycle or motor quadrucycle
 }
 
 export enum ApplicationStatus {
@@ -563,7 +568,12 @@ export const SUPERSEDING_MATRIX: Record<LicenseCategory, LicenseCategory[]> = {
   // Passenger Transport
   [LicenseCategory.D]: [LicenseCategory.B, LicenseCategory.B1, LicenseCategory.B2, LicenseCategory.C, LicenseCategory.C1, LicenseCategory.D, LicenseCategory.D1],
   [LicenseCategory.D1]: [LicenseCategory.B, LicenseCategory.B1, LicenseCategory.B2, LicenseCategory.C, LicenseCategory.C1, LicenseCategory.D1],
-  [LicenseCategory.D2]: [LicenseCategory.B, LicenseCategory.B1, LicenseCategory.B2, LicenseCategory.C, LicenseCategory.C1, LicenseCategory.D, LicenseCategory.D1, LicenseCategory.D2, LicenseCategory.BE, LicenseCategory.CE, LicenseCategory.C1E]
+  [LicenseCategory.D2]: [LicenseCategory.B, LicenseCategory.B1, LicenseCategory.B2, LicenseCategory.C, LicenseCategory.C1, LicenseCategory.D, LicenseCategory.D1, LicenseCategory.D2, LicenseCategory.BE, LicenseCategory.CE, LicenseCategory.C1E],
+  
+  // Learner's Permits
+  [LicenseCategory.LEARNERS_1]: [LicenseCategory.LEARNERS_1],
+  [LicenseCategory.LEARNERS_2]: [LicenseCategory.LEARNERS_2],
+  [LicenseCategory.LEARNERS_3]: [LicenseCategory.LEARNERS_3]
 };
 
 // Detailed license category rules
@@ -811,6 +821,46 @@ export const LICENSE_CATEGORY_RULES: Record<LicenseCategory, LicenseCategoryRule
     allows_learners_permit: false,
     test_requirements: ["Articulated-bus practical exam", "Route-map training"],
     medical_requirements: ["Regular medical checks"]
+  },
+  
+  // Learner's Permit Categories
+  [LicenseCategory.LEARNERS_1]: {
+    category: LicenseCategory.LEARNERS_1,
+    minimum_age: 16,
+    prerequisites: [],
+    supersedes: [LicenseCategory.LEARNERS_1],
+    description: "Learner's permit for motor cycles, motor tricycles and motor quadricycles with engine of any capacity",
+    restrictions: ["Must be accompanied by licensed driver", "Display L plates", "Theory test required"],
+    requires_learners_permit: false,
+    allows_learners_permit: true,
+    test_requirements: ["Theory test"],
+    medical_requirements: ["Vision exam", "Medical fitness exam"]
+  },
+  
+  [LicenseCategory.LEARNERS_2]: {
+    category: LicenseCategory.LEARNERS_2,
+    minimum_age: 17,
+    prerequisites: [],
+    supersedes: [LicenseCategory.LEARNERS_2],
+    description: "Learner's permit for light motor vehicles, other than motor cycles, motor tricycles or motor quadricycles",
+    restrictions: ["Must be accompanied by licensed driver", "Display L plates", "Theory test required"],
+    requires_learners_permit: false,
+    allows_learners_permit: true,
+    test_requirements: ["Theory test"],
+    medical_requirements: ["Vision exam", "Medical fitness exam"]
+  },
+  
+  [LicenseCategory.LEARNERS_3]: {
+    category: LicenseCategory.LEARNERS_3,
+    minimum_age: 18,
+    prerequisites: [],
+    supersedes: [LicenseCategory.LEARNERS_3],
+    description: "Learner's permit for any motor vehicle other than motor cycles, motor tricycles or motor quadricycles",
+    restrictions: ["Must be accompanied by licensed driver", "Display L plates", "Theory test required"],
+    requires_learners_permit: false,
+    allows_learners_permit: true,
+    test_requirements: ["Theory test"],
+    medical_requirements: ["Vision exam", "Medical fitness exam"]
   }
 };
 
@@ -942,4 +992,72 @@ export const getCategoryFamily = (category: LicenseCategory): 'A' | 'B' | 'C' | 
     return 'C';
   }
   return 'D';
+};
+
+// Mapping from learner's permit codes to actual license categories
+export const LEARNERS_PERMIT_MAPPING: Record<string, LicenseCategory[]> = {
+  '1': [LicenseCategory.A1, LicenseCategory.A2, LicenseCategory.A], // Motorcycles
+  '2': [LicenseCategory.B1, LicenseCategory.B], // Light vehicles
+  '3': [LicenseCategory.B, LicenseCategory.C1, LicenseCategory.C, LicenseCategory.D1, LicenseCategory.D, LicenseCategory.D2] // Any motor vehicle
+};
+
+// Reverse mapping from license categories to learner's permit codes
+export const LICENSE_TO_LEARNERS_MAPPING: Record<LicenseCategory, string> = {
+  [LicenseCategory.A1]: '1',
+  [LicenseCategory.A2]: '1',
+  [LicenseCategory.A]: '1',
+  [LicenseCategory.B1]: '2',
+  [LicenseCategory.B]: '2',
+  [LicenseCategory.B2]: '2',
+  [LicenseCategory.BE]: '2',
+  [LicenseCategory.C1]: '3',
+  [LicenseCategory.C]: '3',
+  [LicenseCategory.C1E]: '3',
+  [LicenseCategory.CE]: '3',
+  [LicenseCategory.D1]: '3',
+  [LicenseCategory.D]: '3',
+  [LicenseCategory.D2]: '3',
+  [LicenseCategory.LEARNERS_1]: '1',
+  [LicenseCategory.LEARNERS_2]: '2',
+  [LicenseCategory.LEARNERS_3]: '3'
+};
+
+// Add rules for learner's permit codes
+export const LEARNERS_PERMIT_RULES: Record<string, LicenseCategoryRule> = {
+  '1': {
+    category: LicenseCategory.LEARNERS_1,
+    minimum_age: 16,
+    prerequisites: [],
+    supersedes: [LicenseCategory.LEARNERS_1],
+    description: "Learner's permit for motor cycles, motor tricycles and motor quadricycles with engine of any capacity",
+    restrictions: ["Must be accompanied by licensed driver", "Display L plates", "Theory test required"],
+    requires_learners_permit: false,
+    allows_learners_permit: true,
+    test_requirements: ["Theory test"],
+    medical_requirements: ["Vision exam", "Medical fitness exam"]
+  },
+  '2': {
+    category: LicenseCategory.LEARNERS_2,
+    minimum_age: 17,
+    prerequisites: [],
+    supersedes: [LicenseCategory.LEARNERS_2],
+    description: "Learner's permit for light motor vehicles, other than motor cycles, motor tricycles or motor quadricycles",
+    restrictions: ["Must be accompanied by licensed driver", "Display L plates", "Theory test required"],
+    requires_learners_permit: false,
+    allows_learners_permit: true,
+    test_requirements: ["Theory test"],
+    medical_requirements: ["Vision exam", "Medical fitness exam"]
+  },
+  '3': {
+    category: LicenseCategory.LEARNERS_3,
+    minimum_age: 18,
+    prerequisites: [],
+    supersedes: [LicenseCategory.LEARNERS_3],
+    description: "Learner's permit for any motor vehicle other than motor cycles, motor tricycles or motor quadricycles",
+    restrictions: ["Must be accompanied by licensed driver", "Display L plates", "Theory test required"],
+    requires_learners_permit: false,
+    allows_learners_permit: true,
+    test_requirements: ["Theory test"],
+    medical_requirements: ["Vision exam", "Medical fitness exam"]
+  }
 };
