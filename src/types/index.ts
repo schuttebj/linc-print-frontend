@@ -388,11 +388,14 @@ export interface SystemLicense {
 export interface ExternalLicense {
   id?: string; // temp ID for form management
   license_number: string;
+  license_category: LicenseCategory; // Single category for the form
   license_type: 'LEARNERS_PERMIT' | 'DRIVERS_LICENSE';
-  categories: LicenseCategory[];
+  categories: LicenseCategory[]; // Full categories array for system compatibility
   issue_date: string;
   expiry_date: string;
+  issuing_authority: string; // Added for form compatibility
   issuing_location: string;
+  restrictions: string; // Added for form compatibility
   // External licenses require manual verification
   verified: boolean;
   verification_source: 'MANUAL';
@@ -402,6 +405,7 @@ export interface ExternalLicense {
   // Auto-population fields
   is_auto_populated?: boolean; // True if auto-populated for prerequisites
   required_for_category?: LicenseCategory; // Category this license is required for
+  is_required: boolean; // Whether this external license is mandatory for the application
 }
 
 export interface LicenseVerificationData {
@@ -446,7 +450,14 @@ export interface ApplicationFormData {
   
   // Step 6: Biometric Data
   biometric_data: {
-    photo?: File | string;
+    photo?: File | string | {
+      filename: string;
+      file_size: number;
+      dimensions: string;
+      format: string;
+      iso_compliant: boolean;
+      processed_url: string;
+    };
     signature?: File | string;
     fingerprint?: File | string;
   };

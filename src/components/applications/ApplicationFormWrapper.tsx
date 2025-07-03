@@ -793,7 +793,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
             { value: LicenseCategory.A1, label: 'A1 - Motor cycle not exceeding 125cm³ (16+ years)' },
             { value: LicenseCategory.A, label: 'A - Motor cycle exceeding 125cm³' },
             { value: LicenseCategory.B, label: 'B - Light motor vehicle (≤ 3,500 kg)' },
-            { value: LicenseCategory.EB, label: 'EB - Light articulated vehicle/combination' }
+            { value: LicenseCategory.BE, label: 'BE - Light articulated vehicle/combination' }
           ];
       }
     };
@@ -809,7 +809,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         [LicenseCategory.D1]: [LicenseCategory.B],
         [LicenseCategory.D]: [LicenseCategory.D1],
         [LicenseCategory.D2]: [LicenseCategory.D],
-        [LicenseCategory.EB]: [LicenseCategory.B]
+        [LicenseCategory.BE]: [LicenseCategory.B]
       };
       return requirements[category] || [];
     };
@@ -824,6 +824,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         setFormData(prev => ({
           ...prev,
           license_verification: {
+            person_id: formData.person!.id,
             requires_verification: false,
             system_licenses: [],
             external_licenses: [],
@@ -850,21 +851,24 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
       setFormData(prev => ({
         ...prev,
         license_verification: {
+          person_id: formData.person!.id,
           requires_verification: missingRequired.length > 0,
           system_licenses: systemLicenses,
           external_licenses: missingRequired.map(cat => ({
             license_category: cat,
+            license_type: 'DRIVERS_LICENSE' as const,
+            categories: [cat],
             license_number: '',
             issue_date: '',
             expiry_date: '',
             issuing_authority: '',
+            issuing_location: '',
             restrictions: '',
             verified: false,
+            verification_source: 'MANUAL' as const,
             is_required: true
           })),
-          all_license_categories: [...systemLicenses.map((l: any) => l.license_category), selectedCategory],
-          missing_prerequisites: missingRequired,
-          can_proceed: missingRequired.length === 0
+          all_license_categories: [...systemLicenses.map((l: any) => l.license_category), selectedCategory]
         }
       }));
     };
@@ -1105,12 +1109,16 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                           const updated = { ...formData.license_verification };
                           updated.external_licenses.push({
                             license_category: LicenseCategory.B,
+                            license_type: 'DRIVERS_LICENSE' as const,
+                            categories: [LicenseCategory.B],
                             license_number: '',
                             issue_date: '',
                             expiry_date: '',
                             issuing_authority: '',
+                            issuing_location: '',
                             restrictions: '',
                             verified: false,
+                            verification_source: 'MANUAL' as const,
                             is_required: false
                           });
                           setFormData(prev => ({ ...prev, license_verification: updated }));
@@ -1894,7 +1902,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                     <ListItemText 
                       primary="Digital Signature"
                       secondary={formData.biometric_data.signature ? 
-                        `Captured: ${formData.biometric_data.signature.name}` : 
+                        `Captured: ${typeof formData.biometric_data.signature === 'object' && 'name' in formData.biometric_data.signature ? formData.biometric_data.signature.name : 'Signature file'}` : 
                         "Optional - can be added for enhanced security"
                       }
                     />
@@ -1910,7 +1918,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                     <ListItemText 
                       primary="Fingerprint"
                       secondary={formData.biometric_data.fingerprint ? 
-                        `Captured: ${formData.biometric_data.fingerprint.name}` : 
+                        `Captured: ${typeof formData.biometric_data.fingerprint === 'object' && 'name' in formData.biometric_data.fingerprint ? formData.biometric_data.fingerprint.name : 'Fingerprint file'}` : 
                         "Optional - hardware integration pending"
                       }
                     />
@@ -2029,13 +2037,6 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                       </TableBody>
                     </Table>
                     
-                    {formData.is_urgent && (
-                      <Alert severity="warning" sx={{ mt: 2 }}>
-                        <Typography variant="body2">
-                          <strong>Urgent Processing:</strong> Additional fees may apply for expedited processing.
-                        </Typography>
-                      </Alert>
-                    )}
                   </Box>
                 ) : (
                   <Alert severity="info">
@@ -2220,9 +2221,6 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                     <Typography variant="body2" color="text.secondary">
                       Created: {new Date(app.created_at).toLocaleDateString()}
                     </Typography>
-                    {app.is_urgent && (
-                      <Chip label="Urgent" size="small" color="warning" />
-                    )}
                   </Grid>
                   <Grid item xs={12} md={6}>
                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
@@ -2234,7 +2232,6 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                             ...prev,
                             application_type: app.application_type,
                             license_category: app.license_category,
-                            is_urgent: app.is_urgent,
                             urgency_reason: app.urgency_reason || '',
                             is_temporary_license: app.is_temporary_license,
                             validity_period_days: app.validity_period_days,
