@@ -46,7 +46,15 @@ import {
   TableHead,
   TableBody,
   TableRow,
-  TableCell
+  TableCell,
+  Tabs,
+  Tab,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Badge,
+  Tooltip,
+  IconButton
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -61,7 +69,12 @@ import {
   AttachMoney as MoneyIcon,
   Error as ErrorIcon,
   Create as CreateIcon,
-  Fingerprint as FingerprintIcon
+  Fingerprint as FingerprintIcon,
+  ExpandMore as ExpandMoreIcon,
+  PhotoCamera as PhotoCameraIcon,
+  CloudUpload as CloudUploadIcon,
+  Visibility as VisibilityIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 
 import PersonFormWrapper from '../PersonFormWrapper';
@@ -138,13 +151,16 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
   showHeader = true
 }) => {
   // State management
-  const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [validating, setValidating] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string>('');
-  const [success, setSuccess] = useState<string>('');
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [licenseValidation, setLicenseValidation] = useState<any>(null);
+  const [activeStep, setActiveStep] = useState(0);
+  const [stepValidation, setStepValidation] = useState<boolean[]>([false, false, false, false, false, false]);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   // License validation states
   const [validationResult, setValidationResult] = useState<LicenseValidationResult | null>(null);
@@ -164,25 +180,20 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
   const [formData, setFormData] = useState<ApplicationFormData>({
     person: null,
     application_type: ApplicationType.NEW_LICENSE,
-    license_category: LicenseCategory.B,
-    is_urgent: false,
-    urgency_reason: '',
-    is_temporary_license: false,
-    validity_period_days: DEFAULT_TEMPORARY_LICENSE_DAYS,
-    is_on_hold: false,
-    parent_application_id: undefined,
-    replacement_reason: '',
-    selected_location_id: undefined,
-    // Vehicle type selection
-    vehicle_transmission: TransmissionType.MANUAL,
-    modified_vehicle_for_disability: false,
-    // License verification data
-    license_verification: null,
-    // Document upload fields
+    license_category: '' as LicenseCategory,
+    selected_location_id: '',
+    never_been_refused: true, // Default to true (most people haven't been refused)
+    refusal_details: '',
+    // Section C fields
+    replacement_reason: undefined,
+    office_of_issue: '',
+    police_reported: false,
+    police_station: '',
+    police_reference_number: '',
+    date_of_change: '',
     medical_certificate_file: undefined,
-    medical_certificate_verified_manually: false,
     parental_consent_file: undefined,
-    // Medical information for comprehensive health assessment
+    license_verification: null,
     medical_information: null,
     biometric_data: {},
     selected_fees: [],
@@ -237,6 +248,14 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     return Math.floor((Date.now() - new Date(birthDate).getTime()) / (1000 * 60 * 60 * 24 * 365.25));
   };
 
+  // Check if Section C is required for this application type
+  const requiresSectionC = () => {
+    return [
+      ApplicationType.REPLACEMENT,
+      ApplicationType.NEW_LICENSE // For "new card/duplicate" cases
+    ].includes(formData.application_type);
+  };
+
   // Steps configuration
   const steps = [
     {
@@ -251,6 +270,13 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
       icon: <AssignmentIcon />,
       component: 'application'
     },
+    // Conditionally include Section C for replacement/notice applications
+    ...(requiresSectionC() ? [{
+      label: 'Notice/Replacement Details',
+      description: 'Complete Section C for replacement or notice of change',
+      icon: <WarningIcon />,
+      component: 'sectionC'
+    }] : []),
     {
       label: 'Requirements',
       description: 'Verify documents and prerequisites',
@@ -389,165 +415,71 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
 
   // Handle application details changes
   const handleApplicationDetailsChange = async (field: string, value: any) => {
-    // First update the form data
+    console.log('Application details change:', field, value);
+    
     setFormData(prev => {
       const updated = { ...prev, [field]: value };
       
-      // Recalculate fees when application type or categories change
-      if (field === 'application_type' || field === 'license_category') {
+      // Auto-calculate fees when category changes
+      if (field === 'license_category' && value && prev.person) {
+        console.log('Calculating fees for category:', value);
         const fees = applicationService.calculateApplicationFees(
-          field === 'application_type' ? value : updated.application_type,
-          [field === 'license_category' ? value : updated.license_category],
+          updated.application_type,
+          [value],
           lookups.fee_structures
         );
-        
         updated.selected_fees = fees;
         updated.total_amount = applicationService.calculateTotalAmount(fees);
-
-        // Handle application type specific settings
-        if (field === 'application_type') {
-          if (value === ApplicationType.LEARNERS_PERMIT) {
-            // Learner's permits: Fixed 6 months validity, no temporary license option
-            updated.validity_period_days = LEARNERS_PERMIT_VALIDITY_MONTHS * 30; // 6 months in days
-            updated.is_temporary_license = false;
-          } else if (value === ApplicationType.NEW_LICENSE) {
-            // Driver's license: Allow temporary license option with default period
-            updated.validity_period_days = DEFAULT_TEMPORARY_LICENSE_DAYS;
-          } else {
-            // Other types: Reset temporary license settings
-            updated.is_temporary_license = false;
-            updated.validity_period_days = DEFAULT_TEMPORARY_LICENSE_DAYS;
-          }
-        }
+        console.log('Calculated fees:', fees, 'Total:', updated.total_amount);
       }
       
       return updated;
     });
-    
-    // Clear existing validation errors when making changes
-    setValidationErrors([]);
-    
-    // Force validation check for critical fields that affect requirements
-    const shouldTriggerValidation = field === 'application_type' || 
-                                  field === 'license_category' || 
-                                  field === 'selected_location_id';
-    
-    if (shouldTriggerValidation && formData.person?.birth_date) {
-      // Get the updated values for validation
-      const updatedAppType = field === 'application_type' ? value : formData.application_type;
-      const updatedCategory = field === 'license_category' ? value : formData.license_category;
-      
-      // Reset external form states when application type changes
-      if (field === 'application_type') {
-        setShowExternalLearnerForm(false);
-        setShowExternalLicenseForm(false);
-        setExistingLicenseCheck(null); // Force refresh of license check
-      }
-      
-      // Run validation with updated values
-      await validateLicenseCategories(
-        updatedCategory as LicenseCategory, 
-        updatedAppType as ApplicationType,
-        formData.person,
-        formData.license_verification
-      );
-    }
-
-    // Also run the existing prerequisite check
-    if (field === 'license_category' && formData.person?.id) {
-      await checkPrerequisites(formData.person.id, value as LicenseCategory);
-    }
   };
 
   // Handle person selection
   // Comprehensive license validation function
-  const validateLicenseCategories = useCallback(async (
-    category: LicenseCategory, 
+  const validateLicenseCategories = async (
+    selectedCategory: LicenseCategory,
     applicationType: ApplicationType,
-    person: Person | null,
-    licenseVerification?: LicenseVerificationData | null
+    person: Person,
+    licenseVerification: LicenseVerificationData | null
   ) => {
-    if (!person?.birth_date || !category) {
-      setValidationResult(null);
-      return;
-    }
+    if (!selectedCategory || !person.birth_date) return;
 
     try {
-      // Extract external licenses from verification data
-      const externalLearnerPermit = licenseVerification?.external_licenses.find(l => l.license_type === 'LEARNERS_PERMIT' && l.verified);
-      const externalExistingLicense = licenseVerification?.external_licenses.find(l => l.license_type === 'DRIVERS_LICENSE' && l.verified);
-
-      const validation = await licenseValidationService.validateApplication(
+      setValidating(true);
+      const validationResult = await licenseValidationService.validateApplication(
         applicationType,
-        category, // Single category for new validation service
+        selectedCategory,
         person.birth_date,
         person.id,
-        formData.vehicle_transmission,
-        formData.modified_vehicle_for_disability,
-        externalLearnerPermit ? {
-          license_number: externalLearnerPermit.license_number,
-          license_type: externalLearnerPermit.license_type,
-          categories: externalLearnerPermit.categories,
-          issue_date: externalLearnerPermit.issue_date,
-          expiry_date: externalLearnerPermit.expiry_date,
-          issuing_location: externalLearnerPermit.issuing_location,
-          verified_by_clerk: externalLearnerPermit.verified,
-          verification_notes: externalLearnerPermit.verification_notes
-        } : undefined,
-        externalExistingLicense ? {
-          license_number: externalExistingLicense.license_number,
-          license_type: externalExistingLicense.license_type,
-          categories: externalExistingLicense.categories,
-          issue_date: externalExistingLicense.issue_date,
-          expiry_date: externalExistingLicense.expiry_date,
-          issuing_location: externalExistingLicense.issuing_location,
-          verified_by_clerk: externalExistingLicense.verified,
-          verification_notes: externalExistingLicense.verification_notes
-        } : undefined
+        TransmissionType.MANUAL, // Default since we removed transmission selection
+        false, // Default since we removed disability modification
+        undefined,
+        undefined
       );
-
-      setValidationResult(validation);
-
-      // Check existing licenses when person is selected or when reset
-      let existingCheck = existingLicenseCheck;
-      if (!existingLicenseCheck) {
-        existingCheck = await licenseValidationService.checkExistingLicenses(person.id);
-        setExistingLicenseCheck(existingCheck);
-      }
-
-      // Show external forms if needed for NEW_LICENSE applications
-      if (applicationType === ApplicationType.NEW_LICENSE && existingCheck) {
-        // Check if we need learner's permit for base categories (especially B)
-        const rules = LICENSE_CATEGORY_RULES[category];
-        const needsLearnerPermit = rules.allows_learners_permit && rules.requires_existing.length === 0;
-        
-        if (needsLearnerPermit && !existingCheck.has_learners_permit) {
-          setShowExternalLearnerForm(true);
-        }
-        
-        // Check if we need existing license for advanced categories
-        const needsExistingLicense = rules.requires_existing.length > 0;
-        
-        if (needsExistingLicense && !existingCheck.has_active_licenses) {
-          setShowExternalLicenseForm(true);
-        }
-      }
       
-      // For replacements/renewals, check existing licenses
-      if ((applicationType === ApplicationType.REPLACEMENT || applicationType === ApplicationType.RENEWAL) && existingCheck && !existingCheck.has_active_licenses) {
-        setShowExternalLicenseForm(true);
-      }
+      console.log('License validation result:', validationResult);
+      setLicenseValidation(validationResult);
+      
     } catch (error) {
       console.error('License validation error:', error);
-      setValidationResult({
+      setLicenseValidation({
         is_valid: false,
-        message: 'Validation failed - please check requirements',
+        message: 'Validation failed',
         missing_prerequisites: [],
         age_violations: [],
-        invalid_combinations: []
+        invalid_combinations: [],
+        medicalRequired: false,
+        medicalRequiredReason: '',
+        licenseRestrictions: [],
+        authorizedCategories: []
       });
+    } finally {
+      setValidating(false);
     }
-  }, [existingLicenseCheck]);
+  };
 
   const handlePersonSelected = useCallback(async (person: Person | null) => {
     setFormData(prev => ({ ...prev, person }));
@@ -619,16 +551,18 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         }
         break;
 
-      case 1: // Application Details
+      case 1: // Application Details - Section B
         if (!formData.license_category) {
           errors.push('Please select a license category');
         }
-        if (formData.is_urgent && !formData.urgency_reason?.trim()) {
-          errors.push('Please provide urgency reason');
+        if (!formData.application_type) {
+          errors.push('Please select an application type');
         }
-        if (formData.application_type === ApplicationType.REPLACEMENT && !formData.replacement_reason?.trim()) {
-          errors.push('Please provide replacement reason');
+        // Validate never been refused declaration
+        if (formData.never_been_refused === false && !formData.refusal_details?.trim()) {
+          errors.push('Please provide details of previous license application refusal');
         }
+        // Remove old validations that are no longer in Section B
         break;
 
       case 2: // Requirements
@@ -728,13 +662,6 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         location_id: formData.selected_location_id || user?.primary_location_id || '',
         application_type: formData.application_type,
         license_category: formData.license_category,
-        is_urgent: formData.is_urgent,
-        urgency_reason: formData.urgency_reason,
-        is_temporary_license: formData.is_temporary_license,
-        validity_period_days: formData.validity_period_days,
-        is_on_hold: formData.is_on_hold,
-        parent_application_id: formData.parent_application_id,
-        replacement_reason: formData.replacement_reason,
         medical_information: formData.medical_information
       };
 
@@ -762,13 +689,6 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         location_id: formData.selected_location_id || user?.primary_location_id || '',
         application_type: formData.application_type,
         license_category: formData.license_category,
-        is_urgent: formData.is_urgent,
-        urgency_reason: formData.urgency_reason,
-        is_temporary_license: formData.is_temporary_license,
-        validity_period_days: formData.validity_period_days,
-        is_on_hold: formData.is_on_hold,
-        parent_application_id: formData.parent_application_id,
-        replacement_reason: formData.replacement_reason,
         medical_information: formData.medical_information
       };
 
@@ -792,8 +712,11 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
 
   // Render step content
   const renderStepContent = (step: number) => {
-    switch (step) {
-      case 0: // Person
+    const currentStep = steps[step];
+    if (!currentStep) return <Typography>Unknown step</Typography>;
+
+    switch (currentStep.component) {
+      case 'person':
         return (
           <PersonFormWrapper
             mode="application"
@@ -806,19 +729,22 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           />
         );
 
-      case 1: // Application Details
+      case 'application':
         return renderApplicationDetailsStep();
 
-      case 2: // Requirements
+      case 'sectionC':
+        return renderSectionCStep();
+
+      case 'requirements':
         return renderRequirementsStep();
 
-      case 3: // Medical Assessment
+      case 'medical':
         return renderMedicalStep();
 
-      case 4: // Biometric
+      case 'biometric':
         return renderBiometricStep();
 
-      case 5: // Review
+      case 'review':
         return renderReviewStep();
 
       default:
@@ -826,391 +752,518 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     }
   };
 
-  // Application Details Step
-  const renderApplicationDetailsStep = () => (
-    <Box>
-      <Typography variant="h6" gutterBottom>Application Details</Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Complete the application details and license category selection
-      </Typography>
+  // Application Details Step - Section B
+  const renderApplicationDetailsStep = () => {
+    // Determine which application form type we're dealing with
+    const getApplicationFormType = () => {
+      if (formData.application_type === ApplicationType.LEARNERS_PERMIT) {
+        return 'LEARNERS_PERMIT';
+      } else if ([LicenseCategory.C1, LicenseCategory.C, LicenseCategory.C1E, LicenseCategory.CE, 
+                  LicenseCategory.D1, LicenseCategory.D, LicenseCategory.D2].includes(formData.license_category)) {
+        return 'PROFESSIONAL_DRIVER';
+      } else {
+        return 'DRIVERS_LICENSE';
+      }
+    };
 
-      <Grid container spacing={3}>
-        {/* Location Selection (for admin users) */}
-        {canSelectLocation() && (
+    const getAvailableLicenseCategories = () => {
+      const formType = getApplicationFormType();
+      
+      switch (formType) {
+        case 'LEARNERS_PERMIT':
+          return [
+            { value: LicenseCategory.A1, label: 'A1 - Motor cycle not exceeding 125cm³ (16+ years)' },
+            { value: LicenseCategory.A, label: 'A - Motor cycle exceeding 125cm³' },
+            { value: LicenseCategory.B, label: 'B - Light motor vehicle (≤ 3,500 kg)' }
+          ];
+          
+        case 'PROFESSIONAL_DRIVER':
+          return [
+            { value: LicenseCategory.C1, label: 'C1 - Heavy motor vehicle (3,500-16,000 kg)' },
+            { value: LicenseCategory.C, label: 'C - Extra heavy motor vehicle (> 16,000 kg)' },
+            { value: LicenseCategory.C1E, label: 'C1E - Heavy articulated vehicle' },
+            { value: LicenseCategory.CE, label: 'CE - Extra heavy articulated vehicle' },
+            { value: LicenseCategory.D1, label: 'D1 - Minibus (≤ 16 passengers)' },
+            { value: LicenseCategory.D, label: 'D - Bus (> 16 passengers)' },
+            { value: LicenseCategory.D2, label: 'D2 - Articulated bus' }
+          ];
+          
+        default: // DRIVERS_LICENSE
+          return [
+            { value: LicenseCategory.A1, label: 'A1 - Motor cycle not exceeding 125cm³ (16+ years)' },
+            { value: LicenseCategory.A, label: 'A - Motor cycle exceeding 125cm³' },
+            { value: LicenseCategory.B, label: 'B - Light motor vehicle (≤ 3,500 kg)' },
+            { value: LicenseCategory.EB, label: 'EB - Light articulated vehicle/combination' }
+          ];
+      }
+    };
+
+    // Check if selected category requires prerequisite licenses
+    const getRequiredLicenses = (category: LicenseCategory): LicenseCategory[] => {
+      const requirements: Record<string, LicenseCategory[]> = {
+        [LicenseCategory.A]: [LicenseCategory.A1],
+        [LicenseCategory.C1]: [LicenseCategory.B],
+        [LicenseCategory.C]: [LicenseCategory.C1],
+        [LicenseCategory.C1E]: [LicenseCategory.C1],
+        [LicenseCategory.CE]: [LicenseCategory.C],
+        [LicenseCategory.D1]: [LicenseCategory.B],
+        [LicenseCategory.D]: [LicenseCategory.D1],
+        [LicenseCategory.D2]: [LicenseCategory.D],
+        [LicenseCategory.EB]: [LicenseCategory.B]
+      };
+      return requirements[category] || [];
+    };
+
+    // Check license verification status
+    const checkLicenseRequirements = async (selectedCategory: LicenseCategory) => {
+      if (!formData.person) return;
+
+      const requiredLicenses = getRequiredLicenses(selectedCategory);
+      if (requiredLicenses.length === 0) {
+        // No prerequisites required
+        setFormData(prev => ({
+          ...prev,
+          license_verification: {
+            requires_verification: false,
+            system_licenses: [],
+            external_licenses: [],
+            all_license_categories: [selectedCategory],
+            missing_prerequisites: [],
+            can_proceed: true
+          }
+        }));
+        return;
+      }
+
+      // Check if person has required licenses in the system
+      // TODO: This will need to be implemented when we have license lookup service
+      // For now, assume no licenses found in system and require external capture
+      
+      const systemLicenses: any[] = []; // TODO: await licenseService.getPersonLicenses(formData.person.id);
+      const foundRequired = requiredLicenses.filter(req => 
+        systemLicenses.some(sys => sys.license_category === req)
+      );
+      const missingRequired = requiredLicenses.filter(req => 
+        !systemLicenses.some(sys => sys.license_category === req)
+      );
+
+      setFormData(prev => ({
+        ...prev,
+        license_verification: {
+          requires_verification: missingRequired.length > 0,
+          system_licenses: systemLicenses,
+          external_licenses: missingRequired.map(cat => ({
+            license_category: cat,
+            license_number: '',
+            issue_date: '',
+            expiry_date: '',
+            issuing_authority: '',
+            restrictions: '',
+            verified: false,
+            is_required: true
+          })),
+          all_license_categories: [...systemLicenses.map((l: any) => l.license_category), selectedCategory],
+          missing_prerequisites: missingRequired,
+          can_proceed: missingRequired.length === 0
+        }
+      }));
+    };
+
+    return (
+      <Box>
+        <Typography variant="h6" gutterBottom>
+          Section B: Application Details
+        </Typography>
+        
+        <Grid container spacing={3}>
+          {/* Application Type Selection */}
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth required>
+              <InputLabel>Application Type</InputLabel>
+              <Select
+                value={formData.application_type}
+                onChange={async (e) => {
+                  const newType = e.target.value as ApplicationType;
+                  setFormData(prev => ({ 
+                    ...prev, 
+                    application_type: newType,
+                    license_category: '' as LicenseCategory // Reset category when type changes
+                  }));
+                }}
+              >
+                <MenuItem value={ApplicationType.LEARNERS_PERMIT}>Learner's Permit</MenuItem>
+                <MenuItem value={ApplicationType.NEW_LICENSE}>Driver's License</MenuItem>
+                <MenuItem value={ApplicationType.RENEWAL}>License Renewal</MenuItem>
+                <MenuItem value={ApplicationType.REPLACEMENT}>Replacement License</MenuItem>
+                <MenuItem value={ApplicationType.TEMPORARY_LICENSE}>Temporary License</MenuItem>
+                <MenuItem value={ApplicationType.INTERNATIONAL_PERMIT}>International Permit</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+
+          {/* Application Location (for admin users) */}
+          {canSelectLocation() && (
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth required>
+                <InputLabel>Application Location</InputLabel>
+                <Select
+                  value={formData.selected_location_id || ''}
+                  onChange={(e) => handleApplicationDetailsChange('selected_location_id', e.target.value)}
+                >
+                  {getAvailableLocations().map((location) => (
+                    <MenuItem key={location.id} value={location.id}>
+                      {location.name} ({location.code})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+          )}
+
+          {/* License Category Selection */}
           <Grid item xs={12}>
             <FormControl fullWidth required>
-              <InputLabel>Application Location</InputLabel>
+              <InputLabel>License Category</InputLabel>
               <Select
-                value={formData.selected_location_id || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, selected_location_id: e.target.value }))}
-                label="Application Location"
+                value={formData.license_category}
+                onChange={async (e) => {
+                  const selectedCategory = e.target.value as LicenseCategory;
+                  setFormData(prev => ({ ...prev, license_category: selectedCategory }));
+                  
+                  // Check license requirements immediately
+                  await checkLicenseRequirements(selectedCategory);
+                }}
               >
-                <MenuItem value="">
-                  <em>Select location for this application</em>
-                </MenuItem>
-                {getAvailableLocations().map((location) => (
-                  <MenuItem key={location.id} value={location.id}>
-                    {location.name} ({location.code}) - {location.province_code}
+                {getAvailableLicenseCategories().map((category) => (
+                  <MenuItem key={category.value} value={category.value}>
+                    {category.label}
                   </MenuItem>
                 ))}
               </Select>
-              <Typography variant="caption" sx={{ mt: 1, color: 'text.secondary' }}>
-                {user?.user_type === 'PROVINCIAL_ADMIN' 
-                  ? `Showing locations in ${user.scope_province} province`
-                  : 'Select the location where this application will be processed'
-                }
-              </Typography>
             </FormControl>
           </Grid>
-        )}
 
-        {/* Current Location Display (for location users) */}
-        {!canSelectLocation() && user?.primary_location_id && (
+          {/* Never Been Refused Declaration */}
           <Grid item xs={12}>
-            <Alert severity="info">
-              <Typography variant="body2">
-                <strong>Application Location:</strong> {locations.find(loc => loc.id === user.primary_location_id)?.name || 'Current location'}
-              </Typography>
-            </Alert>
-          </Grid>
-        )}
-
-        {/* Application Type */}
-        <Grid item xs={12} md={6}>
-          <FormControl fullWidth required>
-            <InputLabel>Application Type</InputLabel>
-            <Select
-              value={formData.application_type}
-              onChange={(e) => handleApplicationDetailsChange('application_type', e.target.value)}
-              label="Application Type"
-            >
-              <MenuItem value={ApplicationType.LEARNERS_PERMIT}>Learner's Permit</MenuItem>
-              <MenuItem value={ApplicationType.NEW_LICENSE}>Driver's License</MenuItem>
-              <MenuItem value={ApplicationType.RENEWAL}>License Renewal</MenuItem>
-              <MenuItem value={ApplicationType.REPLACEMENT}>Replacement License</MenuItem>
-              <MenuItem value={ApplicationType.TEMPORARY_LICENSE}>Temporary License</MenuItem>
-              <MenuItem value={ApplicationType.INTERNATIONAL_PERMIT}>International Permit</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-
-        {/* Replacement Reason */}
-        {formData.application_type === ApplicationType.REPLACEMENT && (
-          <Grid item xs={12}>
-            <FormControl fullWidth required>
-              <InputLabel>Replacement Reason</InputLabel>
-              <Select
-                value={formData.replacement_reason || ''}
-                onChange={(e) => handleApplicationDetailsChange('replacement_reason', e.target.value)}
-                label="Replacement Reason"
-              >
-                <MenuItem value={ReplacementReason.LOST}>Lost</MenuItem>
-                <MenuItem value={ReplacementReason.STOLEN}>Stolen</MenuItem>
-                <MenuItem value={ReplacementReason.DAMAGED}>Damaged</MenuItem>
-                <MenuItem value={ReplacementReason.NAME_CHANGE}>Name Change</MenuItem>
-                <MenuItem value={ReplacementReason.ADDRESS_CHANGE}>Address Change</MenuItem>
-                <MenuItem value={ReplacementReason.OTHER}>Other</MenuItem>
-              </Select>
-            </FormControl>
-            {(formData.replacement_reason === ReplacementReason.OTHER || 
-              formData.replacement_reason === ReplacementReason.STOLEN) && (
-              <TextField
-                fullWidth
-                label={formData.replacement_reason === ReplacementReason.STOLEN ? "Police Report Details" : "Other Reason Details"}
-                value={formData.urgency_reason || ''}
-                onChange={(e) => handleApplicationDetailsChange('urgency_reason', e.target.value)}
-                placeholder={formData.replacement_reason === ReplacementReason.STOLEN ? 
-                  "Police report number and details" : "Please specify the replacement reason"}
-                multiline
-                rows={2}
-                sx={{ mt: 2 }}
-                required
-              />
-            )}
-          </Grid>
-        )}
-
-        {/* License Category - Single Select with Enhanced Information */}
-        <Grid item xs={12}>
-          <FormControl fullWidth required>
-            <InputLabel>License Category</InputLabel>
-            <Select
-              value={formData.license_category}
-              onChange={(e) => handleApplicationDetailsChange('license_category', e.target.value)}
-              label="License Category"
-            >
-              {Object.entries(LICENSE_CATEGORY_RULES).map(([category, rules]) => {
-                const isDisabled = formData.application_type === ApplicationType.LEARNERS_PERMIT && !rules.allows_learners_permit;
-                const supersededCategories = getSupersededCategories(category as LicenseCategory);
-                const categoryFamily = getCategoryFamily(category as LicenseCategory);
-                const isCommercial = isCommercialLicense(category as LicenseCategory);
-                
-                return (
-                  <MenuItem key={category} value={category} disabled={isDisabled}>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', py: 1 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="body1" fontWeight="bold">
-                          {category}
-                        </Typography>
-                        {isCommercial && (
-                          <Chip label="Commercial" size="small" color="warning" variant="outlined" />
-                        )}
-                        <Chip label={`Family ${categoryFamily}`} size="small" color="default" variant="outlined" />
-                      </Box>
-                      <Typography variant="body2" color="text.secondary">
-                        {rules.description} (Min age: {rules.min_age})
-                      </Typography>
-                      {rules.requires_existing.length > 0 && (
-                        <Typography variant="caption" color="warning.main">
-                          Requires: {rules.requires_existing.join(', ')}
-                        </Typography>
-                      )}
-                      {supersededCategories.length > 0 && (
-                        <Typography variant="caption" color="success.main">
-                          Also authorizes: {supersededCategories.join(', ')}
-                        </Typography>
-                      )}
-                    </Box>
-                  </MenuItem>
-                );
-              })}
-            </Select>
-            <Typography variant="caption" sx={{ mt: 1, color: 'text.secondary' }}>
-              Select the specific category you want to apply for. Higher categories automatically include authorization for lower categories.
-            </Typography>
-          </FormControl>
-        </Grid>
-
-        {/* Authorized Categories Preview */}
-        {formData.license_category && (
-          <Grid item xs={12}>
-            <Card variant="outlined" sx={{ bgcolor: 'success.50' }}>
-              <CardContent sx={{ py: 2 }}>
-                <Typography variant="subtitle2" gutterBottom sx={{ color: 'success.main', fontWeight: 600 }}>
-                  <CheckCircleIcon sx={{ mr: 1, fontSize: 20 }} />
-                  Categories You Will Be Authorized For:
-                </Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-                  {getAuthorizedCategories(formData.license_category).map((category) => (
-                    <Chip 
-                      key={category}
-                      label={category}
-                      color={category === formData.license_category ? 'primary' : 'success'}
-                      variant={category === formData.license_category ? 'filled' : 'outlined'}
-                      size="small"
+            <Card variant="outlined">
+              <CardContent>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={formData.never_been_refused}
+                      onChange={(e) => setFormData(prev => ({ 
+                        ...prev, 
+                        never_been_refused: e.target.checked,
+                        refusal_details: e.target.checked ? '' : prev.refusal_details 
+                      }))}
                     />
-                  ))}
-                </Box>
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                  Your license card will show ALL these categories. You can drive any vehicle type covered by these categories.
-                </Typography>
-                {isCommercialLicense(formData.license_category) && (
-                  <Alert severity="info" sx={{ mt: 2 }}>
-                    <Typography variant="body2">
-                      🚛 <strong>Commercial License:</strong> This category requires additional medical clearance and may have enhanced testing requirements.
-                    </Typography>
-                  </Alert>
-                )}
-                {(requiresMedicalAlways(formData.license_category) || (formData.person && calculateAge(formData.person.birth_date) >= 60 && requiresMedical60Plus(formData.license_category))) && (
-                  <Alert severity="warning" sx={{ mt: 1 }}>
-                    <Typography variant="body2">
-                      🏥 <strong>Medical Assessment Required:</strong> {
-                        requiresMedicalAlways(formData.license_category) 
-                          ? 'Always required for this category'
-                          : 'Required due to age (60+) for commercial license'
-                      }
-                    </Typography>
-                  </Alert>
+                  }
+                  label="I have never been refused a driving license or had a driving license suspended or cancelled"
+                />
+                
+                {!formData.never_been_refused && (
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={3}
+                    label="Please provide details of any previous license application refusal, suspension, or cancellation"
+                    value={formData.refusal_details || ''}
+                    onChange={(e) => setFormData(prev => ({ 
+                      ...prev, 
+                      refusal_details: e.target.value 
+                    }))}
+                    required
+                    sx={{ mt: 2 }}
+                  />
                 )}
               </CardContent>
             </Card>
           </Grid>
-        )}
 
-        {/* Vehicle Transmission Type */}
-        <Grid item xs={12}>
-          <FormControl fullWidth required>
-            <InputLabel>Vehicle Transmission</InputLabel>
-            <Select
-              value={formData.vehicle_transmission}
-              onChange={(e) => handleApplicationDetailsChange('vehicle_transmission', e.target.value)}
-              label="Vehicle Transmission"
-            >
-              <MenuItem value={TransmissionType.MANUAL}>Manual Transmission</MenuItem>
-              <MenuItem value={TransmissionType.AUTOMATIC}>Automatic Transmission</MenuItem>
-            </Select>
-            <Typography variant="caption" sx={{ mt: 1, color: 'text.secondary' }}>
-              This will be noted as a restriction on the license if automatic is selected
-            </Typography>
-          </FormControl>
-        </Grid>
+          {/* License Verification Results */}
+          {formData.license_verification && (
+            <Grid item xs={12}>
+              <Card variant="outlined">
+                <CardHeader title="License Verification" />
+                <CardContent>
+                  {formData.license_verification.requires_verification ? (
+                    <Alert severity="warning" sx={{ mb: 2 }}>
+                      <Typography variant="body2" gutterBottom>
+                        The selected license category requires prerequisite licenses. 
+                        Please provide details of your existing licenses below.
+                      </Typography>
+                    </Alert>
+                  ) : (
+                    <Alert severity="success" sx={{ mb: 2 }}>
+                      <Typography variant="body2">
+                        No additional license verification required for this category.
+                      </Typography>
+                    </Alert>
+                  )}
 
-        {/* Modified Vehicle for Disability */}
-        <Grid item xs={12}>
-          <Card variant="outlined" sx={{ p: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                  Modified Vehicle for Disability
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Check if the applicant drives a specially modified vehicle due to a disability
-                </Typography>
-              </Box>
-              <Switch
-                checked={formData.modified_vehicle_for_disability}
-                onChange={(e) => handleApplicationDetailsChange('modified_vehicle_for_disability', e.target.checked)}
-                color="primary"
-              />
-            </Box>
-          </Card>
-        </Grid>
+                  {/* External License Capture */}
+                  {formData.license_verification.external_licenses.map((extLicense, index) => (
+                    <Card key={index} variant="outlined" sx={{ mt: 2 }}>
+                      <CardHeader 
+                        title={`Required License: ${extLicense.license_category}`}
+                        avatar={
+                          <Chip 
+                            label="Required" 
+                            color="error" 
+                            size="small"
+                          />
+                        }
+                      />
+                      <CardContent>
+                        <Grid container spacing={2}>
+                          <Grid item xs={12} md={6}>
+                            <TextField
+                              fullWidth
+                              label="License Number"
+                              value={extLicense.license_number}
+                              onChange={(e) => {
+                                const updated = { ...formData.license_verification };
+                                updated.external_licenses[index].license_number = e.target.value;
+                                setFormData(prev => ({ ...prev, license_verification: updated }));
+                              }}
+                              required
+                            />
+                          </Grid>
+                          <Grid item xs={12} md={6}>
+                            <TextField
+                              fullWidth
+                              label="Issuing Authority"
+                              value={extLicense.issuing_authority}
+                              onChange={(e) => {
+                                const updated = { ...formData.license_verification };
+                                updated.external_licenses[index].issuing_authority = e.target.value;
+                                setFormData(prev => ({ ...prev, license_verification: updated }));
+                              }}
+                              required
+                            />
+                          </Grid>
+                          <Grid item xs={12} md={6}>
+                            <TextField
+                              fullWidth
+                              type="date"
+                              label="Issue Date"
+                              value={extLicense.issue_date}
+                              onChange={(e) => {
+                                const updated = { ...formData.license_verification };
+                                updated.external_licenses[index].issue_date = e.target.value;
+                                setFormData(prev => ({ ...prev, license_verification: updated }));
+                              }}
+                              InputLabelProps={{ shrink: true }}
+                              required
+                            />
+                          </Grid>
+                          <Grid item xs={12} md={6}>
+                            <TextField
+                              fullWidth
+                              type="date"
+                              label="Expiry Date"
+                              value={extLicense.expiry_date}
+                              onChange={(e) => {
+                                const updated = { ...formData.license_verification };
+                                updated.external_licenses[index].expiry_date = e.target.value;
+                                setFormData(prev => ({ ...prev, license_verification: updated }));
+                              }}
+                              InputLabelProps={{ shrink: true }}
+                              required
+                            />
+                          </Grid>
+                          <Grid item xs={12}>
+                            <TextField
+                              fullWidth
+                              multiline
+                              rows={2}
+                              label="Restrictions (if any)"
+                              value={extLicense.restrictions}
+                              onChange={(e) => {
+                                const updated = { ...formData.license_verification };
+                                updated.external_licenses[index].restrictions = e.target.value;
+                                setFormData(prev => ({ ...prev, license_verification: updated }));
+                              }}
+                              placeholder="e.g., Automatic transmission only, Corrective lenses required"
+                            />
+                          </Grid>
+                        </Grid>
+                      </CardContent>
+                    </Card>
+                  ))}
 
-        {/* Hold for Printing */}
-        <Grid item xs={12}>
-          <Card variant="outlined" sx={{ p: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                  Hold Application (Do Not Send to Printer)
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Prevent the license from being sent to the printer. 
-                  Useful when accumulating multiple categories before printing a combined card.
-                </Typography>
-              </Box>
-              <Switch
-                checked={formData.is_on_hold || false}
-                onChange={(e) => handleApplicationDetailsChange('is_on_hold', e.target.checked)}
-                color="warning"
-              />
-            </Box>
-          </Card>
-        </Grid>
-
-        {/* Urgency Settings */}
-        <Grid item xs={12}>
-          <Card variant="outlined" sx={{ p: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: formData.is_urgent ? 2 : 0 }}>
-              <Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                  Urgent Processing Required
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Request expedited processing for this application
-                </Typography>
-              </Box>
-              <Switch
-                checked={formData.is_urgent}
-                onChange={(e) => handleApplicationDetailsChange('is_urgent', e.target.checked)}
-                color="error"
-              />
-            </Box>
-            {formData.is_urgent && (
-              <TextField
-                fullWidth
-                label="Urgency Reason"
-                value={formData.urgency_reason || ''}
-                onChange={(e) => handleApplicationDetailsChange('urgency_reason', e.target.value)}
-                placeholder="Please explain why urgent processing is required"
-                multiline
-                rows={2}
-                required
-              />
-            )}
-          </Card>
-        </Grid>
-
-
-
-        {/* Temporary License Option */}
-        <Grid item xs={12}>
-          <Card variant="outlined" sx={{ p: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                  Issue Temporary License
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Temporary license can be issued independently of application status ({DEFAULT_TEMPORARY_LICENSE_DAYS} days validity)
-                </Typography>
-              </Box>
-              <Switch
-                checked={formData.is_temporary_license}
-                onChange={(e) => handleApplicationDetailsChange('is_temporary_license', e.target.checked)}
-                color="info"
-              />
-            </Box>
-          </Card>
-        </Grid>
-
-        {/* Prerequisite Check Display */}
-        {checkingPrerequisites && (
-          <Grid item xs={12}>
-            <Alert severity="info">
-              <Typography variant="body2">
-                <CircularProgress size={16} sx={{ mr: 1 }} />
-                Checking prerequisites for {formData.license_category}...
-              </Typography>
-            </Alert>
-          </Grid>
-        )}
-        
-        {prerequisiteCheck && (
-          <Grid item xs={12}>
-            <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Prerequisite Check Results
-              </Typography>
-              
-              {prerequisiteCheck.canProceed ? (
-                <Alert severity="success">
-                  <Typography variant="body2" gutterBottom>
-                    Prerequisites satisfied for {formData.license_category}:
-                  </Typography>
-                  {prerequisiteCheck.hasCompleted && (
-                    <Box sx={{ mt: 1 }}>
-                      <Typography variant="body2" fontWeight="bold">Completed Applications:</Typography>
-                      <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
-                        {prerequisiteCheck.completedApplications.map((app, index) => (
-                          <li key={index}>
-                            {app.license_category} - {app.application_number} (Completed)
-                          </li>
-                        ))}
-                      </ul>
+                  {/* Optional External Licenses */}
+                  {!formData.license_verification.requires_verification && (
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        Do you have any existing licenses to add to your record? (Optional)
+                      </Typography>
+                      <Button
+                        variant="outlined"
+                        onClick={() => {
+                          // Add optional external license
+                          const updated = { ...formData.license_verification };
+                          updated.external_licenses.push({
+                            license_category: LicenseCategory.B,
+                            license_number: '',
+                            issue_date: '',
+                            expiry_date: '',
+                            issuing_authority: '',
+                            restrictions: '',
+                            verified: false,
+                            is_required: false
+                          });
+                          setFormData(prev => ({ ...prev, license_verification: updated }));
+                        }}
+                      >
+                        Add Existing License
+                      </Button>
                     </Box>
                   )}
-                  {prerequisiteCheck.hasOnHold && (
-                    <Box sx={{ mt: 1 }}>
-                      <Typography variant="body2" fontWeight="bold">On-Hold Applications:</Typography>
-                      <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
-                        {prerequisiteCheck.onHoldApplications.map((app, index) => (
-                          <li key={index}>
-                            {app.license_category} - {app.application_number} (On Hold)
-                          </li>
-                        ))}
-                      </ul>
-                    </Box>
-                  )}
-                </Alert>
-              ) : (
-                <Alert severity="warning">
-                  <Typography variant="body2" gutterBottom>
-                    No completed or on-hold {LICENSE_CATEGORY_RULES[formData.license_category]?.requires_existing.join(' or ')} application found.
-                  </Typography>
-                  <Typography variant="body2">
-                    You can still proceed by verifying external license details in the Requirements section.
-                  </Typography>
-                </Alert>
-              )}
-            </Paper>
-          </Grid>
-        )}
-      </Grid>
-    </Box>
-  );
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
+        </Grid>
+      </Box>
+    );
+  };
 
   // Medical Assessment Step
+  // Section C Step - Notice/Replacement Details
+  const renderSectionCStep = () => {
+    return (
+      <Box>
+        <Typography variant="h6" gutterBottom>
+          Section C: Notice/Replacement Details
+        </Typography>
+        
+        <Grid container spacing={3}>
+          {/* Replacement Reason */}
+          <Grid item xs={12}>
+            <FormControl fullWidth required>
+              <InputLabel>Reason for Replacement/Notice</InputLabel>
+              <Select
+                value={formData.replacement_reason || ''}
+                onChange={(e) => setFormData(prev => ({ 
+                  ...prev, 
+                  replacement_reason: e.target.value as any,
+                  // Reset conditional fields when reason changes
+                  police_reported: false,
+                  police_station: '',
+                  police_reference_number: ''
+                }))}
+              >
+                <MenuItem value="theft">Theft (Diefstal)</MenuItem>
+                <MenuItem value="loss">Loss (Verlies)</MenuItem>
+                <MenuItem value="destruction">Destruction (Vernietiging)</MenuItem>
+                <MenuItem value="recovery">Recovery (Terugvinding)</MenuItem>
+                <MenuItem value="new_card">New Card (Nuwe kaart)</MenuItem>
+                <MenuItem value="change_particulars">Change of Particulars (ID, name, address)</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+
+          {/* Office of Issue */}
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              label="Office of Issue (Kantoor van uitreiking)"
+              value={formData.office_of_issue || ''}
+              onChange={(e) => setFormData(prev => ({ 
+                ...prev, 
+                office_of_issue: e.target.value 
+              }))}
+              required
+            />
+          </Grid>
+
+          {/* Date of Change */}
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              type="date"
+              label="Date of Change (Datum van verandering)"
+              value={formData.date_of_change || ''}
+              onChange={(e) => setFormData(prev => ({ 
+                ...prev, 
+                date_of_change: e.target.value 
+              }))}
+              InputLabelProps={{ shrink: true }}
+              required
+            />
+          </Grid>
+
+          {/* Police Report Section - Only for theft/loss */}
+          {(formData.replacement_reason === 'theft' || formData.replacement_reason === 'loss') && (
+            <>
+              <Grid item xs={12}>
+                <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
+                  Police Report Details
+                </Typography>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={formData.police_reported || false}
+                      onChange={(e) => setFormData(prev => ({ 
+                        ...prev, 
+                        police_reported: e.target.checked,
+                        police_station: e.target.checked ? prev.police_station : '',
+                        police_reference_number: e.target.checked ? prev.police_reference_number : ''
+                      }))}
+                    />
+                  }
+                  label={`${formData.replacement_reason === 'theft' ? 'Theft' : 'Loss'} reported to Police (${formData.replacement_reason === 'theft' ? 'Diefstal' : 'Verlies'} gerapporteer aan Polisie)`}
+                />
+              </Grid>
+
+              {formData.police_reported && (
+                <>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      label="Police Station (at/te)"
+                      value={formData.police_station || ''}
+                      onChange={(e) => setFormData(prev => ({ 
+                        ...prev, 
+                        police_station: e.target.value 
+                      }))}
+                      required
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      label="Reference Number (CAS no./Verwysingsnr. MAS nr.)"
+                      value={formData.police_reference_number || ''}
+                      onChange={(e) => setFormData(prev => ({ 
+                        ...prev, 
+                        police_reference_number: e.target.value 
+                      }))}
+                      required
+                    />
+                  </Grid>
+                </>
+              )}
+            </>
+          )}
+
+          {/* Information Card */}
+          <Grid item xs={12}>
+            <Card variant="outlined" sx={{ bgcolor: 'info.50' }}>
+              <CardContent sx={{ py: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  <strong>Section C:</strong> This section applies to replacement licenses and notices of change. 
+                  All fields marked as required must be completed before proceeding.
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      </Box>
+    );
+  };
+
   const renderMedicalStep = () => {
     const age = formData.person?.birth_date ? calculateAge(formData.person.birth_date) : 0;
     const isMedicalMandatory = requiresMedicalAlways(formData.license_category) || 
@@ -1269,8 +1322,6 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
             </Grid>
           )}
 
-
-
           {/* Parental Consent */}
           {requiresParentalConsent && (
             <Grid item xs={12}>
@@ -1322,8 +1373,6 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
               disabled={false}
             />
           </Grid>
-
-
 
           {/* Additional Notes */}
           <Grid item xs={12}>
@@ -1680,32 +1729,14 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                   </Grid>
                   <Grid item xs={12} md={6}>
                     <Typography variant="body2" color="text.secondary">Application Type:</Typography>
-                    <Typography variant="body1">
-                      {formData.application_type.replace('_', ' ')}
-                    </Typography>
+                    <Typography variant="body1">{formData.application_type.replace(/_/g, ' ')}</Typography>
                   </Grid>
                   <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">New License Category:</Typography>
-                    <Typography variant="body1">
-                      {formData.license_category}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Typography variant="body2" color="text.secondary">License Card Will Show:</Typography>
-                    <Typography variant="body1" fontWeight="bold">
-                      {(() => {
-                        const existingCategories = formData.license_verification?.all_license_categories || [];
-                        const allCategories = [...existingCategories, formData.license_category];
-                        const uniqueCategories = Array.from(new Set(allCategories));
-                        return uniqueCategories.sort().join(', ');
-                      })()}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      ({(formData.license_verification?.all_license_categories || []).length} existing + 1 new category)
-                    </Typography>
+                    <Typography variant="body2" color="text.secondary">License Category:</Typography>
+                    <Typography variant="body1">{formData.license_category}</Typography>
                   </Grid>
                   <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Processing Location:</Typography>
+                    <Typography variant="body2" color="text.secondary">Location:</Typography>
                     <Typography variant="body1">
                       {(() => {
                         const selectedLocationId = formData.selected_location_id || user?.primary_location_id;
@@ -1715,25 +1746,13 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                     </Typography>
                   </Grid>
                   <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Urgency:</Typography>
-                    <Typography variant="body1">
-                      {formData.is_urgent ? 'Urgent' : 'Standard'}
-                    </Typography>
+                    <Typography variant="body2" color="text.secondary">Never Been Refused:</Typography>
+                    <Typography variant="body1">{formData.never_been_refused ? 'Yes' : 'No'}</Typography>
                   </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Hold for Printing:</Typography>
-                    <Typography variant="body1">{formData.is_on_hold ? 'Yes' : 'No'}</Typography>
-                  </Grid>
-                  {formData.replacement_reason && (
+                  {formData.refusal_details && (
                     <Grid item xs={12}>
-                      <Typography variant="body2" color="text.secondary">Replacement Reason:</Typography>
-                      <Typography variant="body1">{formData.replacement_reason}</Typography>
-                    </Grid>
-                  )}
-                  {formData.notes && (
-                    <Grid item xs={12}>
-                      <Typography variant="body2" color="text.secondary">Notes:</Typography>
-                      <Typography variant="body1">{formData.notes}</Typography>
+                      <Typography variant="body2" color="text.secondary">Refusal Details:</Typography>
+                      <Typography variant="body1">{formData.refusal_details}</Typography>
                     </Grid>
                   )}
                 </Grid>
@@ -1751,7 +1770,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                   {requiresMedical && (
                     <ListItem>
                       <ListItemIcon>
-                        {(formData.medical_certificate_file || formData.medical_certificate_verified_manually) ? 
+                        {formData.medical_certificate_file ? 
                           <CheckCircleIcon color="success" /> : 
                           <ErrorIcon color="error" />
                         }
@@ -1761,9 +1780,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                         secondary={
                           formData.medical_certificate_file ? 
                             `Uploaded: ${formData.medical_certificate_file.name}` : 
-                            formData.medical_certificate_verified_manually ?
-                              "Verified manually by clerk" :
-                              "Required but not provided"
+                            "Required but not provided"
                         }
                       />
                     </ListItem>

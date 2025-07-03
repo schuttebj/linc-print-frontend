@@ -143,15 +143,13 @@ export interface ApplicationCreate {
   location_id: string;
   application_type: ApplicationType;
   license_category: LicenseCategory;
-  is_urgent: boolean;
-  urgency_reason?: string;
-  is_temporary_license: boolean;
-  validity_period_days?: number;
-  is_on_hold?: boolean;
-  parent_application_id?: string;
-  replacement_reason?: string;
   // Medical information for this specific application
   medical_information?: MedicalInformation;
+  // External license verification data
+  license_verification?: LicenseVerificationData;
+  // Section B data
+  never_been_refused?: boolean;
+  refusal_details?: string;
 }
 
 export interface ApplicationUpdate {
@@ -419,37 +417,41 @@ export interface ApplicationFormData {
   // Step 1: Person (handled by PersonFormWrapper)
   person: Person | null;
   
-  // Step 2: Application Details
+  // Step 2: Application Details - Section B
   application_type: ApplicationType;
   license_category: LicenseCategory;
-  is_urgent: boolean;
-  urgency_reason?: string;
-  is_temporary_license: boolean;
-  validity_period_days?: number;
-  is_on_hold?: boolean;
-  parent_application_id?: string;
-  replacement_reason?: string;
   // Location selection for admin users
   selected_location_id?: string;
-  // Vehicle type selection
-  vehicle_transmission: TransmissionType;
-  modified_vehicle_for_disability: boolean;
   
-  // Step 3: Requirements
+  // Section B: Never been refused declaration
+  never_been_refused: boolean;
+  refusal_details?: string;
+  
+  // Step 3: Section C - Notice/Replacement Details (for specific application types)
+  replacement_reason?: 'theft' | 'loss' | 'destruction' | 'recovery' | 'new_card' | 'change_particulars';
+  office_of_issue?: string;
+  police_reported?: boolean;
+  police_station?: string;
+  police_reference_number?: string;
+  date_of_change?: string;
+  
+  // Step 4: Requirements - Section D (will be defined later)
   medical_certificate_file?: File;
-  medical_certificate_verified_manually?: boolean;
   parental_consent_file?: File;
-  existing_license_verified?: boolean;
-  // Updated: License verification data
+  // License verification data (simplified)
   license_verification: LicenseVerificationData | null;
   
-  // Step 4: Medical Information
+  // Step 5: Medical Information (when required)
   medical_information: MedicalInformation | null;
   
-  // Step 5: Biometric Data
-  biometric_data: BiometricCaptureData;
+  // Step 6: Biometric Data
+  biometric_data: {
+    photo?: File | string;
+    signature?: File | string;
+    fingerprint?: File | string;
+  };
   
-  // Step 6: Review & Submit
+  // Final step data
   selected_fees: FeeStructure[];
   total_amount: number;
   notes?: string;
