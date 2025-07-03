@@ -8,7 +8,7 @@ import {
   LicenseCategory, 
   ApplicationType,
   LICENSE_CATEGORY_RULES, 
-  LICENSE_SUPERSEDING_MATRIX,
+  SUPERSEDING_MATRIX,
   VALID_COMBINATIONS,
   LicenseValidationResult,
   ExistingLicenseCheck,
@@ -89,10 +89,10 @@ export class LicenseValidationService {
     const rules = LICENSE_CATEGORY_RULES[selectedCategory];
     const violations: { category: LicenseCategory; required_age: number; current_age: number }[] = [];
 
-    if (age < rules.min_age) {
+    if (age < rules.minimum_age) {
       violations.push({
         category: selectedCategory,
-        required_age: rules.min_age,
+        required_age: rules.minimum_age,
         current_age: age
       });
     }
@@ -100,7 +100,7 @@ export class LicenseValidationService {
     return {
       is_valid: violations.length === 0,
       message: violations.length > 0 
-        ? `Age requirement not met: ${selectedCategory} requires minimum age ${rules.min_age} (current: ${age})`
+        ? `Age requirement not met: ${selectedCategory} requires minimum age ${rules.minimum_age} (current: ${age})`
         : 'Age requirements satisfied',
       missing_prerequisites: [],
       age_violations: violations,
@@ -127,8 +127,8 @@ export class LicenseValidationService {
       .filter((category, index, self) => self.indexOf(category) === index); // Remove duplicates
 
     // Check prerequisites
-    if (rules.requires_existing.length > 0) {
-      const missingRequirements = rules.requires_existing.filter(required => 
+    if (rules.prerequisites.length > 0) {
+      const missingRequirements = rules.prerequisites.filter(required => 
         !allAuthorizedCategories.includes(required)
       );
 
@@ -456,9 +456,9 @@ export class LicenseValidationService {
     const rules = LICENSE_CATEGORY_RULES[category];
     return {
       description: rules.description,
-      vehicleTypes: [...(rules.vehicle_types || [])],
-      minAge: rules.min_age,
-      requiresExisting: [...rules.requires_existing],
+      vehicleTypes: [], // Vehicle types not included in simplified rules - can be derived from description
+      minAge: rules.minimum_age,
+      requiresExisting: [...rules.prerequisites],
       allowsLearners: rules.allows_learners_permit,
       supersedes: getSupersededCategories(category)
     };

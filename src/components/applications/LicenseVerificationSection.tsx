@@ -308,7 +308,7 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
     }
 
     const categoryRules = LICENSE_CATEGORY_RULES[currentLicenseCategory];
-    if (!categoryRules?.requires_existing?.length) {
+    if (!categoryRules?.prerequisites?.length) {
       // No requirements - keep only manually added licenses (remove auto-populated ones)
       return existingExternalLicenses.filter(license => !license.is_auto_populated);
     }
@@ -331,7 +331,7 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
     // Find missing required categories using new superseding logic
     const missingCategories: LicenseCategory[] = [];
     
-    categoryRules.requires_existing.forEach(requiredCat => {
+    categoryRules.prerequisites.forEach(requiredCat => {
       // Check if the required category is available directly
       const hasDirectCategory = systemCategories.has(requiredCat as LicenseCategory) || 
                                manualExternalCategories.has(requiredCat as LicenseCategory);
