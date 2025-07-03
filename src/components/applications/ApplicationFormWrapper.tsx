@@ -160,7 +160,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [licenseValidation, setLicenseValidation] = useState<any>(null);
   const [activeStep, setActiveStep] = useState(0);
-  const [stepValidation, setStepValidation] = useState<boolean[]>([false, false, false, false, false, false]);
+  const [stepValidation, setStepValidation] = useState<boolean[]>([false, false, false, false, false]);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   // License validation states
@@ -277,12 +277,6 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
       icon: <WarningIcon />,
       component: 'sectionC'
     }] : []),
-    {
-      label: 'Requirements',
-      description: 'Verify documents and prerequisites',
-      icon: <VerifiedUserIcon />,
-      component: 'requirements'
-    },
     {
       label: 'Medical Assessment',
       description: 'Complete vision test and medical clearance',
@@ -543,15 +537,16 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
 
   const getStepValidationErrors = (step: number): string[] => {
     const errors: string[] = [];
-
-    switch (step) {
-      case 0: // Person
+    const currentStep = steps[step];
+    
+    switch (currentStep?.component) {
+      case 'person': // Person
         if (!formData.person) {
           errors.push('Please select or create an applicant');
         }
         break;
 
-      case 1: // Application Details - Section B
+      case 'application': // Application Details - Section B
         if (!formData.license_category) {
           errors.push('Please select a license category');
         }
@@ -562,38 +557,51 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         if (formData.never_been_refused === false && !formData.refusal_details?.trim()) {
           errors.push('Please provide details of previous license application refusal');
         }
-        // Remove old validations that are no longer in Section B
-        break;
-
-      case 2: // Requirements
-        // Age validation
+        // Validate age requirements here since Requirements step is removed
         if (formData.person?.birth_date) {
           const age = Math.floor((Date.now() - new Date(formData.person.birth_date).getTime()) / (1000 * 60 * 60 * 24 * 365.25));
           const minAge = LICENSE_CATEGORY_RULES[formData.license_category]?.minimum_age || 18;
           if (age < minAge) {
             errors.push(`Applicant must be at least ${minAge} years old for category ${formData.license_category}`);
           }
+          // Validate parental consent for under 18
+          if (age < 18 && !formData.parental_consent_file) {
+            errors.push('Parental consent file is required for applicants under 18');
+          }
         }
-
         // License verification validation
         if (formData.license_verification?.requires_verification) {
-          errors.push('External licenses require verification before proceeding');
-        }
-
-        // Prerequisite validation using license verification data
-        const categoryRules = LICENSE_CATEGORY_RULES[formData.license_category];
-        if (categoryRules?.prerequisites?.length) {
-          const allLicenseCategories = formData.license_verification?.all_license_categories || [];
-          const missingRequired = categoryRules.prerequisites.filter(req => 
-            !allLicenseCategories.includes(req as LicenseCategory)
+          const unverifiedLicenses = formData.license_verification.external_licenses.filter(license => 
+            license.is_required && !license.verified
           );
-          if (missingRequired.length > 0) {
-            errors.push(`Category ${formData.license_category} requires existing license: ${missingRequired.join(', ')}`);
+          if (unverifiedLicenses.length > 0) {
+            errors.push('All required external licenses must be verified before proceeding');
           }
         }
         break;
 
-      case 3: // Medical Assessment
+      case 'sectionC': // Section C - Notice/Replacement Details
+        if (!formData.replacement_reason) {
+          errors.push('Please select a reason for replacement/notice');
+        }
+        if (!formData.office_of_issue?.trim()) {
+          errors.push('Office of issue is required');
+        }
+        if (!formData.date_of_change) {
+          errors.push('Date of change is required');
+        }
+        // Police report validation for theft/loss
+        if ((formData.replacement_reason === 'theft' || formData.replacement_reason === 'loss') && formData.police_reported) {
+          if (!formData.police_station?.trim()) {
+            errors.push('Police station is required when theft/loss is reported');
+          }
+          if (!formData.police_reference_number?.trim()) {
+            errors.push('Police reference number is required when theft/loss is reported');
+          }
+        }
+        break;
+
+      case 'medical': // Medical Assessment
         const age = formData.person?.birth_date ? calculateAge(formData.person.birth_date) : 0;
         const isMedicalMandatory = requiresMedicalAlways(formData.license_category) || 
                                  (age >= 60 && requiresMedical60Plus(formData.license_category));
@@ -624,14 +632,14 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         }
         break;
 
-      case 4: // Biometric
+      case 'biometric': // Biometric
         // Photo is required for license production
         if (!formData.biometric_data.photo) {
           errors.push('License photo is required for card production');
         }
         break;
 
-      case 5: // Review
+      case 'review': // Review
         if (formData.selected_fees.length === 0) {
           errors.push('Please select applicable fees');
         }
@@ -734,9 +742,6 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
 
       case 'sectionC':
         return renderSectionCStep();
-
-      case 'requirements':
-        return renderRequirementsStep();
 
       case 'medical':
         return renderMedicalStep();
@@ -1000,6 +1005,63 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
               disabled={false}
             />
           </Grid>
+
+          {/* Parental Consent - For applicants under 18 */}
+          {formData.person?.birth_date && calculateAge(formData.person.birth_date) < 18 && (
+            <Grid item xs={12}>
+              <Card>
+                <CardHeader 
+                  title="Parental Consent" 
+                  subheader="Required for applicants under 18 years" 
+                />
+                <CardContent>
+                  <input
+                    accept="image/*,.pdf"
+                    style={{ display: 'none' }}
+                    id="parental-consent-upload"
+                    type="file"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setFormData(prev => ({ ...prev, parental_consent_file: file }));
+                      }
+                    }}
+                  />
+                  <label htmlFor="parental-consent-upload">
+                    <Button variant="outlined" component="span" startIcon={<AssignmentIcon />}>
+                      {formData.parental_consent_file ? 'Change Parental Consent' : 'Upload Parental Consent'}
+                    </Button>
+                  </label>
+                  {formData.parental_consent_file && (
+                    <Typography variant="body2" sx={{ mt: 1 }}>
+                      File: {formData.parental_consent_file.name}
+                    </Typography>
+                  )}
+                  <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                    Signed consent form from parent or legal guardian
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
+
+          {/* Additional Notes */}
+          <Grid item xs={12}>
+            <Card>
+              <CardHeader title="Additional Notes" />
+              <CardContent>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  label="Notes (Optional)"
+                  value={formData.notes || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Add any additional notes or comments about this application..."
+                />
+              </CardContent>
+            </Card>
+          </Grid>
         </Grid>
       </Box>
     );
@@ -1173,93 +1235,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
   };
 
   // Requirements Step with comprehensive validation and document uploads
-  const renderRequirementsStep = () => {
-    const age = formData.person?.birth_date ? calculateAge(formData.person.birth_date) : 0;
-    const requiresParentalConsent = age < 18;
-    const requiresExternalLicense = prerequisiteCheck?.requiresExternal && !prerequisiteCheck.canProceed;
 
-    return (
-      <Box>
-        <Typography variant="h6" gutterBottom>Requirements Check</Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Verify age requirements, upload required documents, and confirm license prerequisites
-        </Typography>
-
-        <Grid container spacing={3}>
-          {/* Age Requirements Display */}
-          {formData.person?.birth_date && (
-            <Grid item xs={12}>
-              <Alert severity="info">
-                <Typography variant="body2">
-                  <strong>Age verification:</strong> {age} years old
-                  (Required: {LICENSE_CATEGORY_RULES[formData.license_category]?.minimum_age}+ for {formData.license_category})
-                </Typography>
-              </Alert>
-            </Grid>
-          )}
-
-          {/* Parental Consent */}
-          {requiresParentalConsent && (
-            <Grid item xs={12}>
-              <Card>
-                <CardHeader 
-                  title="Parental Consent" 
-                  subheader="Required for applicants under 18 years" 
-                />
-                <CardContent>
-                  <input
-                    accept="image/*,.pdf"
-                    style={{ display: 'none' }}
-                    id="parental-consent-upload"
-                    type="file"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        setFormData(prev => ({ ...prev, parental_consent_file: file }));
-                      }
-                    }}
-                  />
-                  <label htmlFor="parental-consent-upload">
-                    <Button variant="outlined" component="span" startIcon={<AssignmentIcon />}>
-                      {formData.parental_consent_file ? 'Change Parental Consent' : 'Upload Parental Consent'}
-                    </Button>
-                  </label>
-                  {formData.parental_consent_file && (
-                    <Typography variant="body2" sx={{ mt: 1 }}>
-                      File: {formData.parental_consent_file.name}
-                    </Typography>
-                  )}
-                  <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                    Signed consent form from parent or legal guardian
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          )}
-
-
-
-          {/* Additional Notes */}
-          <Grid item xs={12}>
-            <Card>
-              <CardHeader title="Additional Notes" />
-              <CardContent>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={3}
-                  label="Notes (Optional)"
-                  value={formData.notes || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Add any additional notes or comments about this application..."
-                />
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      </Box>
-    );
-  };
 
   // Biometric Step with photo, signature, and fingerprint capture
   const renderBiometricStep = () => {

@@ -331,6 +331,29 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
     // Find missing required categories using new superseding logic
     const missingCategories: LicenseCategory[] = [];
     
+    // Special check for NEW_LICENSE applications that require learner's permit
+    if (currentApplicationType === ApplicationType.NEW_LICENSE && categoryRules.requires_learners_permit) {
+      // Check if person has valid learner's permit for this category
+      const hasSystemLearnerPermit = systemLicenses.some(license => 
+        license.license_type === 'LEARNERS_PERMIT' && 
+        license.categories.includes(currentLicenseCategory) &&
+        license.status === 'ACTIVE' &&
+        !isLicenseExpired(license.expiry_date)
+      );
+      
+      const hasExternalLearnerPermit = manualExternalLicenses.some(license =>
+        license.license_type === 'LEARNERS_PERMIT' &&
+        license.categories.includes(currentLicenseCategory) &&
+        license.verified &&
+        !isLicenseExpired(license.expiry_date)
+      );
+      
+      // If no valid learner's permit found, require external verification
+      if (!hasSystemLearnerPermit && !hasExternalLearnerPermit) {
+        missingCategories.push(currentLicenseCategory);
+      }
+    }
+    
     categoryRules.prerequisites.forEach(requiredCat => {
       // Check if the required category is available directly
       const hasDirectCategory = systemCategories.has(requiredCat as LicenseCategory) || 
@@ -381,20 +404,36 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
       let licenseType: 'LEARNERS_PERMIT' | 'DRIVERS_LICENSE';
       
       if (currentApplicationType === ApplicationType.NEW_LICENSE) {
-        // For NEW_LICENSE applications, check if the missing category allows learner's permit
-        const categoryRules = LICENSE_CATEGORY_RULES[category];
-        if (categoryRules.allows_learners_permit) {
-          // Categories that allow learner's permit need learner's permit first
+        // For NEW_LICENSE applications
+        if (category === currentLicenseCategory && LICENSE_CATEGORY_RULES[category].requires_learners_permit) {
+          // This is the main category being applied for and it requires learner's permit
           licenseType = 'LEARNERS_PERMIT';
         } else {
-          // Advanced categories (C, D families) need existing driver's license
-          licenseType = 'DRIVERS_LICENSE';
+          // This is a prerequisite category - check if it allows learner's permit
+          const categoryRules = LICENSE_CATEGORY_RULES[category];
+          if (categoryRules.allows_learners_permit) {
+            // Categories that allow learner's permit need learner's permit first
+            licenseType = 'LEARNERS_PERMIT';
+          } else {
+            // Advanced categories (C, D families) need existing driver's license
+            licenseType = 'DRIVERS_LICENSE';
+          }
         }
       } else {
         // For other application types (RENEWAL, REPLACEMENT), they need existing driver's license
         licenseType = 'DRIVERS_LICENSE';
       }
       
+      // Create helpful description for the required license
+      let requiredDescription = '';
+      if (category === currentLicenseCategory && licenseType === 'LEARNERS_PERMIT') {
+        requiredDescription = `Required learner's permit for ${category} license application`;
+      } else if (licenseType === 'LEARNERS_PERMIT') {
+        requiredDescription = `Required prerequisite learner's permit for ${category}`;
+      } else {
+        requiredDescription = `Required prerequisite ${category} driver's license`;
+      }
+
       return {
         id: tempId,
         license_number: '',
@@ -408,10 +447,11 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
         restrictions: '',
         verified: false,
         verification_source: 'MANUAL' as const,
-        verification_notes: '',
+        verification_notes: requiredDescription,
         is_required: true,
         // Auto-population fields
-        is_auto_populated: true
+        is_auto_populated: true,
+        required_for_category: currentLicenseCategory
       };
     });
 
