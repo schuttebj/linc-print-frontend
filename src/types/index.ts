@@ -468,9 +468,22 @@ export interface ApplicationFormData {
       format: string;
       iso_compliant: boolean;
       processed_url: string;
+      base64_data?: string; // For processed images
     };
-    signature?: File | string;
-    fingerprint?: File | string;
+    signature?: File | string | {
+      filename: string;
+      file_size: number;
+      format: string;
+      processed_url: string;
+      base64_data?: string; // For processed images
+    };
+    fingerprint?: File | string | {
+      filename: string;
+      file_size: number;
+      format: string;
+      processed_url: string;
+      base64_data?: string; // For processed images
+    };
   };
   
   // Final step data
