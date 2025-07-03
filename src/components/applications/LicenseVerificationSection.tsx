@@ -308,10 +308,9 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
     }
 
     const categoryRules = LICENSE_CATEGORY_RULES[currentLicenseCategory];
-    if (!categoryRules?.prerequisites?.length) {
-      // No requirements - keep only manually added licenses (remove auto-populated ones)
-      return existingExternalLicenses.filter(license => !license.is_auto_populated);
-    }
+    
+    // Separate manually added from auto-populated external licenses
+    const manualExternalLicenses = existingExternalLicenses.filter(license => !license.is_auto_populated);
 
     // Get categories available from system licenses
     const systemCategories = new Set<LicenseCategory>();
@@ -319,20 +318,19 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
       license.categories.forEach(cat => systemCategories.add(cat));
     });
 
-    // Separate manually added from auto-populated external licenses
-    const manualExternalLicenses = existingExternalLicenses.filter(license => !license.is_auto_populated);
-
     // Get categories available from manual external licenses
     const manualExternalCategories = new Set<LicenseCategory>();
     manualExternalLicenses.forEach(license => {
       license.categories.forEach(cat => manualExternalCategories.add(cat));
     });
 
-    // Find missing required categories using new superseding logic
+    // Find missing required categories
     const missingCategories: LicenseCategory[] = [];
     
-    // Special check for NEW_LICENSE applications that require learner's permit
+    // ENHANCED: Check for learner's permit requirements for NEW_LICENSE applications
     if (currentApplicationType === ApplicationType.NEW_LICENSE && categoryRules.requires_learners_permit) {
+      console.log(`Checking learner's permit requirement for ${currentLicenseCategory}`);
+      
       // Check if person has valid learner's permit for this category
       const hasSystemLearnerPermit = systemLicenses.some(license => 
         license.license_type === 'LEARNERS_PERMIT' && 
@@ -348,36 +346,29 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
         !isLicenseExpired(license.expiry_date)
       );
       
+      console.log(`Has system learner's permit: ${hasSystemLearnerPermit}`);
+      console.log(`Has external learner's permit: ${hasExternalLearnerPermit}`);
+      
       // If no valid learner's permit found, require external verification
       if (!hasSystemLearnerPermit && !hasExternalLearnerPermit) {
+        console.log(`Adding ${currentLicenseCategory} to missing categories for learner's permit`);
         missingCategories.push(currentLicenseCategory);
       }
     }
     
-    categoryRules.prerequisites.forEach(requiredCat => {
-      // Check if the required category is available directly
-      const hasDirectCategory = systemCategories.has(requiredCat as LicenseCategory) || 
-                               manualExternalCategories.has(requiredCat as LicenseCategory);
-      
-      if (!hasDirectCategory) {
-        // Check if any existing license supersedes this required category
-        let hasSupersedingLicense = false;
+    // Check other prerequisites if they exist
+    if (categoryRules?.prerequisites?.length) {
+      categoryRules.prerequisites.forEach(requiredCat => {
+        // Check if the required category is available directly
+        const hasDirectCategory = systemCategories.has(requiredCat as LicenseCategory) || 
+                                 manualExternalCategories.has(requiredCat as LicenseCategory);
         
-        // Check system licenses
-        for (const license of systemLicenses) {
-          for (const licenseCat of license.categories) {
-            const authorizedCategories = getAuthorizedCategories(licenseCat);
-            if (authorizedCategories.includes(requiredCat as LicenseCategory)) {
-              hasSupersedingLicense = true;
-              break;
-            }
-          }
-          if (hasSupersedingLicense) break;
-        }
-        
-        // Check manual external licenses if not found in system
-        if (!hasSupersedingLicense) {
-          for (const license of manualExternalLicenses) {
+        if (!hasDirectCategory) {
+          // Check if any existing license supersedes this required category
+          let hasSupersedingLicense = false;
+          
+          // Check system licenses
+          for (const license of systemLicenses) {
             for (const licenseCat of license.categories) {
               const authorizedCategories = getAuthorizedCategories(licenseCat);
               if (authorizedCategories.includes(requiredCat as LicenseCategory)) {
@@ -387,14 +378,56 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
             }
             if (hasSupersedingLicense) break;
           }
+          
+          // Check manual external licenses if not found in system
+          if (!hasSupersedingLicense) {
+            for (const license of manualExternalLicenses) {
+              for (const licenseCat of license.categories) {
+                const authorizedCategories = getAuthorizedCategories(licenseCat);
+                if (authorizedCategories.includes(requiredCat as LicenseCategory)) {
+                  hasSupersedingLicense = true;
+                  break;
+                }
+              }
+              if (hasSupersedingLicense) break;
+            }
+          }
+          
+          // If still not found, add to missing categories
+          if (!hasSupersedingLicense && !missingCategories.includes(requiredCat as LicenseCategory)) {
+            missingCategories.push(requiredCat as LicenseCategory);
+          }
         }
-        
-        // If still not found, add to missing categories
-        if (!hasSupersedingLicense && !missingCategories.includes(requiredCat as LicenseCategory)) {
-          missingCategories.push(requiredCat as LicenseCategory);
-        }
+      });
+    }
+
+    console.log(`Missing categories: ${missingCategories.join(', ')}`);
+
+    // Helper function to get learner's permit code based on category
+    const getLearnerPermitCode = (category: LicenseCategory): string => {
+      // Map license categories to learner's permit codes based on vehicle type
+      switch (category) {
+        case LicenseCategory.A1:
+        case LicenseCategory.A2:
+        case LicenseCategory.A:
+          return '1'; // Motor cycle without a sidecar, motor tricycle or motor quadrucycle, with engine of any capacity
+        case LicenseCategory.B1:
+        case LicenseCategory.B:
+          return '2'; // Light motor vehicle, other than a motor cycle, motor tricycle or motor quadrucycle
+        case LicenseCategory.B2:
+        case LicenseCategory.BE:
+        case LicenseCategory.C1:
+        case LicenseCategory.C:
+        case LicenseCategory.C1E:
+        case LicenseCategory.CE:
+        case LicenseCategory.D1:
+        case LicenseCategory.D:
+        case LicenseCategory.D2:
+          return '3'; // Any motor vehicle other than a motor cycle, motor tricycle or motor quadrucycle
+        default:
+          return '2'; // Default to light vehicle
       }
-    });
+    };
 
     // Create external license entries for missing categories
     const autoPopulatedLicenses = missingCategories.map((category, index) => {
@@ -402,41 +435,46 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
       
       // Determine correct license type based on what's needed
       let licenseType: 'LEARNERS_PERMIT' | 'DRIVERS_LICENSE';
+      let licenseNumber = '';
       
       if (currentApplicationType === ApplicationType.NEW_LICENSE) {
         // For NEW_LICENSE applications
         if (category === currentLicenseCategory && LICENSE_CATEGORY_RULES[category].requires_learners_permit) {
           // This is the main category being applied for and it requires learner's permit
           licenseType = 'LEARNERS_PERMIT';
+          licenseNumber = getLearnerPermitCode(category); // Use the appropriate code
         } else {
           // This is a prerequisite category - check if it allows learner's permit
           const categoryRules = LICENSE_CATEGORY_RULES[category];
           if (categoryRules.allows_learners_permit) {
             // Categories that allow learner's permit need learner's permit first
             licenseType = 'LEARNERS_PERMIT';
+            licenseNumber = getLearnerPermitCode(category);
           } else {
             // Advanced categories (C, D families) need existing driver's license
             licenseType = 'DRIVERS_LICENSE';
+            licenseNumber = '';
           }
         }
       } else {
         // For other application types (RENEWAL, REPLACEMENT), they need existing driver's license
         licenseType = 'DRIVERS_LICENSE';
+        licenseNumber = '';
       }
       
       // Create helpful description for the required license
       let requiredDescription = '';
       if (category === currentLicenseCategory && licenseType === 'LEARNERS_PERMIT') {
-        requiredDescription = `Required learner's permit for ${category} license application`;
+        requiredDescription = `Required learner's permit for ${category} license application (Code ${getLearnerPermitCode(category)})`;
       } else if (licenseType === 'LEARNERS_PERMIT') {
-        requiredDescription = `Required prerequisite learner's permit for ${category}`;
+        requiredDescription = `Required prerequisite learner's permit for ${category} (Code ${getLearnerPermitCode(category)})`;
       } else {
         requiredDescription = `Required prerequisite ${category} driver's license`;
       }
 
       return {
         id: tempId,
-        license_number: '',
+        license_number: licenseNumber,
         license_type: licenseType,
         license_category: category,
         categories: [category],
@@ -455,6 +493,7 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
       };
     });
 
+    console.log(`Auto-populated licenses: ${autoPopulatedLicenses.length}`);
     return [...manualExternalLicenses, ...autoPopulatedLicenses];
   };
 
@@ -495,9 +534,24 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
       <Typography variant="h6" gutterBottom>
         License Verification & Prerequisites
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
         This section shows current licenses, pending applications, and allows adding external licenses for prerequisite verification.
       </Typography>
+      
+      {/* Learner's Permit Codes Information */}
+      <Alert severity="info" sx={{ mb: 3 }}>
+        <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+          Learner's Permit Codes for Madagascar
+        </Typography>
+        <Typography variant="body2" component="div">
+          When adding learner's permits, use the following codes:
+          <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
+            <li><strong>Code 1:</strong> Motor cycle without a sidecar, motor tricycle or motor quadrucycle, with engine of any capacity</li>
+            <li><strong>Code 2:</strong> Light motor vehicle, other than a motor cycle, motor tricycle or motor quadrucycle</li>
+            <li><strong>Code 3:</strong> Any motor vehicle other than a motor cycle, motor tricycle or motor quadrucycle</li>
+          </ul>
+        </Typography>
+      </Alert>
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
@@ -588,8 +642,6 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
         </CardContent>
       </Card>
 
-
-
       {/* External Licenses (Require Verification) */}
       <Card>
         <CardHeader 
@@ -662,12 +714,28 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                 <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
-                    label="License Number"
+                    label={license.license_type === 'LEARNERS_PERMIT' ? 'Learner\'s Permit Code' : 'License Number'}
                     value={license.license_number}
                     onChange={(e) => updateExternalLicense(index, 'license_number', formatLicenseNumber(e.target.value))}
-                    disabled={disabled}
+                    disabled={disabled || (license.is_auto_populated && license.license_type === 'LEARNERS_PERMIT')}
                     required
+                    placeholder={license.license_type === 'LEARNERS_PERMIT' ? 'Code 1, 2, or 3' : 'License number'}
+                    helperText={license.license_type === 'LEARNERS_PERMIT' ? 
+                      'Code 1: Motorcycles • Code 2: Light vehicles • Code 3: Heavy vehicles' : 
+                      'Full license number'
+                    }
+                    sx={{
+                      backgroundColor: license.is_auto_populated && license.license_type === 'LEARNERS_PERMIT' ? '#f5f5f5' : 'inherit',
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: license.is_auto_populated && license.license_type === 'LEARNERS_PERMIT' ? '#ffa726' : 'inherit'
+                      }
+                    }}
                   />
+                  {license.is_auto_populated && license.license_type === 'LEARNERS_PERMIT' && (
+                    <Typography variant="caption" color="warning.main" sx={{ mt: 0.5, fontWeight: 600 }}>
+                      🔒 Code auto-populated based on category
+                    </Typography>
+                  )}
                 </Grid>
 
                 {/* License Type - LOCKED for auto-populated */}
@@ -723,14 +791,52 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                     >
                       {Object.values(LicenseCategory).map((cat) => {
                         const categoryRule = LICENSE_CATEGORY_RULES[cat];
+                        // Helper function to get learner's permit code for display
+                        const getLearnerPermitCodeForDisplay = (category: LicenseCategory): string => {
+                          switch (category) {
+                            case LicenseCategory.A1:
+                            case LicenseCategory.A2:
+                            case LicenseCategory.A:
+                              return '1'; // Motor cycle without a sidecar, motor tricycle or motor quadrucycle, with engine of any capacity
+                            case LicenseCategory.B1:
+                            case LicenseCategory.B:
+                              return '2'; // Light motor vehicle, other than a motor cycle, motor tricycle or motor quadrucycle
+                            case LicenseCategory.B2:
+                            case LicenseCategory.BE:
+                            case LicenseCategory.C1:
+                            case LicenseCategory.C:
+                            case LicenseCategory.C1E:
+                            case LicenseCategory.CE:
+                            case LicenseCategory.D1:
+                            case LicenseCategory.D:
+                            case LicenseCategory.D2:
+                              return '3'; // Any motor vehicle other than a motor cycle, motor tricycle or motor quadrucycle
+                            default:
+                              return '2'; // Default to light vehicle
+                          }
+                        };
+                        
                         return (
                           <MenuItem key={cat} value={cat}>
                             <Box>
                               <Typography variant="body2" fontWeight="bold">
                                 {cat}
+                                {categoryRule?.requires_learners_permit && (
+                                  <Chip 
+                                    label={`Code ${getLearnerPermitCodeForDisplay(cat)}`}
+                                    size="small"
+                                    color="warning"
+                                    sx={{ ml: 1, fontSize: '0.7rem' }}
+                                  />
+                                )}
                               </Typography>
                               <Typography variant="caption" color="text.secondary">
                                 {categoryRule?.description || 'License category'}
+                                {categoryRule?.requires_learners_permit && (
+                                  <span style={{ color: '#ed6c02', fontWeight: 600 }}>
+                                    {' • Requires learner\'s permit'}
+                                  </span>
+                                )}
                               </Typography>
                             </Box>
                           </MenuItem>
@@ -951,8 +1057,6 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
               </Grid>
             </Box>
           ))}
-
-
 
           {/* Add External License Button */}
           <Button
