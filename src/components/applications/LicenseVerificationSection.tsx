@@ -787,6 +787,116 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                   })()}
                 </Grid>
 
+                {/* Issuing Authority */}
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Issuing Authority"
+                    value={license.issuing_authority}
+                    onChange={(e) => updateExternalLicense(index, 'issuing_authority', e.target.value)}
+                    disabled={disabled}
+                    placeholder="e.g., Department of Transport, Police Station, Foreign Authority"
+                    helperText="Authority or department that issued this license"
+                  />
+                </Grid>
+
+                {/* License Restrictions */}
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>License Restrictions</InputLabel>
+                    <Select
+                      value={license.restrictions || 'NONE'}
+                      label="License Restrictions"
+                      onChange={(e) => updateExternalLicense(index, 'restrictions', e.target.value === 'NONE' ? '' : e.target.value)}
+                      disabled={disabled}
+                    >
+                      <MenuItem value="NONE">
+                        <Box>
+                          <Typography variant="body2" fontWeight="bold">
+                            None
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            No restrictions on this license
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                      <MenuItem value="CORRECTIVE_LENSES">
+                        <Box>
+                          <Typography variant="body2" fontWeight="bold">
+                            Corrective Lenses Required
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Must wear glasses or contact lenses while driving
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                      <MenuItem value="VISION_RESTRICTED">
+                        <Box>
+                          <Typography variant="body2" fontWeight="bold">
+                            Vision Restricted
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Limited vision - additional restrictions may apply
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                      <MenuItem value="AUTOMATIC_ONLY">
+                        <Box>
+                          <Typography variant="body2" fontWeight="bold">
+                            Automatic Transmission Only
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Not authorized to drive manual transmission vehicles
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                      <MenuItem value="MODIFIED_VEHICLE_ONLY">
+                        <Box>
+                          <Typography variant="body2" fontWeight="bold">
+                            Modified Vehicle Required
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Vehicle must have disability modifications/adaptations
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                      <MenuItem value="DAYLIGHT_ONLY">
+                        <Box>
+                          <Typography variant="body2" fontWeight="bold">
+                            Daylight Driving Only
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Not authorized to drive during nighttime hours
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                      <MenuItem value="SPEED_LIMITED">
+                        <Box>
+                          <Typography variant="body2" fontWeight="bold">
+                            Speed Limited
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Maximum speed restrictions apply
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                      <MenuItem value="MEDICAL_REVIEW">
+                        <Box>
+                          <Typography variant="body2" fontWeight="bold">
+                            Periodic Medical Review
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Regular medical examinations required
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                    </Select>
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                      Select any restrictions that apply to this license
+                    </Typography>
+                  </FormControl>
+                </Grid>
+
                 {/* Verification */}
                 <Grid item xs={12}>
                   <Divider sx={{ my: 1 }} />

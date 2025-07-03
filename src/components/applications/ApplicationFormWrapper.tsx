@@ -768,35 +768,22 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     };
 
     const getAvailableLicenseCategories = () => {
-      const formType = getApplicationFormType();
-      
-      switch (formType) {
-        case 'LEARNERS_PERMIT':
-          return [
-            { value: LicenseCategory.A1, label: 'A1 - Motor cycle not exceeding 125cm³ (16+ years)' },
-            { value: LicenseCategory.A, label: 'A - Motor cycle exceeding 125cm³' },
-            { value: LicenseCategory.B, label: 'B - Light motor vehicle (≤ 3,500 kg)' }
-          ];
-          
-        case 'PROFESSIONAL_DRIVER':
-          return [
-            { value: LicenseCategory.C1, label: 'C1 - Heavy motor vehicle (3,500-16,000 kg)' },
-            { value: LicenseCategory.C, label: 'C - Extra heavy motor vehicle (> 16,000 kg)' },
-            { value: LicenseCategory.C1E, label: 'C1E - Heavy articulated vehicle' },
-            { value: LicenseCategory.CE, label: 'CE - Extra heavy articulated vehicle' },
-            { value: LicenseCategory.D1, label: 'D1 - Minibus (≤ 16 passengers)' },
-            { value: LicenseCategory.D, label: 'D - Bus (> 16 passengers)' },
-            { value: LicenseCategory.D2, label: 'D2 - Articulated bus' }
-          ];
-          
-        default: // DRIVERS_LICENSE
-          return [
-            { value: LicenseCategory.A1, label: 'A1 - Motor cycle not exceeding 125cm³ (16+ years)' },
-            { value: LicenseCategory.A, label: 'A - Motor cycle exceeding 125cm³' },
-            { value: LicenseCategory.B, label: 'B - Light motor vehicle (≤ 3,500 kg)' },
-            { value: LicenseCategory.BE, label: 'BE - Light articulated vehicle/combination' }
-          ];
-      }
+      // Return ALL 14 license categories with comprehensive descriptions
+      // The system will handle validation and prerequisites automatically
+      return Object.values(LicenseCategory).map(category => {
+        const categoryRule = LICENSE_CATEGORY_RULES[category];
+        return {
+          value: category,
+          label: `${category} - ${categoryRule?.description || 'License category'}`,
+          minAge: categoryRule?.minimum_age || 18,
+          prerequisites: categoryRule?.prerequisites || [],
+          allowsLearners: categoryRule?.allows_learners_permit || false
+        };
+      }).sort((a, b) => {
+        // Sort by category order (A1, A2, A, B1, B, B2, BE, C1, C, C1E, CE, D1, D, D2)
+        const order = ['A1', 'A2', 'A', 'B1', 'B', 'B2', 'BE', 'C1', 'C', 'C1E', 'CE', 'D1', 'D', 'D2'];
+        return order.indexOf(a.value) - order.indexOf(b.value);
+      });
     };
 
     // Check if selected category requires prerequisite licenses
@@ -949,7 +936,16 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
               >
                 {getAvailableLicenseCategories().map((category) => (
                   <MenuItem key={category.value} value={category.value}>
-                    {category.label}
+                    <Box>
+                      <Typography variant="body2" fontWeight="bold">
+                        {category.label}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Min age: {category.minAge} years
+                        {category.prerequisites.length > 0 && ` • Requires: ${category.prerequisites.join(', ')}`}
+                        {category.allowsLearners && ' • Allows learner\'s permit'}
+                      </Typography>
+                    </Box>
                   </MenuItem>
                 ))}
               </Select>
