@@ -525,157 +525,298 @@ export enum LicensePrerequisite {
   REQUIRES_LEARNERS_PERMIT = 'REQUIRES_LEARNERS_PERMIT'
 }
 
-// Superseding Matrix - Which licenses are automatically included when you have a higher license
-export const LICENSE_SUPERSEDING_MATRIX: Record<LicenseCategory, LicenseCategory[]> = {
-  // Motorcycles
-  [LicenseCategory.A1]: [LicenseCategory.A1],
-  [LicenseCategory.A2]: [LicenseCategory.A1, LicenseCategory.A2],
-  [LicenseCategory.A]: [LicenseCategory.A1, LicenseCategory.A2, LicenseCategory.A],
-  
-  // Light Vehicles
-  [LicenseCategory.B1]: [LicenseCategory.B1],
-  [LicenseCategory.B]: [LicenseCategory.B1, LicenseCategory.B],
-  [LicenseCategory.B2]: [LicenseCategory.B1, LicenseCategory.B, LicenseCategory.B2],
-  [LicenseCategory.BE]: [LicenseCategory.B1, LicenseCategory.B, LicenseCategory.BE],
-  
-  // Heavy Goods
-  [LicenseCategory.C1]: [LicenseCategory.B1, LicenseCategory.B, LicenseCategory.B2, LicenseCategory.C1],
-  [LicenseCategory.C]: [LicenseCategory.B1, LicenseCategory.B, LicenseCategory.B2, LicenseCategory.C1, LicenseCategory.C],
-  [LicenseCategory.C1E]: [LicenseCategory.B1, LicenseCategory.B, LicenseCategory.B2, LicenseCategory.C1, LicenseCategory.BE, LicenseCategory.C1E],
-  [LicenseCategory.CE]: [LicenseCategory.B1, LicenseCategory.B, LicenseCategory.B2, LicenseCategory.C1, LicenseCategory.C, LicenseCategory.BE, LicenseCategory.CE],
-  
-  // Passenger Transport
-  [LicenseCategory.D1]: [LicenseCategory.B1, LicenseCategory.B, LicenseCategory.B2, LicenseCategory.C1, LicenseCategory.C, LicenseCategory.D1],
-  [LicenseCategory.D]: [LicenseCategory.B1, LicenseCategory.B, LicenseCategory.B2, LicenseCategory.C1, LicenseCategory.C, LicenseCategory.D1, LicenseCategory.D],
-  [LicenseCategory.D2]: [LicenseCategory.B1, LicenseCategory.B, LicenseCategory.B2, LicenseCategory.C1, LicenseCategory.C, LicenseCategory.D1, LicenseCategory.D, LicenseCategory.BE, LicenseCategory.CE, LicenseCategory.C1E, LicenseCategory.D2]
-} as const;
+// License Category Rules based on Madagascar superseding matrix
+export interface LicenseCategoryRule {
+  category: LicenseCategory;
+  minimum_age: number;
+  prerequisites: LicenseCategory[];
+  supersedes: LicenseCategory[]; // Categories this license allows you to drive
+  description: string;
+  restrictions: string[];
+  requires_learners_permit: boolean;
+  allows_learners_permit: boolean;
+  test_requirements: string[];
+  medical_requirements: string[];
+}
 
-// License category rules configuration
-export const LICENSE_CATEGORY_RULES = {
-  // Motorcycles and Mopeds
-  [LicenseCategory.A1]: {
-    min_age: 16,
-    requires_existing: [],
-    allows_learners_permit: true,
-    allows_temporary_after_practical: true,
-    description: 'Small motorcycles and mopeds (<125cc)',
-    vehicle_types: ['Moped', 'Small motorcycle', 'Scooter']
-  },
-  [LicenseCategory.A2]: {
-    min_age: 18,
-    requires_existing: [],
-    allows_learners_permit: true,
-    allows_temporary_after_practical: true,
-    description: 'Mid-range motorcycles (power limited to 35kW)',
-    vehicle_types: ['Medium motorcycle', 'Power-limited motorcycle']
-  },
-  [LicenseCategory.A]: {
-    min_age: 20,
-    requires_existing: [],
-    allows_learners_permit: true,
-    allows_temporary_after_practical: true,
-    description: 'Unlimited motorcycles (all motorcycles)',
-    vehicle_types: ['All motorcycles', 'High-power motorcycle']
-  },
+// Comprehensive superseding matrix for Madagascar
+export const SUPERSEDING_MATRIX: Record<LicenseCategory, LicenseCategory[]> = {
+  // Motorcycles
+  [LicenseCategory.A]: [LicenseCategory.A, LicenseCategory.A1, LicenseCategory.A2],
+  [LicenseCategory.A1]: [LicenseCategory.A1, LicenseCategory.A2],
+  [LicenseCategory.A2]: [LicenseCategory.A1, LicenseCategory.A2],
   
   // Light Vehicles
-  [LicenseCategory.B1]: {
-    min_age: 16,
-    requires_existing: [],
-    allows_learners_permit: true,
-    allows_temporary_after_practical: true,
-    description: 'Light quadricycles',
-    vehicle_types: ['Motorized tricycle', 'Light quadricycle']
-  },
-  [LicenseCategory.B]: {
-    min_age: 18,
-    requires_existing: [],
-    allows_learners_permit: true,
-    allows_temporary_after_practical: true,
-    description: 'Standard passenger cars and light vehicles (up to 3.5t)',
-    vehicle_types: ['Passenger car', 'Light van', 'Small truck']
-  },
-  [LicenseCategory.B2]: {
-    min_age: 21,
-    requires_existing: [LicenseCategory.B],
-    allows_learners_permit: false,
-    allows_temporary_after_practical: true,
-    description: 'Taxis and commercial passenger vehicles',
-    vehicle_types: ['Taxi', 'Commercial passenger vehicle']
-  },
-  [LicenseCategory.BE]: {
-    min_age: 18,
-    requires_existing: [LicenseCategory.B],
-    allows_learners_permit: false,
-    allows_temporary_after_practical: true,
-    description: 'Category B vehicles with heavy trailer (>750kg)',
-    vehicle_types: ['Car with trailer', 'Van with trailer']
-  },
+  [LicenseCategory.B]: [LicenseCategory.B, LicenseCategory.B1, LicenseCategory.B2],
+  [LicenseCategory.B1]: [LicenseCategory.B1],
+  [LicenseCategory.B2]: [LicenseCategory.B1, LicenseCategory.B2],
   
   // Heavy Goods Vehicles
-  [LicenseCategory.C1]: {
-    min_age: 18,
-    requires_existing: [LicenseCategory.B],
-    allows_learners_permit: false,
-    allows_temporary_after_practical: true,
-    description: 'Medium-sized goods vehicles (3.5-7.5t)',
-    vehicle_types: ['Medium truck', 'Delivery truck']
-  },
-  [LicenseCategory.C]: {
-    min_age: 21,
-    requires_existing: [LicenseCategory.B],
-    allows_learners_permit: false,
-    allows_temporary_after_practical: true,
-    description: 'Heavy goods vehicles (over 7.5t)',
-    vehicle_types: ['Heavy truck', 'Lorry', 'Freight vehicle']
-  },
-  [LicenseCategory.C1E]: {
-    min_age: 18,
-    requires_existing: [LicenseCategory.C1],
-    allows_learners_permit: false,
-    allows_temporary_after_practical: true,
-    description: 'C1 vehicles with heavy trailer',
-    vehicle_types: ['Medium truck with trailer']
-  },
-  [LicenseCategory.CE]: {
-    min_age: 21,
-    requires_existing: [LicenseCategory.C],
-    allows_learners_permit: false,
-    allows_temporary_after_practical: true,
-    description: 'Full heavy combination vehicles',
-    vehicle_types: ['Tractor-trailer', 'Semi-trailer', 'Articulated truck']
-  },
+  [LicenseCategory.C]: [LicenseCategory.B, LicenseCategory.B1, LicenseCategory.B2, LicenseCategory.C, LicenseCategory.C1],
+  [LicenseCategory.C1]: [LicenseCategory.B, LicenseCategory.B1, LicenseCategory.B2, LicenseCategory.C1],
+  
+  // Trailers
+  [LicenseCategory.BE]: [LicenseCategory.B, LicenseCategory.B1, LicenseCategory.B2, LicenseCategory.BE],
+  [LicenseCategory.CE]: [LicenseCategory.B, LicenseCategory.B1, LicenseCategory.B2, LicenseCategory.C, LicenseCategory.C1, LicenseCategory.BE, LicenseCategory.CE],
+  [LicenseCategory.C1E]: [LicenseCategory.B, LicenseCategory.B1, LicenseCategory.B2, LicenseCategory.C, LicenseCategory.C1, LicenseCategory.BE, LicenseCategory.C1E],
   
   // Passenger Transport
+  [LicenseCategory.D]: [LicenseCategory.B, LicenseCategory.B1, LicenseCategory.B2, LicenseCategory.C, LicenseCategory.C1, LicenseCategory.D, LicenseCategory.D1],
+  [LicenseCategory.D1]: [LicenseCategory.B, LicenseCategory.B1, LicenseCategory.B2, LicenseCategory.C, LicenseCategory.C1, LicenseCategory.D1],
+  [LicenseCategory.D2]: [LicenseCategory.B, LicenseCategory.B1, LicenseCategory.B2, LicenseCategory.C, LicenseCategory.C1, LicenseCategory.D, LicenseCategory.D1, LicenseCategory.D2, LicenseCategory.BE, LicenseCategory.CE, LicenseCategory.C1E]
+};
+
+// Detailed license category rules
+export const LICENSE_CATEGORY_RULES: Record<LicenseCategory, LicenseCategoryRule> = {
+  [LicenseCategory.A1]: {
+    category: LicenseCategory.A1,
+    minimum_age: 16,
+    prerequisites: [],
+    supersedes: [LicenseCategory.A1],
+    description: "Small motorcycles and mopeds (<125 cc)",
+    restrictions: [
+      "No prior licence required",
+      "Motorcycle-specific theory and practical tests required",
+      "Vision and medical fitness exam required",
+      "Helmet mandatory for rider and passenger"
+    ],
+    requires_learners_permit: true,
+    allows_learners_permit: true,
+    test_requirements: ["Theory test", "Practical riding exam"],
+    medical_requirements: ["Vision exam", "Medical fitness exam"]
+  },
+  
+  [LicenseCategory.A2]: {
+    category: LicenseCategory.A2,
+    minimum_age: 18,
+    prerequisites: [LicenseCategory.A1], // Must hold A1 for ≥2 years
+    supersedes: [LicenseCategory.A1, LicenseCategory.A2],
+    description: "Mid-range motorcycles (power-limited ≤35 kW)",
+    restrictions: [
+      "Must hold A1 for ≥2 years before upgrading",
+      "Theory and practical tests required",
+      "Medical/vision exam required",
+      "Helmet requirement"
+    ],
+    requires_learners_permit: true,
+    allows_learners_permit: true,
+    test_requirements: ["Theory test", "Practical riding exam"],
+    medical_requirements: ["Vision exam", "Medical fitness exam"]
+  },
+  
+  [LicenseCategory.A]: {
+    category: LicenseCategory.A,
+    minimum_age: 18, // Or 24 years for direct access
+    prerequisites: [LicenseCategory.A2], // Must hold A2 for ≥2 years
+    supersedes: [LicenseCategory.A, LicenseCategory.A1, LicenseCategory.A2],
+    description: "Unlimited motorcycles (no power restriction)",
+    restrictions: [
+      "Must hold A2 for ≥2 years (or ≥24 years old for direct access)",
+      "Same testing and medical requirements as A1/A2"
+    ],
+    requires_learners_permit: true,
+    allows_learners_permit: true,
+    test_requirements: ["Theory test", "Practical riding exam"],
+    medical_requirements: ["Vision exam", "Medical fitness exam"]
+  },
+  
+  [LicenseCategory.B1]: {
+    category: LicenseCategory.B1,
+    minimum_age: 16,
+    prerequisites: [],
+    supersedes: [LicenseCategory.B1],
+    description: "Light quadricycles (motorized tricycles, quadricycles)",
+    restrictions: [
+      "No prior licence required",
+      "Light-vehicle theory test and practical driving exam",
+      "Vision and medical exam required"
+    ],
+    requires_learners_permit: true,
+    allows_learners_permit: true,
+    test_requirements: ["Theory test", "Practical driving exam"],
+    medical_requirements: ["Vision exam", "Medical exam"]
+  },
+  
+  [LicenseCategory.B]: {
+    category: LicenseCategory.B,
+    minimum_age: 18,
+    prerequisites: [],
+    supersedes: [LicenseCategory.B, LicenseCategory.B1, LicenseCategory.B2],
+    description: "Standard passenger cars and light goods vehicles (≤3,500 kg, ≤8 seats)",
+    restrictions: [
+      "Must first pass a learner's permit (theory test)",
+      "Medical and vision exams required",
+      "Provisional licence may apply before full card"
+    ],
+    requires_learners_permit: true,
+    allows_learners_permit: true,
+    test_requirements: ["Theory test", "Practical driving exam"],
+    medical_requirements: ["Vision exam", "Medical exam"]
+  },
+  
+  [LicenseCategory.B2]: {
+    category: LicenseCategory.B2,
+    minimum_age: 18,
+    prerequisites: [LicenseCategory.B], // Full B plus PSV endorsement
+    supersedes: [LicenseCategory.B1, LicenseCategory.B2],
+    description: "Taxis or commercial passenger vehicles",
+    restrictions: [
+      "Full B plus PSV endorsement required",
+      "Passenger-carry safety and first-aid course",
+      "Clean driving record required",
+      "Medical fitness check"
+    ],
+    requires_learners_permit: false,
+    allows_learners_permit: false,
+    test_requirements: ["PSV endorsement", "Safety course"],
+    medical_requirements: ["Medical fitness check"]
+  },
+  
+  [LicenseCategory.BE]: {
+    category: LicenseCategory.BE,
+    minimum_age: 18,
+    prerequisites: [LicenseCategory.B], // Must hold full Category B
+    supersedes: [LicenseCategory.B, LicenseCategory.B1, LicenseCategory.B2, LicenseCategory.BE],
+    description: "B vehicles towing trailers (>750 kg trailer)",
+    restrictions: [
+      "Must hold a full Category B licence",
+      "Additional trailer-handling practical test",
+      "Trailer-specific theory test"
+    ],
+    requires_learners_permit: false,
+    allows_learners_permit: false,
+    test_requirements: ["Trailer theory test", "Trailer practical test"],
+    medical_requirements: ["Standard B requirements"]
+  },
+  
+  [LicenseCategory.C1]: {
+    category: LicenseCategory.C1,
+    minimum_age: 18,
+    prerequisites: [LicenseCategory.B], // Must hold full B for ≥2 years
+    supersedes: [LicenseCategory.B, LicenseCategory.B1, LicenseCategory.B2, LicenseCategory.C1],
+    description: "Medium goods vehicles (3,500–7,500 kg)",
+    restrictions: [
+      "Must hold full Category B licence (often for ≥2 years)",
+      "Heavy-vehicle theory and practical tests",
+      "Annual medical and vision exams",
+      "Tachograph-training course"
+    ],
+    requires_learners_permit: false,
+    allows_learners_permit: false,
+    test_requirements: ["Heavy vehicle theory", "Heavy vehicle practical", "Tachograph training"],
+    medical_requirements: ["Annual medical exam", "Vision exam"]
+  },
+  
+  [LicenseCategory.C]: {
+    category: LicenseCategory.C,
+    minimum_age: 21,
+    prerequisites: [LicenseCategory.C1], // C1 for ≥2 years (or B for ≥2 years)
+    supersedes: [LicenseCategory.B, LicenseCategory.B1, LicenseCategory.B2, LicenseCategory.C, LicenseCategory.C1],
+    description: "Heavy goods vehicles (>7,500 kg)",
+    restrictions: [
+      "C1 for ≥2 years (or B for ≥2 years)",
+      "Advanced heavy-combination handling",
+      "Annual medical and vision exams"
+    ],
+    requires_learners_permit: false,
+    allows_learners_permit: false,
+    test_requirements: ["Advanced heavy vehicle practical"],
+    medical_requirements: ["Annual medical exam", "Vision exam"]
+  },
+  
+  [LicenseCategory.C1E]: {
+    category: LicenseCategory.C1E,
+    minimum_age: 21,
+    prerequisites: [LicenseCategory.C1],
+    supersedes: [LicenseCategory.B, LicenseCategory.B1, LicenseCategory.B2, LicenseCategory.C, LicenseCategory.C1, LicenseCategory.BE, LicenseCategory.C1E],
+    description: "C1 vehicles with heavy trailer (>750 kg)",
+    restrictions: [
+      "Full C1 licence required",
+      "Trailer-combination practical test",
+      "Tachograph and ADR training if applicable"
+    ],
+    requires_learners_permit: false,
+    allows_learners_permit: false,
+    test_requirements: ["Trailer combination test", "ADR training (if applicable)"],
+    medical_requirements: ["Annual medical exam"]
+  },
+  
+  [LicenseCategory.CE]: {
+    category: LicenseCategory.CE,
+    minimum_age: 21,
+    prerequisites: [LicenseCategory.C],
+    supersedes: [LicenseCategory.B, LicenseCategory.B1, LicenseCategory.B2, LicenseCategory.C, LicenseCategory.C1, LicenseCategory.BE, LicenseCategory.CE, LicenseCategory.C1E],
+    description: "Full heavy combinations (tractors + large/semi-trailers)",
+    restrictions: [
+      "Category C licence required",
+      "Advanced combination practical exam",
+      "ADR training for hazardous loads",
+      "Regular medical exams"
+    ],
+    requires_learners_permit: false,
+    allows_learners_permit: false,
+    test_requirements: ["Advanced combination exam", "ADR training"],
+    medical_requirements: ["Regular medical exams"]
+  },
+  
   [LicenseCategory.D1]: {
-    min_age: 21,
-    requires_existing: [LicenseCategory.B],
+    category: LicenseCategory.D1,
+    minimum_age: 21,
+    prerequisites: [LicenseCategory.B],
+    supersedes: [LicenseCategory.B, LicenseCategory.B1, LicenseCategory.B2, LicenseCategory.C, LicenseCategory.C1, LicenseCategory.D1],
+    description: "Small buses (≤16 passengers)",
+    restrictions: [
+      "Full Category B licence required",
+      "PSV endorsement or PCV course",
+      "First-aid and passenger-safety training",
+      "Medical fitness exam",
+      "Criminal background check"
+    ],
+    requires_learners_permit: false,
     allows_learners_permit: false,
-    allows_temporary_after_practical: true,
-    description: 'Small buses (up to 16 passengers)',
-    vehicle_types: ['Minibus', 'Small public transport']
+    test_requirements: ["PCV course", "First-aid training", "Passenger safety"],
+    medical_requirements: ["Medical fitness exam", "Background check"]
   },
+  
   [LicenseCategory.D]: {
-    min_age: 24,
-    requires_existing: [LicenseCategory.B],
+    category: LicenseCategory.D,
+    minimum_age: 24,
+    prerequisites: [LicenseCategory.D1], // D1 for ≥2 years
+    supersedes: [LicenseCategory.B, LicenseCategory.B1, LicenseCategory.B2, LicenseCategory.C, LicenseCategory.C1, LicenseCategory.D, LicenseCategory.D1],
+    description: "Standard buses/coaches (>16 passengers)",
+    restrictions: [
+      "D1 for ≥2 years (or B + D1)",
+      "Enhanced PCV practical test",
+      "Regular medical and vision checks",
+      "Criminal background check"
+    ],
+    requires_learners_permit: false,
     allows_learners_permit: false,
-    allows_temporary_after_practical: true,
-    description: 'Standard buses and coaches (over 16 passengers)',
-    vehicle_types: ['Bus', 'Coach', 'Public transport']
+    test_requirements: ["Enhanced PCV practical test"],
+    medical_requirements: ["Regular medical and vision checks", "Background check"]
   },
+  
   [LicenseCategory.D2]: {
-    min_age: 24,
-    requires_existing: [LicenseCategory.D],
+    category: LicenseCategory.D2,
+    minimum_age: 24,
+    prerequisites: [LicenseCategory.D],
+    supersedes: [LicenseCategory.B, LicenseCategory.B1, LicenseCategory.B2, LicenseCategory.C, LicenseCategory.C1, LicenseCategory.D, LicenseCategory.D1, LicenseCategory.D2, LicenseCategory.BE, LicenseCategory.CE, LicenseCategory.C1E],
+    description: "Specialized public-transport vehicles (articulated buses)",
+    restrictions: [
+      "Full Category D licence required",
+      "Articulated-bus practical exam",
+      "Additional route-map or passenger-assist training"
+    ],
+    requires_learners_permit: false,
     allows_learners_permit: false,
-    allows_temporary_after_practical: true,
-    description: 'Specialized public transport vehicles',
-    vehicle_types: ['Articulated bus', 'Interurban bus', 'Specialized transport']
+    test_requirements: ["Articulated-bus practical exam", "Route-map training"],
+    medical_requirements: ["Regular medical checks"]
   }
-} as const;
+};
 
 // Helper function to get all authorized categories including superseded ones
 export const getAuthorizedCategories = (appliedCategory: LicenseCategory): LicenseCategory[] => {
-  return LICENSE_SUPERSEDING_MATRIX[appliedCategory];
+  return SUPERSEDING_MATRIX[appliedCategory];
 };
 
 // Helper function to check if category requires specific transmission
@@ -787,7 +928,7 @@ export const requiresMedicalAlways = (category: LicenseCategory): boolean => {
 };
 
 export const getSupersededCategories = (category: LicenseCategory): LicenseCategory[] => {
-  return LICENSE_SUPERSEDING_MATRIX[category].filter(cat => cat !== category);
+  return SUPERSEDING_MATRIX[category].filter(cat => cat !== category);
 };
 
 export const getCategoryFamily = (category: LicenseCategory): 'A' | 'B' | 'C' | 'D' => {

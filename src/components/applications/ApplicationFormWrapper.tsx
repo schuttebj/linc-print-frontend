@@ -100,7 +100,8 @@ import {
   BiometricCaptureData,
   ApplicationLookups,
   LICENSE_CATEGORY_RULES,
-  LICENSE_SUPERSEDING_MATRIX,
+  SUPERSEDING_MATRIX,
+  LicenseCategoryRule,
   TransmissionType,
   LicenseRestriction,
   ExternalLicenseDetails,
@@ -359,7 +360,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
 
     // Only check for categories that require prerequisites
     const categoryRules = LICENSE_CATEGORY_RULES[category];
-    if (!categoryRules?.requires_existing?.length) {
+    if (!categoryRules?.prerequisites?.length) {
       setPrerequisiteCheck(null);
       return;
     }
@@ -368,7 +369,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
       setCheckingPrerequisites(true);
       
       // Check for existing applications for required categories
-      const requiredCategories = categoryRules.requires_existing;
+      const requiredCategories = categoryRules.prerequisites;
       const personApplications = await applicationService.getApplicationsByPerson(personId);
       
       const prerequisiteApplications = personApplications.filter(app => 
@@ -569,7 +570,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         // Age validation
         if (formData.person?.birth_date) {
           const age = Math.floor((Date.now() - new Date(formData.person.birth_date).getTime()) / (1000 * 60 * 60 * 24 * 365.25));
-          const minAge = LICENSE_CATEGORY_RULES[formData.license_category]?.min_age || 18;
+          const minAge = LICENSE_CATEGORY_RULES[formData.license_category]?.minimum_age || 18;
           if (age < minAge) {
             errors.push(`Applicant must be at least ${minAge} years old for category ${formData.license_category}`);
           }
@@ -582,9 +583,9 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
 
         // Prerequisite validation using license verification data
         const categoryRules = LICENSE_CATEGORY_RULES[formData.license_category];
-        if (categoryRules?.requires_existing?.length) {
+        if (categoryRules?.prerequisites?.length) {
           const allLicenseCategories = formData.license_verification?.all_license_categories || [];
-          const missingRequired = categoryRules.requires_existing.filter(req => 
+          const missingRequired = categoryRules.prerequisites.filter(req => 
             !allLicenseCategories.includes(req as LicenseCategory)
           );
           if (missingRequired.length > 0) {
@@ -1324,7 +1325,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
               <Alert severity="info">
                 <Typography variant="body2">
                   <strong>Age verification:</strong> {age} years old
-                  (Required: {LICENSE_CATEGORY_RULES[formData.license_category]?.min_age}+ for {formData.license_category})
+                  (Required: {LICENSE_CATEGORY_RULES[formData.license_category]?.minimum_age}+ for {formData.license_category})
                 </Typography>
               </Alert>
             </Grid>
