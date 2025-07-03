@@ -117,11 +117,9 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
     } else if (!isRightEyeGood && leftAcuity <= 9) {
       // Left eye meets 6/9 with right eye blind/impaired
       visionPasses = true;
-      restrictions.push('Right eye vision impaired - restricted to daytime driving');
     } else if (!isLeftEyeGood && rightAcuity <= 9) {
       // Right eye meets 6/9 with left eye blind/impaired
       visionPasses = true;
-      restrictions.push('Left eye vision impaired - restricted to daytime driving');
     }
 
     // Visual field validation: 120 degrees minimum, or 115 degrees if one eye impaired
@@ -133,12 +131,11 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
       // Meets standard field requirement
     } else if (totalFieldDegrees >= 115 && (leftFieldDegrees < 70 || rightFieldDegrees < 70)) {
       // Meets reduced requirement with one eye impaired
-      restrictions.push('Reduced visual field - restricted to familiar routes');
     } else {
       visionPasses = false;
     }
 
-    // Corrective lenses requirement
+    // Corrective lenses requirement - ONLY restriction we include
     if (visionTest.corrective_lenses_required || visionTest.corrective_lenses_already_used) {
       restrictions.push('Must wear corrective lenses while driving');
     }
@@ -471,8 +468,10 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
             sx={{ 
               border: '1px solid',
               borderColor: 'divider',
+              borderRadius: 2,
               '&:before': { display: 'none' },
-              boxShadow: 'none'
+              boxShadow: 'none',
+              overflow: 'hidden' // Ensure content doesn't overflow rounded corners
             }}
           >
             <AccordionSummary 

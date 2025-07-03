@@ -894,15 +894,31 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
       // Special handling for NEW_LICENSE applications that require learner's permits
       if (formData.application_type === ApplicationType.NEW_LICENSE && requiresLearners) {
         // Get the corresponding learner's permit code for this category
-        const learnerCode = LICENSE_TO_LEARNERS_MAPPING[selectedCategory];
+        const learnerCodeString = LICENSE_TO_LEARNERS_MAPPING[selectedCategory];
         
-        if (learnerCode) {
+        if (learnerCodeString) {
+          // Map the string code to the correct LicenseCategory enum
+          let learnerCategory: LicenseCategory;
+          switch (learnerCodeString) {
+            case '1':
+              learnerCategory = LicenseCategory.LEARNERS_1;
+              break;
+            case '2':
+              learnerCategory = LicenseCategory.LEARNERS_2;
+              break;
+            case '3':
+              learnerCategory = LicenseCategory.LEARNERS_3;
+              break;
+            default:
+              learnerCategory = LicenseCategory.LEARNERS_2; // Default fallback
+          }
+
           // Create auto-populated external license for the required learner's permit
           const externalLicenses: ExternalLicense[] = [{
             id: `auto-learners-${selectedCategory}`,
-            license_category: learnerCode as LicenseCategory, // Use the learner's code (1, 2, or 3)
+            license_category: learnerCategory,
             license_type: 'LEARNERS_PERMIT' as const,
-            categories: [learnerCode as LicenseCategory],
+            categories: [learnerCategory],
             license_number: '',
             issue_date: '',
             expiry_date: '',
