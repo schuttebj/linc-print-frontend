@@ -558,7 +558,8 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         break;
 
       case 'application': // Application Details - Section B
-        if (!formData.license_category) {
+        // License category not required for REPLACEMENT and TEMPORARY_LICENSE
+        if (!formData.license_category && ![ApplicationType.REPLACEMENT, ApplicationType.TEMPORARY_LICENSE].includes(formData.application_type)) {
           errors.push('Please select a license category');
         }
         if (!formData.application_type) {
@@ -569,7 +570,9 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           errors.push('Please provide details of previous license application refusal');
         }
         // Validate age requirements here since Requirements step is removed
-        if (formData.person?.birth_date) {
+        // Skip age validation for REPLACEMENT and TEMPORARY_LICENSE applications
+        if (formData.person?.birth_date && formData.license_category && 
+            ![ApplicationType.REPLACEMENT, ApplicationType.TEMPORARY_LICENSE].includes(formData.application_type)) {
           const age = Math.floor((Date.now() - new Date(formData.person.birth_date).getTime()) / (1000 * 60 * 60 * 24 * 365.25));
           const minAge = LICENSE_CATEGORY_RULES[formData.license_category]?.minimum_age || 18;
           if (age < minAge) {
@@ -614,8 +617,21 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
 
       case 'medical': // Medical Assessment
         const age = formData.person?.birth_date ? calculateAge(formData.person.birth_date) : 0;
-        const isMedicalMandatory = requiresMedicalAlways(formData.license_category) || 
-                                 (age >= 60 && requiresMedical60Plus(formData.license_category));
+        
+        // For REPLACEMENT and TEMPORARY_LICENSE, determine medical requirements from external licenses
+        let isMedicalMandatory = false;
+        
+        if ([ApplicationType.REPLACEMENT, ApplicationType.TEMPORARY_LICENSE].includes(formData.application_type)) {
+          // Check if any external licenses require medical assessment
+          const externalCategories = formData.license_verification?.external_licenses?.flatMap(license => license.categories) || [];
+          isMedicalMandatory = externalCategories.some(category => 
+            requiresMedicalAlways(category) || (age >= 60 && requiresMedical60Plus(category))
+          );
+        } else if (formData.license_category) {
+          // Standard logic for other application types
+          isMedicalMandatory = requiresMedicalAlways(formData.license_category) || 
+                             (age >= 60 && requiresMedical60Plus(formData.license_category));
+        }
 
         if (isMedicalMandatory) {
           if (!formData.medical_information) {
@@ -680,7 +696,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         person_id: formData.person!.id,
         location_id: formData.selected_location_id || user?.primary_location_id || '',
         application_type: formData.application_type,
-        license_category: formData.license_category,
+        license_category: formData.license_category || LicenseCategory.B, // Default for REPLACEMENT/TEMPORARY_LICENSE
         medical_information: formData.medical_information
       };
 
@@ -707,7 +723,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         person_id: formData.person!.id,
         location_id: formData.selected_location_id || user?.primary_location_id || '',
         application_type: formData.application_type,
-        license_category: formData.license_category,
+        license_category: formData.license_category || LicenseCategory.B, // Default for REPLACEMENT/TEMPORARY_LICENSE
         medical_information: formData.medical_information
       };
 
@@ -726,6 +742,35 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
       setError(err.message || 'Failed to submit application');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Auto-trigger license verification for REPLACEMENT and TEMPORARY_LICENSE applications
+  useEffect(() => {
+    if (formData.person && [ApplicationType.REPLACEMENT, ApplicationType.TEMPORARY_LICENSE].includes(formData.application_type)) {
+      // Auto-check for existing licenses for replacement/temporary applications
+      checkExistingLicensesForReplacementOrTemporary();
+    }
+  }, [formData.application_type, formData.person]);
+
+  const checkExistingLicensesForReplacementOrTemporary = async () => {
+    if (!formData.person) return;
+
+    try {
+      // This will trigger the license verification section to load system licenses
+      // and show external license form if no system licenses found
+      setFormData(prev => ({
+        ...prev,
+        license_verification: {
+          person_id: formData.person!.id,
+          requires_verification: true, // Force showing external license form
+          system_licenses: [],
+          external_licenses: [],
+          all_license_categories: []
+        }
+      }));
+    } catch (error) {
+      console.error('Error checking existing licenses:', error);
     }
   };
 
@@ -995,37 +1040,56 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           </Grid>
         )}
 
-          {/* License Category Selection */}
-        <Grid item xs={12}>
-          <FormControl fullWidth required>
-            <InputLabel>License Category</InputLabel>
-            <Select
-              value={formData.license_category}
-                onChange={async (e) => {
-                  const selectedCategory = e.target.value as LicenseCategory;
-                  setFormData(prev => ({ ...prev, license_category: selectedCategory }));
-                  
-                  // Check license requirements immediately
-                  await checkLicenseRequirements(selectedCategory);
-                }}
-              >
-                {getAvailableLicenseCategories().map((category) => (
-                  <MenuItem key={category.value} value={category.value}>
-                    <Box>
-                      <Typography variant="body2" fontWeight="bold">
-                        {category.label}
-                        </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Min age: {category.minAge} years
-                        {category.prerequisites.length > 0 && ` • Requires: ${category.prerequisites.join(', ')}`}
-                        {category.allowsLearners && ' • Allows learner\'s permit'}
-                      </Typography>
-                    </Box>
-                  </MenuItem>
-                ))}
-            </Select>
-          </FormControl>
-        </Grid>
+          {/* License Category Selection - Hidden for REPLACEMENT and TEMPORARY_LICENSE */}
+          {![ApplicationType.REPLACEMENT, ApplicationType.TEMPORARY_LICENSE].includes(formData.application_type) && (
+            <Grid item xs={12}>
+              <FormControl fullWidth required>
+                <InputLabel>License Category</InputLabel>
+                <Select
+                  value={formData.license_category}
+                    onChange={async (e) => {
+                      const selectedCategory = e.target.value as LicenseCategory;
+                      setFormData(prev => ({ ...prev, license_category: selectedCategory }));
+                      
+                      // Check license requirements immediately
+                      await checkLicenseRequirements(selectedCategory);
+                    }}
+                  >
+                    {getAvailableLicenseCategories().map((category) => (
+                      <MenuItem key={category.value} value={category.value}>
+                        <Box>
+                          <Typography variant="body2" fontWeight="bold">
+                            {category.label}
+                            </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Min age: {category.minAge} years
+                            {category.prerequisites.length > 0 && ` • Requires: ${category.prerequisites.join(', ')}`}
+                            {category.allowsLearners && ' • Allows learner\'s permit'}
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                    ))}
+                </Select>
+              </FormControl>
+            </Grid>
+          )}
+
+          {/* Info for REPLACEMENT and TEMPORARY_LICENSE applications */}
+          {[ApplicationType.REPLACEMENT, ApplicationType.TEMPORARY_LICENSE].includes(formData.application_type) && (
+            <Grid item xs={12}>
+              <Alert severity="info">
+                <Typography variant="body2" fontWeight="bold">
+                  {formData.application_type === ApplicationType.REPLACEMENT ? 'Replacement License' : 'Temporary License'} Application
+                </Typography>
+                <Typography variant="body2">
+                  {formData.application_type === ApplicationType.REPLACEMENT 
+                    ? 'System will check for existing licenses. If none found, you will need to verify external licenses.'
+                    : 'System will check for existing licenses to issue temporary license. If none found, you will need to verify external licenses.'
+                  }
+                </Typography>
+              </Alert>
+            </Grid>
+          )}
 
           {/* Never Been Refused Declaration */}
           <Grid item xs={12}>

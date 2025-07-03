@@ -187,23 +187,38 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
 
   const addExternalLicense = () => {
     const tempId = `temp-${Date.now()}`;
+    
+    // Default license type based on application type
+    let defaultLicenseType: 'LEARNERS_PERMIT' | 'DRIVERS_LICENSE';
+    let defaultCategories: LicenseCategory[];
+    
+    if (currentApplicationType === ApplicationType.NEW_LICENSE) {
+      defaultLicenseType = 'DRIVERS_LICENSE';
+      defaultCategories = [LicenseCategory.B];
+    } else if ([ApplicationType.REPLACEMENT, ApplicationType.TEMPORARY_LICENSE].includes(currentApplicationType!)) {
+      // For replacement/temporary, default to driver's license and allow multiple categories
+      defaultLicenseType = 'DRIVERS_LICENSE';
+      defaultCategories = []; // Start empty, user will select their categories
+    } else {
+      defaultLicenseType = 'DRIVERS_LICENSE';
+      defaultCategories = [LicenseCategory.B];
+    }
+
     const newExternalLicense: ExternalLicense = {
       id: tempId,
       license_number: '',
-      license_type: 'DRIVERS_LICENSE',
-      license_category: LicenseCategory.B,
-      categories: [LicenseCategory.B],
+      license_type: defaultLicenseType,
+      license_category: defaultCategories[0] || LicenseCategory.B,
+      categories: defaultCategories,
       issue_date: '',
       expiry_date: '',
-      issuing_authority: '',
-      issuing_location: '',
+      issuing_authority: '', // Keep for compatibility but won't show in form
+      issuing_location: '', // Keep for compatibility but won't show in form  
       restrictions: '',
       verified: false,
       verification_source: 'MANUAL',
       verification_notes: '',
-      is_required: false,
-      // Manual license - not auto-populated
-      is_auto_populated: false
+      is_required: false
     };
 
     updateLicenseData({
@@ -306,6 +321,22 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
     systemLicenses: SystemLicense[], 
     existingExternalLicenses: ExternalLicense[]
   ): ExternalLicense[] => {
+    if (!currentLicenseCategory && ![ApplicationType.REPLACEMENT, ApplicationType.TEMPORARY_LICENSE].includes(currentApplicationType!)) {
+      return existingExternalLicenses;
+    }
+
+    // For REPLACEMENT and TEMPORARY_LICENSE, if no system licenses found, show info message
+    if ([ApplicationType.REPLACEMENT, ApplicationType.TEMPORARY_LICENSE].includes(currentApplicationType!) && systemLicenses.length === 0) {
+      // No auto-population needed - user will manually add their existing licenses
+      return existingExternalLicenses.filter(license => !license.is_auto_populated);
+    }
+
+    // For learner's permit applications, no auto-population needed
+    if (currentApplicationType === ApplicationType.LEARNERS_PERMIT) {
+      return existingExternalLicenses.filter(license => !license.is_auto_populated);
+    }
+
+    // Continue with existing logic for NEW_LICENSE applications
     if (!currentLicenseCategory) {
       return existingExternalLicenses;
     }
@@ -317,11 +348,6 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                           
     if (!categoryRules) {
       return existingExternalLicenses;
-    }
-
-    // For learner's permit applications, no auto-population needed
-    if (currentApplicationType === ApplicationType.LEARNERS_PERMIT) {
-      return existingExternalLicenses.filter(license => !license.is_auto_populated);
     }
 
     // Get categories available from system licenses
@@ -616,9 +642,26 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
               </Typography>
             </Box>
           }
-          subheader="Manually added licenses that require clerk verification"
+          subheader={
+            [ApplicationType.REPLACEMENT, ApplicationType.TEMPORARY_LICENSE].includes(currentApplicationType!) 
+              ? "Add all your current licenses for replacement/temporary license processing"
+              : "Manually added licenses that require clerk verification"
+          }
         />
         <CardContent>
+          {/* Info for REPLACEMENT and TEMPORARY_LICENSE applications */}
+          {[ApplicationType.REPLACEMENT, ApplicationType.TEMPORARY_LICENSE].includes(currentApplicationType!) && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              <Typography variant="body2" fontWeight="bold">
+                {currentApplicationType === ApplicationType.REPLACEMENT ? 'Replacement License' : 'Temporary License'} Process
+              </Typography>
+              <Typography variant="body2">
+                Please add all your current licenses below. You can select multiple categories for each license. 
+                This information will be used to {currentApplicationType === ApplicationType.REPLACEMENT ? 'replace your existing license(s)' : 'issue temporary license(s)'}.
+              </Typography>
+            </Alert>
+          )}
+
           {licenseData.external_licenses.map((license, index) => (
             <Box 
               key={license.id || index} 
@@ -685,7 +728,7 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                   />
                 </Grid>
 
-                {/* License Type - LOCKED for auto-populated */}
+                {/* License Type - Different logic for different application types */}
                 <Grid item xs={12} md={6}>
                   <FormControl fullWidth>
                     <InputLabel>License Type</InputLabel>
@@ -693,11 +736,16 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                       value={license.license_type}
                       label="License Type"
                       onChange={(e) => updateExternalLicense(index, 'license_type', e.target.value)}
-                      disabled={disabled || license.is_auto_populated}
+                      disabled={disabled || license.is_auto_populated || 
+                               (currentApplicationType === ApplicationType.NEW_LICENSE && !license.is_auto_populated)}
                       sx={{
-                        backgroundColor: license.is_auto_populated ? '#f5f5f5' : 'inherit',
+                        backgroundColor: (license.is_auto_populated || 
+                                        (currentApplicationType === ApplicationType.NEW_LICENSE && !license.is_auto_populated)) 
+                                        ? '#f5f5f5' : 'inherit',
                         '& .MuiOutlinedInput-notchedOutline': {
-                          borderColor: license.is_auto_populated ? '#ffa726' : 'inherit'
+                          borderColor: (license.is_auto_populated || 
+                                      (currentApplicationType === ApplicationType.NEW_LICENSE && !license.is_auto_populated)) 
+                                      ? '#ffa726' : 'inherit'
                         }
                       }}
                     >
@@ -707,6 +755,16 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                     {license.is_auto_populated && (
                       <Typography variant="caption" color="warning.main" sx={{ mt: 0.5, fontWeight: 600 }}>
                         🔒 Type locked for required license
+                      </Typography>
+                    )}
+                    {currentApplicationType === ApplicationType.NEW_LICENSE && !license.is_auto_populated && (
+                      <Typography variant="caption" color="warning.main" sx={{ mt: 0.5, fontWeight: 600 }}>
+                        🔒 Driver's License required for NEW_LICENSE applications
+                      </Typography>
+                    )}
+                    {[ApplicationType.REPLACEMENT, ApplicationType.TEMPORARY_LICENSE].includes(currentApplicationType!) && (
+                      <Typography variant="caption" color="info.main" sx={{ mt: 0.5, fontWeight: 600 }}>
+                        ℹ️ Select the type of license you currently hold
                       </Typography>
                     )}
                   </FormControl>
@@ -789,26 +847,6 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                   </FormControl>
                 </Grid>
 
-                {/* Issuing Location */}
-                <Grid item xs={12} md={6}>
-                  <FormControl fullWidth>
-                    <InputLabel>Issuing Location</InputLabel>
-                    <Select
-                      value={license.issuing_location}
-                      label="Issuing Location"
-                      onChange={(e) => updateExternalLicense(index, 'issuing_location', e.target.value)}
-                      disabled={disabled}
-                    >
-                      {locations.map((location) => (
-                        <MenuItem key={location.id} value={location.name}>
-                          {location.name} ({location.code})
-                        </MenuItem>
-                      ))}
-                      <MenuItem value="Other">Other (Non-Madagascar)</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-
                 {/* Issue Date */}
                 <Grid item xs={12} md={6}>
                   <TextField
@@ -853,39 +891,31 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                   })()}
                 </Grid>
 
-                {/* Issuing Authority */}
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Issuing Authority"
-                    value={license.issuing_authority}
-                    onChange={(e) => updateExternalLicense(index, 'issuing_authority', e.target.value)}
-                    disabled={disabled}
-                    placeholder="e.g., Department of Transport, Police Station, Foreign Authority"
-                    helperText="Authority or department that issued this license"
-                  />
-                </Grid>
-
-                {/* License Restrictions */}
-                <Grid item xs={12} md={6}>
+                {/* License Restrictions - Multi-select with only specific options */}
+                <Grid item xs={12}>
                   <FormControl fullWidth>
                     <InputLabel>License Restrictions</InputLabel>
                     <Select
-                      value={license.restrictions || 'NONE'}
+                      multiple
+                      value={license.restrictions ? license.restrictions.split(',').map(r => r.trim()).filter(r => r) : []}
                       label="License Restrictions"
-                      onChange={(e) => updateExternalLicense(index, 'restrictions', e.target.value === 'NONE' ? '' : e.target.value)}
+                      onChange={(e) => {
+                        const selectedRestrictions = Array.isArray(e.target.value) ? e.target.value : [];
+                        updateExternalLicense(index, 'restrictions', selectedRestrictions.join(', '));
+                      }}
                       disabled={disabled}
-                    >
-                      <MenuItem value="NONE">
-                        <Box>
-                          <Typography variant="body2" fontWeight="bold">
-                            None
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            No restrictions on this license
-                          </Typography>
+                      renderValue={(selected) => (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          {(selected as string[]).map((value) => (
+                            <Chip key={value} label={
+                              value === 'CORRECTIVE_LENSES' ? 'Corrective Lenses' :
+                              value === 'MODIFIED_VEHICLE_ONLY' ? 'Modified Vehicle' :
+                              value
+                            } size="small" />
+                          ))}
                         </Box>
-                      </MenuItem>
+                      )}
+                    >
                       <MenuItem value="CORRECTIVE_LENSES">
                         <Box>
                           <Typography variant="body2" fontWeight="bold">
@@ -893,26 +923,6 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
                             Must wear glasses or contact lenses while driving
-                          </Typography>
-                        </Box>
-                      </MenuItem>
-                      <MenuItem value="VISION_RESTRICTED">
-                        <Box>
-                          <Typography variant="body2" fontWeight="bold">
-                            Vision Restricted
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Limited vision - additional restrictions may apply
-                          </Typography>
-                        </Box>
-                      </MenuItem>
-                      <MenuItem value="AUTOMATIC_ONLY">
-                        <Box>
-                          <Typography variant="body2" fontWeight="bold">
-                            Automatic Transmission Only
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Not authorized to drive manual transmission vehicles
                           </Typography>
                         </Box>
                       </MenuItem>
@@ -926,39 +936,9 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                           </Typography>
                         </Box>
                       </MenuItem>
-                      <MenuItem value="DAYLIGHT_ONLY">
-                        <Box>
-                          <Typography variant="body2" fontWeight="bold">
-                            Daylight Driving Only
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Not authorized to drive during nighttime hours
-                          </Typography>
-                        </Box>
-                      </MenuItem>
-                      <MenuItem value="SPEED_LIMITED">
-                        <Box>
-                          <Typography variant="body2" fontWeight="bold">
-                            Speed Limited
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Maximum speed restrictions apply
-                          </Typography>
-                        </Box>
-                      </MenuItem>
-                      <MenuItem value="MEDICAL_REVIEW">
-                        <Box>
-                          <Typography variant="body2" fontWeight="bold">
-                            Periodic Medical Review
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Regular medical examinations required
-                          </Typography>
-                        </Box>
-                      </MenuItem>
                     </Select>
                     <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-                      Select any restrictions that apply to this license
+                      Select all restrictions that apply to this license
                     </Typography>
                   </FormControl>
                 </Grid>
