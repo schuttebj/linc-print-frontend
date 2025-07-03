@@ -252,8 +252,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
   // Check if Section C is required for this application type
   const requiresSectionC = () => {
     return [
-      ApplicationType.REPLACEMENT,
-      ApplicationType.NEW_LICENSE // For "new card/duplicate" cases
+      ApplicationType.REPLACEMENT // Only for replacement/notice applications
     ].includes(formData.application_type);
   };
 
@@ -990,7 +989,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           </Grid>
 
           {/* External License Capture for Missing Prerequisites */}
-          {prerequisiteCheck && !prerequisiteCheck.canProceed && (
+          {formData.license_verification?.external_licenses && formData.license_verification.external_licenses.length > 0 && (
             <Grid item xs={12}>
               <Card>
                 <CardHeader 
@@ -998,11 +997,9 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                   subheader="You need to provide details of existing licenses that satisfy the prerequisites"
                 />
                 <CardContent>
-                  {prerequisiteCheck.requiresExternal && (
-                    <Alert severity="warning" sx={{ mb: 2 }}>
-                      This license category requires proof of existing licenses. Please provide details below.
-                    </Alert>
-                  )}
+                  <Alert severity="warning" sx={{ mb: 2 }}>
+                    This license category requires proof of existing licenses. Please provide details below.
+                  </Alert>
 
                   {/* External License Capture */}
                   {formData.license_verification.external_licenses.map((extLicense, index) => (
@@ -1096,7 +1093,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                   ))}
 
                   {/* Optional External Licenses */}
-                  {!formData.license_verification.requires_verification && (
+                  {(!formData.license_verification?.external_licenses || formData.license_verification.external_licenses.filter(l => l.is_required).length === 0) && (
                     <Box sx={{ mt: 2 }}>
                       <Typography variant="body2" color="text.secondary" gutterBottom>
                         Do you have any existing licenses to add to your record? (Optional)
