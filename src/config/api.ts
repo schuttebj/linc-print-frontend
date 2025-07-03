@@ -129,6 +129,9 @@ export const API_ENDPOINTS = {
   applicationFeePayment: (id: string, feeId: string) => `${API_BASE_URL}/api/${API_VERSION}/applications/${id}/fees/${feeId}/pay`,
   applicationAssociated: (id: string) => `${API_BASE_URL}/api/${API_VERSION}/applications/${id}/associated`,
   applicationStatistics: `${API_BASE_URL}/api/${API_VERSION}/applications/statistics`,
+  
+  // Standalone image processing (doesn't require application)
+  processImage: `${API_BASE_URL}/api/${API_VERSION}/applications/process-image`,
 
   // License endpoints (issued licenses management)
   licenses: `${API_BASE_URL}/api/${API_VERSION}/licenses`,

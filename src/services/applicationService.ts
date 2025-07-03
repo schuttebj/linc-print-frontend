@@ -151,6 +151,50 @@ class ApplicationService {
     return await response.json();
   }
 
+  // Standalone image processing (doesn't require application)
+  async processImage(
+    file: File,
+    dataType: 'PHOTO' | 'SIGNATURE' | 'FINGERPRINT'
+  ): Promise<{
+    status: string;
+    message: string;
+    data_type: string;
+    processed_image: {
+      data: string; // base64 encoded image data
+      format: string;
+      dimensions?: string;
+      file_size: number;
+    };
+    processing_info?: {
+      iso_compliant: boolean;
+      cropped_automatically: boolean;
+      enhanced: boolean;
+      compression_ratio: number;
+    };
+    original_filename: string;
+  }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('data_type', dataType);
+
+    // Use fetch directly for file uploads
+    const url = API_ENDPOINTS.processImage;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}` // Temporary, will use auth context
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || `Image processing failed: ${response.statusText}`);
+    }
+
+    return await response.json();
+  }
+
   async uploadBiometricData(
     applicationId: string,
     formData: FormData

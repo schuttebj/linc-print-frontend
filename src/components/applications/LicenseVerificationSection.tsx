@@ -822,6 +822,24 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                           borderColor: license.is_auto_populated ? '#ffa726' : 'inherit'
                         }
                       }}
+                      renderValue={(selected) => (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          {(selected as LicenseCategory[]).map((value) => {
+                            if (license.license_type === 'LEARNERS_PERMIT') {
+                              // For learner's permits, show the code number
+                              const codeNumber = value; // '1', '2', or '3'
+                              return (
+                                <Chip key={value} label={`Code ${codeNumber}`} size="small" />
+                              );
+                            } else {
+                              // For regular licenses, show the category
+                              return (
+                                <Chip key={value} label={value} size="small" />
+                              );
+                            }
+                          })}
+                        </Box>
+                      )}
                     >
                       {license.license_type === 'LEARNERS_PERMIT' ? (
                         // Show learner's permit codes for learner's permits
@@ -868,6 +886,8 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                     {license.is_auto_populated && (
                       <Typography variant="caption" color="warning.main" sx={{ mt: 0.5, fontWeight: 600 }}>
                         🔒 Categories locked for required license: {license.required_for_category ? `Required for ${license.required_for_category}` : 'System required'}
+                        <br />
+                        Debug: categories={JSON.stringify(license.categories)}, license_type={license.license_type}
                       </Typography>
                     )}
                   </FormControl>

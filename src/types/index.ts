@@ -273,6 +273,12 @@ export interface MedicalInformation {
   // Vision Tests
   vision_test: VisionTestData;
   
+  // Medical Conditions (required by backend)
+  medical_conditions: MedicalConditions;
+  
+  // Physical Assessment (required by backend)
+  physical_assessment: PhysicalAssessment;
+  
   // Medical Certificates
   medical_certificate_file?: File;
   medical_certificate_passed: boolean;
@@ -284,7 +290,7 @@ export interface MedicalInformation {
   medical_restrictions: string[];
   medical_notes?: string;
   examined_by?: string;
-  examination_date?: string;
+  examination_date?: string; // Will be converted to date for API
 }
 
 export interface VisionTestData {
