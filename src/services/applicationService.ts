@@ -3,7 +3,7 @@
  * Handles all API calls related to license applications
  */
 
-import { api, API_ENDPOINTS } from '../config/api';
+import { api, API_ENDPOINTS, getAuthToken } from '../config/api';
 import { 
   Application, 
   ApplicationCreate, 
@@ -177,12 +177,18 @@ class ApplicationService {
     formData.append('file', file);
     formData.append('data_type', dataType);
 
+    // Use the proper token management system
+    const token = getAuthToken();
+    if (!token) {
+      throw new Error('No authentication token available');
+    }
+
     // Use fetch directly for file uploads
     const url = API_ENDPOINTS.processImage;
     const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}` // Temporary, will use auth context
+        'Authorization': `Bearer ${token}`
       },
       body: formData
     });

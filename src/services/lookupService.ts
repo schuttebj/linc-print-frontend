@@ -463,13 +463,15 @@ class LookupService {
       console.error('Failed to fetch application types:', error);
       // Return fallback data
       return [
-        { value: 'NEW_LICENSE', label: 'New License' },
-        { value: 'LEARNERS_PERMIT', label: 'Learners Permit' },
-        { value: 'RENEWAL', label: 'Renewal' },
-        { value: 'DUPLICATE', label: 'Duplicate' },
-        { value: 'UPGRADE', label: 'Upgrade' },
-        { value: 'TEMPORARY_LICENSE', label: 'Temporary License' },
-        { value: 'INTERNATIONAL_PERMIT', label: 'International Permit' },
+        { value: 'LEARNERS_PERMIT', label: "Learner's Licence Application" },
+        { value: 'NEW_LICENSE', label: 'Driving Licence Application' },
+        { value: 'CONVERSION', label: 'Driving Licence Conversion' },
+        { value: 'RENEWAL', label: 'Renew Driving Licence Card' },
+        { value: 'PROFESSIONAL_LICENSE', label: 'Professional Driving Licence Application' },
+        { value: 'TEMPORARY_LICENSE', label: 'Temporary Driving Licence Application' },
+        { value: 'FOREIGN_CONVERSION', label: 'Convert Foreign Driving Licence' },
+        { value: 'INTERNATIONAL_PERMIT', label: 'International Driving Permit Application' },
+        { value: 'REPLACEMENT', label: 'Replace Driving Licence Card' },
       ];
     }
   }
@@ -675,6 +677,13 @@ class LookupService {
   public clearCacheEntry(key: string): void {
     this.cache.delete(key);
     this.cacheExpiry.delete(key);
+  }
+
+  /**
+   * Clear application types cache specifically
+   */
+  public clearApplicationTypesCache(): void {
+    this.clearCacheEntry('application_types');
   }
 }
 
