@@ -113,11 +113,21 @@ class ApplicationService {
     reason?: string,
     notes?: string
   ): Promise<Application> {
-    return await api.post(API_ENDPOINTS.applicationStatus(id), {
-      new_status: newStatus,
-      reason,
-      notes
+    // Build query parameters
+    const queryParams = new URLSearchParams({
+      new_status: newStatus
     });
+    
+    if (reason) {
+      queryParams.append('reason', reason);
+    }
+    
+    if (notes) {
+      queryParams.append('notes', notes);
+    }
+    
+    const url = `${API_ENDPOINTS.applicationStatus(id)}?${queryParams.toString()}`;
+    return await api.post(url, {});
   }
 
   // File uploads
