@@ -262,7 +262,10 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
 
   // Check if Section C is required for this application type
   const requiresSectionC = () => {
-    return formData.application_type === ApplicationType.RENEWAL; // Section C required for renewal (replacement functionality)
+    return [
+      ApplicationType.RENEWAL, // Section C required for renewal (replacement functionality)
+      ApplicationType.LEARNERS_PERMIT_DUPLICATE // Section C required for learner's permit duplicates
+    ].includes(formData.application_type);
   };
 
   // Steps configuration
@@ -556,10 +559,10 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         break;
 
       case 'application': // Application Details - Section B
-              // License category not required for TEMPORARY_LICENSE and RENEWAL
-      if (!formData.license_category && ![ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(formData.application_type)) {
-        errors.push('Please select a license category');
-      }
+                      // License category required for all except TEMPORARY_LICENSE and RENEWAL
+        if (!formData.license_category && ![ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(formData.application_type)) {
+          errors.push('Please select a license category');
+        }
         if (!formData.application_type) {
           errors.push('Please select an application type');
         }
@@ -568,9 +571,9 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           errors.push('Please provide details of previous license application refusal');
         }
         // Validate age requirements here since Requirements step is removed
-        // Skip age validation for TEMPORARY_LICENSE and RENEWAL applications
+        // Skip age validation for TEMPORARY_LICENSE, RENEWAL, and LEARNERS_PERMIT_DUPLICATE applications
         if (formData.person?.birth_date && formData.license_category && 
-            ![ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(formData.application_type)) {
+            ![ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL, ApplicationType.LEARNERS_PERMIT_DUPLICATE].includes(formData.application_type)) {
           const age = Math.floor((Date.now() - new Date(formData.person.birth_date).getTime()) / (1000 * 60 * 60 * 24 * 365.25));
           const minAge = LICENSE_CATEGORY_RULES[formData.license_category]?.minimum_age || 18;
           if (age < minAge) {
@@ -592,9 +595,12 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         }
         break;
 
-      case 'sectionC': // Section C - Notice/Renewal Details
+      case 'sectionC': // Section C - Notice/Renewal/Duplicate Details
         if (!formData.replacement_reason) {
-          errors.push('Please select a reason for renewal/notice');
+          const reasonType = formData.application_type === ApplicationType.LEARNERS_PERMIT_DUPLICATE 
+            ? 'duplicate request' 
+            : 'renewal/notice';
+          errors.push(`Please select a reason for ${reasonType}`);
         }
         if (!formData.office_of_issue?.trim()) {
           errors.push('Office of issue is required');
@@ -880,7 +886,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
 
     const getAvailableLicenseCategories = () => {
       // For learner's permit applications, show only learner's permit codes
-      if (formData.application_type === ApplicationType.LEARNERS_PERMIT) {
+      if ([ApplicationType.LEARNERS_PERMIT, ApplicationType.LEARNERS_PERMIT_DUPLICATE].includes(formData.application_type)) {
         return [
           {
             value: LicenseCategory.LEARNERS_1,
@@ -1079,6 +1085,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                 }}
             >
                           <MenuItem value={ApplicationType.LEARNERS_PERMIT}>Learner's Licence Application</MenuItem>
+            <MenuItem value={ApplicationType.LEARNERS_PERMIT_DUPLICATE}>Duplicate of learner's licence</MenuItem>
             <MenuItem value={ApplicationType.NEW_LICENSE}>Driving Licence Application</MenuItem>
             <MenuItem value={ApplicationType.CONVERSION}>Driving Licence Conversion</MenuItem>
             <MenuItem value={ApplicationType.RENEWAL}>Renew Driving Licence Card</MenuItem>
@@ -1197,18 +1204,20 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
             </Card>
           </Grid>
 
-          {/* License Verification Section - Comprehensive External License Form */}
-        <Grid item xs={12}>
-            <LicenseVerificationSection
-              personId={formData.person?.id || null}
-              value={formData.license_verification}
-              onChange={(data) => setFormData(prev => ({ ...prev, license_verification: data }))}
-              locations={locations}
-              currentLicenseCategory={formData.license_category}
-              currentApplicationType={formData.application_type}
-              disabled={false}
-            />
-        </Grid>
+          {/* License Verification Section - Hidden for learner's permit applications */}
+          {![ApplicationType.LEARNERS_PERMIT, ApplicationType.LEARNERS_PERMIT_DUPLICATE].includes(formData.application_type) && (
+            <Grid item xs={12}>
+              <LicenseVerificationSection
+                personId={formData.person?.id || null}
+                value={formData.license_verification}
+                onChange={(data) => setFormData(prev => ({ ...prev, license_verification: data }))}
+                locations={locations}
+                currentLicenseCategory={formData.license_category}
+                currentApplicationType={formData.application_type}
+                disabled={false}
+              />
+            </Grid>
+          )}
 
           {/* Parental Consent - For applicants under 18 */}
           {formData.person?.birth_date && calculateAge(formData.person.birth_date) < 18 && (
@@ -1277,14 +1286,22 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     return (
               <Box>
         <Typography variant="h6" gutterBottom>
-          Section C: Notice Details
+          {formData.application_type === ApplicationType.LEARNERS_PERMIT_DUPLICATE 
+            ? 'Section C: Duplicate Request Details'
+            : 'Section C: Notice Details'
+          }
                 </Typography>
         
         <Grid container spacing={3}>
           {/* Replacement Reason */}
           <Grid item xs={12}>
             <FormControl fullWidth required>
-              <InputLabel>Reason for Notice</InputLabel>
+              <InputLabel>
+                {formData.application_type === ApplicationType.LEARNERS_PERMIT_DUPLICATE 
+                  ? 'Reason for Duplicate Request'
+                  : 'Reason for Notice'
+                }
+              </InputLabel>
               <Select
                 value={formData.replacement_reason || ''}
                 onChange={(e) => setFormData(prev => ({ 
@@ -1300,8 +1317,13 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                 <MenuItem value="loss">Loss</MenuItem>
                 <MenuItem value="destruction">Destruction</MenuItem>
                 <MenuItem value="recovery">Recovery</MenuItem>
-                <MenuItem value="new_card">New Card</MenuItem>
-                <MenuItem value="change_particulars">Change of Particulars (ID, name, address)</MenuItem>
+                {/* Additional options for renewal applications only */}
+                {formData.application_type === ApplicationType.RENEWAL && (
+                  <>
+                    <MenuItem value="new_card">New Card</MenuItem>
+                    <MenuItem value="change_particulars">Change of Particulars (ID, name, address)</MenuItem>
+                  </>
+                )}
               </Select>
             </FormControl>
           </Grid>
@@ -1390,14 +1412,16 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
             </>
           )}
 
-          {/* Information Card */}
+                    {/* Information Card */}
           <Grid item xs={12}>
             <Card variant="outlined" sx={{ bgcolor: 'info.50' }}>
               <CardContent sx={{ py: 2 }}>
                 <Typography variant="body2" color="text.secondary">
-                  <strong>Section C:</strong> This section applies to replacement licenses and notices of change. 
-                  All fields marked as required must be completed before proceeding.
-              </Typography>
+                  <strong>Section C:</strong> {formData.application_type === ApplicationType.LEARNERS_PERMIT_DUPLICATE 
+                    ? 'This section applies to duplicate learner\'s licence requests. Please specify the reason for requesting a duplicate.'
+                    : 'This section applies to replacement licenses and notices of change.'
+                  } All fields marked as required must be completed before proceeding.
+                </Typography>
               </CardContent>
             </Card>
           </Grid>

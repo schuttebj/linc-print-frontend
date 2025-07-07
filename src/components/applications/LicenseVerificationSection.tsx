@@ -844,28 +844,13 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                         // Show learner's permit codes for learner's permits
                         <>
                           <MenuItem value={LicenseCategory.LEARNERS_1}>
-                            <Box>
-                              <Typography variant="body2" fontWeight="bold">Code 1</Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                Motor cycles, motor tricycles and motor quadricycles with engine of any capacity
-                              </Typography>
-                            </Box>
+                            Code 1 - Motor cycles, motor tricycles and motor quadricycles with engine of any capacity
                           </MenuItem>
                           <MenuItem value={LicenseCategory.LEARNERS_2}>
-                            <Box>
-                              <Typography variant="body2" fontWeight="bold">Code 2</Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                Light motor vehicles, other than motor cycles, motor tricycles or motor quadricycles
-                              </Typography>
-                            </Box>
+                            Code 2 - Light motor vehicles, other than motor cycles, motor tricycles or motor quadricycles
                           </MenuItem>
                           <MenuItem value={LicenseCategory.LEARNERS_3}>
-                            <Box>
-                              <Typography variant="body2" fontWeight="bold">Code 3</Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                Any motor vehicle other than motor cycles, motor tricycles or motor quadricycles
-                              </Typography>
-                            </Box>
+                            Code 3 - Any motor vehicle other than motor cycles, motor tricycles or motor quadricycles
                           </MenuItem>
                         </>
                       ) : (
