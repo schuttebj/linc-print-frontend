@@ -1513,12 +1513,10 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                 <MenuItem value="destruction">Destruction</MenuItem>
                 <MenuItem value="recovery">Recovery</MenuItem>
                 {/* Additional options for renewal applications only */}
-                {formData.application_type === ApplicationType.RENEWAL && (
-                  <>
-                    <MenuItem value="new_card">New Card</MenuItem>
-                    <MenuItem value="change_particulars">Change of Particulars (ID, name, address)</MenuItem>
-                  </>
-                )}
+                {formData.application_type === ApplicationType.RENEWAL && [
+                  <MenuItem key="new_card" value="new_card">New Card</MenuItem>,
+                  <MenuItem key="change_particulars" value="change_particulars">Change of Particulars (ID, name, address)</MenuItem>
+                ]}
               </Select>
             </FormControl>
           </Grid>

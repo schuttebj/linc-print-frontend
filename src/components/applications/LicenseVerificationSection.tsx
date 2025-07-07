@@ -840,20 +840,18 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                         </Box>
                       )}
                     >
-                      {license.license_type === 'LEARNERS_PERMIT' ? (
+                      {license.license_type === 'LEARNERS_PERMIT' ? [
                         // Show learner's permit codes for learner's permits
-                        <>
-                          <MenuItem value={LicenseCategory.LEARNERS_1}>
-                            Code 1 - Motor cycles, motor tricycles and motor quadricycles with engine of any capacity
-                          </MenuItem>
-                          <MenuItem value={LicenseCategory.LEARNERS_2}>
-                            Code 2 - Light motor vehicles, other than motor cycles, motor tricycles or motor quadricycles
-                          </MenuItem>
-                          <MenuItem value={LicenseCategory.LEARNERS_3}>
-                            Code 3 - Any motor vehicle other than motor cycles, motor tricycles or motor quadricycles
-                          </MenuItem>
-                        </>
-                      ) : (
+                        <MenuItem key={LicenseCategory.LEARNERS_1} value={LicenseCategory.LEARNERS_1}>
+                          Code 1 - Motor cycles, motor tricycles and motor quadricycles with engine of any capacity
+                        </MenuItem>,
+                        <MenuItem key={LicenseCategory.LEARNERS_2} value={LicenseCategory.LEARNERS_2}>
+                          Code 2 - Light motor vehicles, other than motor cycles, motor tricycles or motor quadricycles
+                        </MenuItem>,
+                        <MenuItem key={LicenseCategory.LEARNERS_3} value={LicenseCategory.LEARNERS_3}>
+                          Code 3 - Any motor vehicle other than motor cycles, motor tricycles or motor quadricycles
+                        </MenuItem>
+                      ] : (
                         // Show regular license categories for driver's licenses
                         Object.values(LicenseCategory).filter(cat => !['1', '2', '3'].includes(cat)).map((category) => (
                           <MenuItem key={category} value={category}>
