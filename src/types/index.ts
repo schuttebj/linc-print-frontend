@@ -445,6 +445,11 @@ export interface ApplicationFormData {
   never_been_refused: boolean;
   refusal_details?: string;
   
+  // Professional Driving Permit specific fields (for PROFESSIONAL_LICENSE applications)
+  professional_permit_categories: ProfessionalPermitCategory[];
+  professional_permit_previous_refusal: boolean;
+  professional_permit_refusal_details?: string;
+  
   // Step 3: Section C - Notice/Replacement Details (for specific application types)
   replacement_reason?: 'theft' | 'loss' | 'destruction' | 'recovery' | 'new_card' | 'change_particulars';
   office_of_issue?: string;
@@ -969,6 +974,13 @@ export enum LicenseRestriction {
   MODIFIED_VEHICLE_ONLY = 'MODIFIED_VEHICLE_ONLY',
   CORRECTIVE_LENSES = 'CORRECTIVE_LENSES',
   VISION_RESTRICTED = 'VISION_RESTRICTED'
+}
+
+// Professional Driving Permit Categories
+export enum ProfessionalPermitCategory {
+  P = 'P', // Passengers (21 years minimum)
+  D = 'D', // Dangerous goods (25 years minimum) - automatically includes G
+  G = 'G'  // Goods (18 years minimum)
 }
 
 // Helper functions for the new license system

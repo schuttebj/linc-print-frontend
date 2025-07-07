@@ -127,7 +127,8 @@ import {
   MedicalInformation,
   VisionTestData,
   MedicalConditions,
-  ProcessedBiometricFile
+  ProcessedBiometricFile,
+  ProfessionalPermitCategory
 } from '../../types';
 
 interface ApplicationFormWrapperProps {
@@ -196,6 +197,10 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     selected_location_id: '',
     never_been_refused: true, // Default to true (most people haven't been refused)
     refusal_details: '',
+    // Professional permit fields
+    professional_permit_categories: [],
+    professional_permit_previous_refusal: false,
+    professional_permit_refusal_details: '',
     // Section C fields
     replacement_reason: undefined,
     office_of_issue: '',
@@ -264,7 +269,8 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
   const requiresSectionC = () => {
     return [
       ApplicationType.RENEWAL, // Section C required for renewal (replacement functionality)
-      ApplicationType.LEARNERS_PERMIT_DUPLICATE // Section C required for learner's permit duplicates
+      ApplicationType.LEARNERS_PERMIT_DUPLICATE, // Section C required for learner's permit duplicates
+      ApplicationType.PROFESSIONAL_LICENSE // Section C required for professional permits (notice of change)
     ].includes(formData.application_type);
   };
 
@@ -593,6 +599,40 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
             errors.push('All required external licenses must be verified before proceeding');
           }
         }
+        
+        // Professional permit specific validations
+        if (formData.application_type === ApplicationType.PROFESSIONAL_LICENSE) {
+          if (formData.professional_permit_categories.length === 0) {
+            errors.push('At least one professional permit category is required');
+          }
+          if (formData.professional_permit_previous_refusal && !formData.professional_permit_refusal_details?.trim()) {
+            errors.push('Professional permit refusal details are required when you have been refused before');
+          }
+          
+          // Age validation for professional permit categories
+          if (formData.person?.birth_date) {
+            const age = calculateAge(formData.person.birth_date);
+            formData.professional_permit_categories.forEach(category => {
+              switch (category) {
+                case ProfessionalPermitCategory.P:
+                  if (age < 21) {
+                    errors.push('Minimum age for Category P (Passengers) is 21 years');
+                  }
+                  break;
+                case ProfessionalPermitCategory.D:
+                  if (age < 25) {
+                    errors.push('Minimum age for Category D (Dangerous goods) is 25 years');
+                  }
+                  break;
+                case ProfessionalPermitCategory.G:
+                  if (age < 18) {
+                    errors.push('Minimum age for Category G (Goods) is 18 years');
+                  }
+                  break;
+              }
+            });
+          }
+        }
         break;
 
       case 'sectionC': // Section C - Notice/Renewal/Duplicate Details
@@ -634,7 +674,8 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         } else if (formData.license_category) {
           // Standard logic for other application types
           isMedicalMandatory = requiresMedicalAlways(formData.license_category) || 
-                             (age >= 60 && requiresMedical60Plus(formData.license_category));
+                             (age >= 60 && requiresMedical60Plus(formData.license_category)) ||
+                             formData.application_type === ApplicationType.PROFESSIONAL_LICENSE;
         }
 
         if (isMedicalMandatory) {
@@ -1167,6 +1208,160 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
             </Grid>
           )}
 
+          {/* Professional Driving Permit Categories - Only for PROFESSIONAL_LICENSE applications */}
+          {formData.application_type === ApplicationType.PROFESSIONAL_LICENSE && (
+            <Grid item xs={12}>
+              <Card variant="outlined">
+                <CardHeader 
+                  title="Professional Driving Permit Categories" 
+                  subheader="Select the category(ies) for which a professional driving permit is required"
+                />
+                <CardContent>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Note: Category D (Dangerous goods) automatically includes Category G (Goods)
+                  </Typography>
+                  
+                  <FormControl component="fieldset" fullWidth>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} md={4}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={formData.professional_permit_categories.includes(ProfessionalPermitCategory.P)}
+                              onChange={(e) => {
+                                const isChecked = e.target.checked;
+                                setFormData(prev => ({
+                                  ...prev,
+                                  professional_permit_categories: isChecked
+                                    ? [...prev.professional_permit_categories, ProfessionalPermitCategory.P]
+                                    : prev.professional_permit_categories.filter(cat => cat !== ProfessionalPermitCategory.P)
+                                }));
+                              }}
+                            />
+                          }
+                          label={
+                            <Box>
+                              <Typography variant="body2" fontWeight="bold">P - Passengers</Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                Minimum age: 21 years
+                              </Typography>
+                            </Box>
+                          }
+                        />
+                      </Grid>
+                      
+                      <Grid item xs={12} md={4}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={formData.professional_permit_categories.includes(ProfessionalPermitCategory.D)}
+                              onChange={(e) => {
+                                const isChecked = e.target.checked;
+                                setFormData(prev => {
+                                  let newCategories = isChecked
+                                    ? [...prev.professional_permit_categories, ProfessionalPermitCategory.D]
+                                    : prev.professional_permit_categories.filter(cat => cat !== ProfessionalPermitCategory.D);
+                                  
+                                  // D automatically includes G
+                                  if (isChecked && !newCategories.includes(ProfessionalPermitCategory.G)) {
+                                    newCategories.push(ProfessionalPermitCategory.G);
+                                  }
+                                  
+                                  return { ...prev, professional_permit_categories: newCategories };
+                                });
+                              }}
+                            />
+                          }
+                          label={
+                            <Box>
+                              <Typography variant="body2" fontWeight="bold">D - Dangerous Goods</Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                Minimum age: 25 years • Automatically includes G
+                              </Typography>
+                            </Box>
+                          }
+                        />
+                      </Grid>
+                      
+                      <Grid item xs={12} md={4}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={formData.professional_permit_categories.includes(ProfessionalPermitCategory.G)}
+                              onChange={(e) => {
+                                const isChecked = e.target.checked;
+                                setFormData(prev => {
+                                  let newCategories = isChecked
+                                    ? [...prev.professional_permit_categories, ProfessionalPermitCategory.G]
+                                    : prev.professional_permit_categories.filter(cat => cat !== ProfessionalPermitCategory.G);
+                                  
+                                  // If unchecking G, also uncheck D (since D includes G)
+                                  if (!isChecked) {
+                                    newCategories = newCategories.filter(cat => cat !== ProfessionalPermitCategory.D);
+                                  }
+                                  
+                                  return { ...prev, professional_permit_categories: newCategories };
+                                });
+                              }}
+                              disabled={formData.professional_permit_categories.includes(ProfessionalPermitCategory.D)}
+                            />
+                          }
+                          label={
+                            <Box>
+                              <Typography variant="body2" fontWeight="bold">G - Goods</Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                Minimum age: 18 years
+                              </Typography>
+                            </Box>
+                          }
+                        />
+                      </Grid>
+                    </Grid>
+                  </FormControl>
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
+
+          {/* Professional Permit Previous Refusal Declaration - Only for PROFESSIONAL_LICENSE */}
+          {formData.application_type === ApplicationType.PROFESSIONAL_LICENSE && (
+            <Grid item xs={12}>
+              <Card variant="outlined">
+                <CardContent>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={!formData.professional_permit_previous_refusal}
+                        onChange={(e) => setFormData(prev => ({ 
+                          ...prev, 
+                          professional_permit_previous_refusal: !e.target.checked,
+                          professional_permit_refusal_details: e.target.checked ? '' : prev.professional_permit_refusal_details 
+                        }))}
+                      />
+                    }
+                    label="I have never had a previous application for a professional driving permit refused"
+                  />
+                  
+                  {formData.professional_permit_previous_refusal && (
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={3}
+                      label="Please provide details of any previous professional driving permit application refusal (where, when, and reasons)"
+                      value={formData.professional_permit_refusal_details || ''}
+                      onChange={(e) => setFormData(prev => ({ 
+                        ...prev, 
+                        professional_permit_refusal_details: e.target.value 
+                      }))}
+                      required
+                      sx={{ mt: 2 }}
+                    />
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
+
           {/* Never Been Refused Declaration */}
           <Grid item xs={12}>
             <Card variant="outlined">
@@ -1433,7 +1628,8 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
   const renderMedicalStep = () => {
     const age = formData.person?.birth_date ? calculateAge(formData.person.birth_date) : 0;
     const isMedicalMandatory = requiresMedicalAlways(formData.license_category) || 
-                             (age >= 60 && requiresMedical60Plus(formData.license_category));
+                             (age >= 60 && requiresMedical60Plus(formData.license_category)) ||
+                             formData.application_type === ApplicationType.PROFESSIONAL_LICENSE;
 
     return (
       <Box>
@@ -1445,7 +1641,13 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         {isMedicalMandatory && (
           <Alert severity="info" sx={{ mb: 3 }}>
             <Typography variant="body2">
-              <strong>Medical assessment is mandatory</strong> for {age >= 60 ? 'applicants 60+ years' : 'commercial license categories (C, D, E)'}
+              <strong>Medical assessment is mandatory</strong> for {
+                formData.application_type === ApplicationType.PROFESSIONAL_LICENSE 
+                  ? 'professional driving permit applications'
+                  : age >= 60 
+                    ? 'applicants 60+ years' 
+                    : 'commercial license categories (C, D, E)'
+              }
             </Typography>
           </Alert>
         )}
@@ -1881,6 +2083,39 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                       <Typography variant="body2" color="text.secondary">Refusal Details:</Typography>
                       <Typography variant="body1">{formData.refusal_details}</Typography>
                     </Grid>
+                  )}
+                  
+                  {/* Professional Permit Details */}
+                  {formData.application_type === ApplicationType.PROFESSIONAL_LICENSE && (
+                    <>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="body2" color="text.secondary">Professional Permit Categories:</Typography>
+                        <Typography variant="body1">
+                          {formData.professional_permit_categories.map(category => {
+                            switch(category) {
+                              case ProfessionalPermitCategory.P:
+                                return 'P - Passengers';
+                              case ProfessionalPermitCategory.D:
+                                return 'D - Dangerous Goods';
+                              case ProfessionalPermitCategory.G:
+                                return 'G - Goods';
+                              default:
+                                return category;
+                            }
+                          }).join(', ')}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="body2" color="text.secondary">Previous Professional Permit Refusal:</Typography>
+                        <Typography variant="body1">{formData.professional_permit_previous_refusal ? 'Yes' : 'No'}</Typography>
+                      </Grid>
+                      {formData.professional_permit_refusal_details && (
+                        <Grid item xs={12}>
+                          <Typography variant="body2" color="text.secondary">Professional Permit Refusal Details:</Typography>
+                          <Typography variant="body1">{formData.professional_permit_refusal_details}</Typography>
+                        </Grid>
+                      )}
+                    </>
                   )}
                 </Grid>
               </CardContent>
