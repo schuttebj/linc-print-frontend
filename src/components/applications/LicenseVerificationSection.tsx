@@ -857,12 +857,7 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                         // Show regular license categories for driver's licenses
                         Object.values(LicenseCategory).filter(cat => !['1', '2', '3'].includes(cat)).map((category) => (
                           <MenuItem key={category} value={category}>
-                            <Box>
-                              <Typography variant="body2" fontWeight="bold">{category}</Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {LICENSE_CATEGORY_RULES[category]?.description || 'Standard license category'}
-                              </Typography>
-                            </Box>
+                            {category} - {LICENSE_CATEGORY_RULES[category]?.description || 'Standard license category'}
                           </MenuItem>
                         ))
                       )}
@@ -936,24 +931,10 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                       )}
                     >
                       <MenuItem value="CORRECTIVE_LENSES">
-                        <Box>
-                          <Typography variant="body2" fontWeight="bold">
-                            Corrective Lenses Required
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Must wear glasses or contact lenses while driving
-                          </Typography>
-                        </Box>
+                        Corrective Lenses Required - Must wear glasses or contact lenses while driving
                       </MenuItem>
                       <MenuItem value="MODIFIED_VEHICLE_ONLY">
-                        <Box>
-                          <Typography variant="body2" fontWeight="bold">
-                            Modified Vehicle Required
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Vehicle must have disability modifications/adaptations
-                          </Typography>
-                        </Box>
+                        Modified Vehicle Required - Vehicle must have disability modifications/adaptations
                       </MenuItem>
                     </Select>
                     <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
