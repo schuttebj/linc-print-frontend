@@ -110,7 +110,7 @@ import {
   LicenseVerificationData,
   LEARNERS_PERMIT_VALIDITY_MONTHS,
   DEFAULT_TEMPORARY_LICENSE_DAYS,
-  ReplacementReason,
+
   getAuthorizedCategories,
   getSupersededCategories,
   isCommercialLicense,
@@ -262,9 +262,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
 
   // Check if Section C is required for this application type
   const requiresSectionC = () => {
-    return [
-      ApplicationType.REPLACEMENT // Only for replacement/notice applications
-    ].includes(formData.application_type);
+    return formData.application_type === ApplicationType.RENEWAL; // Section C required for renewal (replacement functionality)
   };
 
   // Steps configuration
@@ -281,10 +279,10 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
       icon: <AssignmentIcon />,
       component: 'application'
     },
-    // Conditionally include Section C for replacement/notice applications
+    // Conditionally include Section C for renewal applications (includes replacement functionality)
     ...(requiresSectionC() ? [{
-      label: 'Notice/Replacement Details',
-      description: 'Complete Section C for replacement or notice of change',
+      label: 'Notice/Renewal Details',
+      description: 'Complete Section C for renewal or notice of change',
       icon: <WarningIcon />,
       component: 'sectionC'
     }] : []),
@@ -558,10 +556,10 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         break;
 
       case 'application': // Application Details - Section B
-        // License category not required for REPLACEMENT and TEMPORARY_LICENSE
-        if (!formData.license_category && ![ApplicationType.REPLACEMENT, ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(formData.application_type)) {
-          errors.push('Please select a license category');
-        }
+              // License category not required for TEMPORARY_LICENSE and RENEWAL
+      if (!formData.license_category && ![ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(formData.application_type)) {
+        errors.push('Please select a license category');
+      }
         if (!formData.application_type) {
           errors.push('Please select an application type');
         }
@@ -570,9 +568,9 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           errors.push('Please provide details of previous license application refusal');
         }
         // Validate age requirements here since Requirements step is removed
-        // Skip age validation for REPLACEMENT and TEMPORARY_LICENSE applications
+        // Skip age validation for TEMPORARY_LICENSE and RENEWAL applications
         if (formData.person?.birth_date && formData.license_category && 
-            ![ApplicationType.REPLACEMENT, ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(formData.application_type)) {
+            ![ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(formData.application_type)) {
           const age = Math.floor((Date.now() - new Date(formData.person.birth_date).getTime()) / (1000 * 60 * 60 * 24 * 365.25));
           const minAge = LICENSE_CATEGORY_RULES[formData.license_category]?.minimum_age || 18;
           if (age < minAge) {
@@ -594,9 +592,9 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         }
         break;
 
-      case 'sectionC': // Section C - Notice/Replacement Details
+      case 'sectionC': // Section C - Notice/Renewal Details
         if (!formData.replacement_reason) {
-          errors.push('Please select a reason for replacement/notice');
+          errors.push('Please select a reason for renewal/notice');
         }
         if (!formData.office_of_issue?.trim()) {
           errors.push('Office of issue is required');
@@ -618,10 +616,10 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
       case 'medical': // Medical Assessment
         const age = formData.person?.birth_date ? calculateAge(formData.person.birth_date) : 0;
         
-        // For REPLACEMENT and TEMPORARY_LICENSE, determine medical requirements from external licenses
+        // For TEMPORARY_LICENSE and RENEWAL, determine medical requirements from external licenses
         let isMedicalMandatory = false;
         
-        if ([ApplicationType.REPLACEMENT, ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(formData.application_type)) {
+        if ([ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(formData.application_type)) {
           // Check if any external licenses require medical assessment
           const externalCategories = formData.license_verification?.external_licenses?.flatMap(license => license.categories) || [];
           isMedicalMandatory = externalCategories.some(category => 
@@ -696,7 +694,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         person_id: formData.person!.id,
         location_id: formData.selected_location_id || user?.primary_location_id || '',
         application_type: formData.application_type,
-        license_category: formData.license_category || LicenseCategory.B, // Default for REPLACEMENT/TEMPORARY_LICENSE
+        license_category: formData.license_category || LicenseCategory.B, // Default for TEMPORARY_LICENSE/RENEWAL
         medical_information: formData.medical_information
       };
 
@@ -776,7 +774,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         person_id: formData.person!.id,
         location_id: formData.selected_location_id || user?.primary_location_id || '',
         application_type: formData.application_type,
-        license_category: formData.license_category || LicenseCategory.B, // Default for REPLACEMENT/TEMPORARY_LICENSE
+        license_category: formData.license_category || LicenseCategory.B, // Default for TEMPORARY_LICENSE/RENEWAL
         medical_information: medicalInformation
       };
 
@@ -798,10 +796,10 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     }
   };
 
-  // Auto-trigger license verification for REPLACEMENT and TEMPORARY_LICENSE applications
+  // Auto-trigger license verification for TEMPORARY_LICENSE and RENEWAL applications
   useEffect(() => {
-    if (formData.person && [ApplicationType.REPLACEMENT, ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(formData.application_type)) {
-      // Auto-check for existing licenses for replacement/temporary applications
+    if (formData.person && [ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(formData.application_type)) {
+      // Auto-check for existing licenses for temporary/renewal applications
       checkExistingLicensesForReplacementOrTemporary();
     }
   }, [formData.application_type, formData.person]);
@@ -1080,15 +1078,14 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                   }));
                 }}
             >
-              <MenuItem value={ApplicationType.LEARNERS_PERMIT}>Learner's Licence Application</MenuItem>
-              <MenuItem value={ApplicationType.NEW_LICENSE}>Driving Licence Application</MenuItem>
-              <MenuItem value={ApplicationType.CONVERSION}>Driving Licence Conversion</MenuItem>
-              <MenuItem value={ApplicationType.RENEWAL}>Renew Driving Licence Card</MenuItem>
-              <MenuItem value={ApplicationType.PROFESSIONAL_LICENSE}>Professional Driving Licence Application</MenuItem>
-              <MenuItem value={ApplicationType.TEMPORARY_LICENSE}>Temporary Driving Licence Application</MenuItem>
-              <MenuItem value={ApplicationType.FOREIGN_CONVERSION}>Convert Foreign Driving Licence</MenuItem>
-              <MenuItem value={ApplicationType.INTERNATIONAL_PERMIT}>International Driving Permit Application</MenuItem>
-              <MenuItem value={ApplicationType.REPLACEMENT}>Replace Driving Licence Card</MenuItem>
+                          <MenuItem value={ApplicationType.LEARNERS_PERMIT}>Learner's Licence Application</MenuItem>
+            <MenuItem value={ApplicationType.NEW_LICENSE}>Driving Licence Application</MenuItem>
+            <MenuItem value={ApplicationType.CONVERSION}>Driving Licence Conversion</MenuItem>
+            <MenuItem value={ApplicationType.RENEWAL}>Renew Driving Licence Card</MenuItem>
+            <MenuItem value={ApplicationType.PROFESSIONAL_LICENSE}>Professional Driving Licence Application</MenuItem>
+            <MenuItem value={ApplicationType.TEMPORARY_LICENSE}>Temporary Driving Licence Application</MenuItem>
+            <MenuItem value={ApplicationType.FOREIGN_CONVERSION}>Convert Foreign Driving Licence</MenuItem>
+            <MenuItem value={ApplicationType.INTERNATIONAL_PERMIT}>International Driving Permit Application</MenuItem>
             </Select>
           </FormControl>
         </Grid>
@@ -1112,8 +1109,8 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           </Grid>
         )}
 
-          {/* License Category Selection - Hidden for REPLACEMENT and TEMPORARY_LICENSE */}
-          {![ApplicationType.REPLACEMENT, ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(formData.application_type) && (
+          {/* License Category Selection - Hidden for TEMPORARY_LICENSE and RENEWAL */}
+          {![ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(formData.application_type) && (
             <Grid item xs={12}>
               <FormControl fullWidth required>
                 <InputLabel>License Category</InputLabel>
@@ -1146,18 +1143,15 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
             </Grid>
           )}
 
-          {/* Info for REPLACEMENT and TEMPORARY_LICENSE applications */}
-          {[ApplicationType.REPLACEMENT, ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(formData.application_type) && (
+          {/* Info for TEMPORARY_LICENSE and RENEWAL applications */}
+          {[ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(formData.application_type) && (
             <Grid item xs={12}>
               <Alert severity="info">
                 <Typography variant="body2" fontWeight="bold">
-                  {formData.application_type === ApplicationType.REPLACEMENT ? 'Replacement License' : 
-                   formData.application_type === ApplicationType.TEMPORARY_LICENSE ? 'Temporary License' : 'Renewal License'} Application
+                  {formData.application_type === ApplicationType.TEMPORARY_LICENSE ? 'Temporary License' : 'Renewal License'} Application
                 </Typography>
                 <Typography variant="body2">
-                  {formData.application_type === ApplicationType.REPLACEMENT 
-                    ? 'System will check for existing licenses. If none found, you will need to verify external licenses.'
-                    : formData.application_type === ApplicationType.TEMPORARY_LICENSE
+                  {formData.application_type === ApplicationType.TEMPORARY_LICENSE
                     ? 'System will check for existing licenses to issue temporary license. If none found, you will need to verify external licenses.'
                     : 'System will check for existing licenses to renew. If none found, you will need to verify external licenses.'
                   }
@@ -1283,14 +1277,14 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     return (
               <Box>
         <Typography variant="h6" gutterBottom>
-          Section C: Notice/Replacement Details
+          Section C: Notice Details
                 </Typography>
         
         <Grid container spacing={3}>
           {/* Replacement Reason */}
           <Grid item xs={12}>
             <FormControl fullWidth required>
-              <InputLabel>Reason for Replacement/Notice</InputLabel>
+              <InputLabel>Reason for Notice</InputLabel>
               <Select
                 value={formData.replacement_reason || ''}
                 onChange={(e) => setFormData(prev => ({ 

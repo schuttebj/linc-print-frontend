@@ -215,7 +215,7 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
     if ([ApplicationType.NEW_LICENSE, ApplicationType.CONVERSION, ApplicationType.PROFESSIONAL_LICENSE, ApplicationType.FOREIGN_CONVERSION].includes(currentApplicationType!)) {
       defaultLicenseType = 'DRIVERS_LICENSE';
       defaultCategories = [LicenseCategory.B];
-    } else if ([ApplicationType.REPLACEMENT, ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(currentApplicationType!)) {
+    } else if ([ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(currentApplicationType!)) {
       defaultLicenseType = 'DRIVERS_LICENSE';
       defaultCategories = []; // Start empty, user will select their categories
     } else {
@@ -340,12 +340,12 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
     systemLicenses: SystemLicense[], 
     existingExternalLicenses: ExternalLicense[]
   ): ExternalLicense[] => {
-    if (!currentLicenseCategory && ![ApplicationType.REPLACEMENT, ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(currentApplicationType!)) {
+    if (!currentLicenseCategory && ![ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(currentApplicationType!)) {
       return existingExternalLicenses;
     }
 
-    // For REPLACEMENT and TEMPORARY_LICENSE, if no system licenses found, show info message
-    if ([ApplicationType.REPLACEMENT, ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(currentApplicationType!) && systemLicenses.length === 0) {
+    // For TEMPORARY_LICENSE and RENEWAL, if no system licenses found, show info message
+    if ([ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(currentApplicationType!) && systemLicenses.length === 0) {
       // No auto-population needed - user will manually add their existing licenses
       return existingExternalLicenses.filter(license => !license.is_auto_populated);
     }
@@ -506,7 +506,7 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
             requiredDescription = `Required prerequisite ${category} driver's license`;
           }
         } else {
-          // For other application types (RENEWAL, REPLACEMENT), they need existing driver's license
+          // For other application types (RENEWAL, TEMPORARY_LICENSE), they need existing driver's license
           licenseType = 'DRIVERS_LICENSE';
           requiredDescription = `Required prerequisite ${category} driver's license`;
         }
@@ -678,21 +678,21 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
             </Box>
           }
           subheader={
-            [ApplicationType.REPLACEMENT, ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(currentApplicationType!) 
-              ? "Add all your current licenses for replacement/temporary/renewal license processing"
+            [ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(currentApplicationType!) 
+              ? "Add all your current licenses for temporary/renewal license processing"
               : "Manually added licenses that require clerk verification"
           }
         />
         <CardContent>
-          {/* Info for REPLACEMENT and TEMPORARY_LICENSE applications */}
-          {[ApplicationType.REPLACEMENT, ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(currentApplicationType!) && (
+          {/* Info for TEMPORARY_LICENSE and RENEWAL applications */}
+          {[ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(currentApplicationType!) && (
             <Alert severity="info" sx={{ mb: 2 }}>
               <Typography variant="body2" fontWeight="bold">
-                {currentApplicationType === ApplicationType.REPLACEMENT ? 'Replacement License' : currentApplicationType === ApplicationType.TEMPORARY_LICENSE ? 'Temporary License' : 'Renewal License'} Process
+                {currentApplicationType === ApplicationType.TEMPORARY_LICENSE ? 'Temporary License' : 'Renewal License'} Process
               </Typography>
               <Typography variant="body2">
                 Please add all your current licenses below. You can select multiple categories for each license. 
-                This information will be used to {currentApplicationType === ApplicationType.REPLACEMENT ? 'replace your existing license(s)' : currentApplicationType === ApplicationType.TEMPORARY_LICENSE ? 'issue temporary license(s)' : 'renew your license'}.
+                This information will be used to {currentApplicationType === ApplicationType.TEMPORARY_LICENSE ? 'issue temporary license(s)' : 'renew your license'}.
               </Typography>
             </Alert>
           )}
@@ -797,7 +797,7 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                         🔒 Driver's License required for NEW_LICENSE applications
                       </Typography>
                     )}
-                    {[ApplicationType.REPLACEMENT, ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(currentApplicationType!) && (
+                    {[ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(currentApplicationType!) && (
                       <Typography variant="caption" color="info.main" sx={{ mt: 0.5, fontWeight: 600 }}>
                         ℹ️ Select the type of license you currently hold
                       </Typography>
