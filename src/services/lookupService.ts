@@ -75,8 +75,8 @@ export interface Location {
 export interface LicenseCategory {
   value: string;
   label: string;
-  description?: string;
-  minimum_age?: number;
+  description: string;
+  minimum_age: number;
 }
 
 export interface ApplicationType {
@@ -89,6 +89,14 @@ export interface ApplicationStatus {
   value: string;
   label: string;
   description?: string;
+}
+
+export interface ProfessionalPermitCategory {
+  value: string;
+  label: string;
+  description: string;
+  minimum_age: number;
+  auto_includes: string[];
 }
 
 export interface FeeStructure {
@@ -120,6 +128,7 @@ export interface AllLookupData {
   license_categories: LicenseCategory[];
   application_types: ApplicationType[];
   application_statuses: ApplicationStatus[];
+  professional_permit_categories: ProfessionalPermitCategory[];
   fee_structures: FeeStructure[];
 }
 
@@ -435,12 +444,12 @@ class LookupService {
       console.error('Failed to fetch license categories:', error);
       // Return fallback data
       return [
-        { value: 'A′', label: 'A′ - Light Motorcycle/Moped (16+ years)', minimum_age: 16 },
-        { value: 'A', label: 'A - Full Motorcycle (18+ years)', minimum_age: 18 },
-        { value: 'B', label: 'B - Light Vehicle/Car (18+ years)', minimum_age: 18 },
-        { value: 'C', label: 'C - Heavy Goods Vehicle (21+ years)', minimum_age: 21 },
-        { value: 'D', label: 'D - Passenger Transport (21+ years)', minimum_age: 21 },
-        { value: 'E', label: 'E - Large Trailers (21+ years)', minimum_age: 21 },
+        { value: 'A′', label: 'A′', description: 'Light Motorcycle/Moped (16+ years)', minimum_age: 16 },
+        { value: 'A', label: 'A', description: 'Full Motorcycle (18+ years)', minimum_age: 18 },
+        { value: 'B', label: 'B', description: 'Light Vehicle/Car (18+ years)', minimum_age: 18 },
+        { value: 'C', label: 'C', description: 'Heavy Goods Vehicle (21+ years)', minimum_age: 21 },
+        { value: 'D', label: 'D', description: 'Passenger Transport (21+ years)', minimum_age: 21 },
+        { value: 'E', label: 'E', description: 'Large Trailers (21+ years)', minimum_age: 21 },
       ];
     }
   }
@@ -510,6 +519,31 @@ class LookupService {
         { value: 'COMPLETED', label: 'Completed' },
         { value: 'REJECTED', label: 'Rejected' },
         { value: 'CANCELLED', label: 'Cancelled' },
+      ];
+    }
+  }
+
+  /**
+   * Get professional permit categories
+   */
+  public async getProfessionalPermitCategories(): Promise<ProfessionalPermitCategory[]> {
+    const cacheKey = 'professional_permit_categories';
+    
+    if (this.isCacheValid(cacheKey)) {
+      return this.cache.get(cacheKey);
+    }
+
+    try {
+      const data = await api.get<ProfessionalPermitCategory[]>(API_ENDPOINTS.lookups.professionalPermitCategories);
+      this.setCache(cacheKey, data);
+      return data;
+    } catch (error) {
+      console.error('Failed to fetch professional permit categories:', error);
+      // Return fallback data
+      return [
+        { value: 'G', label: 'G', description: 'Goods (18 years minimum)', minimum_age: 18, auto_includes: [] },
+        { value: 'P', label: 'P', description: 'Passengers (21 years minimum)', minimum_age: 21, auto_includes: [] },
+        { value: 'D', label: 'D', description: 'Dangerous goods (25 years minimum) - automatically includes G', minimum_age: 25, auto_includes: ['G'] },
       ];
     }
   }
@@ -624,6 +658,7 @@ class LookupService {
         license_categories,
         application_types,
         application_statuses,
+        professional_permit_categories,
         fee_structures
       ] = await Promise.all([
         this.getDocumentTypes(),
@@ -640,6 +675,7 @@ class LookupService {
         this.getLicenseCategories(),
         this.getApplicationTypes(),
         this.getApplicationStatuses(),
+        this.getProfessionalPermitCategories(),
         this.getFeeStructures()
       ]);
 
@@ -658,6 +694,7 @@ class LookupService {
         license_categories,
         application_types,
         application_statuses,
+        professional_permit_categories,
         fee_structures
       };
     }

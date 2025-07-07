@@ -113,6 +113,7 @@ export const API_ENDPOINTS = {
     licenseCategories: `${API_BASE_URL}/api/${API_VERSION}/lookups/license-categories`,
     applicationTypes: `${API_BASE_URL}/api/${API_VERSION}/lookups/application-types`,
     applicationStatuses: `${API_BASE_URL}/api/${API_VERSION}/lookups/application-statuses`,
+    professionalPermitCategories: `${API_BASE_URL}/api/${API_VERSION}/lookups/professional-permit-categories`,
     all: `${API_BASE_URL}/api/${API_VERSION}/lookups/all`,
   },
 
