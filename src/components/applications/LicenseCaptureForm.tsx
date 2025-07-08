@@ -54,7 +54,7 @@ export interface CapturedLicense {
   license_category: LicenseCategory; // Single category only
   issue_date: string;
   expiry_date: string;
-  issuing_location: string;
+  restrictions: string[]; // License restrictions (corrective lenses, disability modifications)
   verified: boolean;
   verification_notes?: string;
 }
@@ -145,7 +145,7 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
       license_category: availableCategories[0]?.value || LicenseCategory.B,
       issue_date: '',
       expiry_date: '',
-      issuing_location: '',
+      restrictions: [],
       verified: false,
       verification_notes: ''
     };
@@ -345,18 +345,43 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                 />
               </Grid>
 
-              {/* Issuing Location */}
+              {/* License Restrictions */}
               <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Issuing Location/Authority"
-                  value={license.issuing_location}
-                  onChange={(e) => updateLicense(index, 'issuing_location', e.target.value)}
-                  disabled={disabled}
-                  required
-                  placeholder="e.g., Antananarivo Provincial Office, Foreign Country Name"
-                  helperText="Location or authority that issued this license"
-                />
+                <FormControl fullWidth>
+                  <InputLabel>License Restrictions</InputLabel>
+                  <Select
+                    multiple
+                    value={license.restrictions || []}
+                    label="License Restrictions"
+                    onChange={(e) => updateLicense(index, 'restrictions', Array.isArray(e.target.value) ? e.target.value : [])}
+                    disabled={disabled}
+                    renderValue={(selected) => (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {(selected as string[]).map((value) => (
+                          <Chip 
+                            key={value} 
+                            label={
+                              value === 'CORRECTIVE_LENSES' ? 'Corrective Lenses' :
+                              value === 'MODIFIED_VEHICLE_ONLY' ? 'Modified Vehicle' :
+                              value
+                            } 
+                            size="small" 
+                          />
+                        ))}
+                      </Box>
+                    )}
+                  >
+                    <MenuItem value="CORRECTIVE_LENSES">
+                      Corrective Lenses Required - Must wear glasses or contact lenses while driving
+                    </MenuItem>
+                    <MenuItem value="MODIFIED_VEHICLE_ONLY">
+                      Modified Vehicle Required - Vehicle must have disability modifications/adaptations
+                    </MenuItem>
+                  </Select>
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                    Select all restrictions that apply to this license
+                  </Typography>
+                </FormControl>
               </Grid>
 
               {/* Verification */}
@@ -427,15 +452,32 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
             <Typography variant="subtitle2" gutterBottom>
               Capture Summary
             </Typography>
-            <Typography variant="body2">
+            <Typography variant="body2" sx={{ mb: 1 }}>
               Total licenses: {captureData.captured_licenses.length}
             </Typography>
-            <Typography variant="body2">
+            <Typography variant="body2" sx={{ mb: 1 }}>
               Verified: {captureData.captured_licenses.filter(l => l.verified).length} / {captureData.captured_licenses.length}
             </Typography>
-            <Typography variant="body2">
-              Categories: {Array.from(new Set(captureData.captured_licenses.map(l => l.license_category))).join(', ')}
-            </Typography>
+            <Box sx={{ mt: 1 }}>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                {applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE ? "Permit Codes:" : "License Categories:"}
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                {Array.from(new Set(captureData.captured_licenses.map(l => l.license_category))).map((category) => (
+                  <Chip
+                    key={category}
+                    label={
+                      applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE
+                        ? `Code ${category}` // For learner's permits, show "Code 1", "Code 2", etc.
+                        : category // For driver's licenses, show the category letter
+                    }
+                    size="small"
+                    color="primary"
+                    variant="outlined"
+                  />
+                ))}
+              </Box>
+            </Box>
           </Box>
         )}
       </CardContent>

@@ -1049,8 +1049,8 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           </Grid>
         )}
 
-          {/* License Category Selection - Hidden for TEMPORARY_LICENSE and RENEWAL */}
-          {![ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(formData.application_type) && (
+          {/* License Category Selection - Hidden for TEMPORARY_LICENSE, RENEWAL, and CAPTURE applications */}
+          {![ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL, ApplicationType.DRIVERS_LICENSE_CAPTURE, ApplicationType.LEARNERS_PERMIT_CAPTURE].includes(formData.application_type) && (
             <Grid item xs={12}>
               <FormControl fullWidth required>
                 <InputLabel>License Category</InputLabel>
@@ -1095,6 +1095,22 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                     ? 'System will check for existing licenses to issue temporary license. If none found, you will need to verify external licenses.'
                     : 'System will check for existing licenses to renew. If none found, you will need to verify external licenses.'
                   }
+                </Typography>
+              </Alert>
+            </Grid>
+          )}
+
+          {/* Info for CAPTURE applications */}
+          {[ApplicationType.DRIVERS_LICENSE_CAPTURE, ApplicationType.LEARNERS_PERMIT_CAPTURE].includes(formData.application_type) && (
+            <Grid item xs={12}>
+              <Alert severity="warning">
+                <Typography variant="body2" fontWeight="bold">
+                  {formData.application_type === ApplicationType.DRIVERS_LICENSE_CAPTURE ? "Driver's License" : "Learner's Permit"} Capture Application
+                </Typography>
+                <Typography variant="body2">
+                  This application is for capturing existing {formData.application_type === ApplicationType.DRIVERS_LICENSE_CAPTURE ? "driver's licenses" : "learner's permits"} that the person already holds. 
+                  The captured license information will be entered in the Requirements section. 
+                  Medical and biometric data collection will be skipped for capture applications.
                 </Typography>
               </Alert>
             </Grid>

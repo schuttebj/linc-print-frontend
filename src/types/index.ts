@@ -440,7 +440,7 @@ export interface CapturedLicense {
   license_category: LicenseCategory; // Single category only
   issue_date: string;
   expiry_date: string;
-  issuing_location: string;
+  restrictions: string[]; // License restrictions (corrective lenses, disability modifications)
   verified: boolean;
   verification_notes?: string;
 }
