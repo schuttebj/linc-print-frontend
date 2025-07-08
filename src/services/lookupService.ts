@@ -474,7 +474,8 @@ class LookupService {
       return [
         { value: 'LEARNERS_PERMIT', label: "Learner's Licence Application" },
         { value: 'NEW_LICENSE', label: 'Driving Licence Application' },
-        { value: 'CONVERSION', label: 'Driving Licence Conversion' },
+        { value: 'DRIVERS_LICENSE_CAPTURE', label: "Driver's Licence Capture" },
+        { value: 'LEARNERS_PERMIT_CAPTURE', label: "Learner's Permit Capture" },
         { value: 'RENEWAL', label: 'Renew Driving Licence Card' },
         { value: 'PROFESSIONAL_LICENSE', label: 'Professional Driving Licence Application' },
         { value: 'TEMPORARY_LICENSE', label: 'Temporary Driving Licence Application' },

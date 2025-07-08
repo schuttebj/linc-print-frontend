@@ -147,6 +147,8 @@ export interface ApplicationCreate {
   medical_information?: MedicalInformation;
   // External license verification data
   license_verification?: LicenseVerificationData;
+  // License capture data (for DRIVERS_LICENSE_CAPTURE and LEARNERS_PERMIT_CAPTURE)
+  license_capture?: LicenseCaptureData;
   // Section B data
   never_been_refused?: boolean;
   refusal_details?: string;
@@ -174,7 +176,8 @@ export enum ApplicationType {
   RENEWAL = 'RENEWAL',
   TEMPORARY_LICENSE = 'TEMPORARY_LICENSE',
   INTERNATIONAL_PERMIT = 'INTERNATIONAL_PERMIT',
-  CONVERSION = 'CONVERSION',
+  DRIVERS_LICENSE_CAPTURE = 'DRIVERS_LICENSE_CAPTURE',
+  LEARNERS_PERMIT_CAPTURE = 'LEARNERS_PERMIT_CAPTURE',
   PROFESSIONAL_LICENSE = 'PROFESSIONAL_LICENSE',
   FOREIGN_CONVERSION = 'FOREIGN_CONVERSION'
 }
@@ -430,6 +433,23 @@ export interface LicenseVerificationData {
   requires_verification: boolean; // True if any external licenses exist
 }
 
+// License capture interface for DRIVERS_LICENSE_CAPTURE and LEARNERS_PERMIT_CAPTURE applications
+export interface CapturedLicense {
+  id: string; // temp ID for form management
+  license_number: string;
+  license_category: LicenseCategory; // Single category only
+  issue_date: string;
+  expiry_date: string;
+  issuing_location: string;
+  verified: boolean;
+  verification_notes?: string;
+}
+
+export interface LicenseCaptureData {
+  captured_licenses: CapturedLicense[];
+  application_type: ApplicationType;
+}
+
 // Form data interfaces for multi-step form (update existing)
 export interface ApplicationFormData {
   // Step 1: Person (handled by PersonFormWrapper)
@@ -461,8 +481,10 @@ export interface ApplicationFormData {
   // Step 4: Requirements - Section D (will be defined later)
   medical_certificate_file?: File;
   parental_consent_file?: File;
-  // License verification data (simplified)
+  // License verification data (for general applications)
   license_verification: LicenseVerificationData | null;
+  // License capture data (for DRIVERS_LICENSE_CAPTURE and LEARNERS_PERMIT_CAPTURE only)
+  license_capture: LicenseCaptureData | null;
   
   // Step 5: Medical Information (when required)
   medical_information: MedicalInformation | null;

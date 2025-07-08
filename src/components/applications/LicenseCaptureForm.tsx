@@ -1,0 +1,446 @@
+/**
+ * LicenseCaptureForm Component
+ * 
+ * Specialized form for capturing existing licenses during DRIVERS_LICENSE_CAPTURE 
+ * and LEARNERS_PERMIT_CAPTURE application types.
+ * 
+ * Key features:
+ * - Single license category selection (not multi-select)
+ * - Allow multiple licenses via repeater
+ * - Simple license details entry
+ * - Clerk verification requirements
+ */
+
+import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Card,
+  CardContent,
+  CardHeader,
+  Typography,
+  Grid,
+  TextField,
+  Button,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  FormControlLabel,
+  Checkbox,
+  Alert,
+  IconButton,
+  Tooltip,
+  Divider,
+  Stack,
+  Chip
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  Delete as DeleteIcon,
+  VerifiedUser as VerifiedIcon,
+  Warning as WarningIcon
+} from '@mui/icons-material';
+
+import {
+  LicenseCategory,
+  ApplicationType,
+  LICENSE_CATEGORY_RULES,
+  LEARNERS_PERMIT_RULES
+} from '../../types';
+
+export interface CapturedLicense {
+  id: string; // temp ID for form management
+  license_number: string;
+  license_category: LicenseCategory; // Single category only
+  issue_date: string;
+  expiry_date: string;
+  issuing_location: string;
+  verified: boolean;
+  verification_notes?: string;
+}
+
+export interface LicenseCaptureData {
+  captured_licenses: CapturedLicense[];
+  application_type: ApplicationType;
+}
+
+interface LicenseCaptureFormProps {
+  applicationtype: ApplicationType; // DRIVERS_LICENSE_CAPTURE or LEARNERS_PERMIT_CAPTURE
+  value: LicenseCaptureData | null;
+  onChange: (data: LicenseCaptureData | null) => void;
+  disabled?: boolean;
+}
+
+const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
+  applicationtype,
+  value,
+  onChange,
+  disabled = false
+}) => {
+  const [captureData, setCaptureData] = useState<LicenseCaptureData>({
+    captured_licenses: [],
+    application_type: applicationtype
+  });
+
+  // Initialize data from props
+  useEffect(() => {
+    if (value) {
+      setCaptureData(value);
+    } else {
+      setCaptureData({
+        captured_licenses: [],
+        application_type: applicationtype
+      });
+    }
+  }, [value, applicationtype]);
+
+  // Update parent when data changes
+  const updateCaptureData = (newData: LicenseCaptureData) => {
+    setCaptureData(newData);
+    onChange(newData);
+  };
+
+  const getAvailableCategories = () => {
+    if (applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE) {
+      // Only show learner's permit categories
+      return [
+        {
+          value: LicenseCategory.LEARNERS_1,
+          label: `Code 1 - ${LEARNERS_PERMIT_RULES['1']?.description || 'Motorcycles and mopeds'}`
+        },
+        {
+          value: LicenseCategory.LEARNERS_2,
+          label: `Code 2 - ${LEARNERS_PERMIT_RULES['2']?.description || 'Light motor vehicles'}`
+        },
+        {
+          value: LicenseCategory.LEARNERS_3,
+          label: `Code 3 - ${LEARNERS_PERMIT_RULES['3']?.description || 'All motor vehicles'}`
+        }
+      ];
+    } else {
+      // For DRIVERS_LICENSE_CAPTURE, show all regular license categories
+      return Object.values(LicenseCategory)
+        .filter(category => !['1', '2', '3'].includes(category)) // Exclude learner's permit codes
+        .map(category => {
+          const categoryRule = LICENSE_CATEGORY_RULES[category];
+          return {
+            value: category,
+            label: `${category} - ${categoryRule?.description || 'License category'}`
+          };
+        }).sort((a, b) => {
+          // Sort by category order
+          const order = ['A1', 'A2', 'A', 'B1', 'B', 'B2', 'BE', 'C1', 'C', 'C1E', 'CE', 'D1', 'D', 'D2'];
+          return order.indexOf(a.value) - order.indexOf(b.value);
+        });
+    }
+  };
+
+  const addLicense = () => {
+    const tempId = `license-${Date.now()}`;
+    const availableCategories = getAvailableCategories();
+    
+    const newLicense: CapturedLicense = {
+      id: tempId,
+      license_number: '',
+      license_category: availableCategories[0]?.value || LicenseCategory.B,
+      issue_date: '',
+      expiry_date: '',
+      issuing_location: '',
+      verified: false,
+      verification_notes: ''
+    };
+
+    updateCaptureData({
+      ...captureData,
+      captured_licenses: [...captureData.captured_licenses, newLicense]
+    });
+  };
+
+  const updateLicense = (index: number, field: keyof CapturedLicense, value: any) => {
+    const updatedLicenses = [...captureData.captured_licenses];
+    updatedLicenses[index] = {
+      ...updatedLicenses[index],
+      [field]: value
+    };
+
+    updateCaptureData({
+      ...captureData,
+      captured_licenses: updatedLicenses
+    });
+  };
+
+  const removeLicense = (index: number) => {
+    const updatedLicenses = captureData.captured_licenses.filter((_, i) => i !== index);
+    
+    updateCaptureData({
+      ...captureData,
+      captured_licenses: updatedLicenses
+    });
+  };
+
+  const formatLicenseNumber = (number: string): string => {
+    // Remove non-alphanumeric characters and convert to uppercase
+    return number.replace(/[^A-Z0-9]/g, '').toUpperCase();
+  };
+
+  const isLicenseExpired = (expiryDate: string): boolean => {
+    return new Date(expiryDate) < new Date();
+  };
+
+  const validateDate = (dateValue: string): string => {
+    if (!dateValue) return '';
+    
+    const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+    if (!datePattern.test(dateValue)) return '';
+    
+    const year = parseInt(dateValue.substring(0, 4));
+    const currentYear = new Date().getFullYear();
+    
+    // Year must be between 1900 and current year + 50
+    if (year < 1900 || year > currentYear + 50) return '';
+    
+    return dateValue;
+  };
+
+  const getDateConstraints = () => {
+    const currentYear = new Date().getFullYear();
+    return {
+      min: '1900-01-01',
+      max: `${currentYear + 50}-12-31`
+    };
+  };
+
+  const getFormTitle = () => {
+    return applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE 
+      ? "Learner's Permit Capture"
+      : "Driver's Licence Capture";
+  };
+
+  const getFormDescription = () => {
+    return applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE
+      ? "Capture existing learner's permits that the person currently holds. Each permit should be entered separately with its specific code."
+      : "Capture existing driver's licenses that the person currently holds. Each license should be entered separately with its specific category.";
+  };
+
+  const dateConstraints = getDateConstraints();
+
+  return (
+    <Card>
+      <CardHeader 
+        title={
+          <Box display="flex" alignItems="center" gap={1}>
+            <VerifiedIcon color="primary" />
+            <Typography variant="h6">
+              {getFormTitle()}
+            </Typography>
+          </Box>
+        }
+        subheader={getFormDescription()}
+      />
+      <CardContent>
+        {captureData.captured_licenses.length === 0 ? (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            No {applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE ? "learner's permits" : "driver's licenses"} added yet. 
+            Click "Add {applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE ? "Learner's Permit" : "Driver's License"}" to start capturing existing licenses.
+          </Alert>
+        ) : (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            <Typography variant="body2" fontWeight="bold">
+              Clerk Verification Required
+            </Typography>
+            <Typography variant="body2">
+              All captured licenses must be physically verified by the clerk before proceeding.
+            </Typography>
+          </Alert>
+        )}
+
+        {/* License List */}
+        {captureData.captured_licenses.map((license, index) => (
+          <Box key={license.id} sx={{ mb: 3, p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+              <Typography variant="h6" color="primary">
+                {applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE ? "Learner's Permit" : "Driver's License"} {index + 1}
+              </Typography>
+              <Tooltip title="Remove this license">
+                <IconButton
+                  onClick={() => removeLicense(index)}
+                  disabled={disabled}
+                  color="error"
+                  size="small"
+                >
+                  <DeleteIcon />
+                </IconButton>
+              </Tooltip>
+            </Box>
+
+            <Grid container spacing={2}>
+              {/* License Number */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="License Number"
+                  value={license.license_number}
+                  onChange={(e) => updateLicense(index, 'license_number', formatLicenseNumber(e.target.value))}
+                  disabled={disabled}
+                  required
+                  placeholder="Enter license number"
+                  helperText="Format: Alphanumeric characters only"
+                />
+              </Grid>
+
+              {/* License Category - Single Select */}
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth required>
+                  <InputLabel>
+                    {applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE ? "Permit Code" : "License Category"}
+                  </InputLabel>
+                  <Select
+                    value={license.license_category}
+                    onChange={(e) => updateLicense(index, 'license_category', e.target.value)}
+                    disabled={disabled}
+                  >
+                    {getAvailableCategories().map((category) => (
+                      <MenuItem key={category.value} value={category.value}>
+                        {category.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* Issue Date */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  type="date"
+                  label="Issue Date"
+                  value={license.issue_date}
+                  onChange={(e) => updateLicense(index, 'issue_date', validateDate(e.target.value))}
+                  disabled={disabled}
+                  required
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ min: dateConstraints.min, max: dateConstraints.max }}
+                  helperText="Format: YYYY-MM-DD"
+                />
+              </Grid>
+
+              {/* Expiry Date */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  type="date"
+                  label="Expiry Date"
+                  value={license.expiry_date}
+                  onChange={(e) => updateLicense(index, 'expiry_date', validateDate(e.target.value))}
+                  disabled={disabled}
+                  required
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ min: dateConstraints.min, max: dateConstraints.max }}
+                  error={license.expiry_date && isLicenseExpired(license.expiry_date)}
+                  helperText={
+                    license.expiry_date && isLicenseExpired(license.expiry_date)
+                      ? "License is expired"
+                      : "Format: YYYY-MM-DD"
+                  }
+                />
+              </Grid>
+
+              {/* Issuing Location */}
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Issuing Location/Authority"
+                  value={license.issuing_location}
+                  onChange={(e) => updateLicense(index, 'issuing_location', e.target.value)}
+                  disabled={disabled}
+                  required
+                  placeholder="e.g., Antananarivo Provincial Office, Foreign Country Name"
+                  helperText="Location or authority that issued this license"
+                />
+              </Grid>
+
+              {/* Verification */}
+              <Grid item xs={12}>
+                <Divider sx={{ my: 1 }} />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={license.verified}
+                      onChange={(e) => updateLicense(index, 'verified', e.target.checked)}
+                      disabled={disabled}
+                    />
+                  }
+                  label="I have physically verified this license is authentic and valid"
+                  sx={{ color: license.verified ? 'success.main' : 'warning.main' }}
+                />
+              </Grid>
+
+              {/* Verification Notes */}
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Verification Notes"
+                  multiline
+                  rows={2}
+                  value={license.verification_notes || ''}
+                  onChange={(e) => updateLicense(index, 'verification_notes', e.target.value)}
+                  disabled={disabled}
+                  placeholder="Note how the license was verified (physical inspection, condition, etc.)"
+                />
+              </Grid>
+            </Grid>
+
+            {/* License Status Indicator */}
+            <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              <Chip
+                icon={license.verified ? <VerifiedIcon /> : <WarningIcon />}
+                label={license.verified ? 'Verified' : 'Pending Verification'}
+                color={license.verified ? 'success' : 'warning'}
+                size="small"
+              />
+              {license.expiry_date && isLicenseExpired(license.expiry_date) && (
+                <Chip
+                  icon={<WarningIcon />}
+                  label="Expired"
+                  color="error"
+                  size="small"
+                />
+              )}
+            </Box>
+          </Box>
+        ))}
+
+        {/* Add License Button */}
+        <Button
+          variant="outlined"
+          onClick={addLicense}
+          startIcon={<AddIcon />}
+          disabled={disabled}
+          sx={{ mt: 2 }}
+        >
+          Add {applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE ? "Learner's Permit" : "Driver's License"}
+        </Button>
+
+        {/* Summary */}
+        {captureData.captured_licenses.length > 0 && (
+          <Box sx={{ mt: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Capture Summary
+            </Typography>
+            <Typography variant="body2">
+              Total licenses: {captureData.captured_licenses.length}
+            </Typography>
+            <Typography variant="body2">
+              Verified: {captureData.captured_licenses.filter(l => l.verified).length} / {captureData.captured_licenses.length}
+            </Typography>
+            <Typography variant="body2">
+              Categories: {Array.from(new Set(captureData.captured_licenses.map(l => l.license_category))).join(', ')}
+            </Typography>
+          </Box>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+export default LicenseCaptureForm; 

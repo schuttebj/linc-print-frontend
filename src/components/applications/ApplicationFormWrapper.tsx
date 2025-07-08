@@ -79,6 +79,7 @@ import {
 
 import PersonFormWrapper from '../PersonFormWrapper';
 import LicenseVerificationSection from './LicenseVerificationSection';
+import LicenseCaptureForm from './LicenseCaptureForm';
 import MedicalInformationSection from './MedicalInformationSection';
 import WebcamCapture from './WebcamCapture';
 import SignatureCapture from './SignatureCapture';
@@ -108,6 +109,7 @@ import {
   LicenseValidationResult,
   ExistingLicenseCheck,
   LicenseVerificationData,
+  LicenseCaptureData,
   LEARNERS_PERMIT_VALIDITY_MONTHS,
   DEFAULT_TEMPORARY_LICENSE_DAYS,
 
@@ -211,6 +213,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     medical_certificate_file: undefined,
     parental_consent_file: undefined,
     license_verification: null,
+    license_capture: null,
     medical_information: null,
     biometric_data: {},
     selected_fees: [],
@@ -274,7 +277,12 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     ].includes(formData.application_type);
   };
 
-  // Steps configuration
+  // Check if current application type is capture type (no medicals/biometrics needed)
+  const isCaptureApplication = () => {
+    return [ApplicationType.DRIVERS_LICENSE_CAPTURE, ApplicationType.LEARNERS_PERMIT_CAPTURE].includes(formData.application_type);
+  };
+
+  // Steps configuration - dynamic based on application type
   const steps = [
     {
       label: 'Applicant Details',
@@ -284,7 +292,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     },
     {
       label: 'Application Details',
-      description: 'Select license category and vehicle type',
+      description: isCaptureApplication() ? 'Capture existing license details' : 'Select license category and vehicle type',
       icon: <AssignmentIcon />,
       component: 'application'
     },
@@ -295,21 +303,24 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
       icon: <WarningIcon />,
       component: 'sectionC'
     }] : []),
-    {
-      label: 'Medical Assessment',
-      description: 'Complete vision test and medical clearance',
-      icon: <VerifiedUserIcon />,
-      component: 'medical'
-    },
-    {
-      label: 'Biometric Data',
-      description: 'Capture photo and signature',
-      icon: <CameraIcon />,
-      component: 'biometric'
-    },
+    // Skip medical and biometric steps for capture applications
+    ...(!isCaptureApplication() ? [
+      {
+        label: 'Medical Assessment',
+        description: 'Complete vision test and medical clearance',
+        icon: <VerifiedUserIcon />,
+        component: 'medical'
+      },
+      {
+        label: 'Biometric Data',
+        description: 'Capture photo and signature',
+        icon: <CameraIcon />,
+        component: 'biometric'
+      }
+    ] : []),
     {
       label: 'Review & Submit',
-      description: 'Review application and submit',
+      description: isCaptureApplication() ? 'Review captured licenses and submit' : 'Review application and submit',
       icon: <ReceiptIcon />,
       component: 'review'
     }
@@ -822,15 +833,22 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         location_id: formData.selected_location_id || user?.primary_location_id || '',
         application_type: formData.application_type,
         license_category: formData.license_category || LicenseCategory.B, // Default for TEMPORARY_LICENSE/RENEWAL
-        medical_information: medicalInformation
+        medical_information: medicalInformation,
+        // Include license capture data for capture applications
+        license_capture: isCaptureApplication() ? formData.license_capture : undefined
       };
 
       const application = await applicationService.createApplication(applicationData);
       
-      // Update status to submitted
-      await applicationService.updateApplicationStatus(application.id, ApplicationStatus.SUBMITTED);
+      // For capture applications, move directly to completed status
+      // For other applications, move to submitted status for normal workflow
+      const finalStatus = isCaptureApplication() ? ApplicationStatus.COMPLETED : ApplicationStatus.SUBMITTED;
+      await applicationService.updateApplicationStatus(application.id, finalStatus);
       
-      setSuccess('Application submitted successfully');
+      const successMessage = isCaptureApplication() 
+        ? 'License capture completed successfully. License records have been created.'
+        : 'Application submitted successfully';
+      setSuccess(successMessage);
       
       if (onSuccess) {
         onSuccess(application, false);
@@ -843,34 +861,19 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
     }
   };
 
-  // Auto-trigger license verification for TEMPORARY_LICENSE and RENEWAL applications
+  // Auto-trigger license capture for capture applications
   useEffect(() => {
-    if (formData.person && [ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(formData.application_type)) {
-      // Auto-check for existing licenses for temporary/renewal applications
-      checkExistingLicensesForReplacementOrTemporary();
-    }
-  }, [formData.application_type, formData.person]);
-
-  const checkExistingLicensesForReplacementOrTemporary = async () => {
-    if (!formData.person) return;
-
-    try {
-      // This will trigger the license verification section to load system licenses
-      // and show external license form if no system licenses found
+    if (formData.person && [ApplicationType.DRIVERS_LICENSE_CAPTURE, ApplicationType.LEARNERS_PERMIT_CAPTURE].includes(formData.application_type)) {
+      // Initialize license capture for capture applications
       setFormData(prev => ({
         ...prev,
-        license_verification: {
-          person_id: formData.person!.id,
-          requires_verification: true, // Force showing external license form
-          system_licenses: [],
-          external_licenses: [],
-          all_license_categories: []
+        license_capture: {
+          captured_licenses: [],
+          application_type: formData.application_type
         }
       }));
-    } catch (error) {
-      console.error('Error checking existing licenses:', error);
     }
-  };
+  }, [formData.application_type, formData.person]);
 
   // Render step content
   const renderStepContent = (step: number) => {
@@ -979,128 +982,16 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
       return categoryRule?.prerequisites || [];
     };
 
-    // Check license verification status
+    // Simplified license requirements check - now only for informational purposes
     const checkLicenseRequirements = async (selectedCategory: LicenseCategory) => {
-      if (!formData.person) return;
-
-      const categoryRule = LICENSE_CATEGORY_RULES[selectedCategory];
-      if (!categoryRule) return;
-
-      const requiredLicenses = categoryRule?.prerequisites || [];
-      const requiresLearners = categoryRule?.requires_learners_permit || false;
-
-      // Special handling for NEW_LICENSE applications that require learner's permits
-      if ([ApplicationType.NEW_LICENSE, ApplicationType.CONVERSION, ApplicationType.PROFESSIONAL_LICENSE, ApplicationType.FOREIGN_CONVERSION].includes(formData.application_type) && requiresLearners) {
-        // Get the corresponding learner's permit code for this category
-        const learnerCodeString = LICENSE_TO_LEARNERS_MAPPING[selectedCategory];
-        
-        if (learnerCodeString) {
-          // Map the string code to the correct LicenseCategory enum
-          let learnerCategory: LicenseCategory;
-          switch (learnerCodeString) {
-            case '1':
-              learnerCategory = LicenseCategory.LEARNERS_1;
-              break;
-            case '2':
-              learnerCategory = LicenseCategory.LEARNERS_2;
-              break;
-            case '3':
-              learnerCategory = LicenseCategory.LEARNERS_3;
-              break;
-            default:
-              learnerCategory = LicenseCategory.LEARNERS_2; // Default fallback
-          }
-
-          // Create auto-populated external license for the required learner's permit
-          const externalLicenses: ExternalLicense[] = [{
-            id: `auto-learners-${selectedCategory}`,
-            license_category: learnerCategory,
-            license_type: 'LEARNERS_PERMIT' as const,
-            categories: [learnerCategory],
-            license_number: '',
-            issue_date: '',
-            expiry_date: '',
-            issuing_authority: '',
-            issuing_location: '',
-            restrictions: '',
-            verified: false,
-            verification_source: 'MANUAL' as const,
-            is_auto_populated: true,
-            required_for_category: selectedCategory,
-            is_required: true
-          }];
-
-          setFormData(prev => ({
-            ...prev,
-            license_verification: {
-              person_id: formData.person!.id,
-              requires_verification: true,
-              system_licenses: [],
-              external_licenses: externalLicenses,
-              all_license_categories: [selectedCategory]
-            }
-          }));
-          return;
-        }
-      }
-
-      // Handle regular prerequisite requirements
-      if (requiredLicenses.length === 0 && !requiresLearners) {
-        // No prerequisites required
-        setFormData(prev => ({
-          ...prev,
-          license_verification: {
-            person_id: formData.person!.id,
-            requires_verification: false,
-            system_licenses: [],
-            external_licenses: [],
-            all_license_categories: [selectedCategory]
-          }
-        }));
+      // For capture applications, license requirements are handled by the capture form
+      if ([ApplicationType.DRIVERS_LICENSE_CAPTURE, ApplicationType.LEARNERS_PERMIT_CAPTURE].includes(formData.application_type)) {
         return;
       }
 
-      // Check if person has required licenses in the system
-      // TODO: This will need to be implemented when we have license lookup service
-      // For now, assume no licenses found in system and require external capture
-      
-      const systemLicenses: any[] = []; // TODO: await licenseService.getPersonLicenses(formData.person.id);
-      const foundRequired = requiredLicenses.filter(req => 
-        systemLicenses.some(sys => sys.license_category === req)
-      );
-      const missingRequired = requiredLicenses.filter(req => 
-        !systemLicenses.some(sys => sys.license_category === req)
-      );
-
-      // Create external license forms for missing prerequisites
-      const externalLicenses = missingRequired.map(cat => {
-        const catRule = LICENSE_CATEGORY_RULES[cat];
-        return {
-          license_category: cat,
-          license_type: catRule?.requires_learners_permit ? 'LEARNERS_PERMIT' as const : 'DRIVERS_LICENSE' as const,
-          categories: [cat],
-          license_number: '',
-          issue_date: '',
-          expiry_date: '',
-          issuing_authority: '',
-          issuing_location: '',
-          restrictions: '',
-          verified: false,
-          verification_source: 'MANUAL' as const,
-          is_required: true
-        };
-      });
-
-      setFormData(prev => ({
-        ...prev,
-        license_verification: {
-          person_id: formData.person!.id,
-          requires_verification: missingRequired.length > 0,
-          system_licenses: systemLicenses,
-          external_licenses: externalLicenses,
-          all_license_categories: [...systemLicenses.map((l: any) => l.license_category), selectedCategory]
-        }
-      }));
+      // For other applications, we assume clerks will ensure prerequisites are met
+      // before allowing the application to proceed. The system will validate on submission.
+      console.log(`Selected category ${selectedCategory} may have prerequisites, but external verification is no longer required for ${formData.application_type} applications.`);
     };
 
     return (
@@ -1128,7 +1019,8 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                           <MenuItem value={ApplicationType.LEARNERS_PERMIT}>Learner's Licence Application</MenuItem>
             <MenuItem value={ApplicationType.LEARNERS_PERMIT_DUPLICATE}>Duplicate of learner's licence</MenuItem>
             <MenuItem value={ApplicationType.NEW_LICENSE}>Driving Licence Application</MenuItem>
-            <MenuItem value={ApplicationType.CONVERSION}>Driving Licence Conversion</MenuItem>
+            <MenuItem value={ApplicationType.DRIVERS_LICENSE_CAPTURE}>Driver's Licence Capture</MenuItem>
+            <MenuItem value={ApplicationType.LEARNERS_PERMIT_CAPTURE}>Learner's Permit Capture</MenuItem>
             <MenuItem value={ApplicationType.RENEWAL}>Renew Driving Licence Card</MenuItem>
             <MenuItem value={ApplicationType.PROFESSIONAL_LICENSE}>Professional Driving Licence Application</MenuItem>
             <MenuItem value={ApplicationType.TEMPORARY_LICENSE}>Temporary Driving Licence Application</MenuItem>
@@ -1399,16 +1291,13 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
             </Card>
           </Grid>
 
-          {/* License Verification Section - Hidden for learner's permit applications */}
-          {![ApplicationType.LEARNERS_PERMIT, ApplicationType.LEARNERS_PERMIT_DUPLICATE].includes(formData.application_type) && (
+          {/* License Capture Form - Only for license capture applications */}
+          {[ApplicationType.DRIVERS_LICENSE_CAPTURE, ApplicationType.LEARNERS_PERMIT_CAPTURE].includes(formData.application_type) && (
             <Grid item xs={12}>
-              <LicenseVerificationSection
-                personId={formData.person?.id || null}
-                value={formData.license_verification}
-                onChange={(data) => setFormData(prev => ({ ...prev, license_verification: data }))}
-                locations={locations}
-                currentLicenseCategory={formData.license_category}
-                currentApplicationType={formData.application_type}
+              <LicenseCaptureForm
+                applicationtype={formData.application_type}
+                value={formData.license_capture}
+                onChange={(data) => setFormData(prev => ({ ...prev, license_capture: data }))}
                 disabled={false}
               />
             </Grid>

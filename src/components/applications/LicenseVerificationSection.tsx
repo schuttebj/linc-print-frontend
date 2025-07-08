@@ -212,7 +212,7 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
     let defaultLicenseType: 'LEARNERS_PERMIT' | 'DRIVERS_LICENSE';
     let defaultCategories: LicenseCategory[];
     
-    if ([ApplicationType.NEW_LICENSE, ApplicationType.CONVERSION, ApplicationType.PROFESSIONAL_LICENSE, ApplicationType.FOREIGN_CONVERSION].includes(currentApplicationType!)) {
+    if ([ApplicationType.NEW_LICENSE, ApplicationType.DRIVERS_LICENSE_CAPTURE, ApplicationType.PROFESSIONAL_LICENSE, ApplicationType.FOREIGN_CONVERSION].includes(currentApplicationType!)) {
       defaultLicenseType = 'DRIVERS_LICENSE';
       defaultCategories = [LicenseCategory.B];
     } else if ([ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(currentApplicationType!)) {
@@ -388,7 +388,7 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
     const missingCategories: LicenseCategory[] = [];
     
     // Special check for NEW_LICENSE applications that require learner's permit
-    if ([ApplicationType.NEW_LICENSE, ApplicationType.CONVERSION, ApplicationType.PROFESSIONAL_LICENSE, ApplicationType.FOREIGN_CONVERSION].includes(currentApplicationType!) && categoryRules.requires_learners_permit) {
+    if ([ApplicationType.NEW_LICENSE, ApplicationType.DRIVERS_LICENSE_CAPTURE, ApplicationType.PROFESSIONAL_LICENSE, ApplicationType.FOREIGN_CONVERSION].includes(currentApplicationType!) && categoryRules.requires_learners_permit) {
       // Get the corresponding learner's permit code for this category
       const learnerCodeString = LICENSE_TO_LEARNERS_MAPPING[currentLicenseCategory];
       
@@ -493,7 +493,7 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
         requiredDescription = `Required learner's permit: ${learnerRule?.description || 'Learner\'s permit required'}`;
       } else {
         // Regular license category
-        if ([ApplicationType.NEW_LICENSE, ApplicationType.CONVERSION, ApplicationType.PROFESSIONAL_LICENSE, ApplicationType.FOREIGN_CONVERSION].includes(currentApplicationType!)) {
+        if ([ApplicationType.NEW_LICENSE, ApplicationType.DRIVERS_LICENSE_CAPTURE, ApplicationType.PROFESSIONAL_LICENSE, ApplicationType.FOREIGN_CONVERSION].includes(currentApplicationType!)) {
           // For NEW_LICENSE and similar applications
           const catRule = LICENSE_CATEGORY_RULES[category];
           if (catRule?.allows_learners_permit) {
