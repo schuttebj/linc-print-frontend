@@ -20,6 +20,10 @@ import PersonFormTest from './pages/persons/PersonFormTest';
 import ApplicationListPage from './pages/applications/ApplicationListPage';
 import ApplicationFormPage from './pages/applications/ApplicationFormPage';
 
+// License Pages
+import LicenseListPage from './pages/licenses/LicenseListPage';
+import LicenseDetailPage from './pages/licenses/LicenseDetailPage';
+
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
 import UserManagementPage from './pages/admin/UserManagementPage';
@@ -125,6 +129,34 @@ function App() {
                 element={
                   <ProtectedRoute requiredPermission="applications.read">
                     <ApplicationFormPage />
+                  </ProtectedRoute>
+                } 
+              />
+            </Route>
+
+            {/* License Management - requires license permissions */}
+            <Route path="licenses">
+              <Route 
+                index 
+                element={
+                  <ProtectedRoute requiredPermission="licenses.read">
+                    <LicenseListPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="list" 
+                element={
+                  <ProtectedRoute requiredPermission="licenses.read">
+                    <LicenseListPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path=":licenseId" 
+                element={
+                  <ProtectedRoute requiredPermission="licenses.read">
+                    <LicenseDetailPage />
                   </ProtectedRoute>
                 } 
               />

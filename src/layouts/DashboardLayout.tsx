@@ -35,6 +35,9 @@ import {
   LocationOn,
   Assessment,
   Add as AddIcon,
+  CreditCard,
+  Assignment,
+  Visibility,
 } from '@mui/icons-material';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -103,6 +106,22 @@ const DashboardLayout: React.FC = () => {
     },
   ];
 
+  // License management navigation items
+  const licenseNavigationItems = [
+    {
+      text: 'License Management',
+      icon: <CreditCard />,
+      path: '/dashboard/licenses',
+      permission: 'licenses.read',
+    },
+    {
+      text: 'View All Licenses',
+      icon: <Visibility />,
+      path: '/dashboard/licenses/list',
+      permission: 'licenses.read',
+    },
+  ];
+
   // Admin navigation items
   const adminNavigationItems = [
     {
@@ -168,6 +187,51 @@ const DashboardLayout: React.FC = () => {
           );
         })}
       </List>
+
+      {/* License Management Section */}
+      {licenseNavigationItems.some(item => !item.permission || hasPermission(item.permission)) && (
+        <>
+          <Divider />
+          <List>
+            <ListItem>
+              <ListItemText 
+                primary="License Management" 
+                primaryTypographyProps={{ 
+                  variant: 'caption', 
+                  color: 'textSecondary',
+                  fontWeight: 'bold',
+                  textTransform: 'uppercase'
+                }} 
+              />
+            </ListItem>
+            {licenseNavigationItems.map((item) => {
+              // Check permissions
+              if (item.permission && !hasPermission(item.permission)) {
+                return null;
+              }
+
+              const isActive = location.pathname === item.path;
+
+              return (
+                <ListItem key={item.text} disablePadding>
+                  <ListItemButton
+                    selected={isActive}
+                    onClick={() => {
+                      navigate(item.path);
+                      if (isMobile) {
+                        setMobileOpen(false);
+                      }
+                    }}
+                  >
+                    <ListItemIcon>{item.icon}</ListItemIcon>
+                    <ListItemText primary={item.text} />
+                  </ListItemButton>
+                </ListItem>
+              );
+            })}
+          </List>
+        </>
+      )}
 
       {/* Admin Section */}
       {adminNavigationItems.some(item => !item.permission || hasPermission(item.permission)) && (
