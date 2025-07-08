@@ -109,13 +109,13 @@ const DashboardLayout: React.FC = () => {
   // License management navigation items
   const licenseNavigationItems = [
     {
-      text: 'License Management',
+      text: 'License Dashboard',
       icon: <CreditCard />,
       path: '/dashboard/licenses',
       permission: 'licenses.read',
     },
     {
-      text: 'View All Licenses',
+      text: 'Search Licenses',
       icon: <Visibility />,
       path: '/dashboard/licenses/list',
       permission: 'licenses.read',
@@ -195,7 +195,7 @@ const DashboardLayout: React.FC = () => {
           <List>
             <ListItem>
               <ListItemText 
-                primary="License Management" 
+                primary="Licenses" 
                 primaryTypographyProps={{ 
                   variant: 'caption', 
                   color: 'textSecondary',

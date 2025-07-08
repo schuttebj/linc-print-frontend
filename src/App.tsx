@@ -21,6 +21,7 @@ import ApplicationListPage from './pages/applications/ApplicationListPage';
 import ApplicationFormPage from './pages/applications/ApplicationFormPage';
 
 // License Pages
+import LicenseDashboard from './pages/licenses/LicenseDashboard';
 import LicenseListPage from './pages/licenses/LicenseListPage';
 import LicenseDetailPage from './pages/licenses/LicenseDetailPage';
 
@@ -140,7 +141,7 @@ function App() {
                 index 
                 element={
                   <ProtectedRoute requiredPermission="licenses.read">
-                    <LicenseListPage />
+                    <LicenseDashboard />
                   </ProtectedRoute>
                 } 
               />
