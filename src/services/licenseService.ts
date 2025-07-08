@@ -4,6 +4,7 @@
  */
 
 import api from '../config/api';
+import { API_BASE_URL, API_VERSION } from '../config/api';
 
 // License types based on backend schemas
 export interface License {
@@ -269,7 +270,7 @@ export interface LicenseStatistics {
 }
 
 class LicenseService {
-  private basePath = '/licenses';
+  private basePath = `${API_BASE_URL}/api/${API_VERSION}/licenses`;
 
   // License Creation Methods
   async createFromApplication(data: CreateLicenseFromApplication): Promise<License> {
