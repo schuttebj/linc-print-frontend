@@ -187,6 +187,19 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
     return new Date(expiryDate) < new Date();
   };
 
+  const getRestrictionDisplayName = (code: string): string => {
+    const restrictionMap: Record<string, string> = {
+      '01': 'Corrective Lenses Required',
+      '02': 'Prosthetics',
+      '03': 'Automatic Transmission Only',
+      '04': 'Electric Vehicles Only',
+      '05': 'Disability Adapted Vehicles',
+      '06': 'Tractor Vehicles Only',
+      '07': 'Industrial/Agriculture Only'
+    };
+    return restrictionMap[code] || `Restriction ${code}`;
+  };
+
   const validateDate = (dateValue: string): string => {
     if (!dateValue) return '';
     
@@ -360,26 +373,37 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                         {(selected as string[]).map((value) => (
                           <Chip 
                             key={value} 
-                            label={
-                              value === 'CORRECTIVE_LENSES' ? 'Corrective Lenses' :
-                              value === 'MODIFIED_VEHICLE_ONLY' ? 'Modified Vehicle' :
-                              value
-                            } 
+                            label={getRestrictionDisplayName(value)} 
                             size="small" 
                           />
                         ))}
                       </Box>
                     )}
                   >
-                    <MenuItem value="CORRECTIVE_LENSES">
-                      Corrective Lenses Required - Must wear glasses or contact lenses while driving
+                    <MenuItem value="01">
+                      01 - Corrective Lenses Required
                     </MenuItem>
-                    <MenuItem value="MODIFIED_VEHICLE_ONLY">
-                      Modified Vehicle Required - Vehicle must have disability modifications/adaptations
+                    <MenuItem value="02">
+                      02 - Prosthetics Required
+                    </MenuItem>
+                    <MenuItem value="03">
+                      03 - Automatic Transmission Only
+                    </MenuItem>
+                    <MenuItem value="04">
+                      04 - Electric Vehicles Only
+                    </MenuItem>
+                    <MenuItem value="05">
+                      05 - Disability Adapted Vehicles
+                    </MenuItem>
+                    <MenuItem value="06">
+                      06 - Tractor Vehicles Only
+                    </MenuItem>
+                    <MenuItem value="07">
+                      07 - Industrial/Agriculture Only
                     </MenuItem>
                   </Select>
                   <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-                    Select all restrictions that apply to this license
+                    Select all restrictions that apply to this license (all 7 codes available for capture applications)
                   </Typography>
                 </FormControl>
               </Grid>
@@ -485,4 +509,64 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
   );
 };
 
-export default LicenseCaptureForm; 
+export default LicenseCaptureForm;
+
+// Helper function to transform captured license data for authorization endpoint
+export const transformCapturedDataForAuthorization = (captureData: LicenseCaptureData): any => {
+  if (!captureData.captured_licenses || captureData.captured_licenses.length === 0) {
+    return {};
+  }
+
+  // For now, take the first captured license (most common case)
+  const firstLicense = captureData.captured_licenses[0];
+  
+  return {
+    restrictions: firstLicense.restrictions || [],
+    medical_restrictions: [], // Empty for capture applications
+    captured_license_data: {
+      original_license_number: firstLicense.license_number,
+      original_issue_date: firstLicense.issue_date,
+      original_expiry_date: firstLicense.expiry_date,
+      original_category: firstLicense.license_category,
+      verification_status: firstLicense.verified ? 'VERIFIED' : 'PENDING',
+      verification_notes: firstLicense.verification_notes || ''
+    }
+  };
+};
+
+// Helper function to validate captured license data before authorization
+export const validateCapturedDataForAuthorization = (captureData: LicenseCaptureData): { 
+  isValid: boolean; 
+  errors: string[]; 
+} => {
+  const errors: string[] = [];
+  
+  if (!captureData.captured_licenses || captureData.captured_licenses.length === 0) {
+    errors.push('No licenses captured');
+    return { isValid: false, errors };
+  }
+
+  captureData.captured_licenses.forEach((license, index) => {
+    if (!license.license_number.trim()) {
+      errors.push(`License #${index + 1}: License number is required`);
+    }
+    
+    if (!license.license_category) {
+      errors.push(`License #${index + 1}: License category is required`);
+    }
+    
+    if (!license.issue_date) {
+      errors.push(`License #${index + 1}: Issue date is required`);
+    }
+    
+    if (!license.expiry_date) {
+      errors.push(`License #${index + 1}: Expiry date is required`);
+    }
+    
+    if (!license.verified) {
+      errors.push(`License #${index + 1}: License must be verified before authorization`);
+    }
+  });
+
+  return { isValid: errors.length === 0, errors };
+}; 

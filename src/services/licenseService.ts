@@ -1,181 +1,464 @@
 /**
  * License Service for Madagascar License System
- * Handles all API calls related to issued licenses (separate from applications)
+ * Handles all API calls related to license management
  */
 
-import { api, API_ENDPOINTS } from '../config/api';
+import api from '../config/api';
 
-export interface IssuedLicense {
+// License types based on backend schemas
+export interface License {
   id: string;
   license_number: string;
   person_id: string;
+  created_from_application_id: string;
+  
+  // License details
   category: string;
-  status: 'ACTIVE' | 'SUSPENDED' | 'EXPIRED' | 'REVOKED';
+  status: 'ACTIVE' | 'SUSPENDED' | 'CANCELLED';
   issue_date: string;
-  expiry_date: string;
-  location_id: string;
+  issuing_location_id: string;
+  issued_by_user_id: string;
+  
+  // Restrictions and conditions
   restrictions: string[];
+  medical_restrictions: string[];
+  
+  // Professional permit
+  has_professional_permit: boolean;
+  professional_permit_categories: string[];
+  professional_permit_expiry?: string;
+  
+  // Status information
+  status_changed_date?: string;
+  suspension_reason?: string;
+  suspension_start_date?: string;
+  suspension_end_date?: string;
+  cancellation_reason?: string;
+  cancellation_date?: string;
+  
+  // History and references
+  previous_license_id?: string;
+  is_upgrade: boolean;
+  upgrade_from_category?: string;
+  captured_from_license_number?: string;
+  
+  // Compliance
+  sadc_compliance_verified: boolean;
+  international_validity: boolean;
+  vienna_convention_compliant: boolean;
+  
+  // Computed properties
+  is_active: boolean;
+  is_suspended: boolean;
+  is_cancelled: boolean;
+  
+  // Current card information
+  current_card?: LicenseCard;
+  
+  // Audit fields
   created_at: string;
   updated_at: string;
 }
 
+export interface LicenseDetail extends License {
+  // All cards for this license
+  cards: LicenseCard[];
+  
+  // Status history
+  status_history: LicenseStatusHistory[];
+  
+  // Person information (basic)
+  person_name?: string;
+  person_surname?: string;
+  
+  // Location information
+  issuing_location_name?: string;
+  issuing_location_code?: string;
+}
+
+export interface LicenseCard {
+  id: string;
+  card_number: string;
+  status: 'PENDING_PRODUCTION' | 'IN_PRODUCTION' | 'READY_FOR_COLLECTION' | 'COLLECTED' | 'EXPIRED' | 'DAMAGED' | 'LOST' | 'STOLEN';
+  card_type: string;
+  issue_date: string;
+  expiry_date: string;
+  valid_from: string;
+  is_current: boolean;
+  is_expired: boolean;
+  
+  // Collection information
+  ready_for_collection_date?: string;
+  collected_date?: string;
+  collection_reference?: string;
+  
+  // Production information
+  ordered_date?: string;
+  production_started?: string;
+  production_completed?: string;
+  
+  // Card specifications
+  card_template: string;
+  iso_compliance_version: string;
+  days_until_expiry?: number;
+  is_near_expiry: boolean;
+}
+
+export interface LicenseStatusHistory {
+  id: string;
+  from_status?: string;
+  to_status: string;
+  changed_at: string;
+  reason?: string;
+  notes?: string;
+  system_initiated: boolean;
+  
+  // Suspension details
+  suspension_start_date?: string;
+  suspension_end_date?: string;
+}
+
+export interface PersonLicensesSummary {
+  person_id: string;
+  person_name: string;
+  total_licenses: number;
+  active_licenses: number;
+  suspended_licenses: number;
+  cancelled_licenses: number;
+  
+  // License categories held
+  categories: string[];
+  
+  // Recent activity
+  latest_license_date?: string;
+  latest_license_number?: string;
+  
+  // Current cards
+  cards_ready_for_collection: number;
+  cards_near_expiry: number;
+}
+
+export interface LicenseSearchFilters {
+  license_number?: string;
+  person_id?: string;
+  category?: string;
+  status?: string;
+  issuing_location_id?: string;
+  
+  // Date filters
+  issued_after?: string;
+  issued_before?: string;
+  
+  // Professional permit filters
+  has_professional_permit?: boolean;
+  
+  // Pagination
+  page?: number;
+  size?: number;
+}
+
+export interface LicenseListResponse {
+  licenses: License[];
+  total: number;
+  page: number;
+  size: number;
+  pages: number;
+}
+
+export interface CreateLicenseFromApplication {
+  application_id: string;
+  license_category: string;
+  restrictions?: string[];
+  medical_restrictions?: string[];
+  
+  // Professional permit data (if applicable)
+  has_professional_permit?: boolean;
+  professional_permit_categories?: string[];
+  professional_permit_expiry?: string;
+  
+  // Captured license data (for capture applications)
+  captured_from_license_number?: string;
+  
+  // Card ordering
+  order_card_immediately?: boolean;
+  card_expiry_years?: number;
+}
+
+export interface AuthorizationData {
+  restrictions?: string[];
+  medical_restrictions?: string[];
+  professional_permit?: {
+    eligible: boolean;
+    categories: string[];
+    expiry_years?: number;
+  };
+  captured_license_data?: {
+    original_license_number?: string;
+  };
+  test_results?: Record<string, any>;
+}
+
+export interface LicenseStatusUpdate {
+  status: string;
+  reason?: string;
+  notes?: string;
+  suspension_start_date?: string;
+  suspension_end_date?: string;
+}
+
+export interface LicenseRestrictionsUpdate {
+  restrictions: string[];
+  medical_restrictions?: string[];
+  reason?: string;
+}
+
+export interface CardCreate {
+  license_id: string;
+  card_type?: string;
+  expiry_years?: number;
+  replacement_reason?: string;
+}
+
+export interface CardStatusUpdate {
+  status: string;
+  notes?: string;
+  collection_reference?: string;
+}
+
+export interface LicenseNumberValidation {
+  license_number: string;
+  is_valid: boolean;
+  error_message?: string;
+  province_code?: string;
+  location_code?: string;
+  sequence_number?: number;
+  check_digit?: number;
+}
+
+export interface RestrictionDetail {
+  code: string;
+  description: string;
+  category: string;
+  display_name: string;
+}
+
+export interface AvailableRestrictions {
+  restrictions: RestrictionDetail[];
+  total: number;
+}
+
 export interface LicenseStatistics {
-  total_active: number;
-  total_suspended: number;
-  total_expired: number;
-  pending_activation: number;
+  total_licenses: number;
+  active_licenses: number;
+  suspended_licenses: number;
+  cancelled_licenses: number;
+  
+  // By category
   by_category: Record<string, number>;
-  recent_activations: number;
-  expiring_soon: number;
+  
+  // By location
+  by_location: Record<string, number>;
+  
+  // Recent activity
+  issued_this_month: number;
+  issued_this_year: number;
+  
+  // Card statistics
+  cards_pending_collection: number;
+  cards_near_expiry: number;
 }
 
 class LicenseService {
-  // Basic CRUD operations for issued licenses
-  async getLicenses(params: {
-    skip?: number;
-    limit?: number;
-    status?: string;
-    category?: string;
-    location_id?: string;
-  } = {}): Promise<IssuedLicense[]> {
-    const queryString = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        queryString.append(key, value.toString());
-      }
+  private basePath = '/licenses';
+
+  // License Creation Methods
+  async createFromApplication(data: CreateLicenseFromApplication): Promise<License> {
+    const response = await api.post(`${this.basePath}/from-application`, data);
+    return response.data;
+  }
+
+  async createFromAuthorizedApplication(applicationId: string, authorizationData: AuthorizationData): Promise<License> {
+    const response = await api.post(`${this.basePath}/from-authorized-application/${applicationId}`, authorizationData);
+    return response.data;
+  }
+
+  // License Query Methods
+  async getLicense(licenseId: string): Promise<LicenseDetail> {
+    const response = await api.get(`${this.basePath}/${licenseId}`);
+    return response.data;
+  }
+
+  async getLicenseByNumber(licenseNumber: string): Promise<License> {
+    const response = await api.get(`${this.basePath}/number/${licenseNumber}`);
+    return response.data;
+  }
+
+  async getPersonLicenses(personId: string, activeOnly: boolean = false, skip: number = 0, limit: number = 100): Promise<License[]> {
+    const params = new URLSearchParams({
+      active_only: activeOnly.toString(),
+      skip: skip.toString(),
+      limit: limit.toString()
     });
     
-    const url = queryString.toString() ? `${API_ENDPOINTS.licenses}?${queryString}` : API_ENDPOINTS.licenses;
-    return await api.get(url);
+    const response = await api.get(`${this.basePath}/person/${personId}?${params}`);
+    return response.data;
   }
 
-  async getLicense(id: string): Promise<IssuedLicense> {
-    return await api.get(API_ENDPOINTS.licenseById(id));
+  async getPersonLicensesSummary(personId: string): Promise<PersonLicensesSummary> {
+    const response = await api.get(`${this.basePath}/person/${personId}/summary`);
+    return response.data;
   }
 
-  // Get current valid licenses for a person (for license verification)
-  async getPersonCurrentLicenses(personId: string): Promise<IssuedLicense[]> {
-    return await api.get(API_ENDPOINTS.personCurrentLicenses(personId));
+  async searchLicenses(filters: LicenseSearchFilters): Promise<LicenseListResponse> {
+    const response = await api.post(`${this.basePath}/search`, filters);
+    return response.data;
   }
 
-  // Get all licenses for a person (including expired)
-  async getPersonAllLicenses(personId: string, includeExpired: boolean = false): Promise<IssuedLicense[]> {
-    const url = `${API_ENDPOINTS.personAllLicenses(personId)}?include_expired=${includeExpired}`;
-    return await api.get(url);
+  // License Management Methods
+  async updateLicenseStatus(licenseId: string, statusUpdate: LicenseStatusUpdate): Promise<License> {
+    const response = await api.put(`${this.basePath}/${licenseId}/status`, statusUpdate);
+    return response.data;
   }
 
-  // Get active licenses ready for printing/collection
-  async getActiveLicenses(locationId?: string): Promise<IssuedLicense[]> {
-    const url = locationId 
-      ? `${API_ENDPOINTS.activeLicenses}?location_id=${locationId}`
-      : API_ENDPOINTS.activeLicenses;
-    return await api.get(url);
+  async updateLicenseRestrictions(licenseId: string, restrictionsUpdate: LicenseRestrictionsUpdate): Promise<License> {
+    const response = await api.put(`${this.basePath}/${licenseId}/restrictions`, restrictionsUpdate);
+    return response.data;
   }
 
-  // Get licenses pending activation from applications
-  async getPendingActivationLicenses(locationId?: string): Promise<IssuedLicense[]> {
-    const url = locationId 
-      ? `${API_ENDPOINTS.pendingActivationLicenses}?location_id=${locationId}`
-      : API_ENDPOINTS.pendingActivationLicenses;
-    return await api.get(url);
+  async updateProfessionalPermit(licenseId: string, permitUpdate: {
+    has_professional_permit: boolean;
+    professional_permit_categories: string[];
+    professional_permit_expiry: string;
+  }): Promise<License> {
+    const response = await api.put(`${this.basePath}/${licenseId}/professional-permit`, permitUpdate);
+    return response.data;
   }
 
-  // License lifecycle management
-  async activateLicenseFromApplication(applicationId: string): Promise<{
-    success: boolean;
-    license_id: string;
-    license_number: string;
-    message: string;
-  }> {
-    return await api.post(API_ENDPOINTS.activateLicense(applicationId), {});
+  // Card Management Methods
+  async createCard(cardData: CardCreate): Promise<LicenseCard> {
+    const response = await api.post(`${this.basePath}/cards`, cardData);
+    return response.data;
   }
 
-  async suspendLicense(licenseId: string, reason: string, notes?: string): Promise<{
-    success: boolean;
-    message: string;
-    suspended_at: string;
-  }> {
-    return await api.post(API_ENDPOINTS.suspendLicense(licenseId), {
-      reason,
-      notes
-    });
+  async updateCardStatus(cardId: string, statusUpdate: CardStatusUpdate): Promise<LicenseCard> {
+    const response = await api.put(`${this.basePath}/cards/${cardId}/status`, statusUpdate);
+    return response.data;
   }
 
-  async reactivateLicense(licenseId: string, notes?: string): Promise<{
-    success: boolean;
-    message: string;
-    reactivated_at: string;
-  }> {
-    return await api.post(API_ENDPOINTS.reactivateLicense(licenseId), {
-      notes
-    });
+  async getLicenseCards(licenseId: string): Promise<LicenseCard[]> {
+    const response = await api.get(`${this.basePath}/${licenseId}/cards`);
+    return response.data;
   }
 
-  async renewLicense(licenseId: string, newExpiryDate: string): Promise<{
-    success: boolean;
-    new_license_id: string;
-    message: string;
-  }> {
-    return await api.post(API_ENDPOINTS.renewLicense(licenseId), {
-      new_expiry_date: newExpiryDate
-    });
+  async getCurrentCard(licenseId: string): Promise<LicenseCard | null> {
+    const response = await api.get(`${this.basePath}/${licenseId}/cards/current`);
+    return response.data;
   }
 
-  // Statistics and reporting
-  async getLicenseStatistics(locationId?: string): Promise<LicenseStatistics> {
-    const url = locationId 
-      ? `${API_ENDPOINTS.licenseStatistics}?location_id=${locationId}`
-      : API_ENDPOINTS.licenseStatistics;
-    return await api.get(url);
+  // Utility Methods
+  async validateLicenseNumber(licenseNumber: string): Promise<LicenseNumberValidation> {
+    const params = new URLSearchParams({ license_number: licenseNumber });
+    const response = await api.post(`${this.basePath}/validate-number?${params}`);
+    return response.data;
   }
 
-  // Preview what license will look like when activated from application
-  async previewLicenseFromApplication(applicationId: string): Promise<{
-    license_number: string;
-    category: string;
-    issue_date: string;
-    expiry_date: string;
-    restrictions: string[];
-    photo_required: boolean;
-    signature_required: boolean;
-    fingerprint_required: boolean;
-  }> {
-    return await api.get(API_ENDPOINTS.licensePreview(applicationId));
+  async getAvailableRestrictions(): Promise<AvailableRestrictions> {
+    const response = await api.get(`${this.basePath}/restrictions/available`);
+    return response.data;
   }
 
-  // Utility methods
-  isLicenseExpired(license: IssuedLicense): boolean {
-    return new Date(license.expiry_date) < new Date();
+  async getLicenseStatistics(): Promise<LicenseStatistics> {
+    const response = await api.get(`${this.basePath}/statistics/overview`);
+    return response.data;
   }
 
-  isLicenseExpiringSoon(license: IssuedLicense, daysThreshold: number = 30): boolean {
-    const expiryDate = new Date(license.expiry_date);
-    const thresholdDate = new Date();
-    thresholdDate.setDate(thresholdDate.getDate() + daysThreshold);
-    return expiryDate <= thresholdDate;
+  // Health Check
+  async healthCheck(): Promise<{ status: string; timestamp: string }> {
+    const response = await api.get(`${this.basePath}/health`);
+    return response.data;
   }
 
-  isLicenseActive(license: IssuedLicense): boolean {
-    return license.status === 'ACTIVE' && !this.isLicenseExpired(license);
-  }
-
+  // Utility Functions for Frontend
   formatLicenseNumber(licenseNumber: string): string {
-    // Format: MDG-XXXXXX
-    return licenseNumber.replace(/[^A-Z0-9]/g, '').toUpperCase();
+    // Format: TXXX12345678X -> T-XXX-12345678-X
+    if (licenseNumber.length >= 11) {
+      const province = licenseNumber.slice(0, 1);
+      const location = licenseNumber.slice(1, 4);
+      const sequence = licenseNumber.slice(4, -1);
+      const checkDigit = licenseNumber.slice(-1);
+      return `${province}-${location}-${sequence}-${checkDigit}`;
+    }
+    return licenseNumber;
   }
 
-  getLicenseDisplayName(category: string): string {
-    const categoryNames: Record<string, string> = {
-      'A1': 'Motorcycle (≤125cc)',
-      'A': 'Motorcycle (>125cc)',
-      'B': 'Light Motor Vehicle',
-      'C1': 'Medium Vehicle',
-      'C': 'Heavy Vehicle',
-      'D': 'Bus/Passenger Vehicle',
-      'E': 'Articulated Vehicle'
+  getStatusColor(status: string): 'success' | 'warning' | 'error' | 'info' {
+    switch (status) {
+      case 'ACTIVE':
+        return 'success';
+      case 'SUSPENDED':
+        return 'warning';
+      case 'CANCELLED':
+        return 'error';
+      default:
+        return 'info';
+    }
+  }
+
+  getCardStatusColor(status: string): 'success' | 'warning' | 'error' | 'info' {
+    switch (status) {
+      case 'COLLECTED':
+        return 'success';
+      case 'READY_FOR_COLLECTION':
+        return 'info';
+      case 'IN_PRODUCTION':
+        return 'warning';
+      case 'EXPIRED':
+      case 'DAMAGED':
+      case 'LOST':
+      case 'STOLEN':
+        return 'error';
+      default:
+        return 'info';
+    }
+  }
+
+  isNearExpiry(expiryDate: string, daysThreshold: number = 30): boolean {
+    const expiry = new Date(expiryDate);
+    const now = new Date();
+    const diffTime = expiry.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= daysThreshold && diffDays > 0;
+  }
+
+  getDaysUntilExpiry(expiryDate: string): number {
+    const expiry = new Date(expiryDate);
+    const now = new Date();
+    const diffTime = expiry.getTime() - now.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }
+
+  getRestrictionDisplayName(code: string): string {
+    const restrictionMap: Record<string, string> = {
+      '01': 'Corrective Lenses Required',
+      '02': 'Prosthetics',
+      '03': 'Automatic Transmission Only',
+      '04': 'Electric Vehicles Only',
+      '05': 'Disability Adapted Vehicles',
+      '06': 'Tractor Vehicles Only',
+      '07': 'Industrial/Agriculture Only'
     };
-    return categoryNames[category] || category;
+    return restrictionMap[code] || `Restriction ${code}`;
+  }
+
+  getProfessionalPermitDisplayName(category: string): string {
+    const categoryMap: Record<string, string> = {
+      'P': 'Passengers (Professional Permit P)',
+      'D': 'Dangerous Goods (Professional Permit D)',
+      'G': 'Goods (Professional Permit G)'
+    };
+    return categoryMap[category] || `Professional Permit ${category}`;
   }
 }
 
-export const licenseService = new LicenseService(); 
+export const licenseService = new LicenseService();
+export default licenseService; 

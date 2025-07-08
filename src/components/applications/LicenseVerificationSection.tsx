@@ -285,6 +285,19 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
     return new Date(expiryDate) < new Date();
   };
 
+  const getRestrictionDisplayName = (code: string): string => {
+    const restrictionMap: Record<string, string> = {
+      '01': 'Corrective Lenses Required',
+      '02': 'Prosthetics',
+      '03': 'Automatic Transmission Only',
+      '04': 'Electric Vehicles Only',
+      '05': 'Disability Adapted Vehicles',
+      '06': 'Tractor Vehicles Only',
+      '07': 'Industrial/Agriculture Only'
+    };
+    return restrictionMap[code] || `Restriction ${code}`;
+  };
+
   /**
    * Validate and format date to ensure YYYY-MM-DD format with 4-digit year
    */
@@ -919,24 +932,20 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
                       renderValue={(selected) => (
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                           {(selected as string[]).map((value) => (
-                            <Chip key={value} label={
-                              value === 'CORRECTIVE_LENSES' ? 'Corrective Lenses' :
-                              value === 'MODIFIED_VEHICLE_ONLY' ? 'Modified Vehicle' :
-                              value
-                            } size="small" />
+                            <Chip key={value} label={getRestrictionDisplayName(value)} size="small" />
                           ))}
                         </Box>
                       )}
                     >
-                      <MenuItem value="CORRECTIVE_LENSES">
-                        Corrective Lenses Required - Must wear glasses or contact lenses while driving
+                      <MenuItem value="01">
+                        01 - Corrective Lenses Required
                       </MenuItem>
-                      <MenuItem value="MODIFIED_VEHICLE_ONLY">
-                        Modified Vehicle Required - Vehicle must have disability modifications/adaptations
+                      <MenuItem value="02">
+                        02 - Prosthetics Required
                       </MenuItem>
                     </Select>
                     <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-                      Select all restrictions that apply to this license
+                      Select restrictions that apply to this license (only corrective lenses and prosthetics for regular applications)
                     </Typography>
                   </FormControl>
                 </Grid>

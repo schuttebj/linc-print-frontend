@@ -378,46 +378,95 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
 
   // Check prerequisites when person and license category change
   const checkPrerequisites = useCallback(async (personId: string, category: LicenseCategory) => {
-    if (!personId || !category) return;
-
-    // Only check for categories that require prerequisites
-    const categoryRules = LICENSE_CATEGORY_RULES[category];
-    if (!categoryRules?.prerequisites?.length) {
-      setPrerequisiteCheck(null);
-      return;
-    }
+    if (!personId) return;
 
     try {
       setCheckingPrerequisites(true);
       
-      // Check for existing applications for required categories
-      const requiredCategories = categoryRules.prerequisites;
+      // Get all applications for this person
       const personApplications = await applicationService.getApplicationsByPerson(personId);
       
-      const prerequisiteApplications = personApplications.filter(app => 
-        requiredCategories.map(String).includes(String(app.license_category)) &&
-        ['COMPLETED', 'ON_HOLD'].includes(app.status)
-      );
+      // Different logic based on application type
+      if (formData.application_type === ApplicationType.RENEWAL) {
+        // For renewals, check if they have the same category license to renew
+        const existingLicense = personApplications.find(app => 
+          app.license_category === category && 
+          app.status === 'COMPLETED'
+        );
 
-      const completedApplications = prerequisiteApplications.filter(app => app.status === 'COMPLETED');
-      const onHoldApplications = prerequisiteApplications.filter(app => app.status === 'ON_HOLD');
+        setPrerequisiteCheck({
+          hasCompleted: !!existingLicense,
+          hasOnHold: false,
+          completedApplications: existingLicense ? [existingLicense] : [],
+          onHoldApplications: [],
+          canProceed: !!existingLicense,
+          requiresExternal: !existingLicense
+        });
 
-      const hasCompleted = completedApplications.length > 0;
-      const hasOnHold = onHoldApplications.length > 0;
-      const canProceed = hasCompleted || hasOnHold;
+      } else if (formData.application_type === ApplicationType.TEMPORARY_LICENSE) {
+        // For temporary licenses, check if they have any license they can get a temporary for
+        const anyLicense = personApplications.find(app => 
+          app.status === 'COMPLETED' && 
+          app.license_category === category
+        );
 
-      setPrerequisiteCheck({
-        hasCompleted,
-        hasOnHold,
-        completedApplications,
-        onHoldApplications,
-        canProceed,
-        requiresExternal: !canProceed
-      });
+        setPrerequisiteCheck({
+          hasCompleted: !!anyLicense,
+          hasOnHold: false,
+          completedApplications: anyLicense ? [anyLicense] : [],
+          onHoldApplications: [],
+          canProceed: !!anyLicense,
+          requiresExternal: !anyLicense
+        });
 
-      // If no prerequisites found, offer external license verification
-      if (!canProceed) {
-        setShowExternalLicenseForm(true);
+      } else if (formData.application_type === ApplicationType.DRIVERS_LICENSE_CAPTURE) {
+        // For capture applications, they can proceed but should verify licenses
+        setPrerequisiteCheck({
+          hasCompleted: true,
+          hasOnHold: false,
+          completedApplications: [],
+          onHoldApplications: [],
+          canProceed: true,
+          requiresExternal: false
+        });
+
+      } else {
+        // For NEW_LICENSE and PROFESSIONAL_LICENSE, check category prerequisites
+        const categoryRules = LICENSE_CATEGORY_RULES[category];
+        if (!categoryRules?.prerequisites?.length) {
+          setPrerequisiteCheck({
+            hasCompleted: true,
+            hasOnHold: false,
+            completedApplications: [],
+            onHoldApplications: [],
+            canProceed: true,
+            requiresExternal: false
+          });
+          return;
+        }
+
+        // Check for existing applications for required categories
+        const requiredCategories = categoryRules.prerequisites;
+        const prerequisiteApplications = personApplications.filter(app => 
+          requiredCategories.map(String).includes(String(app.license_category)) &&
+          ['COMPLETED', 'ON_HOLD'].includes(app.status)
+        );
+
+        const completedApplications = prerequisiteApplications.filter(app => app.status === 'COMPLETED');
+        const onHoldApplications = prerequisiteApplications.filter(app => app.status === 'ON_HOLD');
+
+        const hasCompleted = completedApplications.length > 0;
+        const hasOnHold = onHoldApplications.length > 0;
+        const canProceed = hasCompleted || hasOnHold;
+
+        setPrerequisiteCheck({
+          hasCompleted,
+          hasOnHold,
+          completedApplications,
+          onHoldApplications,
+          canProceed,
+          requiresExternal: !canProceed
+        });
       }
 
     } catch (err: any) {
@@ -430,11 +479,10 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         canProceed: false,
         requiresExternal: true
       });
-      setShowExternalLicenseForm(true);
     } finally {
       setCheckingPrerequisites(false);
     }
-  }, []);
+  }, [formData.application_type]);
 
   // Handle application details changes
   const handleApplicationDetailsChange = async (field: string, value: any) => {
@@ -982,16 +1030,31 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
       return categoryRule?.prerequisites || [];
     };
 
-    // Simplified license requirements check - now only for informational purposes
+    // License requirements validation for prerequisite checking
     const checkLicenseRequirements = async (selectedCategory: LicenseCategory) => {
-      // For capture applications, license requirements are handled by the capture form
-      if ([ApplicationType.DRIVERS_LICENSE_CAPTURE, ApplicationType.LEARNERS_PERMIT_CAPTURE].includes(formData.application_type)) {
+      // Skip validation for capture applications that don't need prerequisites checked this way
+      if ([ApplicationType.LEARNERS_PERMIT_CAPTURE].includes(formData.application_type)) {
         return;
       }
 
-      // For other applications, we assume clerks will ensure prerequisites are met
-      // before allowing the application to proceed. The system will validate on submission.
-      console.log(`Selected category ${selectedCategory} may have prerequisites, but external verification is no longer required for ${formData.application_type} applications.`);
+      if (!formData.person) return;
+
+      try {
+        // Use the existing validateLicenseCategories function
+        await validateLicenseCategories(
+          selectedCategory,
+          formData.application_type,
+          formData.person,
+          formData.license_verification
+        );
+
+        // For applications that require license validation, also check prerequisites
+        if ([ApplicationType.NEW_LICENSE, ApplicationType.DRIVERS_LICENSE_CAPTURE, ApplicationType.RENEWAL, ApplicationType.PROFESSIONAL_LICENSE, ApplicationType.TEMPORARY_LICENSE].includes(formData.application_type)) {
+          await checkPrerequisites(formData.person.id, selectedCategory);
+        }
+      } catch (error) {
+        console.error('License requirements validation error:', error);
+      }
     };
 
     return (
@@ -1060,8 +1123,13 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                       const selectedCategory = e.target.value as LicenseCategory;
                       setFormData(prev => ({ ...prev, license_category: selectedCategory }));
                       
-                      // Check license requirements immediately
+                      // Check license requirements and prerequisites immediately
                       await checkLicenseRequirements(selectedCategory);
+                      
+                      // Check prerequisites if person is selected
+                      if (formData.person) {
+                        await checkPrerequisites(formData.person.id, selectedCategory);
+                      }
                     }}
                   >
                     {getAvailableLicenseCategories().map((category) => (
@@ -1100,21 +1168,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
             </Grid>
           )}
 
-          {/* Info for CAPTURE applications */}
-          {[ApplicationType.DRIVERS_LICENSE_CAPTURE, ApplicationType.LEARNERS_PERMIT_CAPTURE].includes(formData.application_type) && (
-            <Grid item xs={12}>
-              <Alert severity="warning">
-                <Typography variant="body2" fontWeight="bold">
-                  {formData.application_type === ApplicationType.DRIVERS_LICENSE_CAPTURE ? "Driver's License" : "Learner's Permit"} Capture Application
-                </Typography>
-                <Typography variant="body2">
-                  This application is for capturing existing {formData.application_type === ApplicationType.DRIVERS_LICENSE_CAPTURE ? "driver's licenses" : "learner's permits"} that the person already holds. 
-                  The captured license information will be entered in the Requirements section. 
-                  Medical and biometric data collection will be skipped for capture applications.
-                </Typography>
-              </Alert>
-            </Grid>
-          )}
+
 
           {/* Professional Driving Permit Categories - Only for PROFESSIONAL_LICENSE applications */}
           {formData.application_type === ApplicationType.PROFESSIONAL_LICENSE && (
@@ -1307,6 +1361,77 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
             </Card>
           </Grid>
 
+          {/* License Verification - For applications requiring license validation */}
+          {[ApplicationType.NEW_LICENSE, ApplicationType.DRIVERS_LICENSE_CAPTURE, ApplicationType.RENEWAL, ApplicationType.PROFESSIONAL_LICENSE, ApplicationType.TEMPORARY_LICENSE].includes(formData.application_type) && formData.person && (
+            <Grid item xs={12}>
+              <LicenseVerificationSection
+                personId={formData.person.id}
+                value={formData.license_verification}
+                onChange={(data) => setFormData(prev => ({ ...prev, license_verification: data }))}
+                locations={locations}
+                currentLicenseCategory={formData.license_category}
+                currentApplicationType={formData.application_type}
+                disabled={false}
+              />
+            </Grid>
+          )}
+
+          {/* Prerequisite Validation Alert */}
+          {[ApplicationType.NEW_LICENSE, ApplicationType.DRIVERS_LICENSE_CAPTURE, ApplicationType.RENEWAL, ApplicationType.PROFESSIONAL_LICENSE, ApplicationType.TEMPORARY_LICENSE].includes(formData.application_type) && 
+           formData.license_category && 
+           formData.license_verification && 
+           !prerequisiteCheck?.canProceed && (
+            <Grid item xs={12}>
+              <Alert severity="error">
+                <Typography variant="body2" fontWeight="bold">
+                  Missing Required Prerequisites
+                </Typography>
+                <Typography variant="body2">
+                  {formData.application_type === ApplicationType.NEW_LICENSE && (
+                    `To apply for ${formData.license_category} license, the person must have the required prerequisite licenses or learner's permits on their account.`
+                  )}
+                  {formData.application_type === ApplicationType.DRIVERS_LICENSE_CAPTURE && (
+                    `To capture existing licenses, the person's current licenses must be verified in the system.`
+                  )}
+                  {formData.application_type === ApplicationType.RENEWAL && (
+                    `To renew a license, the person must have an existing license of the same category in the system.`
+                  )}
+                  {formData.application_type === ApplicationType.PROFESSIONAL_LICENSE && (
+                    `To apply for a professional driving permit, the person must have the appropriate base license category.`
+                  )}
+                  {formData.application_type === ApplicationType.TEMPORARY_LICENSE && (
+                    `To issue a temporary license, the person must have an existing license or valid external license verification.`
+                  )}
+                </Typography>
+                {prerequisiteCheck?.hasOnHold && (
+                  <Typography variant="body2" sx={{ mt: 1 }}>
+                    <strong>Note:</strong> There are applications on hold that may affect this application.
+                  </Typography>
+                )}
+              </Alert>
+            </Grid>
+          )}
+
+          {/* Success message when prerequisites are met */}
+          {[ApplicationType.NEW_LICENSE, ApplicationType.DRIVERS_LICENSE_CAPTURE, ApplicationType.RENEWAL, ApplicationType.PROFESSIONAL_LICENSE, ApplicationType.TEMPORARY_LICENSE].includes(formData.application_type) && 
+           formData.license_category && 
+           formData.license_verification && 
+           prerequisiteCheck?.canProceed && (
+            <Grid item xs={12}>
+              <Alert severity="success">
+                <Typography variant="body2" fontWeight="bold">
+                  Prerequisites Verified
+                </Typography>
+                <Typography variant="body2">
+                  The person meets all requirements to proceed with this {formData.application_type.toLowerCase().replace('_', ' ')} application.
+                  {prerequisiteCheck.hasCompleted && (
+                    ` Found ${prerequisiteCheck.completedApplications.length} completed prerequisite application(s).`
+                  )}
+                </Typography>
+              </Alert>
+            </Grid>
+          )}
+
           {/* License Capture Form - Only for license capture applications */}
           {[ApplicationType.DRIVERS_LICENSE_CAPTURE, ApplicationType.LEARNERS_PERMIT_CAPTURE].includes(formData.application_type) && (
             <Grid item xs={12}>
@@ -1358,23 +1483,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         </Grid>
           )}
 
-          {/* Additional Notes */}
-        <Grid item xs={12}>
-            <Card>
-              <CardHeader title="Additional Notes" />
-              <CardContent>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={3}
-                  label="Notes (Optional)"
-                  value={formData.notes || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Add any additional notes or comments about this application..."
-                />
-              </CardContent>
-          </Card>
-        </Grid>
+
         </Grid>
       </Box>
     );
