@@ -273,24 +273,20 @@ class LicenseService {
 
   // License Creation Methods
   async createFromApplication(data: CreateLicenseFromApplication): Promise<License> {
-    const response = await api.post(`${this.basePath}/from-application`, data);
-    return response.data;
+    return await api.post<License>(`${this.basePath}/from-application`, data);
   }
 
   async createFromAuthorizedApplication(applicationId: string, authorizationData: AuthorizationData): Promise<License> {
-    const response = await api.post(`${this.basePath}/from-authorized-application/${applicationId}`, authorizationData);
-    return response.data;
+    return await api.post<License>(`${this.basePath}/from-authorized-application/${applicationId}`, authorizationData);
   }
 
   // License Query Methods
   async getLicense(licenseId: string): Promise<LicenseDetail> {
-    const response = await api.get(`${this.basePath}/${licenseId}`);
-    return response.data;
+    return await api.get<LicenseDetail>(`${this.basePath}/${licenseId}`);
   }
 
   async getLicenseByNumber(licenseNumber: string): Promise<License> {
-    const response = await api.get(`${this.basePath}/number/${licenseNumber}`);
-    return response.data;
+    return await api.get<License>(`${this.basePath}/number/${licenseNumber}`);
   }
 
   async getPersonLicenses(personId: string, activeOnly: boolean = false, skip: number = 0, limit: number = 100): Promise<License[]> {
@@ -300,29 +296,24 @@ class LicenseService {
       limit: limit.toString()
     });
     
-    const response = await api.get(`${this.basePath}/person/${personId}?${params}`);
-    return response.data;
+    return await api.get<License[]>(`${this.basePath}/person/${personId}?${params}`);
   }
 
   async getPersonLicensesSummary(personId: string): Promise<PersonLicensesSummary> {
-    const response = await api.get(`${this.basePath}/person/${personId}/summary`);
-    return response.data;
+    return await api.get<PersonLicensesSummary>(`${this.basePath}/person/${personId}/summary`);
   }
 
   async searchLicenses(filters: LicenseSearchFilters): Promise<LicenseListResponse> {
-    const response = await api.post(`${this.basePath}/search`, filters);
-    return response.data;
+    return await api.post<LicenseListResponse>(`${this.basePath}/search`, filters);
   }
 
   // License Management Methods
   async updateLicenseStatus(licenseId: string, statusUpdate: LicenseStatusUpdate): Promise<License> {
-    const response = await api.put(`${this.basePath}/${licenseId}/status`, statusUpdate);
-    return response.data;
+    return await api.put<License>(`${this.basePath}/${licenseId}/status`, statusUpdate);
   }
 
   async updateLicenseRestrictions(licenseId: string, restrictionsUpdate: LicenseRestrictionsUpdate): Promise<License> {
-    const response = await api.put(`${this.basePath}/${licenseId}/restrictions`, restrictionsUpdate);
-    return response.data;
+    return await api.put<License>(`${this.basePath}/${licenseId}/restrictions`, restrictionsUpdate);
   }
 
   async updateProfessionalPermit(licenseId: string, permitUpdate: {
@@ -330,52 +321,43 @@ class LicenseService {
     professional_permit_categories: string[];
     professional_permit_expiry: string;
   }): Promise<License> {
-    const response = await api.put(`${this.basePath}/${licenseId}/professional-permit`, permitUpdate);
-    return response.data;
+    return await api.put<License>(`${this.basePath}/${licenseId}/professional-permit`, permitUpdate);
   }
 
   // Card Management Methods
   async createCard(cardData: CardCreate): Promise<LicenseCard> {
-    const response = await api.post(`${this.basePath}/cards`, cardData);
-    return response.data;
+    return await api.post<LicenseCard>(`${this.basePath}/cards`, cardData);
   }
 
   async updateCardStatus(cardId: string, statusUpdate: CardStatusUpdate): Promise<LicenseCard> {
-    const response = await api.put(`${this.basePath}/cards/${cardId}/status`, statusUpdate);
-    return response.data;
+    return await api.put<LicenseCard>(`${this.basePath}/cards/${cardId}/status`, statusUpdate);
   }
 
   async getLicenseCards(licenseId: string): Promise<LicenseCard[]> {
-    const response = await api.get(`${this.basePath}/${licenseId}/cards`);
-    return response.data;
+    return await api.get<LicenseCard[]>(`${this.basePath}/${licenseId}/cards`);
   }
 
   async getCurrentCard(licenseId: string): Promise<LicenseCard | null> {
-    const response = await api.get(`${this.basePath}/${licenseId}/cards/current`);
-    return response.data;
+    return await api.get<LicenseCard | null>(`${this.basePath}/${licenseId}/cards/current`);
   }
 
   // Utility Methods
   async validateLicenseNumber(licenseNumber: string): Promise<LicenseNumberValidation> {
     const params = new URLSearchParams({ license_number: licenseNumber });
-    const response = await api.post(`${this.basePath}/validate-number?${params}`);
-    return response.data;
+    return await api.post<LicenseNumberValidation>(`${this.basePath}/validate-number?${params}`);
   }
 
   async getAvailableRestrictions(): Promise<AvailableRestrictions> {
-    const response = await api.get(`${this.basePath}/restrictions/available`);
-    return response.data;
+    return await api.get<AvailableRestrictions>(`${this.basePath}/restrictions/available`);
   }
 
   async getLicenseStatistics(): Promise<LicenseStatistics> {
-    const response = await api.get(`${this.basePath}/statistics/overview`);
-    return response.data;
+    return await api.get<LicenseStatistics>(`${this.basePath}/statistics/overview`);
   }
 
   // Health Check
   async healthCheck(): Promise<{ status: string; timestamp: string }> {
-    const response = await api.get(`${this.basePath}/health`);
-    return response.data;
+    return await api.get<{ status: string; timestamp: string }>(`${this.basePath}/health`);
   }
 
   // Utility Functions for Frontend

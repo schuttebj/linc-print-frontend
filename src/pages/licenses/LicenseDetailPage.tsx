@@ -41,7 +41,7 @@ import {
   Badge,
   Tab,
   Tabs,
-  TabPanel
+
 } from '@mui/material';
 import {
   ArrowBack as BackIcon,
@@ -259,7 +259,7 @@ const LicenseDetailPage: React.FC = () => {
             label={licenseService.formatLicenseNumber(license.license_number)}
             color="primary"
             variant="outlined"
-            size="large"
+            size="medium"
           />
           {getStatusChip(license.status)}
         </Stack>
@@ -464,7 +464,7 @@ const LicenseDetailPage: React.FC = () => {
                           </Typography>
                         </Box>
                         {license.current_card.is_near_expiry && (
-                          <Alert severity="warning" size="small">
+                          <Alert severity="warning">
                             Card expires in {license.current_card.days_until_expiry} days
                           </Alert>
                         )}
