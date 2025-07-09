@@ -118,14 +118,14 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
   const isStepValid = (step: number): boolean => {
     switch (step) {
       case 0:
-        return !!selectedPerson;
+        return !!selectedPerson && !!selectedPerson.id;
       case 1:
         // Check license capture data and location for admin users
         const hasLicenseData = !!licenseCaptureData && licenseCaptureData.captured_licenses.length > 0;
         const hasLocation = !!user?.primary_location_id || !!selectedLocationId;
-        return hasLicenseData && hasLocation;
+        return hasLicenseData && hasLocation && !!selectedPerson && !!selectedPerson.id;
       case 2:
-        return true; // Review step is always valid if we reached here
+        return !!selectedPerson && !!selectedPerson.id && !!licenseCaptureData && licenseCaptureData.captured_licenses.length > 0;
       default:
         return false;
     }
@@ -161,13 +161,14 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
 
   // Person selection handler
   const handlePersonSelected = (person: Person) => {
+    console.log('Person selected from PersonFormWrapper:', person);
+    console.log('Person ID:', person?.id);
     setSelectedPerson(person);
     setError('');
-    // Auto-navigate to next step when person is confirmed
+    
+    // Auto-advance to next step
     setTimeout(() => {
-      if (activeStep === 0) {
-        setActiveStep(1);
-      }
+      setActiveStep(1);
     }, 500);
   };
 
@@ -205,6 +206,13 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
       return;
     }
 
+    // Additional validation for person ID
+    if (!selectedPerson.id) {
+      console.error('Selected person object:', selectedPerson);
+      setError('Person ID is missing. Please go back and reselect the person.');
+      return;
+    }
+
     try {
       setLoading(true);
       setError('');
@@ -226,6 +234,8 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
       };
 
       console.log('User info:', user);
+      console.log('Selected person object:', selectedPerson);
+      console.log('Selected person ID:', selectedPerson.id);
       console.log('Selected location ID:', locationId);
       console.log('User primary_location_id:', user?.primary_location_id);
       console.log('Submitting application data:', applicationData);

@@ -2380,12 +2380,19 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                     variant="contained"
                                     onClick={() => {
                                         // Trigger completion callback for application mode
-                                        const formData = personForm.getValues();
+                                        // For existing persons, pass the actual person object with ID
+                                        const personToPass = personFound || {
+                                            id: currentPersonId,
+                                            ...personForm.getValues()
+                                        };
+                                        
+                                        console.log('Passing existing person to onSuccess:', personToPass);
+                                        
                                         if (onComplete) {
-                                            onComplete(formData);
+                                            onComplete(personToPass);
                                         }
                                         if (onSuccess) {
-                                            onSuccess(formData, true); // true indicates this is an edit/existing person
+                                            onSuccess(personToPass, true); // true indicates this is an edit/existing person
                                         }
                                     }}
                                     startIcon={<ArrowForwardIcon />}
