@@ -243,15 +243,9 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
 
       const application = await applicationService.createApplication(applicationData);
       
-      // Follow the complete valid status transition workflow for license capture
-      // DRAFT → SUBMITTED → THEORY_TEST_REQUIRED → THEORY_PASSED → APPROVED → SENT_TO_PRINTER → CARD_PRODUCTION → READY_FOR_COLLECTION → COMPLETED
+      // For license capture applications, use a simplified workflow
+      // DRAFT → SUBMITTED → COMPLETED (capture applications don't need tests or approval)
       await applicationService.updateApplicationStatus(application.id, ApplicationStatus.SUBMITTED);
-      await applicationService.updateApplicationStatus(application.id, ApplicationStatus.THEORY_TEST_REQUIRED);
-      await applicationService.updateApplicationStatus(application.id, ApplicationStatus.THEORY_PASSED);
-      await applicationService.updateApplicationStatus(application.id, ApplicationStatus.APPROVED);
-      await applicationService.updateApplicationStatus(application.id, ApplicationStatus.SENT_TO_PRINTER);
-      await applicationService.updateApplicationStatus(application.id, ApplicationStatus.CARD_PRODUCTION);
-      await applicationService.updateApplicationStatus(application.id, ApplicationStatus.READY_FOR_COLLECTION);
       await applicationService.updateApplicationStatus(application.id, ApplicationStatus.COMPLETED);
       
       setSuccess('Driver\'s license capture completed successfully! License records have been created.');
