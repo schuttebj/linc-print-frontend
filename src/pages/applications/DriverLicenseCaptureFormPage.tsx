@@ -5,7 +5,7 @@
  * Workflow: Person Selection (A) → License Capture → Review & Submit
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -120,13 +120,66 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
   const handlePersonSelected = useCallback((person: Person) => {
     setSelectedPerson(person);
     setError('');
-  }, []);
+    // Auto-navigate to next step when person is confirmed
+    setTimeout(() => {
+      if (activeStep === 0) {
+        setActiveStep(1);
+      }
+    }, 500);
+  }, [activeStep]);
 
   // License capture handler
   const handleLicenseCaptureChange = useCallback((data: LicenseCaptureData | null) => {
     setLicenseCaptureData(data);
     setError('');
   }, []);
+
+  // License category mapping from SADC codes to Madagascar codes
+  const mapLicenseCategoryToMadagascar = (sadcCategory: LicenseCategory): LicenseCategory => {
+    const mapping: Record<string, LicenseCategory> = {
+      'A1': LicenseCategory.A, // Small motorcycles -> A 
+      'A2': LicenseCategory.A, // Mid-range motorcycles -> A
+      'A': LicenseCategory.A,  // Unlimited motorcycles -> A
+      'B1': LicenseCategory.B, // Light quadricycles -> B
+      'B': LicenseCategory.B,  // Standard passenger cars -> B
+      'B2': LicenseCategory.B, // Taxis -> B
+      'BE': LicenseCategory.B, // B with trailer -> B
+      'C1': LicenseCategory.C, // Medium goods -> C
+      'C': LicenseCategory.C,  // Heavy goods -> C
+      'C1E': LicenseCategory.C, // C1 with trailer -> C
+      'CE': LicenseCategory.C,  // C with trailer -> C
+      'D1': LicenseCategory.D, // Small buses -> D
+      'D': LicenseCategory.D,  // Standard buses -> D
+      'D2': LicenseCategory.D, // Specialized transport -> D
+      // Learners permit codes map to themselves
+      '1': LicenseCategory.LEARNERS_1,
+      '2': LicenseCategory.LEARNERS_2,
+      '3': LicenseCategory.LEARNERS_3
+    };
+    
+    return mapping[sadcCategory] || LicenseCategory.B; // Default to B if no mapping found
+  };
+
+  // Initialize license capture with one default license when person is selected
+  useEffect(() => {
+    if (selectedPerson && !licenseCaptureData) {
+      const defaultLicense = {
+        id: `license-${Date.now()}`,
+        license_number: '',
+        license_category: LicenseCategory.B, // Default to B category
+        issue_date: '',
+        expiry_date: '',
+        restrictions: [],
+        verified: false,
+        verification_notes: ''
+      };
+
+      setLicenseCaptureData({
+        captured_licenses: [defaultLicense],
+        application_type: ApplicationType.DRIVERS_LICENSE_CAPTURE
+      });
+    }
+  }, [selectedPerson, licenseCaptureData]);
 
   // Submit handler
   const handleSubmit = async () => {
@@ -139,15 +192,29 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
       setLoading(true);
       setError('');
 
+      // Map license categories from SADC codes to Madagascar codes
+      const mappedCaptureData = {
+        ...licenseCaptureData,
+        captured_licenses: licenseCaptureData.captured_licenses.map(license => ({
+          ...license,
+          license_category: mapLicenseCategoryToMadagascar(license.license_category)
+        }))
+      };
+
       // Create application with capture data
       const applicationData: ApplicationCreate = {
         person_id: selectedPerson.id,
         location_id: user?.primary_location_id || '',
         application_type: ApplicationType.DRIVERS_LICENSE_CAPTURE,
-        license_category: licenseCaptureData.captured_licenses[0]?.license_category || LicenseCategory.B, // Use first captured license category or default to B
-        license_capture: licenseCaptureData
-        // Note: license_category is required by schema but not meaningful for capture applications
+        license_category: mapLicenseCategoryToMadagascar(licenseCaptureData.captured_licenses[0]?.license_category || LicenseCategory.B),
+        license_capture: mappedCaptureData
       };
+
+      console.log('User info:', user);
+      console.log('User primary_location_id:', user?.primary_location_id);
+      console.log('Submitting application data:', applicationData);
+      console.log('Original capture data:', licenseCaptureData);
+      console.log('Mapped capture data:', mappedCaptureData);
 
       const application = await applicationService.createApplication(applicationData);
       
@@ -167,7 +234,23 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
       }, 2000);
 
     } catch (err: any) {
-      setError(err.message || 'Failed to submit license capture');
+      console.error('Submission error:', err);
+      let errorMessage = 'Failed to submit license capture';
+      
+      // Handle validation errors from backend
+      if (err.response?.data?.detail) {
+        const validationErrors = err.response.data.detail;
+        if (Array.isArray(validationErrors)) {
+          errorMessage = validationErrors.map((error: any) => {
+            const field = error.loc ? error.loc.join('.') : 'field';
+            return `${field}: ${error.msg}`;
+          }).join('; ');
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -215,7 +298,7 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
                     </Typography>
                   </Grid>
                   <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">ID Number</Typography>
+                    <Typography variant="body2" color="text.secondary">Person ID</Typography>
                     <Typography variant="body1">{selectedPerson?.id}</Typography>
                   </Grid>
                   <Grid item xs={12} md={6}>
@@ -360,32 +443,31 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
                 </Box>
                 
                 {/* Navigation Buttons */}
-                <Box sx={{ mb: 2 }}>
-                  <Button
-                    variant="contained"
-                    onClick={index === steps.length - 1 ? handleSubmit : handleNext}
-                    disabled={!isStepValid(index) || loading}
-                    startIcon={loading ? <CircularProgress size={20} /> : undefined}
-                    sx={{ mr: 1 }}
-                  >
-                    {loading ? 'Submitting...' : index === steps.length - 1 ? 'Submit Capture' : 'Next'}
-                  </Button>
-                  
-                  <Button
-                    disabled={index === 0 || loading}
-                    onClick={handleBack}
-                    startIcon={<ArrowBackIcon />}
-                    sx={{ mr: 1 }}
-                  >
-                    Back
-                  </Button>
-                  
+                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
                   <Button
                     onClick={handleCancel}
                     disabled={loading}
                     color="secondary"
                   >
                     Cancel
+                  </Button>
+                  
+                  <Button
+                    disabled={index === 0 || loading}
+                    onClick={handleBack}
+                    startIcon={<ArrowBackIcon />}
+                  >
+                    Back
+                  </Button>
+                  
+                  <Button
+                    variant="contained"
+                    onClick={index === steps.length - 1 ? handleSubmit : handleNext}
+                    disabled={!isStepValid(index) || loading}
+                    startIcon={loading ? <CircularProgress size={20} /> : undefined}
+                    endIcon={index !== steps.length - 1 ? <ArrowForwardIcon /> : undefined}
+                  >
+                    {loading ? 'Submitting...' : index === steps.length - 1 ? 'Submit Capture' : 'Next'}
                   </Button>
                 </Box>
               </StepContent>
