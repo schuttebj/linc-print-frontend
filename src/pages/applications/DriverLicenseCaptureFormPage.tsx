@@ -103,8 +103,8 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
             },
           });
           if (response.ok) {
-            const locations = await response.json();
-            setAvailableLocations(locations);
+            const data = await response.json();
+            setAvailableLocations(data.locations || []);
           }
         } catch (error) {
           console.error('Error loading locations:', error);
@@ -120,13 +120,12 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
       case 0:
         return !!selectedPerson;
       case 1:
-        return !!licenseCaptureData && licenseCaptureData.captured_licenses.length > 0;
+        // Check license capture data and location for admin users
+        const hasLicenseData = !!licenseCaptureData && licenseCaptureData.captured_licenses.length > 0;
+        const hasLocation = !!user?.primary_location_id || !!selectedLocationId;
+        return hasLicenseData && hasLocation;
       case 2:
-        // For admin users, require location selection
-        if (user && !user.primary_location_id) {
-          return !!selectedLocationId;
-        }
-        return true;
+        return true; // Review step is always valid if we reached here
       default:
         return false;
     }
@@ -288,21 +287,7 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
 
       case 1: // License capture step
         return (
-          <LicenseCaptureForm
-            applicationtype={ApplicationType.DRIVERS_LICENSE_CAPTURE}
-            value={licenseCaptureData}
-            onChange={handleLicenseCaptureChange}
-            personBirthDate={selectedPerson?.birth_date}
-          />
-        );
-
-      case 2: // Review step
-        return (
           <Box>
-            <Typography variant="h6" gutterBottom>
-              Review Driver's License Capture
-            </Typography>
-            
             {/* Location Selection for Admin Users */}
             {user && !user.primary_location_id && (
               <Card sx={{ mb: 3 }}>
@@ -331,6 +316,46 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
                 </CardContent>
               </Card>
             )}
+
+            <LicenseCaptureForm
+              applicationtype={ApplicationType.DRIVERS_LICENSE_CAPTURE}
+              value={licenseCaptureData}
+              onChange={handleLicenseCaptureChange}
+              personBirthDate={selectedPerson?.birth_date}
+            />
+          </Box>
+        );
+
+      case 2: // Review step
+        return (
+          <Box>
+            <Typography variant="h6" gutterBottom>
+              Review Driver's License Capture
+            </Typography>
+
+            {/* Processing Location Display */}
+            <Card sx={{ mb: 3 }}>
+              <CardHeader 
+                title="Processing Location" 
+                avatar={<LocationOnIcon />}
+              />
+              <CardContent>
+                <Typography variant="body1">
+                  {user?.primary_location_id ? (
+                    `User's assigned location: ${user.primary_location_id}`
+                  ) : (
+                    availableLocations.find(loc => loc.id === selectedLocationId)?.name || 'No location selected'
+                  )}
+                  {selectedLocationId && (
+                    <Chip 
+                      label={availableLocations.find(loc => loc.id === selectedLocationId)?.code || selectedLocationId} 
+                      size="small" 
+                      sx={{ ml: 1 }}
+                    />
+                  )}
+                </Typography>
+              </CardContent>
+            </Card>
             
             {/* Person Details */}
             <Card sx={{ mb: 3 }}>
