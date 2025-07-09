@@ -48,7 +48,30 @@ class ApplicationService {
     });
     
     const url = queryString.toString() ? `${API_ENDPOINTS.applications}?${queryString}` : API_ENDPOINTS.applications;
-    return await api.get(url);
+    
+    // Add debugging
+    console.log('🔍 getApplications call:', {
+      url,
+      params,
+      queryString: queryString.toString(),
+      endpoint: API_ENDPOINTS.applications
+    });
+    
+    try {
+      const result = await api.get<Application[]>(url);
+      console.log('✅ getApplications success:', { 
+        count: Array.isArray(result) ? result.length : 'not array',
+        result: typeof result === 'object' ? Object.keys(result) : typeof result
+      });
+      return result;
+    } catch (error) {
+      console.error('❌ getApplications error:', {
+        error: error instanceof Error ? error.message : error,
+        url,
+        params
+      });
+      throw error;
+    }
   }
 
   async searchApplications(searchParams: {
