@@ -81,18 +81,6 @@ const DashboardLayout: React.FC = () => {
       permission: null,
     },
     {
-      text: 'Applications',
-      icon: <Assessment />,
-      path: '/dashboard/applications',
-      permission: 'applications.read',
-    },
-    {
-      text: 'New Application',
-      icon: <AddIcon />,
-      path: '/dashboard/applications/create',
-      permission: 'applications.create',
-    },
-    {
       text: 'Person Management',
       icon: <Person />,
       path: '/dashboard/persons/manage',
@@ -103,6 +91,28 @@ const DashboardLayout: React.FC = () => {
       icon: <Search />,
       path: '/dashboard/persons/search',
       permission: 'persons.read',
+    },
+  ];
+
+  // Application navigation items
+  const applicationNavigationItems = [
+    {
+      text: 'View Applications',
+      icon: <Visibility />,
+      path: '/dashboard/applications',
+      permission: 'applications.read',
+    },
+    {
+      text: 'Driver License Capture',
+      icon: <CreditCard />,
+      path: '/dashboard/applications/driver-license-capture',
+      permission: 'applications.create',
+    },
+    {
+      text: 'New Application',
+      icon: <AddIcon />,
+      path: '/dashboard/applications/create',
+      permission: 'applications.create',
     },
   ];
 
@@ -187,6 +197,51 @@ const DashboardLayout: React.FC = () => {
           );
         })}
       </List>
+
+      {/* Applications Section */}
+      {applicationNavigationItems.some(item => !item.permission || hasPermission(item.permission)) && (
+        <>
+          <Divider />
+          <List>
+            <ListItem>
+              <ListItemText 
+                primary="Applications" 
+                primaryTypographyProps={{ 
+                  variant: 'caption', 
+                  color: 'textSecondary',
+                  fontWeight: 'bold',
+                  textTransform: 'uppercase'
+                }} 
+              />
+            </ListItem>
+            {applicationNavigationItems.map((item) => {
+              // Check permissions
+              if (item.permission && !hasPermission(item.permission)) {
+                return null;
+              }
+
+              const isActive = location.pathname === item.path;
+
+              return (
+                <ListItem key={item.text} disablePadding>
+                  <ListItemButton
+                    selected={isActive}
+                    onClick={() => {
+                      navigate(item.path);
+                      if (isMobile) {
+                        setMobileOpen(false);
+                      }
+                    }}
+                  >
+                    <ListItemIcon>{item.icon}</ListItemIcon>
+                    <ListItemText primary={item.text} />
+                  </ListItemButton>
+                </ListItem>
+              );
+            })}
+          </List>
+        </>
+      )}
 
       {/* License Management Section */}
       {licenseNavigationItems.some(item => !item.permission || hasPermission(item.permission)) && (
