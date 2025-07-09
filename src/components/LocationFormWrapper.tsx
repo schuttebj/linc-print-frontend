@@ -318,17 +318,29 @@ const LocationFormWrapper: React.FC<LocationFormWrapperProps> = ({
         const loadLookupData = async () => {
             try {
                 setLookupsLoading(true);
-                const [officeTypesRes, provincesRes] = await Promise.all([
-                    lookupService.getOfficeTypes(),
-                    lookupService.getProvinces()
-                ]);
+                const allLookups = await lookupService.getAllLookups();
                 
-                setOfficeTypes(officeTypesRes);
-                setProvinces(provincesRes);
+                setOfficeTypes(allLookups.office_types);
+                setProvinces(allLookups.provinces);
                 
                 console.log('✅ Location lookup data loaded successfully');
             } catch (error) {
                 console.error('❌ Failed to load location lookup data:', error);
+                // Use fallback data if lookups fail
+                setOfficeTypes([
+                    { value: 'MAIN', label: 'Main Office' },
+                    { value: 'BRANCH', label: 'Branch Office' },
+                    { value: 'KIOSK', label: 'Service Kiosk' },
+                    { value: 'MOBILE', label: 'Mobile Unit' }
+                ]);
+                setProvinces([
+                    { code: 'AN', name: 'Antananarivo' },
+                    { code: 'FI', name: 'Fianarantsoa' },
+                    { code: 'TM', name: 'Toamasina' },
+                    { code: 'MJ', name: 'Mahajanga' },
+                    { code: 'TD', name: 'Toliara' },
+                    { code: 'AS', name: 'Antsiranana' }
+                ]);
             } finally {
                 setLookupsLoading(false);
             }

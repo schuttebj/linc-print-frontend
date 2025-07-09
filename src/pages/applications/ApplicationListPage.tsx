@@ -68,15 +68,27 @@ const ApplicationListPage: React.FC = () => {
   const loadLookups = async () => {
     try {
       setLookupsLoading(true);
-      const [statuses, types] = await Promise.all([
-        lookupService.getApplicationStatuses(),
-        lookupService.getApplicationTypes()
-      ]);
-      setStatusOptions(statuses);
-      setTypeOptions(types);
+      const allLookups = await lookupService.getAllLookups();
+      setStatusOptions(allLookups.application_statuses);
+      setTypeOptions(allLookups.application_types);
     } catch (err: any) {
       console.error('Failed to load lookup data:', err);
       // Use fallback data if lookups fail
+      setStatusOptions([
+        { value: 'DRAFT', label: 'Draft' },
+        { value: 'SUBMITTED', label: 'Submitted' },
+        { value: 'APPROVED', label: 'Approved' },
+        { value: 'REJECTED', label: 'Rejected' },
+        { value: 'COMPLETED', label: 'Completed' }
+      ]);
+      setTypeOptions([
+        { value: 'NEW_LICENSE', label: 'New License' },
+        { value: 'RENEWAL', label: 'Renewal' },
+        { value: 'DUPLICATE', label: 'Duplicate' },
+        { value: 'TEMPORARY_LICENSE', label: 'Temporary License' },
+        { value: 'DRIVERS_LICENSE_CAPTURE', label: "Driver's License Capture" },
+        { value: 'LEARNERS_PERMIT_CAPTURE', label: "Learner's Permit Capture" }
+      ]);
     } finally {
       setLookupsLoading(false);
     }

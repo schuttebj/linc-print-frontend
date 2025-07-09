@@ -624,8 +624,13 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         break;
 
       case 'application': // Application Details - Section B
-                      // License category required for all except TEMPORARY_LICENSE and RENEWAL
-        if (!formData.license_category && ![ApplicationType.TEMPORARY_LICENSE, ApplicationType.RENEWAL].includes(formData.application_type)) {
+                      // License category required for all except TEMPORARY_LICENSE, RENEWAL, and CAPTURE applications
+        if (!formData.license_category && ![
+          ApplicationType.TEMPORARY_LICENSE, 
+          ApplicationType.RENEWAL,
+          ApplicationType.DRIVERS_LICENSE_CAPTURE,
+          ApplicationType.LEARNERS_PERMIT_CAPTURE
+        ].includes(formData.application_type)) {
           errors.push('Please select a license category');
         }
         if (!formData.application_type) {

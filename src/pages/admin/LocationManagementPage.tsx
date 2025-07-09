@@ -144,14 +144,10 @@ const LocationManagementPage: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      // Load only lookup data first
-      const [provincesRes, officeTypesRes] = await Promise.all([
-        lookupService.getProvinces(),
-        lookupService.getOfficeTypes()
-      ]);
-      
-      setProvinces(provincesRes);
-      setOfficeTypes(officeTypesRes);
+      // Load lookup data using getAllLookups
+      const allLookups = await lookupService.getAllLookups();
+      setProvinces(allLookups.provinces);
+      setOfficeTypes(allLookups.office_types);
       
       // Load locations after lookup data is ready
       await loadLocations();
