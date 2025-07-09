@@ -20,6 +20,7 @@ import PersonFormTest from './pages/persons/PersonFormTest';
 import ApplicationListPage from './pages/applications/ApplicationListPage';
 import ApplicationFormPage from './pages/applications/ApplicationFormPage';
 import DriverLicenseCaptureFormPage from './pages/applications/DriverLicenseCaptureFormPage';
+import LearnerPermitCaptureFormPage from './pages/applications/LearnerPermitCaptureFormPage';
 
 // License Pages
 import LicenseDashboard from './pages/licenses/LicenseDashboard';
@@ -123,6 +124,14 @@ function App() {
                 element={
                   <ProtectedRoute requiredPermission="applications.create">
                     <DriverLicenseCaptureFormPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="learner-permit-capture" 
+                element={
+                  <ProtectedRoute requiredPermission="applications.create">
+                    <LearnerPermitCaptureFormPage />
                   </ProtectedRoute>
                 } 
               />

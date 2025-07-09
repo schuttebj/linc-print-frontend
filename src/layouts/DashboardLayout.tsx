@@ -109,6 +109,12 @@ const DashboardLayout: React.FC = () => {
       permission: 'applications.create',
     },
     {
+      text: 'Learner Permit Capture',
+      icon: <Assignment />,
+      path: '/dashboard/applications/learner-permit-capture',
+      permission: 'applications.create',
+    },
+    {
       text: 'New Application',
       icon: <AddIcon />,
       path: '/dashboard/applications/create',
