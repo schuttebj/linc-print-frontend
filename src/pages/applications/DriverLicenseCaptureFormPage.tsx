@@ -318,7 +318,7 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
                       onChange={handleLocationChange}
                       label="Processing Location"
                     >
-                      {availableLocations.map((location) => (
+                      {Array.isArray(availableLocations) && availableLocations.map((location) => (
                         <MenuItem key={location.id} value={location.id}>
                           {location.name} ({location.code})
                         </MenuItem>
@@ -395,7 +395,7 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
                           color={license.verified ? 'success' : 'warning'} 
                         />
                       </Grid>
-                      {license.restrictions.length > 0 && (
+                      {(license.restrictions && license.restrictions.length > 0) && (
                         <Grid item xs={12}>
                           <Typography variant="body2" color="text.secondary">Restrictions</Typography>
                           <Typography variant="body1">{license.restrictions.join(', ')}</Typography>
