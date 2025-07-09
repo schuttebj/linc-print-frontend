@@ -134,32 +134,6 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
     setError('');
   }, []);
 
-  // License category mapping from SADC codes to Madagascar codes
-  const mapLicenseCategoryToMadagascar = (sadcCategory: LicenseCategory): LicenseCategory => {
-    const mapping: Record<string, LicenseCategory> = {
-      'A1': LicenseCategory.A, // Small motorcycles -> A 
-      'A2': LicenseCategory.A, // Mid-range motorcycles -> A
-      'A': LicenseCategory.A,  // Unlimited motorcycles -> A
-      'B1': LicenseCategory.B, // Light quadricycles -> B
-      'B': LicenseCategory.B,  // Standard passenger cars -> B
-      'B2': LicenseCategory.B, // Taxis -> B
-      'BE': LicenseCategory.B, // B with trailer -> B
-      'C1': LicenseCategory.C, // Medium goods -> C
-      'C': LicenseCategory.C,  // Heavy goods -> C
-      'C1E': LicenseCategory.C, // C1 with trailer -> C
-      'CE': LicenseCategory.C,  // C with trailer -> C
-      'D1': LicenseCategory.D, // Small buses -> D
-      'D': LicenseCategory.D,  // Standard buses -> D
-      'D2': LicenseCategory.D, // Specialized transport -> D
-      // Learners permit codes map to themselves
-      '1': LicenseCategory.LEARNERS_1,
-      '2': LicenseCategory.LEARNERS_2,
-      '3': LicenseCategory.LEARNERS_3
-    };
-    
-    return mapping[sadcCategory] || LicenseCategory.B; // Default to B if no mapping found
-  };
-
   // Initialize license capture with one default license when person is selected
   useEffect(() => {
     if (selectedPerson && !licenseCaptureData) {
@@ -192,29 +166,25 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
       setLoading(true);
       setError('');
 
-      // Map license categories from SADC codes to Madagascar codes
-      const mappedCaptureData = {
-        ...licenseCaptureData,
-        captured_licenses: licenseCaptureData.captured_licenses.map(license => ({
-          ...license,
-          license_category: mapLicenseCategoryToMadagascar(license.license_category)
-        }))
-      };
+      // Validate required fields
+      if (!user?.primary_location_id) {
+        setError('User location not found. Please contact administrator to assign a location to your account.');
+        return;
+      }
 
-      // Create application with capture data
+      // Create application with capture data (no mapping needed - backend now accepts SADC codes)
       const applicationData: ApplicationCreate = {
         person_id: selectedPerson.id,
-        location_id: user?.primary_location_id || '',
+        location_id: user.primary_location_id,
         application_type: ApplicationType.DRIVERS_LICENSE_CAPTURE,
-        license_category: mapLicenseCategoryToMadagascar(licenseCaptureData.captured_licenses[0]?.license_category || LicenseCategory.B),
-        license_capture: mappedCaptureData
+        license_category: licenseCaptureData.captured_licenses[0]?.license_category || LicenseCategory.B,
+        license_capture: licenseCaptureData
       };
 
       console.log('User info:', user);
       console.log('User primary_location_id:', user?.primary_location_id);
       console.log('Submitting application data:', applicationData);
-      console.log('Original capture data:', licenseCaptureData);
-      console.log('Mapped capture data:', mappedCaptureData);
+      console.log('Capture data:', licenseCaptureData);
 
       const application = await applicationService.createApplication(applicationData);
       
@@ -276,6 +246,7 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
             applicationtype={ApplicationType.DRIVERS_LICENSE_CAPTURE}
             value={licenseCaptureData}
             onChange={handleLicenseCaptureChange}
+            personBirthDate={selectedPerson?.birth_date}
           />
         );
 
@@ -298,7 +269,7 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
                     </Typography>
                   </Grid>
                   <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Person ID</Typography>
+                    <Typography variant="body2" color="text.secondary">System ID</Typography>
                     <Typography variant="body1">{selectedPerson?.id}</Typography>
                   </Grid>
                   <Grid item xs={12} md={6}>
@@ -337,7 +308,7 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
                       </Grid>
                       <Grid item xs={12} md={2}>
                         <Typography variant="body2" color="text.secondary">Expiry Date</Typography>
-                        <Typography variant="body1">{license.expiry_date}</Typography>
+                        <Typography variant="body1">{license.expiry_date || 'Not specified'}</Typography>
                       </Grid>
                       <Grid item xs={12} md={3}>
                         <Typography variant="body2" color="text.secondary">Status</Typography>

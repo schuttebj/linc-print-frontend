@@ -11,7 +11,7 @@
  * - Clerk verification requirements
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -38,7 +38,8 @@ import {
   Add as AddIcon,
   Delete as DeleteIcon,
   VerifiedUser as VerifiedIcon,
-  Warning as WarningIcon
+  Warning as WarningIcon,
+  Error as ErrorIcon
 } from '@mui/icons-material';
 
 import {
@@ -47,6 +48,7 @@ import {
   LICENSE_CATEGORY_RULES,
   LEARNERS_PERMIT_RULES
 } from '../../types';
+import { LicenseValidationService } from '../../services/licenseValidationService';
 
 export interface CapturedLicense {
   id: string; // temp ID for form management
@@ -69,18 +71,22 @@ interface LicenseCaptureFormProps {
   value: LicenseCaptureData | null;
   onChange: (data: LicenseCaptureData | null) => void;
   disabled?: boolean;
+  personBirthDate?: string; // For age validation
 }
 
 const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
   applicationtype,
   value,
   onChange,
-  disabled = false
+  disabled = false,
+  personBirthDate
 }) => {
   const [captureData, setCaptureData] = useState<LicenseCaptureData>({
     captured_licenses: [],
     application_type: applicationtype
   });
+  const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
+  const validationService = new LicenseValidationService();
 
   // Initialize data from props
   useEffect(() => {
@@ -94,9 +100,60 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
     }
   }, [value, applicationtype]);
 
+  // Validate license data whenever it changes
+  const validateLicenseData = useCallback((licenses: CapturedLicense[]) => {
+    const errors: Record<string, string[]> = {};
+
+    licenses.forEach((license, index) => {
+      const licenseErrors: string[] = [];
+      
+      // Check for duplicate license categories
+      const duplicateCategories = licenses.filter(l => 
+        l.license_category === license.license_category && l.id !== license.id
+      );
+      if (duplicateCategories.length > 0) {
+        licenseErrors.push(`Duplicate license category ${license.license_category} - cannot add the same category multiple times`);
+      }
+
+      // Check age requirements
+      if (personBirthDate) {
+        const ageValidation = validationService.validateAgeRequirements(
+          personBirthDate,
+          license.license_category
+        );
+        if (!ageValidation.is_valid) {
+          licenseErrors.push(ageValidation.message);
+        }
+      }
+
+      // Check prerequisites
+      const existingCategories = licenses
+        .filter(l => l.id !== license.id)
+        .map(l => l.license_category);
+      
+      const rules = LICENSE_CATEGORY_RULES[license.license_category];
+      if (rules && rules.prerequisites.length > 0) {
+        const missingPrerequisites = rules.prerequisites.filter(req => 
+          !existingCategories.includes(req)
+        );
+        if (missingPrerequisites.length > 0) {
+          licenseErrors.push(`Category ${license.license_category} requires: ${missingPrerequisites.join(', ')}`);
+        }
+      }
+
+      if (licenseErrors.length > 0) {
+        errors[license.id] = licenseErrors;
+      }
+    });
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  }, [personBirthDate, validationService]);
+
   // Update parent when data changes
   const updateCaptureData = (newData: LicenseCaptureData) => {
     setCaptureData(newData);
+    validateLicenseData(newData.captured_licenses);
     onChange(newData);
   };
 
@@ -311,6 +368,7 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                     value={license.license_category}
                     onChange={(e) => updateLicense(index, 'license_category', e.target.value)}
                     disabled={disabled}
+                    error={validationErrors[license.id]?.length > 0}
                   >
                     {getAvailableCategories().map((category) => (
                       <MenuItem key={category.value} value={category.value}>
@@ -318,6 +376,18 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                       </MenuItem>
                     ))}
                   </Select>
+                  {validationErrors[license.id]?.length > 0 && (
+                    <Box sx={{ mt: 1 }}>
+                      {validationErrors[license.id].map((error, errorIndex) => (
+                        <Alert key={errorIndex} severity="error" sx={{ mb: 0.5 }}>
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <ErrorIcon fontSize="small" />
+                            <Typography variant="body2">{error}</Typography>
+                          </Box>
+                        </Alert>
+                      ))}
+                    </Box>
+                  )}
                 </FormControl>
               </Grid>
 
