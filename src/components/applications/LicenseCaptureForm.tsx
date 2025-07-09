@@ -163,26 +163,47 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
       return [
         {
           value: LicenseCategory.LEARNERS_1,
-          label: `Code 1 - ${LEARNERS_PERMIT_RULES['1']?.description || 'Motorcycles and mopeds'}`
+          label: `Code 1 - ${LEARNERS_PERMIT_RULES['1']?.description || 'Motorcycles and mopeds'}`,
+          disabled: false
         },
         {
           value: LicenseCategory.LEARNERS_2,
-          label: `Code 2 - ${LEARNERS_PERMIT_RULES['2']?.description || 'Light motor vehicles'}`
+          label: `Code 2 - ${LEARNERS_PERMIT_RULES['2']?.description || 'Light motor vehicles'}`,
+          disabled: false
         },
         {
           value: LicenseCategory.LEARNERS_3,
-          label: `Code 3 - ${LEARNERS_PERMIT_RULES['3']?.description || 'All motor vehicles'}`
+          label: `Code 3 - ${LEARNERS_PERMIT_RULES['3']?.description || 'All motor vehicles'}`,
+          disabled: false
         }
       ];
     } else {
       // For DRIVERS_LICENSE_CAPTURE, show all regular license categories
+      const existingCategories = captureData.captured_licenses.map(l => l.license_category);
+      
       return Object.values(LicenseCategory)
         .filter(category => !['1', '2', '3'].includes(category)) // Exclude learner's permit codes
         .map(category => {
           const categoryRule = LICENSE_CATEGORY_RULES[category];
+          const hasPrerequisites = categoryRule?.prerequisites?.length > 0;
+          
+          let disabled = false;
+          let disabledReason = '';
+          
+          if (hasPrerequisites) {
+            const missingPrerequisites = categoryRule.prerequisites.filter(req => 
+              !existingCategories.includes(req)
+            );
+            if (missingPrerequisites.length > 0) {
+              disabled = true;
+              disabledReason = `Requires: ${missingPrerequisites.join(', ')}`;
+            }
+          }
+          
           return {
             value: category,
-            label: `${category} - ${categoryRule?.description || 'License category'}`
+            label: `${category} - ${categoryRule?.description || 'License category'}${disabled ? ` (${disabledReason})` : ''}`,
+            disabled
           };
         }).sort((a, b) => {
           // Sort by category order
@@ -371,7 +392,11 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                     error={validationErrors[license.id]?.length > 0}
                   >
                     {getAvailableCategories().map((category) => (
-                      <MenuItem key={category.value} value={category.value}>
+                      <MenuItem 
+                        key={category.value} 
+                        value={category.value}
+                        disabled={category.disabled}
+                      >
                         {category.label}
                       </MenuItem>
                     ))}

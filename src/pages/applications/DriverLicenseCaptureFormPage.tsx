@@ -5,49 +5,55 @@
  * Workflow: Person Selection (A) → License Capture → Review & Submit
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Paper,
   Typography,
+  Box,
   Stepper,
   Step,
   StepLabel,
   StepContent,
   Button,
-  Box,
   Alert,
   CircularProgress,
   Grid,
   Card,
   CardContent,
   CardHeader,
+  Chip,
   Divider,
-  Chip
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  FormHelperText
 } from '@mui/material';
 import {
-  Person as PersonIcon,
-  CameraAlt as CameraIcon,
-  Receipt as ReceiptIcon,
-  CheckCircle as CheckCircleIcon,
+  PersonSearch as PersonSearchIcon,
+  DocumentScanner as DocumentScannerIcon,
+  Preview as PreviewIcon,
+  ArrowForward as ArrowForwardIcon,
   ArrowBack as ArrowBackIcon,
-  ArrowForward as ArrowForwardIcon
+  CheckCircle as CheckCircleIcon,
+  LocationOn as LocationOnIcon
 } from '@mui/icons-material';
-
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import PersonFormWrapper from '../../components/PersonFormWrapper';
 import LicenseCaptureForm from '../../components/applications/LicenseCaptureForm';
 import { applicationService } from '../../services/applicationService';
-import { useAuth } from '../../contexts/AuthContext';
 import {
   Person,
-  Application,
-  ApplicationType,
   ApplicationStatus,
+  ApplicationType,
   ApplicationCreate,
   LicenseCaptureData,
-  LicenseCategory
+  LicenseCategory,
+  Location
 } from '../../types';
+import { API_ENDPOINTS, getAuthToken } from '../../config/api';
 
 const DriverLicenseCaptureFormPage: React.FC = () => {
   const { user } = useAuth();
@@ -55,69 +61,107 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
 
   // Form state
   const [activeStep, setActiveStep] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-
-  // Form data
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
   const [licenseCaptureData, setLicenseCaptureData] = useState<LicenseCaptureData | null>(null);
+  const [selectedLocationId, setSelectedLocationId] = useState<string>('');
+  const [availableLocations, setAvailableLocations] = useState<Location[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>('');
+  const [success, setSuccess] = useState<string>('');
 
   // Steps for driver's license capture
   const steps = [
     {
-      label: 'Applicant Details',
-      description: 'Find or register the license holder',
-      icon: <PersonIcon />,
-      component: 'person'
+      label: 'Select Person',
+      description: 'Choose existing person or register new license holder',
+      icon: <PersonSearchIcon />
     },
     {
-      label: 'License Capture',
-      description: 'Capture existing driver\'s license details',
-      icon: <CameraIcon />,
-      component: 'capture'
+      label: 'Capture License Details',
+      description: 'Enter existing license information for verification',
+      icon: <DocumentScannerIcon />
     },
     {
       label: 'Review & Submit',
-      description: 'Review captured licenses and submit',
-      icon: <ReceiptIcon />,
-      component: 'review'
+      description: 'Review captured information and submit',
+      icon: <PreviewIcon />
     }
   ];
+
+  // Load available locations for admin users
+  useEffect(() => {
+    const loadLocations = async () => {
+      if (user && !user.primary_location_id) {
+        try {
+          const token = getAuthToken();
+          if (!token) return;
+
+          const response = await fetch(API_ENDPOINTS.locations, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+          if (response.ok) {
+            const locations = await response.json();
+            setAvailableLocations(locations);
+          }
+        } catch (error) {
+          console.error('Error loading locations:', error);
+        }
+      }
+    };
+    loadLocations();
+  }, [user]);
 
   // Step validation
   const isStepValid = (step: number): boolean => {
     switch (step) {
-      case 0: // Person step
+      case 0:
         return !!selectedPerson;
-      case 1: // Capture step
-        return !!(licenseCaptureData?.captured_licenses?.length);
-      case 2: // Review step
-        return true; // Always valid if we reached here
+      case 1:
+        return !!licenseCaptureData && licenseCaptureData.captured_licenses.length > 0;
+      case 2:
+        // For admin users, require location selection
+        if (user && !user.primary_location_id) {
+          return !!selectedLocationId;
+        }
+        return true;
       default:
         return false;
     }
   };
 
+  // Handle location selection
+  const handleLocationChange = (event: any) => {
+    setSelectedLocationId(event.target.value);
+    setError('');
+  };
+
+  // Get location ID to use
+  const getLocationId = (): string => {
+    return user?.primary_location_id || selectedLocationId;
+  };
+
   // Navigation handlers
   const handleNext = () => {
-    if (isStepValid(activeStep)) {
-      setActiveStep(prev => prev + 1);
-      setError('');
+    if (activeStep < steps.length - 1) {
+      setActiveStep(activeStep + 1);
     }
   };
 
   const handleBack = () => {
-    setActiveStep(prev => prev - 1);
-    setError('');
+    if (activeStep > 0) {
+      setActiveStep(activeStep - 1);
+    }
   };
 
   const handleCancel = () => {
-    navigate('/dashboard/applications');
+    navigate('/dashboard');
   };
 
   // Person selection handler
-  const handlePersonSelected = useCallback((person: Person) => {
+  const handlePersonSelected = (person: Person) => {
     setSelectedPerson(person);
     setError('');
     // Auto-navigate to next step when person is confirmed
@@ -126,13 +170,13 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
         setActiveStep(1);
       }
     }, 500);
-  }, [activeStep]);
+  };
 
   // License capture handler
-  const handleLicenseCaptureChange = useCallback((data: LicenseCaptureData | null) => {
+  const handleLicenseCaptureChange = (data: LicenseCaptureData | null) => {
     setLicenseCaptureData(data);
     setError('');
-  }, []);
+  };
 
   // Initialize license capture with one default license when person is selected
   useEffect(() => {
@@ -166,22 +210,24 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
       setLoading(true);
       setError('');
 
-      // Validate required fields
-      if (!user?.primary_location_id) {
-        setError('User location not found. Please contact administrator to assign a location to your account.');
+      // Validate location
+      const locationId = getLocationId();
+      if (!locationId) {
+        setError('Location is required. Please select a location or contact administrator to assign a location to your account.');
         return;
       }
 
       // Create application with capture data (no mapping needed - backend now accepts SADC codes)
       const applicationData: ApplicationCreate = {
         person_id: selectedPerson.id,
-        location_id: user.primary_location_id,
+        location_id: locationId,
         application_type: ApplicationType.DRIVERS_LICENSE_CAPTURE,
         license_category: licenseCaptureData.captured_licenses[0]?.license_category || LicenseCategory.B,
         license_capture: licenseCaptureData
       };
 
       console.log('User info:', user);
+      console.log('Selected location ID:', locationId);
       console.log('User primary_location_id:', user?.primary_location_id);
       console.log('Submitting application data:', applicationData);
       console.log('Capture data:', licenseCaptureData);
@@ -257,6 +303,35 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
               Review Driver's License Capture
             </Typography>
             
+            {/* Location Selection for Admin Users */}
+            {user && !user.primary_location_id && (
+              <Card sx={{ mb: 3 }}>
+                <CardHeader 
+                  title="Select Processing Location" 
+                  avatar={<LocationOnIcon />}
+                />
+                <CardContent>
+                  <FormControl fullWidth required error={!!error && !selectedLocationId}>
+                    <InputLabel>Processing Location</InputLabel>
+                    <Select
+                      value={selectedLocationId}
+                      onChange={handleLocationChange}
+                      label="Processing Location"
+                    >
+                      {availableLocations.map((location) => (
+                        <MenuItem key={location.id} value={location.id}>
+                          {location.name} ({location.code})
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    {!!error && !selectedLocationId && (
+                      <FormHelperText>Please select a processing location</FormHelperText>
+                    )}
+                  </FormControl>
+                </CardContent>
+              </Card>
+            )}
+            
             {/* Person Details */}
             <Card sx={{ mb: 3 }}>
               <CardHeader title="License Holder" />
@@ -269,8 +344,10 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
                     </Typography>
                   </Grid>
                   <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">System ID</Typography>
-                    <Typography variant="body1">{selectedPerson?.id}</Typography>
+                    <Typography variant="body2" color="text.secondary">Madagascar ID</Typography>
+                    <Typography variant="body1">
+                      {selectedPerson?.aliases?.find(alias => alias.is_primary)?.document_number || 'Not available'}
+                    </Typography>
                   </Grid>
                   <Grid item xs={12} md={6}>
                     <Typography variant="body2" color="text.secondary">Birth Date</Typography>

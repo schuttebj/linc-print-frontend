@@ -20,6 +20,19 @@ export interface Person {
   updated_at: string;
   created_by?: string;
   updated_by?: string;
+  aliases?: PersonAlias[];
+}
+
+export interface PersonAlias {
+  id: string;
+  document_type: string;
+  document_number: string;
+  country_of_issue: string;
+  name_in_document?: string;
+  is_primary: boolean;
+  is_current: boolean;
+  issue_date?: string;
+  expiry_date?: string;
 }
 
 // Role interface

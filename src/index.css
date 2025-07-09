@@ -47,3 +47,31 @@ body {
     color-adjust: exact;
   }
 } 
+
+/* Fix floating label background */
+.MuiInputLabel-root.MuiInputLabel-shrink {
+  background-color: white;
+  padding: 0 4px;
+  margin-left: -4px;
+}
+
+/* Fix for Material-UI outlined input labels */
+.MuiOutlinedInput-root .MuiInputLabel-root.MuiInputLabel-shrink {
+  background-color: white;
+  padding: 0 4px;
+  margin-left: -4px;
+}
+
+/* Fix for Material-UI Select labels */
+.MuiSelect-root ~ .MuiInputLabel-root.MuiInputLabel-shrink {
+  background-color: white;
+  padding: 0 4px;
+  margin-left: -4px;
+}
+
+/* Fix for FormControl labels */
+.MuiFormControl-root .MuiInputLabel-root.MuiInputLabel-shrink {
+  background-color: white;
+  padding: 0 4px;
+  margin-left: -4px;
+} 
