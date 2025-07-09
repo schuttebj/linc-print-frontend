@@ -23,13 +23,15 @@ import {
   MenuItem,
   Grid,
   Chip,
-  Divider
+  Divider,
+  CardHeader,
+  FormHelperText
 } from '@mui/material';
-import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
+import { ArrowBack as ArrowBackIcon, LocationOn as LocationOnIcon } from '@mui/icons-material';
 
 import { useAuth } from '../../contexts/AuthContext';
-import { PersonFormWrapper } from '../../components/PersonFormWrapper';
-import { LicenseCaptureForm } from '../../components/applications/LicenseCaptureForm';
+import PersonFormWrapper from '../../components/PersonFormWrapper';
+import LicenseCaptureForm from '../../components/applications/LicenseCaptureForm';
 import { applicationService } from '../../services/applicationService';
 import { ApplicationStatus, ApplicationType, Person } from '../../types';
 
@@ -115,6 +117,18 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
     setTimeout(() => {
       setActiveStep(2);
     }, 500);
+  };
+
+  // Handle location change for admin users
+  const handleLocationChange = (event: any) => {
+    setSelectedLocationId(event.target.value);
+    setError('');
+  };
+
+  // Handle license capture data change
+  const handleLicenseCaptureChange = (data: any) => {
+    setLicenseCaptureData(data);
+    setError('');
   };
 
   // Handle submission
@@ -208,34 +222,29 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
           <PersonFormWrapper
             mode="application"
             onSuccess={handlePersonSelected}
+            title=""
+            subtitle="Select existing person or register new license holder"
             showHeader={false}
-            autoSearch={true}
           />
         );
 
-      case 1:
+      case 1: // License capture step
         return (
           <Box>
-            <Typography variant="h6" gutterBottom>
-              Capture Learner's Permit Details
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Enter the details from the existing learner's permit to capture it into the system.
-            </Typography>
-
             {/* Location Selection for Admin Users */}
-            {!user?.primary_location_id && (
+            {user && !user.primary_location_id && (
               <Card sx={{ mb: 3 }}>
+                <CardHeader 
+                  title="Select Processing Location" 
+                  avatar={<LocationOnIcon />}
+                />
                 <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Select Location
-                  </Typography>
-                  <FormControl fullWidth>
-                    <InputLabel>Location</InputLabel>
+                  <FormControl fullWidth required error={!!error && !selectedLocationId}>
+                    <InputLabel>Processing Location</InputLabel>
                     <Select
                       value={selectedLocationId}
-                      onChange={(e) => setSelectedLocationId(e.target.value)}
-                      label="Location"
+                      onChange={handleLocationChange}
+                      label="Processing Location"
                     >
                       {Array.isArray(availableLocations) && availableLocations.map((location) => (
                         <MenuItem key={location.id} value={location.id}>
@@ -243,16 +252,19 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
                         </MenuItem>
                       ))}
                     </Select>
+                    {!!error && !selectedLocationId && (
+                      <FormHelperText>Please select a processing location</FormHelperText>
+                    )}
                   </FormControl>
                 </CardContent>
               </Card>
             )}
 
             <LicenseCaptureForm
-              applicationType={ApplicationType.LEARNERS_PERMIT_CAPTURE}
-              onComplete={handleLicenseCaptureComplete}
-              selectedPerson={selectedPerson}
-              availableCategories={['LEARNERS_1', 'LEARNERS_2', 'LEARNERS_3']}
+              applicationtype={ApplicationType.LEARNERS_PERMIT_CAPTURE}
+              value={licenseCaptureData}
+              onChange={handleLicenseCaptureChange}
+              personBirthDate={selectedPerson?.birth_date}
             />
           </Box>
         );
@@ -295,7 +307,7 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
                       Date of Birth
                     </Typography>
                     <Typography variant="body1">
-                      {selectedPerson?.date_of_birth}
+                      {selectedPerson?.birth_date}
                     </Typography>
                   </Grid>
                   <Grid item xs={12} sm={6}>
@@ -303,7 +315,7 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
                       Gender
                     </Typography>
                     <Typography variant="body1">
-                      {selectedPerson?.gender}
+                      {selectedPerson?.person_nature}
                     </Typography>
                   </Grid>
                 </Grid>
