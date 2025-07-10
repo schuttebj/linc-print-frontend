@@ -25,6 +25,10 @@ import LearnersLicenseApplicationPage from './pages/applications/LearnersLicense
 import DuplicateLearnersLicensePage from './pages/applications/DuplicateLearnersLicensePage';
 import DrivingLicenseApplicationPage from './pages/applications/DrivingLicenseApplicationPage';
 import RenewDrivingLicensePage from './pages/applications/RenewDrivingLicensePage';
+import ProfessionalLicenseApplicationPage from './pages/applications/ProfessionalLicenseApplicationPage';
+import TemporaryLicenseApplicationPage from './pages/applications/TemporaryLicenseApplicationPage';
+import ForeignConversionApplicationPage from './pages/applications/ForeignConversionApplicationPage';
+import InternationalPermitApplicationPage from './pages/applications/InternationalPermitApplicationPage';
 
 // License Pages
 import LicenseDashboard from './pages/licenses/LicenseDashboard';
@@ -133,6 +137,22 @@ function App() {
                   </ProtectedRoute>
                 } 
               />
+              <Route 
+                path="professional-license" 
+                element={
+                  <ProtectedRoute requiredPermission="applications.create">
+                    <ProfessionalLicenseApplicationPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="temporary-license" 
+                element={
+                  <ProtectedRoute requiredPermission="applications.create">
+                    <TemporaryLicenseApplicationPage />
+                  </ProtectedRoute>
+                } 
+              />
               
               {/* Renewal and Duplicates */}
               <Route 
@@ -148,6 +168,24 @@ function App() {
                 element={
                   <ProtectedRoute requiredPermission="applications.create">
                     <DuplicateLearnersLicensePage />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* Conversions & International */}
+              <Route 
+                path="foreign-conversion" 
+                element={
+                  <ProtectedRoute requiredPermission="applications.create">
+                    <ForeignConversionApplicationPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="international-permit" 
+                element={
+                  <ProtectedRoute requiredPermission="applications.create">
+                    <InternationalPermitApplicationPage />
                   </ProtectedRoute>
                 } 
               />

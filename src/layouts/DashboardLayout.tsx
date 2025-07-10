@@ -22,6 +22,8 @@ import {
   Divider,
   useTheme,
   useMediaQuery,
+  Collapse,
+  Chip,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -42,6 +44,13 @@ import {
   DirectionsCar,
   Refresh,
   FileCopy,
+  LocalShipping,
+  AccessTime,
+  Public,
+  FlightTakeoff,
+  ExpandLess,
+  ExpandMore,
+  Apps,
 } from '@mui/icons-material';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -57,6 +66,7 @@ const DashboardLayout: React.FC = () => {
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [applicationsExpanded, setApplicationsExpanded] = useState(false);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -74,6 +84,10 @@ const DashboardLayout: React.FC = () => {
     handleProfileMenuClose();
     await logout();
     navigate('/login');
+  };
+
+  const handleApplicationsToggle = () => {
+    setApplicationsExpanded(!applicationsExpanded);
   };
 
   // Navigation items
@@ -106,52 +120,101 @@ const DashboardLayout: React.FC = () => {
       path: '/dashboard/applications',
       permission: 'applications.read',
     },
-    // New License Applications
+  ];
+
+  // Application dropdown items (organized by category)
+  const applicationDropdownItems = [
     {
-      text: 'Learner\'s License Application',
-      icon: <School />,
-      path: '/dashboard/applications/learners-license',
-      permission: 'applications.create',
+      category: 'New License Applications',
+      items: [
+        {
+          text: 'Learner\'s License Application',
+          icon: <School />,
+          path: '/dashboard/applications/learners-license',
+          permission: 'applications.create',
+        },
+        {
+          text: 'Driving License Application',
+          icon: <DirectionsCar />,
+          path: '/dashboard/applications/driving-license',
+          permission: 'applications.create',
+        },
+        {
+          text: 'Professional License Application',
+          icon: <DirectionsCar />,
+          path: '/dashboard/applications/professional-license',
+          permission: 'applications.create',
+        },
+        {
+          text: 'Temporary License Application',
+          icon: <Assignment />,
+          path: '/dashboard/applications/temporary-license',
+          permission: 'applications.create',
+        },
+      ]
     },
     {
-      text: 'Driving License Application',
-      icon: <DirectionsCar />,
-      path: '/dashboard/applications/driving-license',
-      permission: 'applications.create',
-    },
-    // Renewal and Duplicates
-    {
-      text: 'Renew Driving License',
-      icon: <Refresh />,
-      path: '/dashboard/applications/renew-license',
-      permission: 'applications.create',
-    },
-    {
-      text: 'Duplicate Learner\'s License',
-      icon: <FileCopy />,
-      path: '/dashboard/applications/duplicate-learners',
-      permission: 'applications.create',
-    },
-    // License Capture (for existing licenses)
-    {
-      text: 'Driver License Capture',
-      icon: <CreditCard />,
-      path: '/dashboard/applications/driver-license-capture',
-      permission: 'applications.create',
+      category: 'Renewals & Duplicates',
+      items: [
+        {
+          text: 'Renew Driving License',
+          icon: <Refresh />,
+          path: '/dashboard/applications/renew-license',
+          permission: 'applications.create',
+        },
+        {
+          text: 'Duplicate Learner\'s License',
+          icon: <FileCopy />,
+          path: '/dashboard/applications/duplicate-learners',
+          permission: 'applications.create',
+        },
+      ]
     },
     {
-      text: 'Learner Permit Capture',
-      icon: <Assignment />,
-      path: '/dashboard/applications/learner-permit-capture',
-      permission: 'applications.create',
+      category: 'Conversions & International',
+      items: [
+        {
+          text: 'Convert Foreign License',
+          icon: <Assessment />,
+          path: '/dashboard/applications/foreign-conversion',
+          permission: 'applications.create',
+        },
+        {
+          text: 'International Driving Permit',
+          icon: <CreditCard />,
+          path: '/dashboard/applications/international-permit',
+          permission: 'applications.create',
+        },
+      ]
     },
-    // Generic application form (fallback)
     {
-      text: 'Other Applications',
-      icon: <AddIcon />,
-      path: '/dashboard/applications/create',
-      permission: 'applications.create',
+      category: 'License Capture',
+      items: [
+        {
+          text: 'Driver License Capture',
+          icon: <CreditCard />,
+          path: '/dashboard/applications/driver-license-capture',
+          permission: 'applications.create',
+        },
+        {
+          text: 'Learner Permit Capture',
+          icon: <Assignment />,
+          path: '/dashboard/applications/learner-permit-capture',
+          permission: 'applications.create',
+        },
+      ]
     },
+    {
+      category: 'Other',
+      items: [
+        {
+          text: 'Other Applications',
+          icon: <AddIcon />,
+          path: '/dashboard/applications/create',
+          permission: 'applications.create',
+        },
+      ]
+    }
   ];
 
   // License management navigation items
@@ -198,6 +261,9 @@ const DashboardLayout: React.FC = () => {
     },
   ];
 
+  // Check if user has permission to create applications
+  const canCreateApplications = hasPermission('applications.create');
+
   const drawer = (
     <Box>
       <Toolbar>
@@ -237,7 +303,7 @@ const DashboardLayout: React.FC = () => {
       </List>
 
       {/* Applications Section */}
-      {applicationNavigationItems.some(item => !item.permission || hasPermission(item.permission)) && (
+      {(applicationNavigationItems.some(item => !item.permission || hasPermission(item.permission)) || canCreateApplications) && (
         <>
           <Divider />
           <List>
@@ -252,6 +318,8 @@ const DashboardLayout: React.FC = () => {
                 }} 
               />
             </ListItem>
+            
+            {/* View Applications */}
             {applicationNavigationItems.map((item) => {
               // Check permissions
               if (item.permission && !hasPermission(item.permission)) {
@@ -277,6 +345,75 @@ const DashboardLayout: React.FC = () => {
                 </ListItem>
               );
             })}
+
+            {/* Create Applications Dropdown */}
+            {canCreateApplications && (
+              <>
+                <ListItem disablePadding>
+                  <ListItemButton onClick={handleApplicationsToggle}>
+                    <ListItemIcon>
+                      <Apps />
+                    </ListItemIcon>
+                    <ListItemText primary="Create Applications" />
+                    {applicationsExpanded ? <ExpandLess /> : <ExpandMore />}
+                  </ListItemButton>
+                </ListItem>
+                
+                <Collapse in={applicationsExpanded} timeout="auto" unmountOnExit>
+                  <List component="div" disablePadding>
+                    {applicationDropdownItems.map((categoryGroup) => (
+                      <Box key={categoryGroup.category}>
+                        {/* Category Header */}
+                        <ListItem sx={{ pl: 4, py: 0.5 }}>
+                          <Chip 
+                            label={categoryGroup.category} 
+                            size="small" 
+                            variant="outlined"
+                            sx={{ fontSize: '0.7rem', height: '20px' }}
+                          />
+                        </ListItem>
+                        
+                        {/* Category Items */}
+                        {categoryGroup.items.map((item) => {
+                          // Check permissions
+                          if (item.permission && !hasPermission(item.permission)) {
+                            return null;
+                          }
+
+                          const isActive = location.pathname === item.path;
+
+                          return (
+                            <ListItem key={item.text} disablePadding>
+                              <ListItemButton
+                                selected={isActive}
+                                sx={{ pl: 6 }}
+                                onClick={() => {
+                                  navigate(item.path);
+                                  if (isMobile) {
+                                    setMobileOpen(false);
+                                  }
+                                }}
+                              >
+                                <ListItemIcon sx={{ minWidth: 36 }}>
+                                  {item.icon}
+                                </ListItemIcon>
+                                <ListItemText 
+                                  primary={item.text} 
+                                  primaryTypographyProps={{ 
+                                    variant: 'body2',
+                                    fontSize: '0.875rem'
+                                  }} 
+                                />
+                              </ListItemButton>
+                            </ListItem>
+                          );
+                        })}
+                      </Box>
+                    ))}
+                  </List>
+                </Collapse>
+              </>
+            )}
           </List>
         </>
       )}
@@ -375,7 +512,6 @@ const DashboardLayout: React.FC = () => {
 
   return (
     <Box sx={{ display: 'flex' }}>
-      {/* App Bar */}
       <AppBar
         position="fixed"
         sx={{
@@ -393,20 +529,19 @@ const DashboardLayout: React.FC = () => {
           >
             <MenuIcon />
           </IconButton>
-          
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             Madagascar Driver's License System
           </Typography>
-
-          {/* User Menu */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
-              {user?.username}
-            </Typography>
+            {user && (
+              <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
+                {user.first_name} {user.last_name}
+              </Typography>
+            )}
             <IconButton
               size="large"
               aria-label="account of current user"
-              aria-controls="profile-menu"
+              aria-controls="menu-appbar"
               aria-haspopup="true"
               onClick={handleProfileMenuOpen}
               color="inherit"
@@ -419,44 +554,17 @@ const DashboardLayout: React.FC = () => {
         </Toolbar>
       </AppBar>
 
-      {/* Profile Menu */}
-      <Menu
-        id="profile-menu"
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleProfileMenuClose}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'right',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'right',
-        }}
-      >
-        <MenuItem onClick={handleProfileMenuClose}>
-          <AccountCircle sx={{ mr: 2 }} />
-          Profile
-        </MenuItem>
-        <Divider />
-        <MenuItem onClick={handleLogout}>
-          <Logout sx={{ mr: 2 }} />
-          Logout
-        </MenuItem>
-      </Menu>
-
-      {/* Navigation Drawer */}
       <Box
         component="nav"
         sx={{ width: { md: DRAWER_WIDTH }, flexShrink: { md: 0 } }}
+        aria-label="mailbox folders"
       >
-        {/* Mobile drawer */}
         <Drawer
           variant="temporary"
           open={mobileOpen}
           onClose={handleDrawerToggle}
           ModalProps={{
-            keepMounted: true, // Better open performance on mobile.
+            keepMounted: true,
           }}
           sx={{
             display: { xs: 'block', md: 'none' },
@@ -465,8 +573,6 @@ const DashboardLayout: React.FC = () => {
         >
           {drawer}
         </Drawer>
-        
-        {/* Desktop drawer */}
         <Drawer
           variant="permanent"
           sx={{
@@ -479,17 +585,45 @@ const DashboardLayout: React.FC = () => {
         </Drawer>
       </Box>
 
-      {/* Main content */}
       <Box
         component="main"
         sx={{
           flexGrow: 1,
           width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
+          minHeight: '100vh',
+          backgroundColor: theme.palette.background.default,
         }}
       >
         <Toolbar />
-        <Outlet />
+        <Box sx={{ p: 3 }}>
+          <Outlet />
+        </Box>
       </Box>
+
+      <Menu
+        id="menu-appbar"
+        anchorEl={anchorEl}
+        anchorOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+        keepMounted
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+        open={Boolean(anchorEl)}
+        onClose={handleProfileMenuClose}
+      >
+        <MenuItem onClick={handleProfileMenuClose} disabled>
+          <AccountCircle sx={{ mr: 2 }} />
+          Profile
+        </MenuItem>
+        <MenuItem onClick={handleLogout}>
+          <Logout sx={{ mr: 2 }} />
+          Logout
+        </MenuItem>
+      </Menu>
     </Box>
   );
 };
