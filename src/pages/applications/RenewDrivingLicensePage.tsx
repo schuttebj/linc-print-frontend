@@ -242,13 +242,29 @@ const RenewDrivingLicensePage: React.FC = () => {
       // For renewal, use the highest/most comprehensive license category from existing licenses
       const primaryCategory = licenseVerification.all_license_categories[0] as LicenseCategory;
 
+      // Check if medical is mandatory for renewal
+      const age = selectedPerson?.birth_date ? calculateAge(selectedPerson.birth_date) : 0;
+      const isMedicalMandatory = age >= 60 || 
+                               licenseVerification?.all_license_categories?.some(cat => requiresMedicalAlways(cat as LicenseCategory));
+
+      // Clean medical information - only send if mandatory or if properly filled out
+      let cleanMedicalInfo = null;
+      if (medicalInformation && (isMedicalMandatory || medicalInformation.medical_clearance)) {
+        cleanMedicalInfo = {
+          ...medicalInformation,
+          examination_date: medicalInformation.examination_date && medicalInformation.examination_date.trim() !== '' 
+            ? medicalInformation.examination_date 
+            : undefined
+        };
+      }
+
       // Create application data
       const applicationData: ApplicationCreate = {
         person_id: selectedPerson.id,
         location_id: locationId,
         application_type: ApplicationType.RENEWAL,
         license_category: primaryCategory, // System will determine what to renew
-        medical_information: medicalInformation,
+        medical_information: cleanMedicalInfo,
         license_verification: licenseVerification,
         replacement_reason: replacementReason as any,
         office_of_issue: officeOfIssue,

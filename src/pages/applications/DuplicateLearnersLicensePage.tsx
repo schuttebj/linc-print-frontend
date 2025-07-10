@@ -235,6 +235,21 @@ const DuplicateLearnersLicensePage: React.FC = () => {
         return;
       }
 
+      // Check if medical is mandatory for duplicate
+      const age = selectedPerson?.birth_date ? calculateAge(selectedPerson.birth_date) : 0;
+      const isMedicalMandatory = age >= 60; // For duplicates, typically only age-based
+
+      // Clean medical information - only send if mandatory or if properly filled out
+      let cleanMedicalInfo = null;
+      if (medicalInformation && (isMedicalMandatory || medicalInformation.medical_clearance)) {
+        cleanMedicalInfo = {
+          ...medicalInformation,
+          examination_date: medicalInformation.examination_date && medicalInformation.examination_date.trim() !== '' 
+            ? medicalInformation.examination_date 
+            : undefined
+        };
+      }
+
       // Create application data - Note: For duplicates, we don't need to specify license_category
       // The system will look up the person's existing learner's permit
       const applicationData: ApplicationCreate = {
@@ -242,7 +257,7 @@ const DuplicateLearnersLicensePage: React.FC = () => {
         location_id: locationId,
         application_type: ApplicationType.LEARNERS_PERMIT_DUPLICATE,
         license_category: LicenseCategory.LEARNERS_1, // Temporary - backend should determine from existing permit
-        medical_information: medicalInformation,
+        medical_information: cleanMedicalInfo,
         replacement_reason: replacementReason as any,
         office_of_issue: officeOfIssue,
         date_of_change: dateOfChange,
