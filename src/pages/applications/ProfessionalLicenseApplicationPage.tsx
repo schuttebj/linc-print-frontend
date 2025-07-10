@@ -31,8 +31,8 @@ import {
   Warning as WarningIcon
 } from '@mui/icons-material';
 
-import { PersonFormWrapper } from '../../components/PersonFormWrapper';
-import { MedicalInformationSection } from '../../components/applications/MedicalInformationSection';
+import PersonFormWrapper from '../../components/PersonFormWrapper';
+import MedicalInformationSection from '../../components/applications/MedicalInformationSection';
 import { 
   Person, 
   ApplicationType, 

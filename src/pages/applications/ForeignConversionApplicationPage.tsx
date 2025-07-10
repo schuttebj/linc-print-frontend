@@ -28,11 +28,11 @@ import {
   LocationOn as LocationOnIcon,
   DirectionsCar as DirectionsCarIcon,
   Warning as WarningIcon,
-  PublicIcon
+  Language as LanguageIcon
 } from '@mui/icons-material';
 
-import { PersonFormWrapper } from '../../components/PersonFormWrapper';
-import { MedicalInformationSection } from '../../components/applications/MedicalInformationSection';
+import PersonFormWrapper from '../../components/PersonFormWrapper';
+import MedicalInformationSection from '../../components/applications/MedicalInformationSection';
 import { 
   Person, 
   ApplicationType, 
@@ -429,7 +429,7 @@ const ForeignConversionApplicationPage: React.FC = () => {
                     {getCommonCountries().map((country) => (
                       <MenuItem key={country} value={country}>
                         <Box display="flex" alignItems="center">
-                          <PublicIcon sx={{ mr: 1 }} />
+                          <LanguageIcon sx={{ mr: 1 }} />
                           {country}
                         </Box>
                       </MenuItem>

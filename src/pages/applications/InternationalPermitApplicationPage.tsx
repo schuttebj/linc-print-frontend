@@ -26,14 +26,14 @@ import {
 } from '@mui/material';
 import {
   LocationOn as LocationOnIcon,
-  Public as PublicIcon,
+  Language as LanguageIcon,
   Warning as WarningIcon,
   FlightTakeoff as FlightTakeoffIcon
 } from '@mui/icons-material';
 
-import { PersonFormWrapper } from '../../components/PersonFormWrapper';
-import { LicenseVerificationSection } from '../../components/applications/LicenseVerificationSection';
-import { MedicalInformationSection } from '../../components/applications/MedicalInformationSection';
+import PersonFormWrapper from '../../components/PersonFormWrapper';
+import LicenseVerificationSection from '../../components/applications/LicenseVerificationSection';
+import MedicalInformationSection from '../../components/applications/MedicalInformationSection';
 import { 
   Person, 
   ApplicationType, 
