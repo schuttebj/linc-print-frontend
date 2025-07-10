@@ -184,7 +184,7 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
       const defaultLicense = {
         id: `license-${Date.now()}`,
         license_number: '',
-        license_category: LicenseCategory.LEARNERS_1, // Default to LEARNERS_1 category
+        license_category: LicenseCategory.LEARNERS_1, // Default to LEARNERS_1 (only valid database value)
         issue_date: '',
         expiry_date: '',
         restrictions: [],
