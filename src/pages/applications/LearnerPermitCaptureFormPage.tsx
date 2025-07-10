@@ -225,11 +225,28 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
       }
 
       // Create application with capture data
+      // Note: Backend expects enum names (LEARNERS_1) not values (1)
+      const firstCapturedCategory = licenseCaptureData.captured_licenses[0]?.license_category;
+      
+      // Map enum values to enum keys for backend
+      const getEnumKeyFromValue = (value: LicenseCategory): string => {
+        switch (value) {
+          case LicenseCategory.LEARNERS_1:
+            return 'LEARNERS_1';
+          case LicenseCategory.LEARNERS_2:
+            return 'LEARNERS_2';
+          case LicenseCategory.LEARNERS_3:
+            return 'LEARNERS_3';
+          default:
+            return 'LEARNERS_1'; // fallback
+        }
+      };
+
       const applicationData = {
         person_id: selectedPerson.id,
         location_id: locationId,
         application_type: ApplicationType.LEARNERS_PERMIT_CAPTURE,
-        license_category: licenseCaptureData.captured_licenses[0]?.license_category || LicenseCategory.LEARNERS_1,
+        license_category: getEnumKeyFromValue(firstCapturedCategory || LicenseCategory.LEARNERS_1) as any,
         license_capture: licenseCaptureData
       };
 
@@ -516,44 +533,33 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
                 <Box sx={{ mt: 2, mb: 2 }}>
                   {renderStepContent(index)}
                 </Box>
-                <Box sx={{ mb: 2 }}>
-                  <div>
-                    {index === steps.length - 1 ? (
-                      <Button
-                        variant="contained"
-                        onClick={handleSubmit}
-                        disabled={!isStepValid(index) || loading}
-                        sx={{ mt: 1, mr: 1 }}
-                        startIcon={loading ? <CircularProgress size={20} /> : undefined}
-                      >
-                        {loading ? 'Submitting...' : 'Submit Learner\'s Permit Capture'}
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="contained"
-                        onClick={handleNext}
-                        disabled={!isStepValid(index)}
-                        sx={{ mt: 1, mr: 1 }}
-                        endIcon={<ArrowForwardIcon />}
-                      >
-                        Continue
-                      </Button>
-                    )}
-                    <Button
-                      disabled={index === 0}
-                      onClick={handleBack}
-                      sx={{ mt: 1, mr: 1 }}
-                      startIcon={<ArrowBackIcon />}
-                    >
-                      Back
-                    </Button>
-                    <Button
-                      onClick={handleCancel}
-                      sx={{ mt: 1 }}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
+                {/* Navigation Buttons */}
+                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                  <Button
+                    onClick={handleCancel}
+                    disabled={loading}
+                    color="secondary"
+                  >
+                    Cancel
+                  </Button>
+                  
+                  <Button
+                    disabled={index === 0 || loading}
+                    onClick={handleBack}
+                    startIcon={<ArrowBackIcon />}
+                  >
+                    Back
+                  </Button>
+                  
+                  <Button
+                    variant="contained"
+                    onClick={index === steps.length - 1 ? handleSubmit : handleNext}
+                    disabled={!isStepValid(index) || loading}
+                    startIcon={loading ? <CircularProgress size={20} /> : undefined}
+                    endIcon={index !== steps.length - 1 ? <ArrowForwardIcon /> : undefined}
+                  >
+                    {loading ? 'Submitting...' : index === steps.length - 1 ? 'Submit Capture' : 'Next'}
+                  </Button>
                 </Box>
               </StepContent>
             </Step>
