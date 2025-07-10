@@ -225,28 +225,17 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
       }
 
       // Create application with capture data
-      // Note: Backend expects enum names (LEARNERS_1) not values (1)
+      // Note: Backend expects enum values ('1', '2', '3') not enum keys ('LEARNERS_1')
       const firstCapturedCategory = licenseCaptureData.captured_licenses[0]?.license_category;
       
-      // Map enum values to enum keys for backend
-      const getEnumKeyFromValue = (value: LicenseCategory): string => {
-        switch (value) {
-          case LicenseCategory.LEARNERS_1:
-            return 'LEARNERS_1';
-          case LicenseCategory.LEARNERS_2:
-            return 'LEARNERS_2';
-          case LicenseCategory.LEARNERS_3:
-            return 'LEARNERS_3';
-          default:
-            return 'LEARNERS_1'; // fallback
-        }
-      };
+      // Use the enum value directly (LEARNERS_1 = '1', LEARNERS_2 = '2', LEARNERS_3 = '3')
+      const categoryValue = firstCapturedCategory || LicenseCategory.LEARNERS_1;
 
       const applicationData = {
         person_id: selectedPerson.id,
         location_id: locationId,
         application_type: ApplicationType.LEARNERS_PERMIT_CAPTURE,
-        license_category: getEnumKeyFromValue(firstCapturedCategory || LicenseCategory.LEARNERS_1) as any,
+        license_category: categoryValue, // Send the enum value ('1', '2', '3')
         license_capture: licenseCaptureData
       };
 
