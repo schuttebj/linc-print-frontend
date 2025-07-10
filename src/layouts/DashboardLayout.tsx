@@ -38,6 +38,10 @@ import {
   CreditCard,
   Assignment,
   Visibility,
+  School,
+  DirectionsCar,
+  Refresh,
+  FileCopy,
 } from '@mui/icons-material';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -102,6 +106,33 @@ const DashboardLayout: React.FC = () => {
       path: '/dashboard/applications',
       permission: 'applications.read',
     },
+    // New License Applications
+    {
+      text: 'Learner\'s License Application',
+      icon: <School />,
+      path: '/dashboard/applications/learners-license',
+      permission: 'applications.create',
+    },
+    {
+      text: 'Driving License Application',
+      icon: <DirectionsCar />,
+      path: '/dashboard/applications/driving-license',
+      permission: 'applications.create',
+    },
+    // Renewal and Duplicates
+    {
+      text: 'Renew Driving License',
+      icon: <Refresh />,
+      path: '/dashboard/applications/renew-license',
+      permission: 'applications.create',
+    },
+    {
+      text: 'Duplicate Learner\'s License',
+      icon: <FileCopy />,
+      path: '/dashboard/applications/duplicate-learners',
+      permission: 'applications.create',
+    },
+    // License Capture (for existing licenses)
     {
       text: 'Driver License Capture',
       icon: <CreditCard />,
@@ -114,8 +145,9 @@ const DashboardLayout: React.FC = () => {
       path: '/dashboard/applications/learner-permit-capture',
       permission: 'applications.create',
     },
+    // Generic application form (fallback)
     {
-      text: 'New Application',
+      text: 'Other Applications',
       icon: <AddIcon />,
       path: '/dashboard/applications/create',
       permission: 'applications.create',

@@ -21,6 +21,10 @@ import ApplicationListPage from './pages/applications/ApplicationListPage';
 import ApplicationFormPage from './pages/applications/ApplicationFormPage';
 import DriverLicenseCaptureFormPage from './pages/applications/DriverLicenseCaptureFormPage';
 import LearnerPermitCaptureFormPage from './pages/applications/LearnerPermitCaptureFormPage';
+import LearnersLicenseApplicationPage from './pages/applications/LearnersLicenseApplicationPage';
+import DuplicateLearnersLicensePage from './pages/applications/DuplicateLearnersLicensePage';
+import DrivingLicenseApplicationPage from './pages/applications/DrivingLicenseApplicationPage';
+import RenewDrivingLicensePage from './pages/applications/RenewDrivingLicensePage';
 
 // License Pages
 import LicenseDashboard from './pages/licenses/LicenseDashboard';
@@ -111,14 +115,44 @@ function App() {
                   </ProtectedRoute>
                 } 
               />
+              
+              {/* New License Applications */}
               <Route 
-                path="create" 
+                path="learners-license" 
                 element={
                   <ProtectedRoute requiredPermission="applications.create">
-                    <ApplicationFormPage />
+                    <LearnersLicenseApplicationPage />
                   </ProtectedRoute>
                 } 
               />
+              <Route 
+                path="driving-license" 
+                element={
+                  <ProtectedRoute requiredPermission="applications.create">
+                    <DrivingLicenseApplicationPage />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* Renewal and Duplicates */}
+              <Route 
+                path="renew-license" 
+                element={
+                  <ProtectedRoute requiredPermission="applications.create">
+                    <RenewDrivingLicensePage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="duplicate-learners" 
+                element={
+                  <ProtectedRoute requiredPermission="applications.create">
+                    <DuplicateLearnersLicensePage />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* License Capture (for existing licenses) */}
               <Route 
                 path="driver-license-capture" 
                 element={
@@ -135,6 +169,18 @@ function App() {
                   </ProtectedRoute>
                 } 
               />
+              
+              {/* Generic application form (fallback) */}
+              <Route 
+                path="create" 
+                element={
+                  <ProtectedRoute requiredPermission="applications.create">
+                    <ApplicationFormPage />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* Application details and editing */}
               <Route 
                 path="edit/:applicationId" 
                 element={
