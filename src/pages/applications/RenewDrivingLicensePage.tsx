@@ -407,6 +407,9 @@ const RenewDrivingLicensePage: React.FC = () => {
                         personId={selectedPerson.id}
                         value={licenseVerification}
                         onChange={setLicenseVerification}
+                        locations={availableLocations}
+                        currentLicenseCategory={null}
+                        currentApplicationType={ApplicationType.RENEWAL}
                         disabled={false}
                       />
                       

@@ -466,7 +466,9 @@ const DrivingLicenseApplicationPage: React.FC = () => {
                         personId={selectedPerson.id}
                         value={licenseVerification}
                         onChange={setLicenseVerification}
-                        requiredForCategory={selectedCategory}
+                        locations={availableLocations}
+                        currentLicenseCategory={selectedCategory}
+                        currentApplicationType={ApplicationType.NEW_LICENSE}
                         disabled={false}
                       />
                     </CardContent>

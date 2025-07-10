@@ -165,6 +165,13 @@ export interface ApplicationCreate {
   // Section B data
   never_been_refused?: boolean;
   refusal_details?: string;
+  // Section C data (for duplicates, renewals, etc.)
+  replacement_reason?: 'theft' | 'loss' | 'destruction' | 'recovery' | 'new_card' | 'change_particulars';
+  office_of_issue?: string;
+  police_reported?: boolean;
+  police_station?: string;
+  police_reference_number?: string;
+  date_of_change?: string;
 }
 
 export interface ApplicationUpdate {
