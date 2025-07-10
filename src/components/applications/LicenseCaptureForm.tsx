@@ -159,8 +159,7 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
 
   const getAvailableCategories = () => {
     if (applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE) {
-      // Only show learner's permit categories that exist in database
-      // NOTE: LEARNERS_3 temporarily removed due to database enum mismatch
+      // Show all learner's permit categories
       return [
         {
           value: LicenseCategory.LEARNERS_1,
@@ -171,13 +170,12 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
           value: LicenseCategory.LEARNERS_2,
           label: `Code 2 - ${LEARNERS_PERMIT_RULES['2']?.description || 'Light motor vehicles'}`,
           disabled: false
+        },
+        {
+          value: LicenseCategory.LEARNERS_3,
+          label: `Code 3 - ${LEARNERS_PERMIT_RULES['3']?.description || 'All motor vehicles'}`,
+          disabled: false
         }
-        // LEARNERS_3 commented out until database enum is updated
-        // {
-        //   value: LicenseCategory.LEARNERS_3,
-        //   label: `Code 3 - ${LEARNERS_PERMIT_RULES['3']?.description || 'All motor vehicles'}`,
-        //   disabled: false
-        // }
       ];
     } else {
       // For DRIVERS_LICENSE_CAPTURE, show all regular license categories
