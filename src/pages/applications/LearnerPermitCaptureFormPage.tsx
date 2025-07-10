@@ -1,81 +1,118 @@
 /**
- * Learner's Permit Capture Form Page for Madagascar License System
- * Allows capturing existing learner's permits into the system
+ * Learner's Permit Capture Form Page
+ * Focused form for LEARNERS_PERMIT_CAPTURE applications only
+ * 
+ * Workflow: Person Selection (A) → License Capture → Review & Submit
  */
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
-  Box,
   Container,
+  Paper,
   Typography,
-  Card,
-  CardContent,
+  Box,
   Stepper,
   Step,
   StepLabel,
+  StepContent,
   Button,
   Alert,
   CircularProgress,
+  Grid,
+  Card,
+  CardContent,
+  CardHeader,
+  Chip,
+  Divider,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
-  Grid,
-  Chip,
-  Divider,
-  CardHeader,
   FormHelperText
 } from '@mui/material';
-import { ArrowBack as ArrowBackIcon, LocationOn as LocationOnIcon } from '@mui/icons-material';
-
+import {
+  PersonSearch as PersonSearchIcon,
+  DocumentScanner as DocumentScannerIcon,
+  Preview as PreviewIcon,
+  ArrowForward as ArrowForwardIcon,
+  ArrowBack as ArrowBackIcon,
+  CheckCircle as CheckCircleIcon,
+  LocationOn as LocationOnIcon
+} from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import PersonFormWrapper from '../../components/PersonFormWrapper';
 import LicenseCaptureForm from '../../components/applications/LicenseCaptureForm';
 import { applicationService } from '../../services/applicationService';
-import { ApplicationStatus, ApplicationType, Person } from '../../types';
-
-const steps = [
-  'Select Person',
-  'Capture Learner\'s Permit Details',
-  'Review & Submit'
-];
+import {
+  Person,
+  ApplicationStatus,
+  ApplicationType,
+  ApplicationCreate,
+  LicenseCaptureData,
+  LicenseCategory,
+  Location
+} from '../../types';
+import { API_ENDPOINTS, getAuthToken } from '../../config/api';
 
 const LearnerPermitCaptureFormPage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // State
+  // Form state
   const [activeStep, setActiveStep] = useState(0);
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
-  const [licenseCaptureData, setLicenseCaptureData] = useState<any>(null);
+  const [licenseCaptureData, setLicenseCaptureData] = useState<LicenseCaptureData | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
-  const [availableLocations, setAvailableLocations] = useState<any[]>([]);
+  const [availableLocations, setAvailableLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
 
+  // Steps for learner's permit capture
+  const steps = [
+    {
+      label: 'Select Person',
+      description: 'Choose existing person or register new learner\'s permit holder',
+      icon: <PersonSearchIcon />
+    },
+    {
+      label: 'Capture Learner\'s Permit Details',
+      description: 'Enter existing learner\'s permit information for verification',
+      icon: <DocumentScannerIcon />
+    },
+    {
+      label: 'Review & Submit',
+      description: 'Review captured information and submit',
+      icon: <PreviewIcon />
+    }
+  ];
+
   // Load available locations for admin users
   useEffect(() => {
     const loadLocations = async () => {
-      try {
-        if (!user?.primary_location_id) {
-          const response = await fetch('/api/v1/locations');
-          const data = await response.json();
-          setAvailableLocations(data.locations || []);
+      if (user && !user.primary_location_id) {
+        try {
+          const token = getAuthToken();
+          if (!token) return;
+
+          const response = await fetch(API_ENDPOINTS.locations, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setAvailableLocations(data.locations || []);
+          }
+        } catch (error) {
+          console.error('Error loading locations:', error);
         }
-      } catch (err) {
-        console.error('Failed to load locations:', err);
       }
     };
-
     loadLocations();
-  }, [user?.primary_location_id]);
-
-  // Get location ID (either from user or selected)
-  const getLocationId = (): string | null => {
-    return user?.primary_location_id || selectedLocationId || null;
-  };
+  }, [user]);
 
   // Step validation
   const isStepValid = (step: number): boolean => {
@@ -94,7 +131,35 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
     }
   };
 
-  // Handle person selection
+  // Handle location selection
+  const handleLocationChange = (event: any) => {
+    setSelectedLocationId(event.target.value);
+    setError('');
+  };
+
+  // Get location ID to use
+  const getLocationId = (): string => {
+    return user?.primary_location_id || selectedLocationId;
+  };
+
+  // Navigation handlers
+  const handleNext = () => {
+    if (activeStep < steps.length - 1) {
+      setActiveStep(activeStep + 1);
+    }
+  };
+
+  const handleBack = () => {
+    if (activeStep > 0) {
+      setActiveStep(activeStep - 1);
+    }
+  };
+
+  const handleCancel = () => {
+    navigate('/dashboard');
+  };
+
+  // Person selection handler
   const handlePersonSelected = (person: Person) => {
     console.log('Person selected from PersonFormWrapper:', person);
     console.log('Person ID:', person?.id);
@@ -107,29 +172,32 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
     }, 500);
   };
 
-  // Handle license capture data
-  const handleLicenseCaptureComplete = (data: any) => {
-    console.log('License capture data received:', data);
-    setLicenseCaptureData(data);
-    setError('');
-    
-    // Auto-advance to review step
-    setTimeout(() => {
-      setActiveStep(2);
-    }, 500);
-  };
-
-  // Handle location change for admin users
-  const handleLocationChange = (event: any) => {
-    setSelectedLocationId(event.target.value);
-    setError('');
-  };
-
-  // Handle license capture data change
-  const handleLicenseCaptureChange = (data: any) => {
+  // License capture handler
+  const handleLicenseCaptureChange = (data: LicenseCaptureData | null) => {
     setLicenseCaptureData(data);
     setError('');
   };
+
+  // Initialize license capture with one default license when person is selected
+  useEffect(() => {
+    if (selectedPerson && !licenseCaptureData) {
+      const defaultLicense = {
+        id: `license-${Date.now()}`,
+        license_number: '',
+        license_category: LicenseCategory.LEARNERS_1, // Default to LEARNERS_1 category
+        issue_date: '',
+        expiry_date: '',
+        restrictions: [],
+        verified: false,
+        verification_notes: ''
+      };
+
+      setLicenseCaptureData({
+        captured_licenses: [defaultLicense],
+        application_type: ApplicationType.LEARNERS_PERMIT_CAPTURE
+      });
+    }
+  }, [selectedPerson, licenseCaptureData]);
 
   // Handle submission
   const handleSubmit = async () => {
@@ -161,7 +229,7 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
         person_id: selectedPerson.id,
         location_id: locationId,
         application_type: ApplicationType.LEARNERS_PERMIT_CAPTURE,
-        license_category: licenseCaptureData.captured_licenses[0]?.license_category || 'LEARNERS_1',
+        license_category: licenseCaptureData.captured_licenses[0]?.license_category || LicenseCategory.LEARNERS_1,
         license_capture: licenseCaptureData
       };
 
@@ -191,39 +259,30 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
 
     } catch (err: any) {
       console.error('Submission error:', err);
-      setError(err.message || 'Failed to submit learner\'s permit capture');
+      let errorMessage = 'Failed to submit learner\'s permit capture';
+      
+      if (err.message) {
+        errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle navigation
-  const handleBack = () => {
-    if (activeStep > 0) {
-      setActiveStep(activeStep - 1);
-    }
-  };
-
-  const handleNext = () => {
-    if (isStepValid(activeStep)) {
-      setActiveStep(activeStep + 1);
-    }
-  };
-
-  const handleGoToDashboard = () => {
-    navigate('/dashboard');
-  };
-
   // Render step content
-  const renderStepContent = () => {
-    switch (activeStep) {
-      case 0:
+  const renderStepContent = (step: number) => {
+    switch (step) {
+      case 0: // Person step
         return (
           <PersonFormWrapper
             mode="application"
             onSuccess={handlePersonSelected}
             title=""
-            subtitle="Select existing person or register new license holder"
+            subtitle="Select existing person or register new learner's permit holder"
             showHeader={false}
           />
         );
@@ -269,222 +328,238 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
           </Box>
         );
 
-      case 2:
+      case 2: // Review step
         return (
           <Box>
             <Typography variant="h6" gutterBottom>
               Review Learner's Permit Capture
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Please review the captured learner's permit details before submitting.
-            </Typography>
 
-            {/* Person Information */}
+            {/* Processing Location Display */}
             <Card sx={{ mb: 3 }}>
+              <CardHeader 
+                title="Processing Location" 
+                avatar={<LocationOnIcon />}
+              />
               <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Person Information
+                <Typography variant="body1">
+                  {user?.primary_location_id ? (
+                    `User's assigned location: ${user.primary_location_id}`
+                  ) : (
+                    availableLocations.find(loc => loc.id === selectedLocationId)?.name || 'No location selected'
+                  )}
+                  {selectedLocationId && (
+                    <Chip 
+                      label={availableLocations.find(loc => loc.id === selectedLocationId)?.code || selectedLocationId} 
+                      size="small" 
+                      sx={{ ml: 1 }}
+                    />
+                  )}
                 </Typography>
+              </CardContent>
+            </Card>
+            
+            {/* Person Details */}
+            <Card sx={{ mb: 3 }}>
+              <CardHeader title="Learner's Permit Holder" />
+              <CardContent>
                 <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
-                    <Typography variant="body2" color="text.secondary">
-                      Name
-                    </Typography>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="body2" color="text.secondary">Name</Typography>
                     <Typography variant="body1">
-                      {selectedPerson?.surname}, {selectedPerson?.first_name}
+                      {selectedPerson?.surname}, {selectedPerson?.first_name} {selectedPerson?.middle_name}
                     </Typography>
                   </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <Typography variant="body2" color="text.secondary">
-                      Madagascar ID
-                    </Typography>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="body2" color="text.secondary">Madagascar ID</Typography>
                     <Typography variant="body1">
                       {selectedPerson?.aliases?.find(alias => alias.is_primary)?.document_number || 'Not available'}
                     </Typography>
                   </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <Typography variant="body2" color="text.secondary">
-                      Date of Birth
-                    </Typography>
-                    <Typography variant="body1">
-                      {selectedPerson?.birth_date}
-                    </Typography>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="body2" color="text.secondary">Birth Date</Typography>
+                    <Typography variant="body1">{selectedPerson?.birth_date}</Typography>
                   </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <Typography variant="body2" color="text.secondary">
-                      Gender
-                    </Typography>
-                    <Typography variant="body1">
-                      {selectedPerson?.person_nature}
-                    </Typography>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="body2" color="text.secondary">Nationality</Typography>
+                    <Typography variant="body1">{selectedPerson?.nationality_code}</Typography>
                   </Grid>
                 </Grid>
               </CardContent>
             </Card>
 
-            {/* Location Information */}
-            {(user?.primary_location_id || selectedLocationId) && (
-              <Card sx={{ mb: 3 }}>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Processing Location
-                  </Typography>
-                  <Typography variant="body1">
-                    {user?.primary_location_id ? 'Your assigned location' : 
-                     availableLocations.find(loc => loc.id === selectedLocationId)?.name || 'Selected location'}
-                  </Typography>
-                  {selectedLocationId && (
-                    <Chip 
-                      label={availableLocations.find(loc => loc.id === selectedLocationId)?.code || 'Location'} 
-                      size="small" 
-                      sx={{ mt: 1 }}
-                    />
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
             {/* Captured Licenses */}
             <Card sx={{ mb: 3 }}>
+              <CardHeader 
+                title="Captured Learner's Permits" 
+                subheader={`${licenseCaptureData?.captured_licenses?.length || 0} permit(s) captured`}
+              />
               <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Captured Learner's Permits
-                </Typography>
-                {licenseCaptureData?.captured_licenses?.map((license: any, index: number) => (
-                  <Box key={license.id} sx={{ mb: 2 }}>
-                    {index > 0 && <Divider sx={{ my: 2 }} />}
+                {licenseCaptureData?.captured_licenses?.map((license, index) => (
+                  <Box key={license.id} sx={{ mb: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
                     <Grid container spacing={2}>
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="body2" color="text.secondary">
-                          License Number
-                        </Typography>
-                        <Typography variant="body1">{license.license_number}</Typography>
+                      <Grid item xs={12} md={3}>
+                        <Typography variant="body2" color="text.secondary">License Number</Typography>
+                        <Typography variant="body1" fontWeight="bold">{license.license_number}</Typography>
                       </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="body2" color="text.secondary">
-                          Category
-                        </Typography>
-                        <Chip label={license.license_category} color="primary" size="small" />
+                      <Grid item xs={12} md={2}>
+                        <Typography variant="body2" color="text.secondary">Category</Typography>
+                        <Chip label={license.license_category} size="small" color="primary" />
                       </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="body2" color="text.secondary">
-                          Issue Date
-                        </Typography>
+                      <Grid item xs={12} md={2}>
+                        <Typography variant="body2" color="text.secondary">Issue Date</Typography>
                         <Typography variant="body1">{license.issue_date}</Typography>
                       </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="body2" color="text.secondary">
-                          Expiry Date
-                        </Typography>
-                        <Typography variant="body1">{license.expiry_date}</Typography>
+                      <Grid item xs={12} md={2}>
+                        <Typography variant="body2" color="text.secondary">Expiry Date</Typography>
+                        <Typography variant="body1">{license.expiry_date || 'Not specified'}</Typography>
                       </Grid>
-                      {license.restrictions && license.restrictions.length > 0 && (
+                      <Grid item xs={12} md={3}>
+                        <Typography variant="body2" color="text.secondary">Status</Typography>
+                        <Chip 
+                          label={license.verified ? 'Verified' : 'Pending Verification'} 
+                          size="small" 
+                          color={license.verified ? 'success' : 'warning'} 
+                        />
+                      </Grid>
+                      {(license.restrictions && license.restrictions.length > 0) && (
                         <Grid item xs={12}>
-                          <Typography variant="body2" color="text.secondary">
-                            Restrictions
-                          </Typography>
-                          <Box sx={{ mt: 1 }}>
-                            {license.restrictions.map((restriction: string, idx: number) => (
-                              <Chip
-                                key={idx}
-                                label={restriction}
-                                size="small"
-                                sx={{ mr: 1, mb: 1 }}
-                              />
-                            ))}
-                          </Box>
+                          <Typography variant="body2" color="text.secondary">Restrictions</Typography>
+                          <Typography variant="body1">{license.restrictions.join(', ')}</Typography>
+                        </Grid>
+                      )}
+                      {license.verification_notes && (
+                        <Grid item xs={12}>
+                          <Typography variant="body2" color="text.secondary">Verification Notes</Typography>
+                          <Typography variant="body1">{license.verification_notes}</Typography>
                         </Grid>
                       )}
                     </Grid>
+                    {index < (licenseCaptureData?.captured_licenses?.length || 0) - 1 && (
+                      <Divider sx={{ mt: 2 }} />
+                    )}
                   </Box>
                 ))}
               </CardContent>
             </Card>
 
-            {/* Submit Button */}
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-              <Button
-                variant="contained"
-                onClick={handleSubmit}
-                disabled={loading}
-                size="large"
-                sx={{ minWidth: 200 }}
-              >
-                {loading ? <CircularProgress size={24} /> : 'Submit Learner\'s Permit Capture'}
-              </Button>
-            </Box>
+            {/* Summary */}
+            <Alert severity="info" sx={{ mb: 2 }}>
+              <Typography variant="body2">
+                <strong>Next Steps:</strong> After submission, captured learner's permit records will be created in the system 
+                and marked as completed. The permit holder will be able to apply for full driver's licenses 
+                based on their captured learner's permit credentials.
+              </Typography>
+            </Alert>
           </Box>
         );
 
       default:
-        return null;
+        return <Typography>Unknown step</Typography>;
     }
   };
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      {/* Header */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={handleGoToDashboard}
-          sx={{ mr: 2 }}
-        >
-          Back to Dashboard
-        </Button>
-        <Typography variant="h4" component="h1">
-          Learner's Permit Capture
-        </Typography>
-      </Box>
+      <Paper elevation={3} sx={{ p: 4 }}>
+        {/* Header */}
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h4" gutterBottom>
+            Learner's Permit Capture
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Capture existing learner's permit details for system registration
+          </Typography>
+        </Box>
 
-      {/* Error Alert */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
-      )}
+        {/* Error/Success Messages */}
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
+        
+        {success && (
+          <Alert severity="success" sx={{ mb: 3 }} icon={<CheckCircleIcon />}>
+            {success}
+          </Alert>
+        )}
 
-      {/* Success Alert */}
-      {success && (
-        <Alert severity="success" sx={{ mb: 3 }}>
-          {success}
-        </Alert>
-      )}
-
-      {/* Stepper */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Stepper activeStep={activeStep} sx={{ mb: 3 }}>
-            {steps.map((label) => (
-              <Step key={label}>
-                <StepLabel>{label}</StepLabel>
-              </Step>
-            ))}
-          </Stepper>
-
-          {/* Step Content */}
-          {renderStepContent()}
-
-          {/* Navigation Buttons */}
-          {activeStep < 2 && (
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
-              <Button
-                onClick={handleBack}
-                disabled={activeStep === 0}
+        {/* Stepper */}
+        <Stepper activeStep={activeStep} orientation="vertical">
+          {steps.map((step, index) => (
+            <Step key={step.label}>
+              <StepLabel
+                optional={
+                  <Typography variant="caption">{step.description}</Typography>
+                }
+                StepIconComponent={() => (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 40,
+                      height: 40,
+                      borderRadius: '50%',
+                      bgcolor: activeStep >= index ? 'primary.main' : 'grey.300',
+                      color: activeStep >= index ? 'white' : 'grey.600',
+                    }}
+                  >
+                    {step.icon}
+                  </Box>
+                )}
               >
-                Back
-              </Button>
-              <Button
-                variant="contained"
-                onClick={handleNext}
-                disabled={!isStepValid(activeStep)}
-              >
-                Next
-              </Button>
-            </Box>
-          )}
-        </CardContent>
-      </Card>
+                {step.label}
+              </StepLabel>
+              <StepContent>
+                <Box sx={{ mt: 2, mb: 2 }}>
+                  {renderStepContent(index)}
+                </Box>
+                <Box sx={{ mb: 2 }}>
+                  <div>
+                    {index === steps.length - 1 ? (
+                      <Button
+                        variant="contained"
+                        onClick={handleSubmit}
+                        disabled={!isStepValid(index) || loading}
+                        sx={{ mt: 1, mr: 1 }}
+                        startIcon={loading ? <CircularProgress size={20} /> : undefined}
+                      >
+                        {loading ? 'Submitting...' : 'Submit Learner\'s Permit Capture'}
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="contained"
+                        onClick={handleNext}
+                        disabled={!isStepValid(index)}
+                        sx={{ mt: 1, mr: 1 }}
+                        endIcon={<ArrowForwardIcon />}
+                      >
+                        Continue
+                      </Button>
+                    )}
+                    <Button
+                      disabled={index === 0}
+                      onClick={handleBack}
+                      sx={{ mt: 1, mr: 1 }}
+                      startIcon={<ArrowBackIcon />}
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      onClick={handleCancel}
+                      sx={{ mt: 1 }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </Box>
+              </StepContent>
+            </Step>
+          ))}
+        </Stepper>
+      </Paper>
     </Container>
   );
 };
