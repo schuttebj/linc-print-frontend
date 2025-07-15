@@ -6,7 +6,7 @@
 import { API_BASE_URL } from '../config/api';
 
 // Types for card management
-export interface Card {
+export interface CardData {
   id: string;
   card_number: string;
   person_id: string;
@@ -67,7 +67,7 @@ export interface CardSearchFilters {
 }
 
 export interface CardListResponse {
-  cards: Card[];
+  cards: CardData[];
   total: number;
   page: number;
   size: number;
@@ -166,27 +166,27 @@ class CardService {
   }
 
   // Get card by ID
-  async getCard(cardId: string): Promise<Card> {
+  async getCard(cardId: string): Promise<CardData> {
     const response = await fetch(`${this.baseURL}/${cardId}`, {
       method: 'GET',
       headers: await this.getAuthHeaders(),
     });
 
-    return this.handleResponse<Card>(response);
+    return this.handleResponse<CardData>(response);
   }
 
   // Get card by card number
-  async getCardByNumber(cardNumber: string): Promise<Card> {
+  async getCardByNumber(cardNumber: string): Promise<CardData> {
     const response = await fetch(`${this.baseURL}/number/${cardNumber}`, {
       method: 'GET',
       headers: await this.getAuthHeaders(),
     });
 
-    return this.handleResponse<Card>(response);
+    return this.handleResponse<CardData>(response);
   }
 
   // Get cards for a person
-  async getPersonCards(personId: string, activeOnly: boolean = false): Promise<Card[]> {
+  async getPersonCards(personId: string, activeOnly: boolean = false): Promise<CardData[]> {
     const params = new URLSearchParams();
     if (activeOnly) params.append('active_only', 'true');
 
@@ -195,51 +195,51 @@ class CardService {
       headers: await this.getAuthHeaders(),
     });
 
-    return this.handleResponse<Card[]>(response);
+    return this.handleResponse<CardData[]>(response);
   }
 
   // Create a new card
-  async createCard(cardData: CardCreate): Promise<Card> {
+  async createCard(cardData: CardCreate): Promise<CardData> {
     const response = await fetch(this.baseURL, {
       method: 'POST',
       headers: await this.getAuthHeaders(),
       body: JSON.stringify(cardData),
     });
 
-    return this.handleResponse<Card>(response);
+    return this.handleResponse<CardData>(response);
   }
 
   // Create test card for a license (simplified for testing)
-  async createTestCard(licenseId: string): Promise<Card> {
+  async createTestCard(licenseId: string): Promise<CardData> {
     const response = await fetch(`${this.baseURL}/test`, {
       method: 'POST',
       headers: await this.getAuthHeaders(),
       body: JSON.stringify({ license_id: licenseId }),
     });
 
-    return this.handleResponse<Card>(response);
+    return this.handleResponse<CardData>(response);
   }
 
   // Update card status
-  async updateCardStatus(cardId: string, status: string, notes?: string): Promise<Card> {
+  async updateCardStatus(cardId: string, status: string, notes?: string): Promise<CardData> {
     const response = await fetch(`${this.baseURL}/${cardId}/status`, {
       method: 'PUT',
       headers: await this.getAuthHeaders(),
       body: JSON.stringify({ status, notes }),
     });
 
-    return this.handleResponse<Card>(response);
+    return this.handleResponse<CardData>(response);
   }
 
   // Mark card as collected
-  async markCardCollected(cardId: string, collectionReference?: string, notes?: string): Promise<Card> {
+  async markCardCollected(cardId: string, collectionReference?: string, notes?: string): Promise<CardData> {
     const response = await fetch(`${this.baseURL}/${cardId}/collect`, {
       method: 'POST',
       headers: await this.getAuthHeaders(),
       body: JSON.stringify({ collection_reference: collectionReference, notes }),
     });
 
-    return this.handleResponse<Card>(response);
+    return this.handleResponse<CardData>(response);
   }
 
   // Helper methods for status and formatting

@@ -47,7 +47,7 @@ import {
 import { format, parseISO } from 'date-fns';
 
 import { useAuth } from '../../contexts/AuthContext';
-import cardService, { CardSearchFilters, CardListResponse, Card } from '../../services/cardService';
+import cardService, { CardSearchFilters, CardListResponse, CardData } from '../../services/cardService';
 
 interface CardListPageProps {}
 
@@ -55,7 +55,7 @@ const CardListPage: React.FC<CardListPageProps> = () => {
   const { user } = useAuth();
 
   // State management
-  const [cards, setCards] = useState<Card[]>([]);
+  const [cards, setCards] = useState<CardData[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState(0);
@@ -70,7 +70,7 @@ const CardListPage: React.FC<CardListPageProps> = () => {
     size: 25
   });
   const [quickSearch, setQuickSearch] = useState('');
-  const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+  const [selectedCard, setSelectedCard] = useState<CardData | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
   // Load cards
@@ -190,7 +190,7 @@ const CardListPage: React.FC<CardListPageProps> = () => {
     );
   };
 
-  const handleViewCard = (card: Card) => {
+  const handleViewCard = (card: CardData) => {
     setSelectedCard(card);
     setDetailDialogOpen(true);
   };
