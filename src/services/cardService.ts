@@ -3,7 +3,7 @@
  * Handles all card-related API operations
  */
 
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, getAuthToken } from '../config/api';
 
 // Types for card management
 export interface CardData {
@@ -94,7 +94,7 @@ class CardService {
   private baseURL = `${API_BASE_URL}/api/v1/cards`;
 
   private async getAuthHeaders(): Promise<Headers> {
-    const token = localStorage.getItem('access_token');
+    const token = getAuthToken();
     const headers = new Headers({
       'Content-Type': 'application/json',
     });
