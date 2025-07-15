@@ -62,7 +62,7 @@ import { applicationService } from '../../services/applicationService';
 
 export interface CapturedLicense {
   id: string; // temp ID for form management
-  license_number: string;
+  license_number?: string; // Made optional as we're removing this field
   license_category: LicenseCategory; // Single category only
   issue_date: string;
   restrictions: string[]; // License restrictions (corrective lenses, disability modifications)
@@ -134,18 +134,28 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
     }
   };
 
-  // Get existing license categories
-  const getExistingCategories = useCallback(() => {
+  // Get existing license categories including those being captured in current session
+  const getExistingCategories = useCallback((currentLicenseId?: string) => {
+    // Get categories from existing licenses in the system
     const categories = new Set<string>();
     existingLicenses.forEach(license => {
       license.categories.forEach((cat: string) => categories.add(cat));
     });
+    
+    // Also include categories being added in the current capture session
+    // This allows for adding dependent categories in the same session
+    // But exclude the current license being edited to prevent circular dependencies
+    captureData.captured_licenses.forEach(license => {
+      if (currentLicenseId && license.id === currentLicenseId) return;
+      categories.add(license.license_category);
+    });
+    
     return Array.from(categories);
-  }, [existingLicenses]);
+  }, [existingLicenses, captureData.captured_licenses]);
 
   // Check if a category has prerequisites met
-  const hasPrerequisites = useCallback((category: LicenseCategory) => {
-    const existingCategories = getExistingCategories();
+  const hasPrerequisites = useCallback((category: LicenseCategory, currentLicenseId?: string) => {
+    const existingCategories = getExistingCategories(currentLicenseId);
     
     // Prerequisite rules for categories
     const prerequisites: Record<string, string[]> = {
@@ -165,7 +175,12 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
   // Validate license data whenever it changes
   const validateLicenseData = useCallback((licenses: CapturedLicense[]) => {
     const errors: Record<string, string[]> = {};
-    const existingCategories = getExistingCategories();
+    
+    // Get system categories (not including current capture session)
+    const systemCategories = new Set<string>();
+    existingLicenses.forEach(license => {
+      license.categories.forEach((cat: string) => systemCategories.add(cat));
+    });
 
     licenses.forEach((license, index) => {
       const licenseErrors: string[] = [];
@@ -179,12 +194,12 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
       }
 
       // Check if category already exists in the system
-      if (existingCategories.includes(license.license_category)) {
+      if (systemCategories.has(license.license_category)) {
         licenseErrors.push(`License category ${license.license_category} already exists in the system - cannot capture duplicate`);
       }
 
       // Check prerequisites for certain categories
-      if (!hasPrerequisites(license.license_category)) {
+      if (!hasPrerequisites(license.license_category, license.id)) {
         const prerequisites: Record<string, string[]> = {
           'C': ['B'],
           'C1E': ['C1'],
@@ -196,7 +211,7 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
         };
         const required = prerequisites[license.license_category];
         if (required) {
-          licenseErrors.push(`Cannot capture ${license.license_category} - prerequisite license(s) ${required.join(', ')} not found in system`);
+          licenseErrors.push(`Cannot capture ${license.license_category} - prerequisite license(s) ${required.join(', ')} not found in system or current capture`);
         }
       }
       
@@ -207,7 +222,7 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
 
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
-  }, [getExistingCategories, hasPrerequisites]);
+  }, [existingLicenses, hasPrerequisites]);
 
   // Update parent when data changes
   const updateCaptureData = (newData: LicenseCaptureData) => {
@@ -216,8 +231,15 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
     onChange(newData);
   };
 
-  const getAvailableCategories = () => {
-    const existingCategories = getExistingCategories();
+  const getAvailableCategories = (currentLicenseId?: string) => {
+    // Get system categories (not including current capture session)
+    const systemCategories = new Set<string>();
+    existingLicenses.forEach(license => {
+      license.categories.forEach((cat: string) => systemCategories.add(cat));
+    });
+    
+    // Get all categories including those being added in current session
+    const allExistingCategories = getExistingCategories(currentLicenseId);
     
     if (applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE) {
       // Show all learner's permit categories
@@ -225,17 +247,17 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
         {
           value: LicenseCategory.LEARNERS_1,
           label: `Code 1 - ${LEARNERS_PERMIT_RULES['1']?.description || 'Motorcycles and mopeds'}`,
-          disabled: existingCategories.includes('1')
+          disabled: systemCategories.has('1')
         },
         {
           value: LicenseCategory.LEARNERS_2,
           label: `Code 2 - ${LEARNERS_PERMIT_RULES['2']?.description || 'Light motor vehicles'}`,
-          disabled: existingCategories.includes('2')
+          disabled: systemCategories.has('2')
         },
         {
           value: LicenseCategory.LEARNERS_3,
           label: `Code 3 - ${LEARNERS_PERMIT_RULES['3']?.description || 'All motor vehicles'}`,
-          disabled: existingCategories.includes('3')
+          disabled: systemCategories.has('3')
         }
       ];
     } else {
@@ -244,8 +266,8 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
         .filter(category => !['1', '2', '3'].includes(category)) // Exclude learner's permit codes
         .map(category => {
           const categoryRule = LICENSE_CATEGORY_RULES[category];
-          const alreadyExists = existingCategories.includes(category);
-          const hasPrereqs = hasPrerequisites(category);
+          const alreadyExists = systemCategories.has(category);
+          const hasPrereqs = hasPrerequisites(category, currentLicenseId);
           
           let disabledReason = '';
           if (alreadyExists) {
@@ -281,11 +303,10 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
 
   const addLicense = () => {
     const tempId = `license-${Date.now()}`;
-    const availableCategories = getAvailableCategories();
+    const availableCategories = getAvailableCategories(tempId);
     
     const newLicense: CapturedLicense = {
       id: tempId,
-      license_number: '',
       license_category: availableCategories[0]?.value || LicenseCategory.B,
       issue_date: '',
       restrictions: [],
@@ -301,10 +322,43 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
 
   const updateLicense = (index: number, field: keyof CapturedLicense, value: any) => {
     const updatedLicenses = [...captureData.captured_licenses];
+    const oldValue = updatedLicenses[index][field];
+    
     updatedLicenses[index] = {
       ...updatedLicenses[index],
       [field]: value
     };
+
+    // If changing license category, we need to reset verification for any dependent licenses
+    if (field === 'license_category' && oldValue !== value) {
+      // Find any licenses that might depend on this one
+      const prerequisites: Record<string, string[]> = {
+        'C': ['B'],
+        'C1E': ['C1'],
+        'CE': ['C'],
+        'D': ['B'],
+        'D1': ['B'],
+        'D2': ['D'],
+        'BE': ['B'],
+      };
+      
+      // If this was a prerequisite category that was changed, reset verification on dependent licenses
+      updatedLicenses.forEach((license, licenseIndex) => {
+        if (licenseIndex !== index) { // Don't check the license we're updating
+          const requiredFor = Object.entries(prerequisites)
+            .filter(([_, prereqs]) => prereqs.includes(oldValue as string))
+            .map(([category]) => category);
+            
+          if (requiredFor.includes(license.license_category)) {
+            // Reset verification if this license depended on the changed category
+            updatedLicenses[licenseIndex] = {
+              ...updatedLicenses[licenseIndex],
+              verified: false
+            };
+          }
+        }
+      });
+    }
 
     updateCaptureData({
       ...captureData,
@@ -502,20 +556,6 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
             </Box>
 
             <Grid container spacing={2}>
-              {/* License Number */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="License Number"
-                  value={license.license_number}
-                  onChange={(e) => updateLicense(index, 'license_number', formatLicenseNumber(e.target.value))}
-                  disabled={disabled}
-                  required
-                  placeholder="Enter license number"
-                  helperText="Format: Alphanumeric characters only"
-                />
-              </Grid>
-
               {/* License Category - Single Select */}
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth required>
@@ -528,7 +568,7 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                     disabled={disabled}
                     error={validationErrors[license.id]?.length > 0}
                   >
-                    {getAvailableCategories().map((category) => (
+                    {getAvailableCategories(license.id).map((category) => (
                       <MenuItem 
                         key={category.value} 
                         value={category.value}
@@ -727,7 +767,6 @@ export const transformCapturedDataForAuthorization = (captureData: LicenseCaptur
     restrictions: firstLicense.restrictions || [],
     medical_restrictions: [], // Empty for capture applications
     captured_license_data: {
-      original_license_number: firstLicense.license_number,
       original_issue_date: firstLicense.issue_date,
       original_expiry_date: '', // Removed expiry_date
       original_category: firstLicense.license_category,
@@ -750,10 +789,6 @@ export const validateCapturedDataForAuthorization = (captureData: LicenseCapture
   }
 
   captureData.captured_licenses.forEach((license, index) => {
-    if (!license.license_number.trim()) {
-      errors.push(`License #${index + 1}: License number is required`);
-    }
-    
     if (!license.license_category) {
       errors.push(`License #${index + 1}: License category is required`);
     }
