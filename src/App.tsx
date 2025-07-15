@@ -34,6 +34,7 @@ import InternationalPermitApplicationPage from './pages/applications/Internation
 import LicenseDashboard from './pages/licenses/LicenseDashboard';
 import LicenseListPage from './pages/licenses/LicenseListPage';
 import LicenseDetailPage from './pages/licenses/LicenseDetailPage';
+import LicenseApprovalPage from './pages/licenses/LicenseApprovalPage';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -252,6 +253,14 @@ function App() {
                 element={
                   <ProtectedRoute requiredPermission="licenses.read">
                     <LicenseListPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="approval" 
+                element={
+                  <ProtectedRoute requiredPermission="applications.authorize">
+                    <LicenseApprovalPage />
                   </ProtectedRoute>
                 } 
               />

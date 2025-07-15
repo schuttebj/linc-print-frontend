@@ -131,6 +131,11 @@ export const API_ENDPOINTS = {
   applicationAssociated: (id: string) => `${API_BASE_URL}/api/${API_VERSION}/applications/${id}/associated`,
   applicationStatistics: `${API_BASE_URL}/api/${API_VERSION}/applications/statistics`,
   
+  // Authorization endpoints
+  applicationsPendingAuthorization: `${API_BASE_URL}/api/${API_VERSION}/applications/pending-authorization`,
+  applicationAuthorization: (id: string) => `${API_BASE_URL}/api/${API_VERSION}/applications/${id}/authorization`,
+  applicationAuthorizationUpdate: (id: string, authId: string) => `${API_BASE_URL}/api/${API_VERSION}/applications/${id}/authorization/${authId}`,
+  
   // Standalone image processing (doesn't require application)
   processImage: `${API_BASE_URL}/api/${API_VERSION}/applications/process-image`,
 

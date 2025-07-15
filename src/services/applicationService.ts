@@ -458,6 +458,23 @@ class ApplicationService {
     return errors;
   }
 
+  // Authorization functions
+  async getPendingAuthorizationApplications(): Promise<Application[]> {
+    return await api.get(API_ENDPOINTS.applicationsPendingAuthorization);
+  }
+
+  async getApplicationAuthorization(applicationId: string): Promise<any> {
+    return await api.get(API_ENDPOINTS.applicationAuthorization(applicationId));
+  }
+
+  async createApplicationAuthorization(applicationId: string, authorizationData: any): Promise<any> {
+    return await api.post(API_ENDPOINTS.applicationAuthorization(applicationId), authorizationData);
+  }
+
+  async updateApplicationAuthorization(applicationId: string, authorizationId: string, authorizationData: any): Promise<any> {
+    return await api.put(API_ENDPOINTS.applicationAuthorizationUpdate(applicationId, authorizationId), authorizationData);
+  }
+
   private calculateAge(birthDate: string): number {
     const birth = new Date(birthDate);
     const today = new Date();
