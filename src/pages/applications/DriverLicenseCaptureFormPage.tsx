@@ -184,7 +184,6 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
     if (selectedPerson && !licenseCaptureData) {
       const defaultLicense = {
         id: `license-${Date.now()}`,
-        license_number: '',
         license_category: LicenseCategory.B, // Default to B category
         issue_date: '',
         restrictions: [],
@@ -335,6 +334,7 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
               value={licenseCaptureData}
               onChange={handleLicenseCaptureChange}
               personBirthDate={selectedPerson?.birth_date}
+              personId={selectedPerson?.id}
             />
           </Box>
         );
@@ -410,18 +410,14 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
                   <Box key={license.id} sx={{ mb: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
                     <Grid container spacing={2}>
                       <Grid item xs={12} md={3}>
-                        <Typography variant="body2" color="text.secondary">License Number</Typography>
-                        <Typography variant="body1" fontWeight="bold">{license.license_number}</Typography>
-                      </Grid>
-                      <Grid item xs={12} md={2}>
                         <Typography variant="body2" color="text.secondary">Category</Typography>
                         <Chip label={license.license_category} size="small" color="primary" />
                       </Grid>
-                      <Grid item xs={12} md={2}>
+                      <Grid item xs={12} md={3}>
                         <Typography variant="body2" color="text.secondary">Issue Date</Typography>
                         <Typography variant="body1">{license.issue_date}</Typography>
                       </Grid>
-                      <Grid item xs={12} md={3}>
+                      <Grid item xs={12} md={6}>
                         <Typography variant="body2" color="text.secondary">Restrictions</Typography>
                         {license.restrictions?.length > 0 ? (
                           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
