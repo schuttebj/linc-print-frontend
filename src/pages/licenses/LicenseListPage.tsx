@@ -152,11 +152,7 @@ const LicenseListPage: React.FC<LicenseListPageProps> = () => {
 
   // Navigation functions
   const handleViewLicense = (license: License) => {
-    navigate(`/licenses/${license.id}`);
-  };
-
-  const handleViewPerson = (personId: string) => {
-    navigate(`/persons/${personId}`);
+    navigate(`/dashboard/licenses/${license.id}`);
   };
 
   // Format functions
@@ -479,20 +475,12 @@ const LicenseListPage: React.FC<LicenseListPageProps> = () => {
                       </TableCell>
                       <TableCell>
                         <Stack direction="row" spacing={0.5}>
-                          <Tooltip title="View Details">
+                          <Tooltip title="View License Details">
                             <IconButton 
                               size="small"
                               onClick={() => handleViewLicense(license)}
                             >
                               <ViewIcon />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="View Person">
-                            <IconButton 
-                              size="small"
-                              onClick={() => handleViewPerson(license.person_id)}
-                            >
-                              <EditIcon />
                             </IconButton>
                           </Tooltip>
                         </Stack>

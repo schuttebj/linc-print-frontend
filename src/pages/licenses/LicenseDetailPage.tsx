@@ -249,7 +249,7 @@ const LicenseDetailPage: React.FC = () => {
       {/* Header */}
       <Box sx={{ mb: 3 }}>
         <Stack direction="row" alignItems="center" spacing={2}>
-          <IconButton onClick={() => navigate('/licenses')}>
+          <IconButton onClick={() => navigate('/dashboard/licenses/list')}>
             <BackIcon />
           </IconButton>
           <Typography variant="h4" component="h1">

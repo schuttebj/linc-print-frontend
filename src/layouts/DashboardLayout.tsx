@@ -231,7 +231,14 @@ const DashboardLayout: React.FC = () => {
       path: '/dashboard/licenses/list',
       permission: 'licenses.read',
     },
+    {
+      text: 'License Approval',
+      icon: <Assessment />,
+      path: '/dashboard/licenses/approval',
+      permission: 'applications.authorize',
+    },
   ];
+
 
   // Admin navigation items
   const adminNavigationItems = [

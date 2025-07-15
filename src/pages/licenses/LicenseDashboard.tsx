@@ -43,13 +43,16 @@ import {
   Assessment,
   Visibility,
   Schedule,
-  LocationOn
+  LocationOn,
+  Gavel
 } from '@mui/icons-material';
 
 import { licenseService, LicenseStatistics, License } from '../../services/licenseService';
+import { useAuth } from '../../contexts/AuthContext';
 
 const LicenseDashboard: React.FC = () => {
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statistics, setStatistics] = useState<LicenseStatistics | null>(null);
@@ -351,6 +354,16 @@ const LicenseDashboard: React.FC = () => {
                 >
                   Search Licenses
                 </Button>
+                {hasPermission('applications.authorize') && (
+                  <Button
+                    variant="outlined"
+                    fullWidth
+                    startIcon={<Gavel />}
+                    onClick={() => navigate('/dashboard/licenses/approval')}
+                  >
+                    License Approval
+                  </Button>
+                )}
                 <Button
                   variant="outlined"
                   fullWidth
