@@ -292,7 +292,7 @@ const LicenseDashboard: React.FC = () => {
                           primary={
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <Typography variant="body1">
-                                {license.license_number}
+                                {licenseService.formatLicenseId(license.id)}
                               </Typography>
                               <Chip
                                 label={license.status}

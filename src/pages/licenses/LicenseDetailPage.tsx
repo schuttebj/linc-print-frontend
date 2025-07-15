@@ -276,7 +276,7 @@ const LicenseDetailPage: React.FC = () => {
             License Details
           </Typography>
           <Chip 
-            label={licenseService.formatLicenseNumber(license.license_number)}
+            label={licenseService.formatLicenseId(license.id)}
             color="primary"
             variant="outlined"
             size="medium"
@@ -370,7 +370,7 @@ const LicenseDetailPage: React.FC = () => {
                           License Number
                         </Typography>
                         <Typography variant="body1" fontWeight="bold">
-                          {licenseService.formatLicenseNumber(license.license_number)}
+                          {licenseService.formatLicenseId(license.id)}
                         </Typography>
                       </Box>
                       <Box>
