@@ -9,7 +9,6 @@ import { API_BASE_URL, API_VERSION } from '../config/api';
 // License types based on backend schemas
 export interface License {
   id: string;
-  license_number: string;
   person_id: string;
   created_from_application_id: string;
   
@@ -132,7 +131,7 @@ export interface PersonLicensesSummary {
   
   // Recent activity
   latest_license_date?: string;
-  latest_license_number?: string;
+  latest_license_id?: string;
   
   // Current cards
   cards_ready_for_collection: number;
@@ -140,8 +139,8 @@ export interface PersonLicensesSummary {
 }
 
 export interface LicenseSearchFilters {
-  license_number?: string;
   person_id?: string;
+  person_name?: string;
   category?: string;
   status?: string;
   issuing_location_id?: string;
@@ -362,16 +361,12 @@ class LicenseService {
   }
 
   // Utility Functions for Frontend
-  formatLicenseNumber(licenseNumber: string): string {
-    // Format: TXXX12345678X -> T-XXX-12345678-X
-    if (licenseNumber.length >= 11) {
-      const province = licenseNumber.slice(0, 1);
-      const location = licenseNumber.slice(1, 4);
-      const sequence = licenseNumber.slice(4, -1);
-      const checkDigit = licenseNumber.slice(-1);
-      return `${province}-${location}-${sequence}-${checkDigit}`;
+  formatLicenseId(licenseId: string): string {
+    // Format UUID for display: show first 8 characters
+    if (licenseId && licenseId.length >= 8) {
+      return `${licenseId.slice(0, 8)}...`;
     }
-    return licenseNumber;
+    return licenseId || 'N/A';
   }
 
   getStatusColor(status: string): 'success' | 'warning' | 'error' | 'info' {

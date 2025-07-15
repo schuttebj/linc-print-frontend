@@ -51,7 +51,8 @@ import {
   ApplicationCreate,
   LicenseCaptureData,
   LicenseCategory,
-  Location
+  Location,
+  CapturedLicense
 } from '../../types';
 import { API_ENDPOINTS, getAuthToken } from '../../config/api';
 
@@ -186,7 +187,6 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
         license_number: '',
         license_category: LicenseCategory.B, // Default to B category
         issue_date: '',
-        expiry_date: '',
         restrictions: [],
         verified: false,
         verification_notes: ''
@@ -421,24 +421,23 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
                         <Typography variant="body2" color="text.secondary">Issue Date</Typography>
                         <Typography variant="body1">{license.issue_date}</Typography>
                       </Grid>
-                      <Grid item xs={12} md={2}>
-                        <Typography variant="body2" color="text.secondary">Expiry Date</Typography>
-                        <Typography variant="body1">{license.expiry_date || 'Not specified'}</Typography>
-                      </Grid>
                       <Grid item xs={12} md={3}>
-                        <Typography variant="body2" color="text.secondary">Status</Typography>
-                        <Chip 
-                          label={license.verified ? 'Verified' : 'Pending Verification'} 
-                          size="small" 
-                          color={license.verified ? 'success' : 'warning'} 
-                        />
+                        <Typography variant="body2" color="text.secondary">Restrictions</Typography>
+                        {license.restrictions?.length > 0 ? (
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            {license.restrictions.map((restriction, rIndex) => (
+                              <Chip 
+                                key={rIndex} 
+                                label={restriction} 
+                                size="small" 
+                                variant="outlined" 
+                              />
+                            ))}
+                          </Box>
+                        ) : (
+                          <Typography variant="body1">None</Typography>
+                        )}
                       </Grid>
-                      {(license.restrictions && license.restrictions.length > 0) && (
-                        <Grid item xs={12}>
-                          <Typography variant="body2" color="text.secondary">Restrictions</Typography>
-                          <Typography variant="body1">{license.restrictions.join(', ')}</Typography>
-                        </Grid>
-                      )}
                       {license.verification_notes && (
                         <Grid item xs={12}>
                           <Typography variant="body2" color="text.secondary">Verification Notes</Typography>

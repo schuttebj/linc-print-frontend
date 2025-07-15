@@ -1445,6 +1445,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                 value={formData.license_capture}
                 onChange={(data) => setFormData(prev => ({ ...prev, license_capture: data }))}
                 disabled={false}
+                personId={formData.person?.id}
               />
             </Grid>
           )}

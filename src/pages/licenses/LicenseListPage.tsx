@@ -124,7 +124,7 @@ const LicenseListPage: React.FC<LicenseListPageProps> = () => {
     if (quickSearch.trim()) {
       setSearchFilters(prev => ({
         ...prev,
-        license_number: quickSearch.trim()
+        person_name: quickSearch.trim()
       }));
       setPage(0);
     }
@@ -239,10 +239,10 @@ const LicenseListPage: React.FC<LicenseListPageProps> = () => {
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
-                  label="Quick Search (License Number)"
+                  label="Quick Search (Person Name)"
                   value={quickSearch}
                   onChange={(e) => setQuickSearch(e.target.value)}
-                  placeholder="Enter license number..."
+                  placeholder="Enter person name..."
                   InputProps={{
                     endAdornment: (
                       <IconButton 
@@ -417,7 +417,7 @@ const LicenseListPage: React.FC<LicenseListPageProps> = () => {
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell>License Number</TableCell>
+                    <TableCell>License ID</TableCell>
                     <TableCell>Category</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell>Issue Date</TableCell>
@@ -432,7 +432,7 @@ const LicenseListPage: React.FC<LicenseListPageProps> = () => {
                     <TableRow key={license.id} hover>
                       <TableCell>
                         <Typography variant="body2" fontWeight="bold">
-                          {licenseService.formatLicenseNumber(license.license_number)}
+                          {licenseService.formatLicenseId(license.id)}
                         </Typography>
                         {license.captured_from_license_number && (
                           <Typography variant="caption" color="textSecondary">

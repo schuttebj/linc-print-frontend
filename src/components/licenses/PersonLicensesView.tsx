@@ -316,7 +316,7 @@ const PersonLicensesView: React.FC<PersonLicensesViewProps> = ({
                 </Typography>
                 <Typography variant="body2">
                   {summary.latest_license_date 
-                    ? `${formatDate(summary.latest_license_date)} (${summary.latest_license_number})`
+                    ? `${formatDate(summary.latest_license_date)} (ID: ${summary.latest_license_id?.slice(0, 8)}...)`
                     : 'No recent activity'
                   }
                 </Typography>
@@ -358,7 +358,7 @@ const PersonLicensesView: React.FC<PersonLicensesViewProps> = ({
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell>License Number</TableCell>
+                    <TableCell>License ID</TableCell>
                     <TableCell>Category</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell>Issue Date</TableCell>
@@ -373,7 +373,7 @@ const PersonLicensesView: React.FC<PersonLicensesViewProps> = ({
                     <TableRow key={license.id} hover>
                       <TableCell>
                         <Typography variant="body2" fontWeight="bold">
-                          {licenseService.formatLicenseNumber(license.license_number)}
+                          {licenseService.formatLicenseId(license.id)}
                         </Typography>
                         {license.captured_from_license_number && (
                           <Typography variant="caption" color="textSecondary">

@@ -32,14 +32,23 @@ import {
   Tooltip,
   Divider,
   Stack,
-  Chip
+  Chip,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+  Collapse
 } from '@mui/material';
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
   VerifiedUser as VerifiedIcon,
   Warning as WarningIcon,
-  Error as ErrorIcon
+  Error as ErrorIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
+  CheckCircle as CheckCircleIcon
 } from '@mui/icons-material';
 
 import {
@@ -49,13 +58,13 @@ import {
   LEARNERS_PERMIT_RULES
 } from '../../types';
 import { LicenseValidationService } from '../../services/licenseValidationService';
+import { applicationService } from '../../services/applicationService';
 
 export interface CapturedLicense {
   id: string; // temp ID for form management
   license_number: string;
   license_category: LicenseCategory; // Single category only
   issue_date: string;
-  expiry_date: string;
   restrictions: string[]; // License restrictions (corrective lenses, disability modifications)
   verified: boolean;
   verification_notes?: string;
@@ -72,6 +81,7 @@ interface LicenseCaptureFormProps {
   onChange: (data: LicenseCaptureData | null) => void;
   disabled?: boolean;
   personBirthDate?: string; // For age validation
+  personId?: string; // For loading existing licenses
 }
 
 const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
@@ -79,14 +89,25 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
   value,
   onChange,
   disabled = false,
-  personBirthDate
+  personBirthDate,
+  personId
 }) => {
   const [captureData, setCaptureData] = useState<LicenseCaptureData>({
     captured_licenses: [],
     application_type: applicationtype
   });
   const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
+  const [existingLicenses, setExistingLicenses] = useState<any[]>([]);
+  const [loadingExisting, setLoadingExisting] = useState(false);
+  const [showExisting, setShowExisting] = useState(false);
   const validationService = new LicenseValidationService();
+
+  // Load existing licenses when person changes
+  useEffect(() => {
+    if (personId) {
+      loadExistingLicenses(personId);
+    }
+  }, [personId]);
 
   // Initialize data from props
   useEffect(() => {
@@ -100,47 +121,85 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
     }
   }, [value, applicationtype]);
 
+  const loadExistingLicenses = async (personId: string) => {
+    setLoadingExisting(true);
+    try {
+      const response = await applicationService.getPersonLicenses(personId);
+      setExistingLicenses(response.system_licenses || []);
+    } catch (error) {
+      console.error('Error loading existing licenses:', error);
+      setExistingLicenses([]);
+    } finally {
+      setLoadingExisting(false);
+    }
+  };
+
+  // Get existing license categories
+  const getExistingCategories = useCallback(() => {
+    const categories = new Set<string>();
+    existingLicenses.forEach(license => {
+      license.categories.forEach((cat: string) => categories.add(cat));
+    });
+    return Array.from(categories);
+  }, [existingLicenses]);
+
+  // Check if a category has prerequisites met
+  const hasPrerequisites = useCallback((category: LicenseCategory) => {
+    const existingCategories = getExistingCategories();
+    
+    // Prerequisite rules for categories
+    const prerequisites: Record<string, string[]> = {
+      'C': ['B'],        // C license needs B
+      'C1E': ['C1'],     // C1E needs C1
+      'CE': ['C'],       // CE needs C
+      'D': ['B'],        // D license needs B
+      'D1': ['B'],       // D1 license needs B
+      'D2': ['D'],       // D2 needs D
+      'BE': ['B'],       // BE needs B
+    };
+
+    const requiredCategories = prerequisites[category] || [];
+    return requiredCategories.every(req => existingCategories.includes(req));
+  }, [getExistingCategories]);
+
   // Validate license data whenever it changes
   const validateLicenseData = useCallback((licenses: CapturedLicense[]) => {
     const errors: Record<string, string[]> = {};
+    const existingCategories = getExistingCategories();
 
     licenses.forEach((license, index) => {
       const licenseErrors: string[] = [];
       
-      // Check for duplicate license categories
-      const duplicateCategories = licenses.filter(l => 
+      // Check for duplicate license categories within the capture
+      const duplicateInCapture = licenses.filter(l => 
         l.license_category === license.license_category && l.id !== license.id
       );
-      if (duplicateCategories.length > 0) {
+      if (duplicateInCapture.length > 0) {
         licenseErrors.push(`Duplicate license category ${license.license_category} - cannot add the same category multiple times`);
       }
 
-      // Check age requirements
-      if (personBirthDate) {
-        const ageValidation = validationService.validateAgeRequirements(
-          personBirthDate,
-          license.license_category
-        );
-        if (!ageValidation.is_valid) {
-          licenseErrors.push(ageValidation.message);
-        }
+      // Check if category already exists in the system
+      if (existingCategories.includes(license.license_category)) {
+        licenseErrors.push(`License category ${license.license_category} already exists in the system - cannot capture duplicate`);
       }
 
-      // Check prerequisites
-      const existingCategories = licenses
-        .filter(l => l.id !== license.id)
-        .map(l => l.license_category);
+      // Check prerequisites for certain categories
+      if (!hasPrerequisites(license.license_category)) {
+        const prerequisites: Record<string, string[]> = {
+          'C': ['B'],
+          'C1E': ['C1'],
+          'CE': ['C'],
+          'D': ['B'],
+          'D1': ['B'],
+          'D2': ['D'],
+          'BE': ['B'],
+        };
+        const required = prerequisites[license.license_category];
+        if (required) {
+          licenseErrors.push(`Cannot capture ${license.license_category} - prerequisite license(s) ${required.join(', ')} not found in system`);
+        }
+      }
       
-      const rules = LICENSE_CATEGORY_RULES[license.license_category];
-      if (rules && rules.prerequisites.length > 0) {
-        const missingPrerequisites = rules.prerequisites.filter(req => 
-          !existingCategories.includes(req)
-        );
-        if (missingPrerequisites.length > 0) {
-          licenseErrors.push(`Category ${license.license_category} requires: ${missingPrerequisites.join(', ')}`);
-        }
-      }
-
       if (licenseErrors.length > 0) {
         errors[license.id] = licenseErrors;
       }
@@ -148,7 +207,7 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
 
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
-  }, [personBirthDate, validationService]);
+  }, [getExistingCategories, hasPrerequisites]);
 
   // Update parent when data changes
   const updateCaptureData = (newData: LicenseCaptureData) => {
@@ -158,52 +217,59 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
   };
 
   const getAvailableCategories = () => {
+    const existingCategories = getExistingCategories();
+    
     if (applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE) {
       // Show all learner's permit categories
       return [
         {
           value: LicenseCategory.LEARNERS_1,
           label: `Code 1 - ${LEARNERS_PERMIT_RULES['1']?.description || 'Motorcycles and mopeds'}`,
-          disabled: false
+          disabled: existingCategories.includes('1')
         },
         {
           value: LicenseCategory.LEARNERS_2,
           label: `Code 2 - ${LEARNERS_PERMIT_RULES['2']?.description || 'Light motor vehicles'}`,
-          disabled: false
+          disabled: existingCategories.includes('2')
         },
         {
           value: LicenseCategory.LEARNERS_3,
           label: `Code 3 - ${LEARNERS_PERMIT_RULES['3']?.description || 'All motor vehicles'}`,
-          disabled: false
+          disabled: existingCategories.includes('3')
         }
       ];
     } else {
-      // For DRIVERS_LICENSE_CAPTURE, show all regular license categories
-      const existingCategories = captureData.captured_licenses.map(l => l.license_category);
-      
+      // For DRIVERS_LICENSE_CAPTURE, filter based on existing licenses and prerequisites
       return Object.values(LicenseCategory)
         .filter(category => !['1', '2', '3'].includes(category)) // Exclude learner's permit codes
         .map(category => {
           const categoryRule = LICENSE_CATEGORY_RULES[category];
-          const hasPrerequisites = categoryRule?.prerequisites?.length > 0;
+          const alreadyExists = existingCategories.includes(category);
+          const hasPrereqs = hasPrerequisites(category);
           
-          let disabled = false;
           let disabledReason = '';
-          
-          if (hasPrerequisites) {
-            const missingPrerequisites = categoryRule.prerequisites.filter(req => 
-              !existingCategories.includes(req)
-            );
-            if (missingPrerequisites.length > 0) {
-              disabled = true;
-              disabledReason = `Requires: ${missingPrerequisites.join(', ')}`;
+          if (alreadyExists) {
+            disabledReason = ' (Already exists)';
+          } else if (!hasPrereqs) {
+            const prerequisites: Record<string, string[]> = {
+              'C': ['B'],
+              'C1E': ['C1'],
+              'CE': ['C'],
+              'D': ['B'],
+              'D1': ['B'],
+              'D2': ['D'],
+              'BE': ['B'],
+            };
+            const required = prerequisites[category];
+            if (required) {
+              disabledReason = ` (Needs ${required.join(', ')})`;
             }
           }
           
           return {
             value: category,
-            label: `${category} - ${categoryRule?.description || 'License category'}${disabled ? ` (${disabledReason})` : ''}`,
-            disabled
+            label: `${category} - ${categoryRule?.description || 'License category'}${disabledReason}`,
+            disabled: alreadyExists || !hasPrereqs
           };
         }).sort((a, b) => {
           // Sort by category order
@@ -222,7 +288,6 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
       license_number: '',
       license_category: availableCategories[0]?.value || LicenseCategory.B,
       issue_date: '',
-      expiry_date: '',
       restrictions: [],
       verified: false,
       verification_notes: ''
@@ -259,10 +324,6 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
   const formatLicenseNumber = (number: string): string => {
     // Remove non-alphanumeric characters and convert to uppercase
     return number.replace(/[^A-Z0-9]/g, '').toUpperCase();
-  };
-
-  const isLicenseExpired = (expiryDate: string): boolean => {
-    return new Date(expiryDate) < new Date();
   };
 
   const getRestrictionDisplayName = (code: string): string => {
@@ -329,6 +390,82 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
         subheader={getFormDescription()}
       />
       <CardContent>
+        {/* Existing Licenses Section */}
+        <Card sx={{ mb: 3, bgcolor: 'grey.50' }}>
+          <CardHeader
+            title={
+              <Box display="flex" alignItems="center" gap={1}>
+                <CheckCircleIcon color="success" />
+                <Typography variant="h6">
+                  Existing Licenses ({existingLicenses.length})
+                </Typography>
+                <IconButton 
+                  size="small" 
+                  onClick={() => setShowExisting(!showExisting)}
+                  disabled={loadingExisting}
+                >
+                  {showExisting ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                </IconButton>
+              </Box>
+            }
+            subheader="Current licenses in the system - cannot capture duplicates"
+          />
+          <Collapse in={showExisting}>
+            <CardContent>
+              {loadingExisting ? (
+                <Typography variant="body2">Loading existing licenses...</Typography>
+              ) : existingLicenses.length === 0 ? (
+                <Alert severity="info">
+                  No existing licenses found. All categories are available for capture.
+                </Alert>
+              ) : (
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>License ID</TableCell>
+                      <TableCell>Categories</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Issue Date</TableCell>
+                      <TableCell>Location</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {existingLicenses.map((license) => (
+                      <TableRow key={license.id}>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight="bold">
+                            {license.license_number}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Stack direction="row" spacing={0.5}>
+                            {license.categories.map((cat: string) => (
+                              <Chip key={cat} label={cat} size="small" color="primary" />
+                            ))}
+                          </Stack>
+                        </TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={license.status}
+                            size="small"
+                            color={license.is_active ? 'success' : 'default'}
+                          />
+                        </TableCell>
+                        <TableCell>{license.issue_date}</TableCell>
+                        <TableCell>
+                          <Typography variant="body2">
+                            {license.issuing_location}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Collapse>
+        </Card>
+
         {captureData.captured_licenses.length === 0 ? (
           <Alert severity="info" sx={{ mb: 2 }}>
             No {applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE ? "learner's permits" : "driver's licenses"} added yet. 
@@ -432,27 +569,6 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                 />
               </Grid>
 
-              {/* Expiry Date */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  type="date"
-                  label="Expiry Date"
-                  value={license.expiry_date}
-                  onChange={(e) => updateLicense(index, 'expiry_date', validateDate(e.target.value))}
-                  disabled={disabled}
-                  required
-                  InputLabelProps={{ shrink: true }}
-                  inputProps={{ min: dateConstraints.min, max: dateConstraints.max }}
-                  error={license.expiry_date && isLicenseExpired(license.expiry_date)}
-                  helperText={
-                    license.expiry_date && isLicenseExpired(license.expiry_date)
-                      ? "License is expired"
-                      : "Format: YYYY-MM-DD"
-                  }
-                />
-              </Grid>
-
               {/* License Restrictions */}
               <Grid item xs={12}>
                 <FormControl fullWidth>
@@ -542,14 +658,6 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                 color={license.verified ? 'success' : 'warning'}
                 size="small"
               />
-              {license.expiry_date && isLicenseExpired(license.expiry_date) && (
-                <Chip
-                  icon={<WarningIcon />}
-                  label="Expired"
-                  color="error"
-                  size="small"
-                />
-              )}
             </Box>
           </Box>
         ))}
@@ -621,7 +729,7 @@ export const transformCapturedDataForAuthorization = (captureData: LicenseCaptur
     captured_license_data: {
       original_license_number: firstLicense.license_number,
       original_issue_date: firstLicense.issue_date,
-      original_expiry_date: firstLicense.expiry_date,
+      original_expiry_date: '', // Removed expiry_date
       original_category: firstLicense.license_category,
       verification_status: firstLicense.verified ? 'VERIFIED' : 'PENDING',
       verification_notes: firstLicense.verification_notes || ''
@@ -652,10 +760,6 @@ export const validateCapturedDataForAuthorization = (captureData: LicenseCapture
     
     if (!license.issue_date) {
       errors.push(`License #${index + 1}: Issue date is required`);
-    }
-    
-    if (!license.expiry_date) {
-      errors.push(`License #${index + 1}: Expiry date is required`);
     }
     
     if (!license.verified) {
