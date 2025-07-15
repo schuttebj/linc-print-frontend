@@ -124,8 +124,16 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
   const loadExistingLicenses = async (personId: string) => {
     setLoadingExisting(true);
     try {
+      console.log('Loading existing licenses for person:', personId);
       const response = await applicationService.getPersonLicenses(personId);
-      setExistingLicenses(response.system_licenses || []);
+      console.log('Existing licenses response:', response);
+      const licenses = response.system_licenses || [];
+      setExistingLicenses(licenses);
+      
+      // Auto-expand if licenses are found
+      if (licenses.length > 0) {
+        setShowExisting(true);
+      }
     } catch (error) {
       console.error('Error loading existing licenses:', error);
       setExistingLicenses([]);
@@ -450,10 +458,18 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
           <CardHeader
             title={
               <Box display="flex" alignItems="center" gap={1}>
-                <CheckCircleIcon color="success" />
+                <CheckCircleIcon color={existingLicenses.length > 0 ? "success" : "disabled"} />
                 <Typography variant="h6">
                   Existing Licenses ({existingLicenses.length})
                 </Typography>
+                {existingLicenses.length > 0 && (
+                  <Chip 
+                    label="Found" 
+                    size="small" 
+                    color="success" 
+                    variant="outlined"
+                  />
+                )}
                 <IconButton 
                   size="small" 
                   onClick={() => setShowExisting(!showExisting)}
