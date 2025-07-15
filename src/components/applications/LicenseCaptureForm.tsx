@@ -62,12 +62,12 @@ import { applicationService } from '../../services/applicationService';
 
 export interface CapturedLicense {
   id: string; // temp ID for form management
-  license_number?: string; // Made optional as we're removing this field
   license_category: LicenseCategory; // Single category only
   issue_date: string;
   restrictions: string[]; // License restrictions (corrective lenses, disability modifications)
   verified: boolean;
   verification_notes?: string;
+  // license_number field removed as we're no longer capturing it
 }
 
 export interface LicenseCaptureData {
@@ -312,6 +312,7 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
       restrictions: [],
       verified: false,
       verification_notes: ''
+      // license_number field removed
     };
 
     updateCaptureData({
@@ -772,6 +773,7 @@ export const transformCapturedDataForAuthorization = (captureData: LicenseCaptur
       original_category: firstLicense.license_category,
       verification_status: firstLicense.verified ? 'VERIFIED' : 'PENDING',
       verification_notes: firstLicense.verification_notes || ''
+      // No license_number included
     }
   };
 };
@@ -793,6 +795,8 @@ export const validateCapturedDataForAuthorization = (captureData: LicenseCapture
       errors.push(`License #${index + 1}: License category is required`);
     }
     
+    // license_number validation removed
+
     if (!license.issue_date) {
       errors.push(`License #${index + 1}: Issue date is required`);
     }
