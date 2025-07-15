@@ -72,6 +72,7 @@ import licenseService, {
   CardCreate,
   CardStatusUpdate
 } from '../../services/licenseService';
+import cardService from '../../services/cardService';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface TabPanelProps {
@@ -176,6 +177,25 @@ const LicenseDetailPage: React.FC = () => {
       loadLicense(); // Refresh data
     } catch (err: any) {
       setError(err.message || 'Failed to create card');
+    }
+  };
+
+  // Handle test card creation
+  const handleCreateTestCard = async () => {
+    if (!license) return;
+
+    try {
+      setError(null);
+      const testCard = await cardService.createTestCard(license.id);
+      
+      // Show success message
+      alert(`Test card created successfully! Card Number: ${testCard.card_number}`);
+      
+      // Refresh license data to show new card
+      loadLicense();
+    } catch (err: any) {
+      setError(err.message || 'Failed to create test card');
+      console.error('Error creating test card:', err);
     }
   };
 
@@ -295,6 +315,15 @@ const LicenseDetailPage: React.FC = () => {
             onClick={() => setCardDialogOpen(true)}
           >
             Order New Card
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<AddIcon />}
+            onClick={handleCreateTestCard}
+            color="warning"
+            sx={{ ml: 1 }}
+          >
+            Create Test Card
           </Button>
           <Button
             variant="outlined"

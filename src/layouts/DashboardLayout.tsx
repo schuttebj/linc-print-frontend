@@ -239,6 +239,16 @@ const DashboardLayout: React.FC = () => {
     },
   ];
 
+  // Card management navigation items
+  const cardNavigationItems = [
+    {
+      text: 'Card Management',
+      icon: <CreditCard />,
+      path: '/dashboard/cards',
+      permission: 'cards.read',
+    },
+  ];
+
 
   // Admin navigation items
   const adminNavigationItems = [
@@ -442,6 +452,51 @@ const DashboardLayout: React.FC = () => {
               />
             </ListItem>
             {licenseNavigationItems.map((item) => {
+              // Check permissions
+              if (item.permission && !hasPermission(item.permission)) {
+                return null;
+              }
+
+              const isActive = location.pathname === item.path;
+
+              return (
+                <ListItem key={item.text} disablePadding>
+                  <ListItemButton
+                    selected={isActive}
+                    onClick={() => {
+                      navigate(item.path);
+                      if (isMobile) {
+                        setMobileOpen(false);
+                      }
+                    }}
+                  >
+                    <ListItemIcon>{item.icon}</ListItemIcon>
+                    <ListItemText primary={item.text} />
+                  </ListItemButton>
+                </ListItem>
+              );
+            })}
+          </List>
+        </>
+      )}
+
+      {/* Card Management Section */}
+      {cardNavigationItems.some(item => !item.permission || hasPermission(item.permission)) && (
+        <>
+          <Divider />
+          <List>
+            <ListItem>
+              <ListItemText 
+                primary="Cards" 
+                primaryTypographyProps={{ 
+                  variant: 'caption', 
+                  color: 'textSecondary',
+                  fontWeight: 'bold',
+                  textTransform: 'uppercase'
+                }} 
+              />
+            </ListItem>
+            {cardNavigationItems.map((item) => {
               // Check permissions
               if (item.permission && !hasPermission(item.permission)) {
                 return null;

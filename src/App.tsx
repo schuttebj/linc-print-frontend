@@ -36,6 +36,9 @@ import LicenseListPage from './pages/licenses/LicenseListPage';
 import LicenseDetailPage from './pages/licenses/LicenseDetailPage';
 import LicenseApprovalPage from './pages/licenses/LicenseApprovalPage';
 
+// Card Pages
+import CardListPage from './pages/cards/CardListPage';
+
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
 import UserManagementPage from './pages/admin/UserManagementPage';
@@ -269,6 +272,18 @@ function App() {
                 element={
                   <ProtectedRoute requiredPermission="licenses.read">
                     <LicenseDetailPage />
+                  </ProtectedRoute>
+                } 
+              />
+            </Route>
+
+            {/* Card Management - requires card permissions */}
+            <Route path="cards">
+              <Route 
+                index 
+                element={
+                  <ProtectedRoute requiredPermission="cards.read">
+                    <CardListPage />
                   </ProtectedRoute>
                 } 
               />
