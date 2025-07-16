@@ -292,9 +292,9 @@ const LearnersLicenseApplicationPage: React.FC = () => {
       
       setSuccess('Learner\'s license application submitted successfully!');
       
-      // Navigate to application details
+      // Navigate to applications dashboard
       setTimeout(() => {
-        navigate(`/dashboard/applications/${application.id}`, {
+        navigate('/dashboard/applications/dashboard', {
           state: { 
             message: 'Learner\'s license application submitted successfully',
             application 
@@ -738,10 +738,10 @@ const LearnersLicenseApplicationPage: React.FC = () => {
           <Paper square elevation={0} sx={{ p: 3 }}>
             <Typography>All steps completed - learner's license application submitted successfully!</Typography>
             <Button 
-              onClick={() => navigate('/dashboard/applications')} 
+              onClick={() => navigate('/dashboard/applications/dashboard')} 
               sx={{ mt: 1, mr: 1 }}
             >
-              View Applications
+              Back to Applications
             </Button>
           </Paper>
         )}

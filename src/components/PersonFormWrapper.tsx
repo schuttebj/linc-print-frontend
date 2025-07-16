@@ -1938,7 +1938,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                         <TextField
                                             {...field}
                                             fullWidth
-                                            label="Street Line 1"
+                                            label="Address Line 1"
                                             helperText="Street address line 1"
                                             onChange={(e) => {
                                                 const value = e.target.value.toUpperCase();
@@ -1957,7 +1957,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                         <TextField
                                             {...field}
                                             fullWidth
-                                            label="Street Line 2"
+                                            label="Address Line 2"
                                             helperText="Street address line 2 (optional)"
                                             onChange={(e) => {
                                                 const value = e.target.value.toUpperCase();

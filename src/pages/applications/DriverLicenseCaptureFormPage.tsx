@@ -250,9 +250,9 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
       
       setSuccess('Driver\'s license capture completed successfully! License records have been created.');
       
-      // Navigate to application details
+      // Navigate to applications dashboard
       setTimeout(() => {
-        navigate(`/dashboard/applications/${application.id}`, {
+        navigate('/dashboard/applications/dashboard', {
           state: { 
             message: 'License capture completed successfully',
             application 
@@ -561,10 +561,10 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
           <Paper square elevation={0} sx={{ p: 3 }}>
             <Typography>All steps completed - license capture submitted successfully!</Typography>
             <Button 
-              onClick={() => navigate('/dashboard/applications')} 
+              onClick={() => navigate('/dashboard/applications/dashboard')} 
               sx={{ mt: 1, mr: 1 }}
             >
-              View Applications
+              Back to Applications
             </Button>
           </Paper>
         )}

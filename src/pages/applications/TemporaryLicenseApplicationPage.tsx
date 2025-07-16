@@ -265,9 +265,9 @@ const TemporaryLicenseApplicationPage: React.FC = () => {
       
       setSuccess('Temporary driving license application submitted successfully!');
       
-      // Navigate to application details
+      // Navigate to applications dashboard
       setTimeout(() => {
-        navigate(`/dashboard/applications/${application.id}`, {
+        navigate('/dashboard/applications/dashboard', {
           state: { 
             message: 'Temporary driving license application submitted successfully',
             application 

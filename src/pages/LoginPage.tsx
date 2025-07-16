@@ -62,10 +62,9 @@ const LoginPage: React.FC = () => {
     },
   });
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated - always go to dashboard
   if (isAuthenticated) {
-    const from = (location.state as any)?.from?.pathname || '/dashboard';
-    return <Navigate to={from} replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   const onSubmit = async (data: LoginFormData) => {

@@ -253,9 +253,9 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
       
       setSuccess('Learner\'s permit capture completed successfully! License records have been created.');
       
-      // Navigate to application details
+      // Navigate to applications dashboard
       setTimeout(() => {
-        navigate(`/dashboard/applications/${application.id}`, {
+        navigate('/dashboard/applications/dashboard', {
           state: { 
             message: 'Learner\'s permit capture completed successfully',
             application 

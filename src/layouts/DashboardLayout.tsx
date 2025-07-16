@@ -68,6 +68,25 @@ const DashboardLayout: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [applicationsExpanded, setApplicationsExpanded] = useState(false);
 
+  // Function to get user location display text
+  const getUserLocationText = (): string => {
+    if (!user) return '';
+    
+    switch (user.user_type) {
+      case 'SYSTEM_USER':
+        return 'All';
+      case 'NATIONAL_ADMIN':
+        return 'National';
+      case 'PROVINCIAL_ADMIN':
+        return user.scope_province || 'Provincial';
+      case 'LOCATION_USER':
+        // For now, show "Office" - can be enhanced to show actual office name later
+        return 'Office';
+      default:
+        return '';
+    }
+  };
+
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
@@ -114,6 +133,12 @@ const DashboardLayout: React.FC = () => {
 
   // Application navigation items
   const applicationNavigationItems = [
+    {
+      text: 'Applications Dashboard',
+      icon: <Apps />,
+      path: '/dashboard/applications/dashboard',
+      permission: 'applications.read',
+    },
     {
       text: 'View Applications',
       icon: <Visibility />,
@@ -596,9 +621,30 @@ const DashboardLayout: React.FC = () => {
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             {user && (
-              <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
-                {user.first_name} {user.last_name}
-              </Typography>
+              <>
+                <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
+                  {user.first_name} {user.last_name}
+                </Typography>
+                {getUserLocationText() && (
+                  <Chip
+                    label={getUserLocationText()}
+                    size="small"
+                    variant="outlined"
+                    sx={{
+                      height: '24px',
+                      fontSize: '0.75rem',
+                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                      color: 'white',
+                      borderColor: 'rgba(255, 255, 255, 0.3)',
+                      '& .MuiChip-label': {
+                        paddingLeft: '8px',
+                        paddingRight: '8px',
+                      },
+                      display: { xs: 'none', sm: 'flex' }
+                    }}
+                  />
+                )}
+              </>
             )}
             <IconButton
               size="large"

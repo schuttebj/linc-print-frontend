@@ -17,6 +17,7 @@ import PersonEditPage from './pages/persons/PersonEditPage';
 import PersonFormTest from './pages/persons/PersonFormTest';
 
 // Application Pages
+import ApplicationsDashboard from './pages/applications/ApplicationsDashboard';
 import ApplicationListPage from './pages/applications/ApplicationListPage';
 import ApplicationFormPage from './pages/applications/ApplicationFormPage';
 import DriverLicenseCaptureFormPage from './pages/applications/DriverLicenseCaptureFormPage';
@@ -120,6 +121,14 @@ function App() {
                 element={
                   <ProtectedRoute requiredPermission="applications.read">
                     <ApplicationListPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="dashboard" 
+                element={
+                  <ProtectedRoute requiredPermission="applications.read">
+                    <ApplicationsDashboard />
                   </ProtectedRoute>
                 } 
               />
