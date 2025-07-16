@@ -27,10 +27,6 @@ import {
   Assessment,
   CreditCard,
   Add as AddIcon,
-  TrendingUp,
-  Today,
-  DateRange,
-  CalendarMonth,
 } from '@mui/icons-material';
 
 import { useAuth } from '../../contexts/AuthContext';
@@ -137,21 +133,7 @@ const ApplicationsDashboard: React.FC = () => {
     }
   ];
 
-  // Get role-based stats context
-  const getStatsContext = () => {
-    switch (user?.user_type) {
-      case 'SYSTEM_USER':
-        return 'System-wide';
-      case 'NATIONAL_ADMIN':
-        return 'National';
-      case 'PROVINCIAL_ADMIN':
-        return user.scope_province || 'Provincial';
-      case 'LOCATION_USER':
-        return 'Office';
-      default:
-        return 'Your';
-    }
-  };
+
 
   const handleApplicationClick = (path: string) => {
     navigate(path);
@@ -173,88 +155,7 @@ const ApplicationsDashboard: React.FC = () => {
         </Typography>
       </Box>
 
-      {/* Stats Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Stack spacing={2} alignItems="center">
-                <Today sx={{ fontSize: 40, color: 'primary.main' }} />
-                <Typography variant="h6">Today</Typography>
-                <Typography variant="h4" color="primary.main">
-                  -
-                </Typography>
-                <Typography variant="body2" color="text.secondary" textAlign="center">
-                  Your applications today
-                </Typography>
-                <Typography variant="caption" color="warning.main" sx={{ fontStyle: 'italic' }}>
-                  Placeholder - Not live data
-                </Typography>
-              </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
 
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Stack spacing={2} alignItems="center">
-                <DateRange sx={{ fontSize: 40, color: 'secondary.main' }} />
-                <Typography variant="h6">This Week</Typography>
-                <Typography variant="h4" color="secondary.main">
-                  -
-                </Typography>
-                <Typography variant="body2" color="text.secondary" textAlign="center">
-                  Your applications this week
-                </Typography>
-                <Typography variant="caption" color="warning.main" sx={{ fontStyle: 'italic' }}>
-                  Placeholder - Not live data
-                </Typography>
-              </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Stack spacing={2} alignItems="center">
-                <CalendarMonth sx={{ fontSize: 40, color: 'info.main' }} />
-                <Typography variant="h6">This Month</Typography>
-                <Typography variant="h4" color="info.main">
-                  -
-                </Typography>
-                <Typography variant="body2" color="text.secondary" textAlign="center">
-                  Your applications this month
-                </Typography>
-                <Typography variant="caption" color="warning.main" sx={{ fontStyle: 'italic' }}>
-                  Placeholder - Not live data
-                </Typography>
-              </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Stack spacing={2} alignItems="center">
-                <TrendingUp sx={{ fontSize: 40, color: 'success.main' }} />
-                <Typography variant="h6">{getStatsContext()}</Typography>
-                <Typography variant="h4" color="success.main">
-                  -
-                </Typography>
-                <Typography variant="body2" color="text.secondary" textAlign="center">
-                  {getStatsContext().toLowerCase()} applications overview
-                </Typography>
-                <Typography variant="caption" color="warning.main" sx={{ fontStyle: 'italic' }}>
-                  Placeholder - Not live data
-                </Typography>
-              </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
 
       {/* Quick Actions */}
       <Paper sx={{ p: 3, mb: 4 }}>

@@ -139,9 +139,8 @@ const PersonSearchPage: React.FC = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   
-  // Dialog states
+  // Delete dialog states
   const [selectedPerson, setSelectedPerson] = useState<PersonSearchResult | null>(null);
-  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   
@@ -341,10 +340,19 @@ const PersonSearchPage: React.FC = () => {
     }
   };
 
-  // View person details
+  // View person details - navigate to full page
   const viewPersonDetails = (person: PersonSearchResult) => {
-    setSelectedPerson(person);
-    setShowDetailsDialog(true);
+    // Encode current search state to preserve when returning
+    const currentFilters = searchForm.getValues();
+    const searchState = {
+      filters: encodeURIComponent(JSON.stringify(currentFilters)),
+      query: currentFilters.search_text || '',
+      page: page.toString(),
+      rowsPerPage: rowsPerPage.toString()
+    };
+    
+    const params = new URLSearchParams(searchState);
+    navigate(`/dashboard/persons/detail/${person.id}?returnTo=search&${params.toString()}`);
   };
 
   // Edit person - navigate to PersonManagementPage
@@ -815,236 +823,7 @@ const PersonSearchPage: React.FC = () => {
         </Card>
       )}
 
-      {/* Person Details Dialog */}
-      <Dialog 
-        open={showDetailsDialog} 
-        onClose={() => {}}
-        disableEscapeKeyDown
-        maxWidth="md" 
-        fullWidth
-        slotProps={{
-          backdrop: {
-            onClick: (event) => {
-              console.log('🚨 PersonSearchPage DETAILS DIALOG: Backdrop clicked!', event);
-              event.stopPropagation();
-              event.preventDefault();
-            }
-          }
-        }}
-      >
-        <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <PersonIcon color="primary" />
-            <Typography variant="h6">
-              Person Details
-            </Typography>
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          {selectedPerson && (
-            <Box sx={{ pt: 2 }}>
-              {/* Personal Information */}
-              <Typography variant="h6" gutterBottom color="primary">
-                Personal Information
-              </Typography>
-              <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" color="text.secondary">Full Name</Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {[selectedPerson.first_name, selectedPerson.middle_name, selectedPerson.surname].filter(Boolean).join(' ')}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} md={3}>
-                  <Typography variant="subtitle2" color="text.secondary">Gender</Typography>
-                  <Typography variant="body1">
-                    {getPersonNatureDisplay(selectedPerson.person_nature)}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} md={3}>
-                  <Typography variant="subtitle2" color="text.secondary">Birth Date</Typography>
-                  <Typography variant="body1">
-                    {selectedPerson.birth_date ? formatDate(selectedPerson.birth_date) : 'NOT PROVIDED'}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <Typography variant="subtitle2" color="text.secondary">Nationality</Typography>
-                  <Typography variant="body1">
-                    {selectedPerson.nationality_code === 'MG' ? 'MALAGASY' : selectedPerson.nationality_code}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <Typography variant="subtitle2" color="text.secondary">Language</Typography>
-                  <Typography variant="body1">
-                    {getLanguageDisplay(selectedPerson.preferred_language)}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <Typography variant="subtitle2" color="text.secondary">Status</Typography>
-                  <Chip
-                    label={selectedPerson.is_active ? 'ACTIVE' : 'INACTIVE'}
-                    color={selectedPerson.is_active ? 'success' : 'default'}
-                    size="small"
-                  />
-                </Grid>
-              </Grid>
 
-              <Divider sx={{ my: 2 }} />
-
-              {/* Contact Information */}
-              <Typography variant="h6" gutterBottom color="primary">
-                <PhoneIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-                Contact Information
-              </Typography>
-              <Grid container spacing={2} sx={{ mb: 3 }}>
-                {selectedPerson.email_address && (
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="subtitle2" color="text.secondary">Email</Typography>
-                    <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <EmailIcon fontSize="small" />
-                      {selectedPerson.email_address}
-                    </Typography>
-                  </Grid>
-                )}
-                {selectedPerson.cell_phone && (
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="subtitle2" color="text.secondary">Cell Phone</Typography>
-                    <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <PhoneIcon fontSize="small" />
-                      {selectedPerson.cell_phone_country_code} {selectedPerson.cell_phone}
-                    </Typography>
-                  </Grid>
-                )}
-                {selectedPerson.work_phone && (
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="subtitle2" color="text.secondary">Work Phone</Typography>
-                    <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <PhoneIcon fontSize="small" />
-                      {selectedPerson.work_phone}
-                    </Typography>
-                  </Grid>
-                )}
-              </Grid>
-
-              <Divider sx={{ my: 2 }} />
-
-              {/* Documents */}
-              <Typography variant="h6" gutterBottom color="primary">
-                <DocumentIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-                Documents ({selectedPerson.aliases?.length || 0})
-              </Typography>
-              {selectedPerson.aliases?.map((alias, index) => (
-                <Box key={alias.id} sx={{ mb: 2, p: 2, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} md={4}>
-                      <Typography variant="subtitle2" color="text.secondary">Document Type</Typography>
-                      <Typography variant="body1">
-                        {getDocumentTypeDisplay(alias.document_type)}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                      <Typography variant="subtitle2" color="text.secondary">Document Number</Typography>
-                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                        {alias.document_number}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                      <Typography variant="subtitle2" color="text.secondary">Status</Typography>
-                      <Stack direction="row" spacing={1}>
-                        {alias.is_primary && <Chip label="PRIMARY" size="small" color="primary" />}
-                        {alias.is_current && <Chip label="CURRENT" size="small" color="success" />}
-                      </Stack>
-                    </Grid>
-                    {alias.name_in_document && (
-                      <Grid item xs={12}>
-                        <Typography variant="subtitle2" color="text.secondary">Name in Document</Typography>
-                        <Typography variant="body1">
-                          {alias.name_in_document}
-                        </Typography>
-                      </Grid>
-                    )}
-                    {alias.expiry_date && (
-                      <Grid item xs={12} md={6}>
-                        <Typography variant="subtitle2" color="text.secondary">Expiry Date</Typography>
-                        <Typography variant="body1">
-                          {formatDate(alias.expiry_date)}
-                        </Typography>
-                      </Grid>
-                    )}
-                  </Grid>
-                </Box>
-              ))}
-
-              <Divider sx={{ my: 2 }} />
-
-              {/* Addresses */}
-              <Typography variant="h6" gutterBottom color="primary">
-                <LocationIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-                Addresses ({selectedPerson.addresses?.length || 0})
-              </Typography>
-              {selectedPerson.addresses?.map((address, index) => (
-                <Box key={address.id} sx={{ mb: 2, p: 2, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12}>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'primary.main' }}>
-                        {address.address_type === 'RESIDENTIAL' ? 'RESIDENTIAL ADDRESS' : 'POSTAL ADDRESS'}
-                        {address.is_primary && <Chip label="PRIMARY" size="small" color="primary" sx={{ ml: 1 }} />}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={12}>
-                      <Typography variant="subtitle2" color="text.secondary">Full Address</Typography>
-                      <Typography variant="body1">
-                        {[address.street_line1, address.street_line2, address.locality, address.town].filter(Boolean).join(', ')}
-                        {address.postal_code && ` - ${address.postal_code}`}
-                        <br />
-                        {address.country}
-                      </Typography>
-                    </Grid>
-                  </Grid>
-                </Box>
-              ))}
-
-              <Divider sx={{ my: 2 }} />
-
-              {/* Audit Information */}
-              <Typography variant="h6" gutterBottom color="primary">
-                <CalendarIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-                Audit Information
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" color="text.secondary">Created</Typography>
-                  <Typography variant="body1">
-                    {formatDate(selectedPerson.created_at)}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" color="text.secondary">Last Updated</Typography>
-                  <Typography variant="body1">
-                    {formatDate(selectedPerson.updated_at)}
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          {hasPermission('persons.update') && selectedPerson && (
-            <Button
-              onClick={() => {
-                setShowDetailsDialog(false);
-                editPerson(selectedPerson);
-              }}
-              startIcon={<EditIcon />}
-              variant="contained"
-            >
-              Edit Person
-            </Button>
-          )}
-          <Button onClick={() => setShowDetailsDialog(false)}>
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog 

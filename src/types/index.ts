@@ -107,6 +107,7 @@ export interface Application {
   application_type: ApplicationType;
   license_category: LicenseCategory;
   status: ApplicationStatus;
+  test_result?: TestResult; // Test result for NEW_LICENSE and LEARNERS_PERMIT applications
   is_urgent: boolean;
   urgency_reason?: string;
   is_temporary_license: boolean;
@@ -234,14 +235,11 @@ export enum LicenseCategory {
 export enum ApplicationStatus {
   DRAFT = 'DRAFT',
   SUBMITTED = 'SUBMITTED',
+  PAID = 'PAID',
   ON_HOLD = 'ON_HOLD',
-  DOCUMENTS_PENDING = 'DOCUMENTS_PENDING',
-  THEORY_TEST_REQUIRED = 'THEORY_TEST_REQUIRED',
-  THEORY_PASSED = 'THEORY_PASSED',
-  THEORY_FAILED = 'THEORY_FAILED',
-  PRACTICAL_TEST_REQUIRED = 'PRACTICAL_TEST_REQUIRED',
-  PRACTICAL_PASSED = 'PRACTICAL_PASSED',
-  PRACTICAL_FAILED = 'PRACTICAL_FAILED',
+  PASSED = 'PASSED',
+  FAILED = 'FAILED',
+  ABSENT = 'ABSENT',
   APPROVED = 'APPROVED',
   SENT_TO_PRINTER = 'SENT_TO_PRINTER',
   CARD_PRODUCTION = 'CARD_PRODUCTION',
@@ -249,6 +247,12 @@ export enum ApplicationStatus {
   COMPLETED = 'COMPLETED',
   REJECTED = 'REJECTED',
   CANCELLED = 'CANCELLED'
+}
+
+export enum TestResult {
+  PASSED = 'PASSED',
+  FAILED = 'FAILED',
+  ABSENT = 'ABSENT'
 }
 
 // Fee Structure

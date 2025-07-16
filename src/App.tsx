@@ -13,6 +13,7 @@ import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
 import PersonManagementPage from './pages/persons/PersonManagementPage';
 import PersonSearchPage from './pages/persons/PersonSearchPage';
+import PersonDetailPage from './pages/persons/PersonDetailPage';
 import PersonEditPage from './pages/persons/PersonEditPage';
 import PersonFormTest from './pages/persons/PersonFormTest';
 
@@ -93,6 +94,14 @@ function App() {
                 element={
                   <ProtectedRoute requiredPermission="persons.read">
                     <PersonSearchPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="detail/:personId" 
+                element={
+                  <ProtectedRoute requiredPermission="persons.read">
+                    <PersonDetailPage />
                   </ProtectedRoute>
                 } 
               />
