@@ -295,7 +295,7 @@ const ApplicationsDashboard: React.FC = () => {
                   }
 
                   return (
-                    <Grid item xs={12} sm={6} md={4} key={app.title}>
+                    <Grid item xs={12} sm={6} md={3} key={app.title}>
                       <Card 
                         sx={{ 
                           height: '100%',
@@ -330,33 +330,6 @@ const ApplicationsDashboard: React.FC = () => {
               {index < applicationCategories.length - 1 && <Divider sx={{ mt: 3 }} />}
             </Box>
           ))}
-        </Stack>
-      </Paper>
-
-      {/* Additional Actions */}
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          Other Options
-        </Typography>
-        <Stack direction="row" spacing={2}>
-          {hasPermission('applications.create') && (
-            <Button
-              variant="outlined"
-              startIcon={<AddIcon />}
-              onClick={() => navigate('/dashboard/applications/create')}
-            >
-              Custom Application
-            </Button>
-          )}
-          {hasPermission('applications.read') && (
-            <Button
-              variant="outlined"
-              startIcon={<Assessment />}
-              onClick={() => navigate('/dashboard/applications')}
-            >
-              Application Reports
-            </Button>
-          )}
         </Stack>
       </Paper>
     </Container>
