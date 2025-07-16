@@ -34,7 +34,6 @@ import {
 } from '@mui/material';
 import {
   Add as AddIcon,
-  Edit as EditIcon,
   Visibility as ViewIcon,
   Search as SearchIcon,
   FilterList as FilterIcon
@@ -168,10 +167,6 @@ const ApplicationListPage: React.FC = () => {
 
   const handleViewApplication = (applicationId: string) => {
     navigate(`/dashboard/applications/${applicationId}`);
-  };
-
-  const handleEditApplication = (applicationId: string) => {
-    navigate(`/dashboard/applications/edit/${applicationId}`);
   };
 
   if (loading) {
@@ -361,15 +356,6 @@ const ApplicationListPage: React.FC = () => {
                       >
                         <ViewIcon />
                       </IconButton>
-                      {hasPermission('applications.update') && (
-                        <IconButton
-                          size="small"
-                          onClick={() => handleEditApplication(application.id!)}
-                          title="Edit Application"
-                        >
-                          <EditIcon />
-                        </IconButton>
-                      )}
                     </Stack>
                   </TableCell>
                 </TableRow>
