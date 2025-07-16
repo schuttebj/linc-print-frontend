@@ -36,6 +36,7 @@ import {
   PersonSearch as PersonSearchIcon,
   Assignment as AssignmentIcon,
   LocalHospital as MedicalIcon,
+  CameraAlt as CameraIcon,
   Preview as PreviewIcon,
   ArrowForward as ArrowForwardIcon,
   ArrowBack as ArrowBackIcon,
@@ -49,6 +50,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import PersonFormWrapper from '../../components/PersonFormWrapper';
 import MedicalInformationSection from '../../components/applications/MedicalInformationSection';
 import LicenseVerificationSection from '../../components/applications/LicenseVerificationSection';
+import BiometricCaptureStep, { BiometricData } from '../../components/applications/BiometricCaptureStep';
 import { applicationService } from '../../services/applicationService';
 import {
   Person,
@@ -77,6 +79,7 @@ const DrivingLicenseApplicationPage: React.FC = () => {
   const [refusalDetails, setRefusalDetails] = useState<string>('');
   const [licenseVerification, setLicenseVerification] = useState<LicenseVerificationData | null>(null);
   const [medicalInformation, setMedicalInformation] = useState<MedicalInformation | null>(null);
+  const [biometricData, setBiometricData] = useState<BiometricData>({});
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [availableLocations, setAvailableLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(false);
@@ -100,6 +103,11 @@ const DrivingLicenseApplicationPage: React.FC = () => {
       label: 'Medical Assessment',
       description: 'Complete vision test and medical clearance',
       icon: <MedicalIcon />
+    },
+    {
+      label: 'Biometric Data',
+      description: 'Capture photo, signature, and fingerprint',
+      icon: <CameraIcon />
     },
     {
       label: 'Review & Submit',
@@ -221,7 +229,10 @@ const DrivingLicenseApplicationPage: React.FC = () => {
                                  (age >= 60 && requiresMedical60Plus(selectedCategory));
         return isMedicalMandatory ? !!medicalInformation?.medical_clearance : true;
       case 3:
-        return !!selectedPerson && !!selectedPerson.id && !!selectedCategory && prerequisiteErrors.length === 0;
+        // Biometric step - photo is required
+        return !!biometricData.photo;
+      case 4:
+        return !!selectedPerson && !!selectedPerson.id && !!selectedCategory && prerequisiteErrors.length === 0 && !!biometricData.photo;
       default:
         return false;
     }
@@ -324,7 +335,8 @@ const DrivingLicenseApplicationPage: React.FC = () => {
         medical_information: cleanMedicalInfo,
         license_verification: licenseVerification,
         never_been_refused: neverBeenRefused,
-        refusal_details: neverBeenRefused ? undefined : refusalDetails
+        refusal_details: neverBeenRefused ? undefined : refusalDetails,
+        biometric_data: biometricData
       };
 
       console.log('User info:', user);
@@ -577,7 +589,16 @@ const DrivingLicenseApplicationPage: React.FC = () => {
           </Box>
         );
 
-      case 3: // Review step
+      case 3: // Biometric step
+        return (
+          <BiometricCaptureStep
+            value={biometricData}
+            onChange={setBiometricData}
+            disabled={false}
+          />
+        );
+
+      case 4: // Review step
         return (
           <Box>
             <Typography variant="h6" gutterBottom>
@@ -730,6 +751,46 @@ const DrivingLicenseApplicationPage: React.FC = () => {
                 </CardContent>
               </Card>
             )}
+
+            {/* Biometric Data */}
+            <Card sx={{ mb: 3 }}>
+              <CardHeader title="Biometric Data" />
+              <CardContent>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={4}>
+                    <Typography variant="body2" color="text.secondary">License Photo</Typography>
+                    <Chip 
+                      label={biometricData.photo ? 'Captured' : 'Required'} 
+                      size="small" 
+                      color={biometricData.photo ? 'success' : 'error'} 
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Typography variant="body2" color="text.secondary">Digital Signature</Typography>
+                    <Chip 
+                      label={biometricData.signature ? 'Captured' : 'Optional'} 
+                      size="small" 
+                      color={biometricData.signature ? 'success' : 'default'} 
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Typography variant="body2" color="text.secondary">Fingerprint</Typography>
+                    <Chip 
+                      label={biometricData.fingerprint ? 'Captured' : 'Optional'} 
+                      size="small" 
+                      color={biometricData.fingerprint ? 'success' : 'default'} 
+                    />
+                  </Grid>
+                </Grid>
+                {biometricData.photo && (
+                  <Alert severity="success" sx={{ mt: 2 }}>
+                    <Typography variant="body2">
+                      All required biometric data has been captured for license production.
+                    </Typography>
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
 
             {/* Summary */}
             <Alert severity="info" sx={{ mb: 2 }}>

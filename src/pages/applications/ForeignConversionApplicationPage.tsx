@@ -7,6 +7,7 @@ import {
   Stepper,
   Step,
   StepLabel,
+  StepContent,
   Box,
   Button,
   Alert,
@@ -22,17 +23,27 @@ import {
   Chip,
   FormControlLabel,
   Checkbox,
-  TextField
+  TextField,
+  CircularProgress
 } from '@mui/material';
 import {
+  PersonSearch as PersonSearchIcon,
+  Assignment as AssignmentIcon,
+  LocalHospital as MedicalIcon,
+  CameraAlt as CameraIcon,
+  Preview as PreviewIcon,
   LocationOn as LocationOnIcon,
   DirectionsCar as DirectionsCarIcon,
   Warning as WarningIcon,
-  Language as LanguageIcon
+  Language as LanguageIcon,
+  ArrowForward as ArrowForwardIcon,
+  ArrowBack as ArrowBackIcon,
+  CheckCircle as CheckCircleIcon
 } from '@mui/icons-material';
 
 import PersonFormWrapper from '../../components/PersonFormWrapper';
 import MedicalInformationSection from '../../components/applications/MedicalInformationSection';
+import BiometricCaptureStep, { BiometricData } from '../../components/applications/BiometricCaptureStep';
 import { 
   Person, 
   ApplicationType, 
@@ -47,7 +58,33 @@ import { applicationService } from '../../services/applicationService';
 import { lookupService } from '../../services/lookupService';
 import type { Location } from '../../services/lookupService';
 
-const steps = ['Person', 'Foreign License Details', 'Medical Assessment', 'Review'];
+const steps = [
+  {
+    label: 'Select Person',
+    description: 'Choose existing person or register new applicant',
+    icon: <PersonSearchIcon />
+  },
+  {
+    label: 'Foreign License Details',
+    description: 'Enter foreign license details for conversion',
+    icon: <AssignmentIcon />
+  },
+  {
+    label: 'Medical Assessment',
+    description: 'Complete vision test and medical clearance',
+    icon: <MedicalIcon />
+  },
+  {
+    label: 'Biometric Data',
+    description: 'Capture photo, signature, and fingerprint',
+    icon: <CameraIcon />
+  },
+  {
+    label: 'Review & Submit',
+    description: 'Review application details and submit',
+    icon: <PreviewIcon />
+  }
+];
 
 const ForeignConversionApplicationPage: React.FC = () => {
   const navigate = useNavigate();
@@ -58,6 +95,7 @@ const ForeignConversionApplicationPage: React.FC = () => {
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<LicenseCategory | null>(null);
   const [medicalInformation, setMedicalInformation] = useState<MedicalInformation | null>(null);
+  const [biometricData, setBiometricData] = useState<BiometricData>({});
   const [neverBeenRefused, setNeverBeenRefused] = useState<boolean>(true);
   const [refusalDetails, setRefusalDetails] = useState<string>('');
   
@@ -165,7 +203,9 @@ const ForeignConversionApplicationPage: React.FC = () => {
         const isMedicalMandatory = requiresMedicalAlways(selectedCategory) || 
                                  (age >= 60 && requiresMedical60Plus(selectedCategory));
         return !isMedicalMandatory || (medicalInformation?.medical_clearance === true);
-      case 3: // Review step
+      case 3: // Biometric step
+        return !!biometricData.photo;
+      case 4: // Review step
         return true;
       default:
         return false;
@@ -623,7 +663,24 @@ const ForeignConversionApplicationPage: React.FC = () => {
           </Box>
         );
 
-      case 3: // Review step
+      case 3: // Biometric step
+        return (
+          <Box>
+            <Typography variant="h6" gutterBottom>
+              Section E: Biometric Data Capture
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Capture photo, signature, and fingerprint for license production
+            </Typography>
+            
+            <BiometricCaptureStep
+              value={biometricData}
+              onChange={setBiometricData}
+            />
+          </Box>
+        );
+
+      case 4: // Review step
         return (
           <Box>
             <Typography variant="h6" gutterBottom>
@@ -764,6 +821,39 @@ const ForeignConversionApplicationPage: React.FC = () => {
               </Card>
             )}
 
+            {/* Biometric Information */}
+            <Card sx={{ mb: 3 }}>
+              <CardHeader title="Biometric Data" />
+              <CardContent>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={4}>
+                    <Typography variant="body2" color="text.secondary">License Photo</Typography>
+                    <Chip 
+                      label={biometricData.photo ? 'Captured' : 'Not Captured'} 
+                      size="small" 
+                      color={biometricData.photo ? 'success' : 'default'} 
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Typography variant="body2" color="text.secondary">Digital Signature</Typography>
+                    <Chip 
+                      label={biometricData.signature ? 'Captured' : 'Not Captured'} 
+                      size="small" 
+                      color={biometricData.signature ? 'success' : 'default'} 
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Typography variant="body2" color="text.secondary">Fingerprint</Typography>
+                    <Chip 
+                      label={biometricData.fingerprint ? 'Captured' : 'Not Captured'} 
+                      size="small" 
+                      color={biometricData.fingerprint ? 'success' : 'default'} 
+                    />
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </Card>
+
             {/* Summary */}
             <Alert severity="info" sx={{ mb: 2 }}>
               <Typography variant="body2">
@@ -806,55 +896,82 @@ const ForeignConversionApplicationPage: React.FC = () => {
         )}
 
         {/* Stepper */}
-        <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
-          {steps.map((label) => (
-            <Step key={label}>
-              <StepLabel>{label}</StepLabel>
+        <Stepper activeStep={activeStep} orientation="vertical">
+          {steps.map((step, index) => (
+            <Step key={step.label}>
+              <StepLabel
+                optional={
+                  <Typography variant="caption">{step.description}</Typography>
+                }
+                StepIconComponent={() => (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 40,
+                      height: 40,
+                      borderRadius: '50%',
+                      bgcolor: activeStep >= index ? 'primary.main' : 'grey.300',
+                      color: activeStep >= index ? 'white' : 'grey.600',
+                    }}
+                  >
+                    {step.icon}
+                  </Box>
+                )}
+              >
+                {step.label}
+              </StepLabel>
+              <StepContent>
+                <Box sx={{ mt: 2, mb: 2 }}>
+                  {renderStepContent(index)}
+                </Box>
+                
+                {/* Navigation Buttons */}
+                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                  <Button
+                    onClick={handleCancel}
+                    disabled={loading}
+                    color="secondary"
+                  >
+                    Cancel
+                  </Button>
+                  
+                  <Button
+                    disabled={index === 0 || loading}
+                    onClick={handleBack}
+                    startIcon={<ArrowBackIcon />}
+                  >
+                    Back
+                  </Button>
+                  
+                  <Button
+                    variant="contained"
+                    onClick={index === steps.length - 1 ? handleSubmit : handleNext}
+                    disabled={!isStepValid(index) || loading}
+                    startIcon={loading ? <CircularProgress size={20} /> : undefined}
+                    endIcon={index !== steps.length - 1 ? <ArrowForwardIcon /> : undefined}
+                  >
+                    {loading ? 'Submitting...' : index === steps.length - 1 ? 'Submit Application' : 'Next'}
+                  </Button>
+                </Box>
+              </StepContent>
             </Step>
           ))}
         </Stepper>
 
-        {/* Step Content */}
-        {renderStepContent(activeStep)}
-
-        {/* Navigation Buttons */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
-          <Button
-            variant="outlined"
-            onClick={handleCancel}
-            disabled={loading}
-          >
-            Cancel
-          </Button>
-          
-          <Box>
-            <Button
-              onClick={handleBack}
-              disabled={activeStep === 0 || loading}
-              sx={{ mr: 1 }}
+        {/* Completion Message */}
+        {activeStep === steps.length && (
+          <Paper square elevation={0} sx={{ p: 3 }}>
+            <Typography>All steps completed - foreign license conversion application submitted successfully!</Typography>
+            <Button 
+              onClick={() => navigate('/dashboard/applications/dashboard')} 
+              sx={{ mt: 1, mr: 1 }}
             >
-              Back
+              Back to Applications
             </Button>
-            
-            {activeStep === steps.length - 1 ? (
-              <Button
-                variant="contained"
-                onClick={handleSubmit}
-                disabled={!isStepValid(activeStep) || loading}
-              >
-                {loading ? 'Submitting...' : 'Submit Application'}
-              </Button>
-            ) : (
-              <Button
-                variant="contained"
-                onClick={handleNext}
-                disabled={!isStepValid(activeStep) || loading}
-              >
-                Next
-              </Button>
-            )}
-          </Box>
-        </Box>
+          </Paper>
+        )}
       </Paper>
     </Container>
   );

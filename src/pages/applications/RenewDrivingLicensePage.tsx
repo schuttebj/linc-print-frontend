@@ -34,6 +34,7 @@ import {
   PersonSearch as PersonSearchIcon,
   Refresh as RenewalIcon,
   LocalHospital as MedicalIcon,
+  CameraAlt as CameraIcon,
   Preview as PreviewIcon,
   ArrowForward as ArrowForwardIcon,
   ArrowBack as ArrowBackIcon,
@@ -45,6 +46,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import PersonFormWrapper from '../../components/PersonFormWrapper';
 import MedicalInformationSection from '../../components/applications/MedicalInformationSection';
+import BiometricCaptureStep, { BiometricData } from '../../components/applications/BiometricCaptureStep';
 import LicenseVerificationSection from '../../components/applications/LicenseVerificationSection';
 import { applicationService } from '../../services/applicationService';
 import {
@@ -73,6 +75,7 @@ const RenewDrivingLicensePage: React.FC = () => {
   const [dateOfChange, setDateOfChange] = useState<string>('');
   const [licenseVerification, setLicenseVerification] = useState<LicenseVerificationData | null>(null);
   const [medicalInformation, setMedicalInformation] = useState<MedicalInformation | null>(null);
+  const [biometricData, setBiometricData] = useState<BiometricData>({});
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [availableLocations, setAvailableLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(false);
@@ -95,6 +98,11 @@ const RenewDrivingLicensePage: React.FC = () => {
       label: 'Medical Assessment',
       description: 'Complete medical clearance if required',
       icon: <MedicalIcon />
+    },
+    {
+      label: 'Biometric Data',
+      description: 'Capture photo, signature, and fingerprint',
+      icon: <CameraIcon />
     },
     {
       label: 'Review & Submit',
@@ -161,6 +169,8 @@ const RenewDrivingLicensePage: React.FC = () => {
                                  licenseVerification?.all_license_categories?.some(cat => requiresMedicalAlways(cat as LicenseCategory));
         return isMedicalMandatory ? !!medicalInformation?.medical_clearance : true;
       case 3:
+        return !!biometricData.photo;
+      case 4:
         return !!selectedPerson && !!selectedPerson.id && !!replacementReason && !!licenseVerification;
       default:
         return false;
@@ -505,7 +515,24 @@ const RenewDrivingLicensePage: React.FC = () => {
           </Box>
         );
 
-      case 3: // Review step
+      case 3: // Biometric step
+        return (
+          <Box>
+            <Typography variant="h6" gutterBottom>
+              Section E: Biometric Data Capture
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Capture photo, signature, and fingerprint for license production
+            </Typography>
+            
+            <BiometricCaptureStep
+              value={biometricData}
+              onChange={setBiometricData}
+            />
+          </Box>
+        );
+
+      case 4: // Review step
         return (
           <Box>
             <Typography variant="h6" gutterBottom>
@@ -651,6 +678,39 @@ const RenewDrivingLicensePage: React.FC = () => {
                 </CardContent>
               </Card>
             )}
+
+            {/* Biometric Information */}
+            <Card sx={{ mb: 3 }}>
+              <CardHeader title="Biometric Data" />
+              <CardContent>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={4}>
+                    <Typography variant="body2" color="text.secondary">License Photo</Typography>
+                    <Chip 
+                      label={biometricData.photo ? 'Captured' : 'Not Captured'} 
+                      size="small" 
+                      color={biometricData.photo ? 'success' : 'default'} 
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Typography variant="body2" color="text.secondary">Digital Signature</Typography>
+                    <Chip 
+                      label={biometricData.signature ? 'Captured' : 'Not Captured'} 
+                      size="small" 
+                      color={biometricData.signature ? 'success' : 'default'} 
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Typography variant="body2" color="text.secondary">Fingerprint</Typography>
+                    <Chip 
+                      label={biometricData.fingerprint ? 'Captured' : 'Not Captured'} 
+                      size="small" 
+                      color={biometricData.fingerprint ? 'success' : 'default'} 
+                    />
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </Card>
 
             {/* Summary */}
             <Alert severity="info" sx={{ mb: 2 }}>
