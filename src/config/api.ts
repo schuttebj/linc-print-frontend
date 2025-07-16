@@ -118,7 +118,7 @@ export const API_ENDPOINTS = {
   },
 
   // Applications endpoints
-  applications: `${API_BASE_URL}/api/${API_VERSION}/applications`,
+  applications: `${API_BASE_URL}/api/${API_VERSION}/applications/`,
   applicationById: (id: string) => `${API_BASE_URL}/api/${API_VERSION}/applications/${id}`,
   applicationsByPerson: (personId: string) => `${API_BASE_URL}/api/${API_VERSION}/applications/search/person/${personId}`,
   personLicenses: (personId: string) => `${API_BASE_URL}/api/${API_VERSION}/applications/person/${personId}/licenses`,

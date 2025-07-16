@@ -147,9 +147,17 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
   const getAllCategories = (systemLicenses: SystemLicense[], externalLicenses: ExternalLicense[]): LicenseCategory[] => {
     const allCategories = new Set<LicenseCategory>();
     
-    // Add categories from system licenses
+    // Add categories from system licenses (exclude expired learner's permits)
     systemLicenses.forEach(license => {
-      license.categories.forEach(cat => allCategories.add(cat));
+      // If it's a learner's permit, only include if not expired
+      if (isLearnerPermit(license.categories)) {
+        if (!isLicenseExpired(license.expiry_date)) {
+          license.categories.forEach(cat => allCategories.add(cat));
+        }
+      } else {
+        // For regular licenses, include regardless of expiry
+        license.categories.forEach(cat => allCategories.add(cat));
+      }
     });
     
     return Array.from(allCategories);
@@ -169,6 +177,10 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
     return new Date(expiryDate) < new Date();
   };
 
+  const isLearnerPermit = (categories: LicenseCategory[]): boolean => {
+    return categories.some(cat => ['1', '2', '3'].includes(cat));
+  };
+
   const getLicenseStatusColor = (license: SystemLicense): 'success' | 'warning' | 'error' => {
     if (license.status === LicenseStatus.ACTIVE && !isLicenseExpired(license.expiry_date)) {
       return 'success';
@@ -177,6 +189,18 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
     } else {
       return 'error';
     }
+  };
+
+  const getExpiredLearnerPermits = (): SystemLicense[] => {
+    return licenseData.system_licenses.filter(license => 
+      isLearnerPermit(license.categories) && isLicenseExpired(license.expiry_date)
+    );
+  };
+
+  const getValidLearnerPermits = (): SystemLicense[] => {
+    return licenseData.system_licenses.filter(license => 
+      isLearnerPermit(license.categories) && !isLicenseExpired(license.expiry_date)
+    );
   };
 
   if (loading) {
@@ -201,6 +225,24 @@ const LicenseVerificationSection: React.FC<LicenseVerificationSectionProps> = ({
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
+        </Alert>
+      )}
+
+      {/* Learner's Permit Expiry Warnings */}
+      {getExpiredLearnerPermits().length > 0 && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          <Typography variant="body2" fontWeight="bold" gutterBottom>
+            Expired Learner's Permits Found:
+          </Typography>
+          {getExpiredLearnerPermits().map((permit, index) => (
+            <Typography key={index} variant="body2">
+              • {permit.license_number} (Categories: {permit.categories.join(', ')}) - Expired: {permit.expiry_date}
+            </Typography>
+          ))}
+          <Typography variant="body2" sx={{ mt: 1 }}>
+            <strong>Note:</strong> Expired learner's permits cannot be used as prerequisites for new licenses. 
+            The applicant must obtain a new learner's permit before applying for a driving license.
+          </Typography>
         </Alert>
       )}
 
