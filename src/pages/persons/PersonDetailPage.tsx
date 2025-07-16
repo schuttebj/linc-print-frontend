@@ -195,7 +195,7 @@ const PersonDetailPage: React.FC = () => {
 
   const loadLicenses = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/persons/${personId}/licenses`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/licenses/person/${personId}`, {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
@@ -231,7 +231,7 @@ const PersonDetailPage: React.FC = () => {
 
   const loadCards = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/persons/${personId}/cards`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/cards/person/${personId}`, {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',

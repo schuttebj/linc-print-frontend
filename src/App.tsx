@@ -21,6 +21,7 @@ import PersonFormTest from './pages/persons/PersonFormTest';
 import ApplicationsDashboard from './pages/applications/ApplicationsDashboard';
 import ApplicationListPage from './pages/applications/ApplicationListPage';
 import ApplicationFormPage from './pages/applications/ApplicationFormPage';
+import ApplicationDetailPage from './pages/applications/ApplicationDetailPage';
 import DriverLicenseCaptureFormPage from './pages/applications/DriverLicenseCaptureFormPage';
 import LearnerPermitCaptureFormPage from './pages/applications/LearnerPermitCaptureFormPage';
 import LearnersLicenseApplicationPage from './pages/applications/LearnersLicenseApplicationPage';
@@ -253,7 +254,7 @@ function App() {
                 path=":applicationId" 
                 element={
                   <ProtectedRoute requiredPermission="applications.read">
-                    <ApplicationFormPage />
+                    <ApplicationDetailPage />
                   </ProtectedRoute>
                 } 
               />
