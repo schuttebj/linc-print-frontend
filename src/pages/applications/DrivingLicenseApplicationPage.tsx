@@ -335,8 +335,8 @@ const DrivingLicenseApplicationPage: React.FC = () => {
         medical_information: cleanMedicalInfo,
         license_verification: licenseVerification,
         never_been_refused: neverBeenRefused,
-        refusal_details: neverBeenRefused ? undefined : refusalDetails,
-        biometric_data: biometricData
+        refusal_details: neverBeenRefused ? undefined : refusalDetails
+        // Note: Biometric data captured but not yet included in submission - backend integration pending
       };
 
       console.log('User info:', user);
