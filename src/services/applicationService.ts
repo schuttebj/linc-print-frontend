@@ -257,10 +257,15 @@ class ApplicationService {
   }> {
     // Use fetch directly for file uploads as the api helper may not handle FormData properly
     const url = API_ENDPOINTS.applicationBiometrics(applicationId);
+    const token = getAuthToken();
+    if (!token) {
+      throw new Error('No authentication token available');
+    }
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}` // Temporary, will use auth context
+        'Authorization': `Bearer ${token}`
       },
       body: formData
     });
@@ -271,6 +276,117 @@ class ApplicationService {
     }
 
     return await response.json();
+  }
+
+  // Store biometric data for an application from captured data
+  async storeBiometricDataForApplication(
+    applicationId: string,
+    biometricData: {
+      photo?: any;
+      signature?: any;
+      fingerprint?: any;
+    }
+  ): Promise<{
+    photo_result?: any;
+    signature_result?: any;
+    fingerprint_result?: any;
+    success: boolean;
+    errors: string[];
+  }> {
+    const results: any = {};
+    const errors: string[] = [];
+
+    try {
+      // Store photo if available
+      if (biometricData.photo?.base64_data) {
+        try {
+          const photoFormData = new FormData();
+          
+          // Convert base64 back to File object for upload
+          const photoBlob = this.base64ToBlob(biometricData.photo.base64_data, 'image/jpeg');
+          const photoFile = new File([photoBlob], biometricData.photo.filename || 'license_photo.jpg', {
+            type: 'image/jpeg'
+          });
+          
+          photoFormData.append('file', photoFile);
+          photoFormData.append('data_type', 'PHOTO');
+          photoFormData.append('capture_method', 'WEBCAM');
+          
+          results.photo_result = await this.uploadBiometricData(applicationId, photoFormData);
+        } catch (error) {
+          console.error('Photo upload failed:', error);
+          errors.push(`Photo upload failed: ${error}`);
+        }
+      }
+
+      // Store signature if available
+      if (biometricData.signature?.base64_data) {
+        try {
+          const signatureFormData = new FormData();
+          
+          const signatureBlob = this.base64ToBlob(biometricData.signature.base64_data, 'image/png');
+          const signatureFile = new File([signatureBlob], biometricData.signature.filename || 'signature.png', {
+            type: 'image/png'
+          });
+          
+          signatureFormData.append('file', signatureFile);
+          signatureFormData.append('data_type', 'SIGNATURE');
+          signatureFormData.append('capture_method', 'DIGITAL_PAD');
+          
+          results.signature_result = await this.uploadBiometricData(applicationId, signatureFormData);
+        } catch (error) {
+          console.error('Signature upload failed:', error);
+          errors.push(`Signature upload failed: ${error}`);
+        }
+      }
+
+      // Store fingerprint if available
+      if (biometricData.fingerprint?.base64_data) {
+        try {
+          const fingerprintFormData = new FormData();
+          
+          const fingerprintBlob = this.base64ToBlob(biometricData.fingerprint.base64_data, 'image/png');
+          const fingerprintFile = new File([fingerprintBlob], biometricData.fingerprint.filename || 'fingerprint.png', {
+            type: 'image/png'
+          });
+          
+          fingerprintFormData.append('file', fingerprintFile);
+          fingerprintFormData.append('data_type', 'FINGERPRINT');
+          fingerprintFormData.append('capture_method', 'MOCK_SCANNER');
+          
+          results.fingerprint_result = await this.uploadBiometricData(applicationId, fingerprintFormData);
+        } catch (error) {
+          console.error('Fingerprint upload failed:', error);
+          errors.push(`Fingerprint upload failed: ${error}`);
+        }
+      }
+
+      return {
+        ...results,
+        success: errors.length === 0,
+        errors
+      };
+
+    } catch (error) {
+      console.error('Biometric data storage failed:', error);
+      return {
+        success: false,
+        errors: [`Biometric data storage failed: ${error}`]
+      };
+    }
+  }
+
+  // Helper method to convert base64 to Blob
+  private base64ToBlob(base64: string, contentType: string): Blob {
+    const byteCharacters = atob(base64);
+    const byteNumbers = new Array(byteCharacters.length);
+    
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    
+    const byteArray = new Uint8Array(byteNumbers);
+    return new Blob([byteArray], { type: contentType });
   }
 
   // Fee management

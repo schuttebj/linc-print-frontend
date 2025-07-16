@@ -349,6 +349,26 @@ const DrivingLicenseApplicationPage: React.FC = () => {
 
       const application = await applicationService.createApplication(applicationData);
       
+      // Store biometric data if captured
+      if (biometricData.photo || biometricData.signature || biometricData.fingerprint) {
+        try {
+          console.log('Storing biometric data for application:', application.id);
+          const biometricResult = await applicationService.storeBiometricDataForApplication(
+            application.id,
+            biometricData
+          );
+          
+          if (biometricResult.success) {
+            console.log('✅ Biometric data stored successfully:', biometricResult);
+          } else {
+            console.warn('⚠️ Some biometric data failed to store:', biometricResult.errors);
+          }
+        } catch (biometricError) {
+          console.error('Biometric storage error (non-critical):', biometricError);
+          // Don't fail the entire application for biometric storage issues
+        }
+      }
+      
       // Update application status to SUBMITTED (applications are created as DRAFT by default)
       await applicationService.updateApplicationStatus(application.id, ApplicationStatus.SUBMITTED);
       

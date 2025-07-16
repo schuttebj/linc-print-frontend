@@ -327,10 +327,49 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
                 onSignatureCapture={handleSignatureCapture}
                 disabled={saving || disabled}
               />
-              {value.signature && (
-                <Alert severity="success" sx={{ mt: 2, fontSize: '0.875rem' }}>
+              {value.signature ? (
+                <Box sx={{ mt: 2 }}>
+                  {/* Display captured signature if available */}
+                  {(value.signature as any).processed_url && (
+                    <Box sx={{ mb: 2, textAlign: 'center' }}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Signature Preview
+                      </Typography>
+                      <Box
+                        sx={{
+                          border: '2px solid',
+                          borderColor: 'success.main',
+                          borderRadius: 2,
+                          p: 1,
+                          backgroundColor: 'background.paper',
+                          display: 'inline-block'
+                        }}
+                      >
+                        <img 
+                          src={(value.signature as any).processed_url}
+                          alt="Captured signature"
+                          style={{
+                            maxWidth: '300px',
+                            maxHeight: '100px',
+                            objectFit: 'contain'
+                          }}
+                        />
+                      </Box>
+                      <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                        {((value.signature as any).file_size / 1024).toFixed(1)}KB | {(value.signature as any).format}
+                      </Typography>
+                    </Box>
+                  )}
+                  <Alert severity="success" sx={{ fontSize: '0.875rem' }}>
+                    <Typography variant="body2">
+                      ✓ Signature captured successfully
+                    </Typography>
+                  </Alert>
+                </Box>
+              ) : (
+                <Alert severity="info" sx={{ mt: 2 }}>
                   <Typography variant="body2">
-                    ✓ Signature captured successfully
+                    Draw your signature in the area above. This will be used on your license card.
                   </Typography>
                 </Alert>
               )}
@@ -358,10 +397,50 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
                 onFingerprintCapture={handleFingerprintCapture}
                 disabled={saving || disabled}
               />
-              {value.fingerprint && (
-                <Alert severity="success" sx={{ mt: 2 }}>
+              {value.fingerprint ? (
+                <Box sx={{ mt: 2 }}>
+                  {/* Display captured fingerprint if available */}
+                  {(value.fingerprint as any).processed_url && (
+                    <Box sx={{ mb: 2, textAlign: 'center' }}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Fingerprint Preview
+                      </Typography>
+                      <Box
+                        sx={{
+                          border: '2px solid',
+                          borderColor: 'success.main',
+                          borderRadius: 2,
+                          p: 1,
+                          backgroundColor: 'background.paper',
+                          display: 'inline-block'
+                        }}
+                      >
+                        <img 
+                          src={(value.fingerprint as any).processed_url}
+                          alt="Captured fingerprint"
+                          style={{
+                            maxWidth: '150px',
+                            maxHeight: '150px',
+                            objectFit: 'contain'
+                          }}
+                        />
+                      </Box>
+                      <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                        {((value.fingerprint as any).file_size / 1024).toFixed(1)}KB | {(value.fingerprint as any).format}
+                      </Typography>
+                    </Box>
+                  )}
+                  <Alert severity="success" sx={{ fontSize: '0.875rem' }}>
+                    <Typography variant="body2">
+                      ✓ Fingerprint captured successfully for enhanced security
+                    </Typography>
+                  </Alert>
+                </Box>
+              ) : (
+                <Alert severity="info" sx={{ mt: 2 }}>
                   <Typography variant="body2">
-                    ✓ Fingerprint captured successfully for enhanced security
+                    <strong>Optional:</strong> Capture fingerprint for enhanced security. 
+                    Currently using mock scanner - will be replaced with real scanner integration.
                   </Typography>
                 </Alert>
               )}
