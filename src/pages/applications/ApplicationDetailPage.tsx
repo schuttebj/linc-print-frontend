@@ -321,15 +321,15 @@ const ApplicationDetailPage: React.FC = () => {
                     <Box>
                       <Typography variant="body2" color="text.secondary">Phone</Typography>
                       <Typography variant="body1">
-                        +{application.person.cell_phone_country_code || '261'} {application.person.cell_phone}
+                        +261 {application.person.cell_phone}
                       </Typography>
                     </Box>
                   )}
                   
-                  {application.person.email_address && (
+                  {application.person.email && (
                     <Box>
                       <Typography variant="body2" color="text.secondary">Email</Typography>
-                      <Typography variant="body1">{application.person.email_address}</Typography>
+                      <Typography variant="body1">{application.person.email}</Typography>
                     </Box>
                   )}
                 </Stack>
