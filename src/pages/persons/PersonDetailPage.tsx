@@ -40,6 +40,7 @@ import {
   Description as DocumentIcon,
   CalendarToday as CalendarIcon,
   CreditCard as LicenseIcon,
+  CreditCard,
   Assignment as ApplicationIcon,
   Receipt as TransactionIcon,
   Visibility as ViewIcon,
