@@ -76,9 +76,18 @@ const ApplicationListPage: React.FC = () => {
       setStatusOptions([
         { value: 'DRAFT', label: 'Draft' },
         { value: 'SUBMITTED', label: 'Submitted' },
+        { value: 'PAID', label: 'Paid' },
+        { value: 'PASSED', label: 'Passed' },
+        { value: 'FAILED', label: 'Failed' },
+        { value: 'ABSENT', label: 'Absent' },
+        { value: 'ON_HOLD', label: 'On Hold' },
         { value: 'APPROVED', label: 'Approved' },
+        { value: 'SENT_TO_PRINTER', label: 'Sent to Printer' },
+        { value: 'CARD_PRODUCTION', label: 'Card Production' },
+        { value: 'READY_FOR_COLLECTION', label: 'Ready for Collection' },
+        { value: 'COMPLETED', label: 'Completed' },
         { value: 'REJECTED', label: 'Rejected' },
-        { value: 'COMPLETED', label: 'Completed' }
+        { value: 'CANCELLED', label: 'Cancelled' }
       ]);
       setTypeOptions([
         { value: 'NEW_LICENSE', label: 'New License' },
@@ -136,13 +145,25 @@ const ApplicationListPage: React.FC = () => {
         return 'default';
       case ApplicationStatus.SUBMITTED:
         return 'info';
-      case ApplicationStatus.APPROVED:
+      case ApplicationStatus.PAID:
+        return 'primary';
+      case ApplicationStatus.PASSED:
         return 'success';
+      case ApplicationStatus.FAILED:
+      case ApplicationStatus.ABSENT:
       case ApplicationStatus.REJECTED:
       case ApplicationStatus.CANCELLED:
         return 'error';
+      case ApplicationStatus.ON_HOLD:
+        return 'warning';
+      case ApplicationStatus.APPROVED:
       case ApplicationStatus.COMPLETED:
         return 'success';
+      case ApplicationStatus.SENT_TO_PRINTER:
+      case ApplicationStatus.CARD_PRODUCTION:
+        return 'primary';
+      case ApplicationStatus.READY_FOR_COLLECTION:
+        return 'info';
       default:
         return 'primary';
     }
