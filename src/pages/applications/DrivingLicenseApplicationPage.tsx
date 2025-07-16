@@ -337,6 +337,9 @@ const DrivingLicenseApplicationPage: React.FC = () => {
 
       const application = await applicationService.createApplication(applicationData);
       
+      // Update application status to SUBMITTED (applications are created as DRAFT by default)
+      await applicationService.updateApplicationStatus(application.id, ApplicationStatus.SUBMITTED);
+      
       setSuccess('Driving license application submitted successfully!');
       
       // Navigate to application details
