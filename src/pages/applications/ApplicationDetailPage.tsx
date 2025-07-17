@@ -402,7 +402,8 @@ const ApplicationDetailPage: React.FC = () => {
           </Card>
         </Grid>
 
-        {/* Biometric Data */}
+        {/* Biometric Data - Temporarily Hidden */}
+        {/*
         <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
@@ -445,6 +446,7 @@ const ApplicationDetailPage: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
+        */}
 
         {/* Timestamps */}
         <Grid item xs={12}>
