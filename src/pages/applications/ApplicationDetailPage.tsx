@@ -402,9 +402,8 @@ const ApplicationDetailPage: React.FC = () => {
           </Card>
         </Grid>
 
-        {/* Biometric Data - Temporarily Hidden */}
-        {/*
-        <Grid item xs={12} md={6}>
+        {/* Biometric Data Display */}
+        <Grid item xs={12}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
@@ -412,41 +411,187 @@ const ApplicationDetailPage: React.FC = () => {
                 Biometric Data
               </Typography>
               
-              <List dense>
-                <ListItem>
-                  <ListItemIcon>
-                    {application.photo_url ? <CheckIcon color="success" /> : <WarningIcon color="warning" />}
-                  </ListItemIcon>
-                  <ListItemText 
-                    primary="Photo"
-                    secondary={application.photo_url ? 'Captured' : 'Not captured'}
-                  />
-                </ListItem>
-                
-                <ListItem>
-                  <ListItemIcon>
-                    {application.signature_url ? <CheckIcon color="success" /> : <WarningIcon color="warning" />}
-                  </ListItemIcon>
-                  <ListItemText 
-                    primary="Signature"
-                    secondary={application.signature_url ? 'Captured' : 'Not captured'}
-                  />
-                </ListItem>
-                
-                <ListItem>
-                  <ListItemIcon>
-                    {application.fingerprint_url ? <CheckIcon color="success" /> : <InfoIcon color="disabled" />}
-                  </ListItemIcon>
-                  <ListItemText 
-                    primary="Fingerprint"
-                    secondary={application.fingerprint_url ? 'Captured' : 'Optional'}
-                  />
-                </ListItem>
-              </List>
+              <Grid container spacing={3}>
+                {/* Photo Display */}
+                <Grid item xs={12} md={4}>
+                  <Paper 
+                    elevation={2} 
+                    sx={{ 
+                      p: 2, 
+                      textAlign: 'center',
+                      minHeight: 300,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                      <PhotoIcon sx={{ mr: 1 }} />
+                      Photo
+                    </Typography>
+                    {(() => {
+                      const photoData = application.biometric_data?.find(bd => bd.data_type === 'PHOTO');
+                      if (photoData) {
+                        return (
+                          <Box>
+                            <img
+                              src={`https://linc-print-backend.onrender.com/api/v1/applications/files/${photoData.file_path}`}
+                              alt="Application Photo"
+                              style={{
+                                maxWidth: '200px',
+                                maxHeight: '200px',
+                                objectFit: 'cover',
+                                border: '2px solid #ddd',
+                                borderRadius: '8px'
+                              }}
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.nextElementSibling?.setAttribute('style', 'display: block');
+                              }}
+                            />
+                            <Box sx={{ display: 'none', color: 'error.main' }}>
+                              <WarningIcon sx={{ fontSize: 24, mb: 1 }} />
+                              <Typography variant="caption">Failed to load photo</Typography>
+                            </Box>
+                            <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
+                              Captured: {new Date(photoData.created_at || '').toLocaleDateString()}
+                            </Typography>
+                          </Box>
+                        );
+                      }
+                      return (
+                        <Box sx={{ color: 'text.secondary' }}>
+                          <WarningIcon sx={{ fontSize: 48, mb: 1 }} />
+                          <Typography variant="body2">No photo captured</Typography>
+                        </Box>
+                      );
+                    })()}
+                  </Paper>
+                </Grid>
+
+                {/* Signature Display */}
+                <Grid item xs={12} md={4}>
+                  <Paper 
+                    elevation={2} 
+                    sx={{ 
+                      p: 2, 
+                      textAlign: 'center',
+                      minHeight: 300,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                      <SignatureIcon sx={{ mr: 1 }} />
+                      Signature
+                    </Typography>
+                    {(() => {
+                      const signatureData = application.biometric_data?.find(bd => bd.data_type === 'SIGNATURE');
+                      if (signatureData) {
+                        return (
+                          <Box>
+                            <img
+                              src={`https://linc-print-backend.onrender.com/api/v1/applications/files/${signatureData.file_path}`}
+                              alt="Application Signature"
+                              style={{
+                                maxWidth: '200px',
+                                maxHeight: '100px',
+                                objectFit: 'contain',
+                                border: '1px solid #ddd',
+                                borderRadius: '4px',
+                                backgroundColor: 'white'
+                              }}
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.nextElementSibling?.setAttribute('style', 'display: block');
+                              }}
+                            />
+                            <Box sx={{ display: 'none', color: 'error.main' }}>
+                              <WarningIcon sx={{ fontSize: 24, mb: 1 }} />
+                              <Typography variant="caption">Failed to load signature</Typography>
+                            </Box>
+                            <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
+                              Captured: {new Date(signatureData.created_at || '').toLocaleDateString()}
+                            </Typography>
+                          </Box>
+                        );
+                      }
+                      return (
+                        <Box sx={{ color: 'text.secondary' }}>
+                          <WarningIcon sx={{ fontSize: 48, mb: 1 }} />
+                          <Typography variant="body2">No signature captured</Typography>
+                        </Box>
+                      );
+                    })()}
+                  </Paper>
+                </Grid>
+
+                {/* Fingerprint Display */}
+                <Grid item xs={12} md={4}>
+                  <Paper 
+                    elevation={2} 
+                    sx={{ 
+                      p: 2, 
+                      textAlign: 'center',
+                      minHeight: 300,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                      <FingerprintIcon sx={{ mr: 1 }} />
+                      Fingerprint
+                    </Typography>
+                    {(() => {
+                      const fingerprintData = application.biometric_data?.find(bd => bd.data_type === 'FINGERPRINT');
+                      if (fingerprintData) {
+                        return (
+                          <Box>
+                            <img
+                              src={`https://linc-print-backend.onrender.com/api/v1/applications/files/${fingerprintData.file_path}`}
+                              alt="Application Fingerprint"
+                              style={{
+                                maxWidth: '150px',
+                                maxHeight: '150px',
+                                objectFit: 'contain',
+                                border: '1px solid #ddd',
+                                borderRadius: '4px',
+                                backgroundColor: 'white'
+                              }}
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.nextElementSibling?.setAttribute('style', 'display: block');
+                              }}
+                            />
+                            <Box sx={{ display: 'none', color: 'error.main' }}>
+                              <WarningIcon sx={{ fontSize: 24, mb: 1 }} />
+                              <Typography variant="caption">Failed to load fingerprint</Typography>
+                            </Box>
+                            <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
+                              Captured: {new Date(fingerprintData.created_at || '').toLocaleDateString()}
+                            </Typography>
+                          </Box>
+                        );
+                      }
+                      return (
+                        <Box sx={{ color: 'text.secondary' }}>
+                          <InfoIcon sx={{ fontSize: 48, mb: 1 }} />
+                          <Typography variant="body2">No fingerprint captured</Typography>
+                          <Typography variant="caption">(Optional)</Typography>
+                        </Box>
+                      );
+                    })()}
+                  </Paper>
+                </Grid>
+              </Grid>
             </CardContent>
           </Card>
         </Grid>
-        */}
 
         {/* Timestamps */}
         <Grid item xs={12}>

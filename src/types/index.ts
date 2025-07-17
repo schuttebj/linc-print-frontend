@@ -96,6 +96,17 @@ export interface Location {
   updated_at: string;
 }
 
+// Biometric Data interface to match backend response
+export interface BiometricData {
+  id: string;
+  application_id: string;
+  data_type: 'PHOTO' | 'SIGNATURE' | 'FINGERPRINT';
+  file_path: string;
+  metadata?: Record<string, any>;
+  created_at?: string;
+  updated_at?: string;
+}
+
 // Application Types for Madagascar License System
 export interface Application {
   id: string;
@@ -130,10 +141,13 @@ export interface Application {
   theory_test_attempts: number;
   practical_test_attempts: number;
   
-  // Biometric data
+  // Biometric data (legacy URLs)
   photo_url?: string;
   signature_url?: string;
   fingerprint_url?: string;
+  
+  // New biometric data structure from backend
+  biometric_data?: BiometricData[];
   
   // Status workflow
   submitted_at?: string;
