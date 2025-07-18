@@ -489,7 +489,7 @@ const ApplicationDetailPage: React.FC = () => {
                                   {licenseReadyPath ? (
                                     <Box>
                                       <img
-                                        src={`https://linc-print-backend.onrender.com/api/v1/applications/files/${getRelativePath(licenseReadyPath)}`}
+                                        src={`https://linc-print-backend.onrender.com/api/v1/applications/${application.id}/biometric-data/PHOTO/license-ready`}
                                         alt="Application Photo (License-Ready)"
                                         style={{
                                           maxWidth: '80px',
