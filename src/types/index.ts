@@ -96,7 +96,61 @@ export interface Location {
   updated_at: string;
 }
 
-// Biometric Data interface to match backend response
+// Biometric Data interface to match enhanced backend response
+export interface BiometricDataItem {
+  id: string;
+  file_path: string;
+  file_url: string; // New: Direct API URL for authenticated access
+  file_size: number;
+  file_format: string;
+  capture_method: string;
+  image_resolution?: string;
+  quality_score?: number;
+  is_verified: boolean;
+  capture_metadata?: {
+    processing_info?: {
+      cropped_to_iso?: boolean;
+      enhanced?: boolean;
+      compression_ratio?: number;
+      license_ready_compression?: number;
+      license_ready_size?: number;
+    };
+    standard_version?: {
+      file_path: string;
+      filename: string;
+      file_size: number;
+      dimensions: string;
+    };
+    license_ready_version?: {
+      file_path: string;
+      filename: string;
+      file_size: number;
+      dimensions: string;
+    };
+  };
+  created_at: string;
+  notes?: string;
+}
+
+// Enhanced photo data with license-ready info
+export interface PhotoBiometricData extends BiometricDataItem {
+  license_ready?: {
+    file_path: string;
+    filename: string;
+    file_size: number;
+    dimensions: string;
+    file_url: string; // Direct URL to license-ready endpoint
+  };
+}
+
+// Organized biometric data structure from enhanced backend
+export interface OrganizedBiometricData {
+  photo?: PhotoBiometricData;
+  signature?: BiometricDataItem;
+  fingerprint?: BiometricDataItem;
+}
+
+// Legacy BiometricData interface (for backward compatibility)
 export interface BiometricData {
   id: string;
   application_id: string;
@@ -147,7 +201,7 @@ export interface Application {
   fingerprint_url?: string;
   
   // New biometric data structure from backend
-  biometric_data?: BiometricData[];
+  biometric_data?: OrganizedBiometricData;
   
   // Status workflow
   submitted_at?: string;

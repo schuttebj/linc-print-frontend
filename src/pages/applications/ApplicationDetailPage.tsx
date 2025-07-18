@@ -431,20 +431,13 @@ const ApplicationDetailPage: React.FC = () => {
                       Photo
                     </Typography>
                     {(() => {
-                                              const photoData = application.biometric_data?.find(bd => bd.data_type === 'PHOTO');
-                        if (photoData) {
-                          const metadata = photoData.metadata;
-                          const standardPath = metadata?.standard_version?.file_path || photoData.file_path;
-                          const licenseReadyPath = metadata?.license_ready_version?.file_path;
-                          
-                          // Extract relative path from absolute path for API call
-                          const getRelativePath = (fullPath: string) => {
-                            if (fullPath.includes('/biometric/')) {
-                              return fullPath.substring(fullPath.indexOf('biometric/'));
-                            }
-                            return fullPath;
-                          };
-
+                      // Use the new organized biometric data structure
+                      const photoData = application.biometric_data?.photo;
+                      if (photoData) {
+                        const metadata = photoData.capture_metadata; // Use correct field name
+                        const standardPath = photoData.file_url; // Use new file_url field
+                        const licenseReadyInfo = metadata?.license_ready_version;
+                        
                         return (
                           <Box>
                             <Grid container spacing={2}>
@@ -454,29 +447,38 @@ const ApplicationDetailPage: React.FC = () => {
                                   <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mb: 1 }}>
                                     Standard Version
                                   </Typography>
-                                  <img
-                                    src={`https://linc-print-backend.onrender.com/api/v1/applications/files/${getRelativePath(standardPath)}`}
-                                    alt="Application Photo (Standard)"
-                                    style={{
-                                      maxWidth: '120px',
-                                      maxHeight: '120px',
-                                      objectFit: 'cover',
-                                      border: '2px solid #ddd',
-                                      borderRadius: '8px'
-                                    }}
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = 'none';
-                                      e.currentTarget.nextElementSibling?.setAttribute('style', 'display: block');
-                                    }}
-                                  />
-                                  <Box sx={{ display: 'none', color: 'error.main' }}>
-                                    <WarningIcon sx={{ fontSize: 20, mb: 1 }} />
-                                    <Typography variant="caption">Failed to load</Typography>
-                                  </Box>
-                                  <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
-                                    High Quality ({metadata?.standard_version?.file_size ? 
-                                      `${Math.round(metadata.standard_version.file_size / 1024)}KB` : 'Unknown'})
-                                  </Typography>
+                                  {standardPath ? (
+                                    <Box>
+                                      <img
+                                        src={`https://linc-print-backend.onrender.com${standardPath}`}
+                                        alt="Application Photo (Standard)"
+                                        style={{
+                                          maxWidth: '120px',
+                                          maxHeight: '120px',
+                                          objectFit: 'cover',
+                                          border: '2px solid #ddd',
+                                          borderRadius: '8px'
+                                        }}
+                                        onError={(e) => {
+                                          e.currentTarget.style.display = 'none';
+                                          e.currentTarget.nextElementSibling?.setAttribute('style', 'display: block');
+                                        }}
+                                      />
+                                      <Box sx={{ display: 'none', color: 'error.main' }}>
+                                        <WarningIcon sx={{ fontSize: 20, mb: 1 }} />
+                                        <Typography variant="caption">Failed to load</Typography>
+                                      </Box>
+                                      <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
+                                        High Quality ({photoData.file_size ? 
+                                          `${Math.round(photoData.file_size / 1024)}KB` : 'Unknown'})
+                                      </Typography>
+                                    </Box>
+                                  ) : (
+                                    <Box sx={{ color: 'error.main' }}>
+                                      <WarningIcon sx={{ fontSize: 20, mb: 1 }} />
+                                      <Typography variant="caption">No image</Typography>
+                                    </Box>
+                                  )}
                                 </Box>
                               </Grid>
 
@@ -486,7 +488,7 @@ const ApplicationDetailPage: React.FC = () => {
                                   <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mb: 1 }}>
                                     License Card (8-bit)
                                   </Typography>
-                                  {licenseReadyPath ? (
+                                  {licenseReadyInfo ? (
                                     <Box>
                                       <img
                                         src={`https://linc-print-backend.onrender.com/api/v1/applications/${application.id}/biometric-data/PHOTO/license-ready`}
@@ -508,8 +510,8 @@ const ApplicationDetailPage: React.FC = () => {
                                         <Typography variant="caption">Failed to load</Typography>
                                       </Box>
                                       <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
-                                        Compressed ({metadata?.license_ready_version?.file_size ? 
-                                          `${Math.round(metadata.license_ready_version.file_size / 1024 * 10) / 10}KB` : 'Unknown'})
+                                        Compressed ({licenseReadyInfo.file_size ? 
+                                          `${Math.round(licenseReadyInfo.file_size / 1024 * 10) / 10}KB` : 'Unknown'})
                                       </Typography>
                                     </Box>
                                   ) : (
@@ -557,20 +559,13 @@ const ApplicationDetailPage: React.FC = () => {
                       Signature
                     </Typography>
                     {(() => {
-                      const signatureData = application.biometric_data?.find(bd => bd.data_type === 'SIGNATURE');
+                      // Use the new organized biometric data structure
+                      const signatureData = application.biometric_data?.signature;
                       if (signatureData) {
-                        // Extract relative path from absolute path for API call
-                        const getRelativePath = (fullPath: string) => {
-                          if (fullPath.includes('/biometric/')) {
-                            return fullPath.substring(fullPath.indexOf('biometric/'));
-                          }
-                          return fullPath;
-                        };
-
                         return (
                           <Box>
                             <img
-                              src={`https://linc-print-backend.onrender.com/api/v1/applications/files/${getRelativePath(signatureData.file_path)}`}
+                              src={`https://linc-print-backend.onrender.com${signatureData.file_url}`}
                               alt="Application Signature"
                               style={{
                                 maxWidth: '200px',
@@ -590,15 +585,18 @@ const ApplicationDetailPage: React.FC = () => {
                               <Typography variant="caption">Failed to load signature</Typography>
                             </Box>
                             <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
-                              Captured: {new Date(signatureData.created_at || '').toLocaleDateString()}
+                              {signatureData.file_size ? `${Math.round(signatureData.file_size / 1024)}KB` : 'Unknown size'} | {signatureData.file_format}
                             </Typography>
                           </Box>
                         );
                       }
+
                       return (
-                        <Box sx={{ color: 'text.secondary' }}>
-                          <WarningIcon sx={{ fontSize: 48, mb: 1 }} />
-                          <Typography variant="body2">No signature captured</Typography>
+                        <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
+                          <SignatureIcon sx={{ fontSize: 48, mb: 1, opacity: 0.5 }} />
+                          <Typography variant="body2">
+                            No signature captured
+                          </Typography>
                         </Box>
                       );
                     })()}
@@ -624,20 +622,13 @@ const ApplicationDetailPage: React.FC = () => {
                       Fingerprint
                     </Typography>
                     {(() => {
-                      const fingerprintData = application.biometric_data?.find(bd => bd.data_type === 'FINGERPRINT');
+                      // Use the new organized biometric data structure
+                      const fingerprintData = application.biometric_data?.fingerprint;
                       if (fingerprintData) {
-                        // Extract relative path from absolute path for API call
-                        const getRelativePath = (fullPath: string) => {
-                          if (fullPath.includes('/biometric/')) {
-                            return fullPath.substring(fullPath.indexOf('biometric/'));
-                          }
-                          return fullPath;
-                        };
-
                         return (
                           <Box>
                             <img
-                              src={`https://linc-print-backend.onrender.com/api/v1/applications/files/${getRelativePath(fingerprintData.file_path)}`}
+                              src={`https://linc-print-backend.onrender.com${fingerprintData.file_url}`}
                               alt="Application Fingerprint"
                               style={{
                                 maxWidth: '150px',
@@ -657,16 +648,18 @@ const ApplicationDetailPage: React.FC = () => {
                               <Typography variant="caption">Failed to load fingerprint</Typography>
                             </Box>
                             <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
-                              Captured: {new Date(fingerprintData.created_at || '').toLocaleDateString()}
+                              {fingerprintData.file_size ? `${Math.round(fingerprintData.file_size / 1024)}KB` : 'Unknown size'} | {fingerprintData.file_format}
                             </Typography>
                           </Box>
                         );
                       }
+
                       return (
-                        <Box sx={{ color: 'text.secondary' }}>
-                          <InfoIcon sx={{ fontSize: 48, mb: 1 }} />
-                          <Typography variant="body2">No fingerprint captured</Typography>
-                          <Typography variant="caption">(Optional)</Typography>
+                        <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
+                          <FingerprintIcon sx={{ fontSize: 48, mb: 1, opacity: 0.5 }} />
+                          <Typography variant="body2">
+                            No fingerprint captured
+                          </Typography>
                         </Box>
                       );
                     })()}
