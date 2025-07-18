@@ -447,65 +447,82 @@ const ApplicationDetailPage: React.FC = () => {
 
                         return (
                           <Box>
-                            {/* Standard Version */}
-                            <Box sx={{ mb: 2 }}>
-                              <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mb: 1 }}>
-                                Standard Version
-                              </Typography>
-                              <img
-                                src={`https://linc-print-backend.onrender.com/api/v1/applications/files/${getRelativePath(standardPath)}`}
-                                alt="Application Photo (Standard)"
-                                style={{
-                                  maxWidth: '150px',
-                                  maxHeight: '150px',
-                                  objectFit: 'cover',
-                                  border: '2px solid #ddd',
-                                  borderRadius: '8px'
-                                }}
-                                onError={(e) => {
-                                  e.currentTarget.style.display = 'none';
-                                  e.currentTarget.nextElementSibling?.setAttribute('style', 'display: block');
-                                }}
-                              />
-                              <Box sx={{ display: 'none', color: 'error.main' }}>
-                                <WarningIcon sx={{ fontSize: 24, mb: 1 }} />
-                                <Typography variant="caption">Failed to load standard photo</Typography>
-                              </Box>
-                            </Box>
-
-                            {/* License-Ready Version */}
-                            {licenseReadyPath && (
-                              <Box sx={{ mb: 2 }}>
-                                <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mb: 1 }}>
-                                  License-Ready Version (8-bit)
-                                </Typography>
-                                <img
-                                  src={`https://linc-print-backend.onrender.com/api/v1/applications/files/${getRelativePath(licenseReadyPath)}`}
-                                  alt="Application Photo (License-Ready)"
-                                  style={{
-                                    maxWidth: '100px',
-                                    maxHeight: '100px',
-                                    objectFit: 'cover',
-                                    border: '1px solid #aaa',
-                                    borderRadius: '4px'
-                                  }}
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = 'none';
-                                    e.currentTarget.nextElementSibling?.setAttribute('style', 'display: block');
-                                  }}
-                                />
-                                <Box sx={{ display: 'none', color: 'error.main' }}>
-                                  <WarningIcon sx={{ fontSize: 16, mb: 1 }} />
-                                  <Typography variant="caption">Failed to load license photo</Typography>
+                            <Grid container spacing={2}>
+                              {/* Standard Version */}
+                              <Grid item xs={6}>
+                                <Box sx={{ textAlign: 'center' }}>
+                                  <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mb: 1 }}>
+                                    Standard Version
+                                  </Typography>
+                                  <img
+                                    src={`https://linc-print-backend.onrender.com/api/v1/applications/files/${getRelativePath(standardPath)}`}
+                                    alt="Application Photo (Standard)"
+                                    style={{
+                                      maxWidth: '120px',
+                                      maxHeight: '120px',
+                                      objectFit: 'cover',
+                                      border: '2px solid #ddd',
+                                      borderRadius: '8px'
+                                    }}
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none';
+                                      e.currentTarget.nextElementSibling?.setAttribute('style', 'display: block');
+                                    }}
+                                  />
+                                  <Box sx={{ display: 'none', color: 'error.main' }}>
+                                    <WarningIcon sx={{ fontSize: 20, mb: 1 }} />
+                                    <Typography variant="caption">Failed to load</Typography>
+                                  </Box>
+                                  <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
+                                    High Quality ({metadata?.standard_version?.file_size ? 
+                                      `${Math.round(metadata.standard_version.file_size / 1024)}KB` : 'Unknown'})
+                                  </Typography>
                                 </Box>
-                                <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
-                                  Size: {metadata?.license_ready_version?.file_size ? 
-                                    `${Math.round(metadata.license_ready_version.file_size / 1024 * 10) / 10}KB` : 'Unknown'}
-                                </Typography>
-                              </Box>
-                            )}
+                              </Grid>
 
-                            <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
+                              {/* License-Ready Version */}
+                              <Grid item xs={6}>
+                                <Box sx={{ textAlign: 'center' }}>
+                                  <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mb: 1 }}>
+                                    License Card (8-bit)
+                                  </Typography>
+                                  {licenseReadyPath ? (
+                                    <Box>
+                                      <img
+                                        src={`https://linc-print-backend.onrender.com/api/v1/applications/files/${getRelativePath(licenseReadyPath)}`}
+                                        alt="Application Photo (License-Ready)"
+                                        style={{
+                                          maxWidth: '80px',
+                                          maxHeight: '80px',
+                                          objectFit: 'cover',
+                                          border: '1px solid #aaa',
+                                          borderRadius: '4px'
+                                        }}
+                                        onError={(e) => {
+                                          e.currentTarget.style.display = 'none';
+                                          e.currentTarget.nextElementSibling?.setAttribute('style', 'display: block');
+                                        }}
+                                      />
+                                      <Box sx={{ display: 'none', color: 'error.main' }}>
+                                        <WarningIcon sx={{ fontSize: 16, mb: 1 }} />
+                                        <Typography variant="caption">Failed to load</Typography>
+                                      </Box>
+                                      <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
+                                        Compressed ({metadata?.license_ready_version?.file_size ? 
+                                          `${Math.round(metadata.license_ready_version.file_size / 1024 * 10) / 10}KB` : 'Unknown'})
+                                      </Typography>
+                                    </Box>
+                                  ) : (
+                                    <Box sx={{ color: 'warning.main', minHeight: '80px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                                      <InfoIcon sx={{ fontSize: 24, mb: 1 }} />
+                                      <Typography variant="caption">Not generated</Typography>
+                                    </Box>
+                                  )}
+                                </Box>
+                              </Grid>
+                            </Grid>
+
+                            <Typography variant="caption" display="block" sx={{ mt: 2, textAlign: 'center', color: 'text.secondary' }}>
                               Captured: {new Date(photoData.created_at || '').toLocaleDateString()}
                             </Typography>
                           </Box>
