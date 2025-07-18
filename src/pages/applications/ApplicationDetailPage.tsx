@@ -431,29 +431,80 @@ const ApplicationDetailPage: React.FC = () => {
                       Photo
                     </Typography>
                     {(() => {
-                      const photoData = application.biometric_data?.find(bd => bd.data_type === 'PHOTO');
-                      if (photoData) {
+                                              const photoData = application.biometric_data?.find(bd => bd.data_type === 'PHOTO');
+                        if (photoData) {
+                          const metadata = photoData.metadata;
+                          const standardPath = metadata?.standard_version?.file_path || photoData.file_path;
+                          const licenseReadyPath = metadata?.license_ready_version?.file_path;
+                          
+                          // Extract relative path from absolute path for API call
+                          const getRelativePath = (fullPath: string) => {
+                            if (fullPath.includes('/biometric/')) {
+                              return fullPath.substring(fullPath.indexOf('biometric/'));
+                            }
+                            return fullPath;
+                          };
+
                         return (
                           <Box>
-                            <img
-                              src={`https://linc-print-backend.onrender.com/api/v1/applications/files/${photoData.file_path}`}
-                              alt="Application Photo"
-                              style={{
-                                maxWidth: '200px',
-                                maxHeight: '200px',
-                                objectFit: 'cover',
-                                border: '2px solid #ddd',
-                                borderRadius: '8px'
-                              }}
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                                e.currentTarget.nextElementSibling?.setAttribute('style', 'display: block');
-                              }}
-                            />
-                            <Box sx={{ display: 'none', color: 'error.main' }}>
-                              <WarningIcon sx={{ fontSize: 24, mb: 1 }} />
-                              <Typography variant="caption">Failed to load photo</Typography>
+                            {/* Standard Version */}
+                            <Box sx={{ mb: 2 }}>
+                              <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mb: 1 }}>
+                                Standard Version
+                              </Typography>
+                              <img
+                                src={`https://linc-print-backend.onrender.com/api/v1/applications/files/${getRelativePath(standardPath)}`}
+                                alt="Application Photo (Standard)"
+                                style={{
+                                  maxWidth: '150px',
+                                  maxHeight: '150px',
+                                  objectFit: 'cover',
+                                  border: '2px solid #ddd',
+                                  borderRadius: '8px'
+                                }}
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  e.currentTarget.nextElementSibling?.setAttribute('style', 'display: block');
+                                }}
+                              />
+                              <Box sx={{ display: 'none', color: 'error.main' }}>
+                                <WarningIcon sx={{ fontSize: 24, mb: 1 }} />
+                                <Typography variant="caption">Failed to load standard photo</Typography>
+                              </Box>
                             </Box>
+
+                            {/* License-Ready Version */}
+                            {licenseReadyPath && (
+                              <Box sx={{ mb: 2 }}>
+                                <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mb: 1 }}>
+                                  License-Ready Version (8-bit)
+                                </Typography>
+                                <img
+                                  src={`https://linc-print-backend.onrender.com/api/v1/applications/files/${getRelativePath(licenseReadyPath)}`}
+                                  alt="Application Photo (License-Ready)"
+                                  style={{
+                                    maxWidth: '100px',
+                                    maxHeight: '100px',
+                                    objectFit: 'cover',
+                                    border: '1px solid #aaa',
+                                    borderRadius: '4px'
+                                  }}
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    e.currentTarget.nextElementSibling?.setAttribute('style', 'display: block');
+                                  }}
+                                />
+                                <Box sx={{ display: 'none', color: 'error.main' }}>
+                                  <WarningIcon sx={{ fontSize: 16, mb: 1 }} />
+                                  <Typography variant="caption">Failed to load license photo</Typography>
+                                </Box>
+                                <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
+                                  Size: {metadata?.license_ready_version?.file_size ? 
+                                    `${Math.round(metadata.license_ready_version.file_size / 1024 * 10) / 10}KB` : 'Unknown'}
+                                </Typography>
+                              </Box>
+                            )}
+
                             <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
                               Captured: {new Date(photoData.created_at || '').toLocaleDateString()}
                             </Typography>
@@ -491,10 +542,18 @@ const ApplicationDetailPage: React.FC = () => {
                     {(() => {
                       const signatureData = application.biometric_data?.find(bd => bd.data_type === 'SIGNATURE');
                       if (signatureData) {
+                        // Extract relative path from absolute path for API call
+                        const getRelativePath = (fullPath: string) => {
+                          if (fullPath.includes('/biometric/')) {
+                            return fullPath.substring(fullPath.indexOf('biometric/'));
+                          }
+                          return fullPath;
+                        };
+
                         return (
                           <Box>
                             <img
-                              src={`https://linc-print-backend.onrender.com/api/v1/applications/files/${signatureData.file_path}`}
+                              src={`https://linc-print-backend.onrender.com/api/v1/applications/files/${getRelativePath(signatureData.file_path)}`}
                               alt="Application Signature"
                               style={{
                                 maxWidth: '200px',
@@ -550,10 +609,18 @@ const ApplicationDetailPage: React.FC = () => {
                     {(() => {
                       const fingerprintData = application.biometric_data?.find(bd => bd.data_type === 'FINGERPRINT');
                       if (fingerprintData) {
+                        // Extract relative path from absolute path for API call
+                        const getRelativePath = (fullPath: string) => {
+                          if (fullPath.includes('/biometric/')) {
+                            return fullPath.substring(fullPath.indexOf('biometric/'));
+                          }
+                          return fullPath;
+                        };
+
                         return (
                           <Box>
                             <img
-                              src={`https://linc-print-backend.onrender.com/api/v1/applications/files/${fingerprintData.file_path}`}
+                              src={`https://linc-print-backend.onrender.com/api/v1/applications/files/${getRelativePath(fingerprintData.file_path)}`}
                               alt="Application Fingerprint"
                               style={{
                                 maxWidth: '150px',
