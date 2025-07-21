@@ -431,10 +431,10 @@ const ApplicationDetailPage: React.FC = () => {
                       Photo
                     </Typography>
                     {(() => {
-                      // Use the new organized biometric data structure
-                      const photoData = application.biometric_data?.photo;
-                      if (photoData) {
-                        const metadata = photoData.capture_metadata; // Use correct field name
+                      // Find the most recent photo from biometric_data array
+                      const photoData = application.biometric_data?.find(item => item.data_type === 'PHOTO');
+                                              if (photoData) {
+                          const metadata = photoData.metadata; // Use correct field name from backend
                         const standardPath = photoData.file_url; // Use new file_url field
                         const licenseReadyInfo = metadata?.license_ready_version;
                         
@@ -559,8 +559,8 @@ const ApplicationDetailPage: React.FC = () => {
                       Signature
                     </Typography>
                     {(() => {
-                      // Use the new organized biometric data structure
-                      const signatureData = application.biometric_data?.signature;
+                      // Find signature from biometric_data array
+                      const signatureData = application.biometric_data?.find(item => item.data_type === 'SIGNATURE');
                       if (signatureData) {
                         return (
                           <Box>
@@ -622,8 +622,8 @@ const ApplicationDetailPage: React.FC = () => {
                       Fingerprint
                     </Typography>
                     {(() => {
-                      // Use the new organized biometric data structure
-                      const fingerprintData = application.biometric_data?.fingerprint;
+                      // Find fingerprint from biometric_data array
+                      const fingerprintData = application.biometric_data?.find(item => item.data_type === 'FINGERPRINT');
                       if (fingerprintData) {
                         return (
                           <Box>

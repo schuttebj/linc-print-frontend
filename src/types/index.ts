@@ -99,6 +99,8 @@ export interface Location {
 // Biometric Data interface to match enhanced backend response
 export interface BiometricDataItem {
   id: string;
+  application_id: string;
+  data_type: 'PHOTO' | 'SIGNATURE' | 'FINGERPRINT';
   file_path: string;
   file_url: string; // New: Direct API URL for authenticated access
   file_size: number;
@@ -107,7 +109,7 @@ export interface BiometricDataItem {
   image_resolution?: string;
   quality_score?: number;
   is_verified: boolean;
-  capture_metadata?: {
+  metadata?: {
     processing_info?: {
       cropped_to_iso?: boolean;
       enhanced?: boolean;
@@ -129,6 +131,7 @@ export interface BiometricDataItem {
     };
   };
   created_at: string;
+  updated_at?: string;
   notes?: string;
 }
 
@@ -201,7 +204,7 @@ export interface Application {
   fingerprint_url?: string;
   
   // New biometric data structure from backend
-  biometric_data?: OrganizedBiometricData;
+  biometric_data?: BiometricDataItem[];
   
   // Status workflow
   submitted_at?: string;
