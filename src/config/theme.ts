@@ -329,6 +329,171 @@ export const compactTheme = createTheme({
         margin: 'dense',
       },
     },
+    MuiSelect: {
+      styleOverrides: {
+        root: {
+          fontSize: '0.875rem',  // Smaller text in selects
+        },
+        select: {
+          paddingTop: '8px',     // Reduce vertical padding
+          paddingBottom: '8px',
+          paddingLeft: '12px',   // Reduce horizontal padding  
+          paddingRight: '32px',  // Space for dropdown arrow
+        },
+      },
+      defaultProps: {
+        size: 'small',
+      },
+    },
+    MuiFormControl: {
+      styleOverrides: {
+        root: {
+          minWidth: '120px',     // Smaller minimum width
+        },
+      },
+      defaultProps: {
+        size: 'small',
+        margin: 'dense',
+      },
+    },
+    MuiInputBase: {
+      styleOverrides: {
+        root: {
+          fontSize: '0.875rem',  // Consistent smaller text
+        },
+        input: {
+          padding: '8px 12px',   // Compact padding for all inputs
+        },
+      },
+    },
+    MuiMenuItem: {
+      styleOverrides: {
+        root: {
+          fontSize: '0.875rem',  // Smaller menu items
+          minHeight: '36px',     // Reduce minimum height (was 48px)
+          paddingTop: '6px',     // Compact vertical padding
+          paddingBottom: '6px',
+          paddingLeft: '12px',   // Compact horizontal padding
+          paddingRight: '12px',
+        },
+      },
+    },
+    MuiAutocomplete: {
+      styleOverrides: {
+        root: {
+          '& .MuiInputBase-root': {
+            paddingTop: '4px',   // Compact autocomplete padding
+            paddingBottom: '4px',
+          },
+        },
+        tag: {
+          margin: '2px',        // Tighter tag spacing
+          height: '24px',       // Smaller tag height
+        },
+        popupIndicator: {
+          padding: '4px',       // Smaller dropdown indicator
+        },
+      },
+      defaultProps: {
+        size: 'small',
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        root: {
+          height: '24px',       // Smaller chips
+          fontSize: '0.75rem',  // Smaller text
+        },
+        label: {
+          paddingLeft: '8px',   // Compact chip padding
+          paddingRight: '8px',
+        },
+      },
+      defaultProps: {
+        size: 'small',
+      },
+    },
+    MuiTableCell: {
+      styleOverrides: {
+        root: {
+          fontSize: '0.875rem',  // Smaller table text
+          padding: '8px',        // Compact cell padding (was 16px)
+        },
+        head: {
+          fontSize: '0.75rem',   // Even smaller header text
+          fontWeight: 600,
+          padding: '6px 8px',    // Extra compact headers
+        },
+      },
+    },
+    MuiTableRow: {
+      styleOverrides: {
+        root: {
+          '&:last-child td': {
+            borderBottom: 0,
+          },
+        },
+      },
+    },
+    MuiCheckbox: {
+      styleOverrides: {
+        root: {
+          padding: '4px',        // Compact checkbox padding
+        },
+      },
+      defaultProps: {
+        size: 'small',
+      },
+    },
+    MuiRadio: {
+      styleOverrides: {
+        root: {
+          padding: '4px',        // Compact radio padding
+        },
+      },
+      defaultProps: {
+        size: 'small',
+      },
+    },
+    MuiSwitch: {
+      styleOverrides: {
+        root: {
+          padding: '6px',        // Compact switch padding
+        },
+      },
+      defaultProps: {
+        size: 'small',
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          margin: '16px',        // Smaller dialog margins
+        },
+      },
+    },
+    MuiDialogTitle: {
+      styleOverrides: {
+        root: {
+          fontSize: '1.125rem',  // Smaller dialog titles
+          padding: '12px 16px',  // Compact dialog title padding
+        },
+      },
+    },
+    MuiDialogContent: {
+      styleOverrides: {
+        root: {
+          padding: '12px 16px',  // Compact dialog content padding
+        },
+      },
+    },
+    MuiDialogActions: {
+      styleOverrides: {
+        root: {
+          padding: '8px 16px',   // Compact dialog action padding
+        },
+      },
+    },
     MuiContainer: {
       styleOverrides: {
         root: {
