@@ -246,13 +246,20 @@ const TransactionPOSPage: React.FC = () => {
     
     const applicationsTotal = personSummary.payable_applications
       .filter(app => selectedApplications.includes(app.id))
-      .reduce((sum, app) => sum + app.total_amount, 0);
+      .reduce((sum, app) => {
+        // Use Math.round to handle floating point precision issues
+        return Math.round((sum + app.total_amount) * 100) / 100;
+      }, 0);
     
     const cardOrdersTotal = personSummary.payable_card_orders
       .filter(order => selectedCardOrders.includes(order.id))
-      .reduce((sum, order) => sum + order.fee_amount, 0);
+      .reduce((sum, order) => {
+        // Use Math.round to handle floating point precision issues
+        return Math.round((sum + order.fee_amount) * 100) / 100;
+      }, 0);
     
-    return applicationsTotal + cardOrdersTotal;
+    // Final rounding to ensure precision
+    return Math.round((applicationsTotal + cardOrdersTotal) * 100) / 100;
   };
 
   const canProceedToPayment = (): boolean => {
