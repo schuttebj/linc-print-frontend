@@ -667,12 +667,11 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                       </Box>
                     )}
                   >
-                    <MenuItem value="00">00 - No Driver Restrictions</MenuItem>
                     <MenuItem value="01">01 - Corrective Lenses Required</MenuItem>
                     <MenuItem value="02">02 - Artificial Limb/Prosthetics</MenuItem>
                   </Select>
                   <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-                    Select driver-specific restrictions that apply
+                    Select driver-specific restrictions that apply (if none selected, "No restrictions" will be automatically applied)
                   </Typography>
                 </FormControl>
               </Grid>
@@ -703,7 +702,6 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                       </Box>
                     )}
                   >
-                    <MenuItem value="00">00 - No Vehicle Restrictions</MenuItem>
                     <MenuItem value="01">01 - Automatic Transmission Only</MenuItem>
                     <MenuItem value="02">02 - Electric Powered Vehicles Only</MenuItem>
                     <MenuItem value="03">03 - Vehicles Adapted for Physical Disabilities</MenuItem>
@@ -715,7 +713,7 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                     )}
                   </Select>
                   <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-                    Select vehicle-specific restrictions that apply
+                    Select vehicle-specific restrictions that apply (if none selected, "No restrictions" will be automatically applied)
                     {applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE && " (limited options for learner's permits)"}
                   </Typography>
                 </FormControl>
@@ -825,8 +823,18 @@ export const transformCapturedDataForAuthorization = (captureData: LicenseCaptur
   // For now, take the first captured license (most common case)
   const firstLicense = captureData.captured_licenses[0];
   
+  // Auto-add "00" codes if restriction arrays are empty
+  const processedRestrictions = {
+    driver_restrictions: firstLicense.restrictions?.driver_restrictions?.length > 0 
+      ? firstLicense.restrictions.driver_restrictions 
+      : ["00"],
+    vehicle_restrictions: firstLicense.restrictions?.vehicle_restrictions?.length > 0 
+      ? firstLicense.restrictions.vehicle_restrictions 
+      : ["00"]
+  };
+  
   return {
-    restrictions: firstLicense.restrictions || { driver_restrictions: [], vehicle_restrictions: [] },
+    restrictions: processedRestrictions,
     medical_restrictions: [], // Empty for capture applications
     captured_license_data: {
       original_issue_date: firstLicense.issue_date,
