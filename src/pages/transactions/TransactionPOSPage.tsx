@@ -110,6 +110,7 @@ const TransactionPOSPage: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [transaction, setTransaction] = useState<any>(null);
   const [showReceipt, setShowReceipt] = useState(false);
+  const [receiptData, setReceiptData] = useState<any>(null);
 
   const steps = ['Search Person', 'Select Items', 'Payment Details', 'Process Payment'];
 
@@ -225,8 +226,13 @@ const TransactionPOSPage: React.FC = () => {
       return;
     }
 
-    if (!personSummary || !user?.primary_location_id) {
-      setError('Missing required payment information');
+    if (!personSummary) {
+      setError('No person selected for payment');
+      return;
+    }
+
+    if (!user?.primary_location_id) {
+      setError('User location not configured. Please contact system administrator.');
       return;
     }
 
@@ -259,9 +265,8 @@ const TransactionPOSPage: React.FC = () => {
     if (!transaction) return;
     
     try {
-      const receiptData = await transactionService.getTransactionReceipt(transaction.id);
-      // TODO: Implement actual printing logic
-      console.log('Receipt data:', receiptData);
+      const data = await transactionService.getTransactionReceipt(transaction.id);
+      setReceiptData(data);
       setShowReceipt(true);
     } catch (err: any) {
       setError('Failed to generate receipt');
@@ -683,13 +688,108 @@ const TransactionPOSPage: React.FC = () => {
           </Box>
         </DialogTitle>
         <DialogContent>
-          {/* TODO: Implement receipt content */}
-          <Typography>Receipt content will be displayed here</Typography>
+          {receiptData ? (
+            <Box sx={{ 
+              p: 3, 
+              fontFamily: 'Arial, sans-serif',
+              backgroundColor: 'white',
+              minHeight: '800px',
+              '@media print': {
+                minHeight: '297mm',
+                width: '210mm',
+                padding: '20mm'
+              }
+            }}>
+              {/* Government Headers */}
+              <Box textAlign="center" mb={3}>
+                <Typography variant="h4" fontWeight="bold" gutterBottom>
+                  {receiptData.government_header}
+                </Typography>
+                <Typography variant="h5" gutterBottom>
+                  {receiptData.department_header}
+                </Typography>
+                <Typography variant="h6" gutterBottom>
+                  {receiptData.office_header}
+                </Typography>
+                <Typography variant="h5" fontWeight="bold" color="primary" sx={{ mt: 2, mb: 3 }}>
+                  {receiptData.receipt_title}
+                </Typography>
+              </Box>
+
+              {/* Receipt Details */}
+              <Box display="flex" justifyContent="space-between" mb={3}>
+                <Box>
+                  <Typography><strong>Receipt No:</strong> {receiptData.receipt_number}</Typography>
+                  <Typography><strong>Transaction No:</strong> {receiptData.transaction_number}</Typography>
+                </Box>
+                <Box textAlign="right">
+                  <Typography><strong>Date:</strong> {receiptData.date}</Typography>
+                  <Typography><strong>Location:</strong> {receiptData.location}</Typography>
+                </Box>
+              </Box>
+
+              {/* Person Details */}
+              <Box mb={3} p={2} border={1} borderColor="grey.300">
+                <Typography variant="h6" gutterBottom>Customer Information</Typography>
+                <Typography><strong>Name:</strong> {receiptData.person_name}</Typography>
+                <Typography><strong>ID Number:</strong> {receiptData.person_id}</Typography>
+              </Box>
+
+              {/* Payment Items */}
+              <Box mb={3}>
+                <Typography variant="h6" gutterBottom>Payment Details</Typography>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid #000' }}>
+                      <th style={{ textAlign: 'left', padding: '8px' }}>Description</th>
+                      <th style={{ textAlign: 'right', padding: '8px' }}>Amount ({receiptData.currency})</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {receiptData.items.map((item: any, index: number) => (
+                      <tr key={index} style={{ borderBottom: '1px solid #ccc' }}>
+                        <td style={{ padding: '8px' }}>{item.description}</td>
+                        <td style={{ padding: '8px', textAlign: 'right' }}>{formatCurrency(item.amount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr style={{ borderTop: '2px solid #000', fontWeight: 'bold' }}>
+                      <td style={{ padding: '8px' }}>TOTAL</td>
+                      <td style={{ padding: '8px', textAlign: 'right' }}>{formatCurrency(receiptData.total_amount)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </Box>
+
+              {/* Payment Method */}
+              <Box mb={3} p={2} bgcolor="grey.100">
+                <Typography><strong>Payment Method:</strong> {receiptData.payment_method}</Typography>
+                {receiptData.payment_reference && (
+                  <Typography><strong>Reference:</strong> {receiptData.payment_reference}</Typography>
+                )}
+                <Typography><strong>Processed By:</strong> {receiptData.processed_by}</Typography>
+              </Box>
+
+              {/* Footer */}
+              <Box mt={4} textAlign="center">
+                <Typography variant="body2" gutterBottom>{receiptData.footer}</Typography>
+                <Typography variant="body2" gutterBottom>{receiptData.validity_note}</Typography>
+                <Typography variant="body2">{receiptData.contact_info}</Typography>
+              </Box>
+            </Box>
+          ) : (
+            <Typography>Loading receipt...</Typography>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowReceipt(false)}>Close</Button>
-          <Button variant="contained" startIcon={<PrintIcon />}>
-            Print
+          <Button 
+            variant="contained" 
+            startIcon={<PrintIcon />}
+            onClick={() => window.print()}
+          >
+            Print A4 Receipt
           </Button>
         </DialogActions>
       </Dialog>
