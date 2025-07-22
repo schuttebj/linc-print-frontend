@@ -401,24 +401,16 @@ class TransactionService {
     return statuses.find(s => s.value === status)?.label || status;
   }
 
-  // Fee Management
+  /**
+   * Get fees organized by application type
+   */
   async getFeesByApplicationType(): Promise<any> {
     try {
       const response = await api.get(`${this.baseUrl}/fee-structures/by-application-type`);
-      return response.data;
+      return response;
     } catch (error: any) {
       console.error('Error fetching fees by application type:', error);
       throw new Error(error.response?.data?.detail || 'Failed to fetch fees by application type');
-    }
-  }
-
-  async updateFeeStructure(feeStructureId: string, updateData: { amount: number }): Promise<FeeStructure> {
-    try {
-      const response = await api.put(`${this.baseUrl}/fee-structures/${feeStructureId}`, updateData);
-      return response.data;
-    } catch (error: any) {
-      console.error('Error updating fee structure:', error);
-      throw new Error(error.response?.data?.detail || 'Failed to update fee structure');
     }
   }
 }
