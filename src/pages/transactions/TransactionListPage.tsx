@@ -95,7 +95,7 @@ const TransactionListPage: React.FC = () => {
         limit: itemsPerPage
       };
 
-      if (filters.status) params.status = filters.status;
+      if (filters.status) params.transaction_status = filters.status;
       if (filters.locationId) params.location_id = filters.locationId;
       if (user?.user_type === 'LOCATION_USER' && user.primary_location_id) {
         params.location_id = user.primary_location_id;

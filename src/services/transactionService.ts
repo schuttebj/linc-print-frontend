@@ -197,7 +197,7 @@ class TransactionService {
     limit?: number;
     person_id?: string;
     location_id?: string;
-    status?: string;
+    transaction_status?: string;
   } = {}): Promise<Transaction[]> {
     try {
       const queryParams = new URLSearchParams();
