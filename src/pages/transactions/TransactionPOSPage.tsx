@@ -320,6 +320,241 @@ const TransactionPOSPage: React.FC = () => {
     }
   };
 
+  const handlePrintA4Receipt = async () => {
+    if (!transaction) return;
+    
+    try {
+      const data = await transactionService.getTransactionReceipt(transaction.id);
+      
+      // Pre-format currency values
+      const formattedItems = data.items.map((item: any) => ({
+        ...item,
+        formattedAmount: formatCurrency(item.amount)
+      }));
+      const formattedTotal = formatCurrency(data.total_amount);
+      
+      // Create the receipt content for printing
+      const printContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Receipt ${data.receipt_number}</title>
+          <meta charset="utf-8">
+          <style>
+            @page {
+              size: A4;
+              margin: 20mm;
+            }
+            
+            body {
+              font-family: Arial, sans-serif;
+              font-size: 11pt;
+              color: black;
+              background: white;
+              margin: 0;
+              padding: 0;
+            }
+            
+            .receipt-container {
+              width: 100%;
+              max-width: 170mm;
+              margin: 0 auto;
+            }
+            
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+            }
+            
+            .header h1 {
+              font-size: 18pt;
+              font-weight: bold;
+              margin: 5px 0;
+            }
+            
+            .header h2 {
+              font-size: 16pt;
+              margin: 5px 0;
+            }
+            
+            .header h3 {
+              font-size: 14pt;
+              margin: 5px 0;
+            }
+            
+            .receipt-title {
+              font-size: 16pt;
+              font-weight: bold;
+              border: 2px solid black;
+              padding: 8px;
+              background: #f5f5f5;
+              margin: 20px 0;
+            }
+            
+            .receipt-details {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 20px;
+              padding-bottom: 10px;
+              border-bottom: 1px solid #ccc;
+            }
+            
+            .customer-info {
+              border: 1px solid black;
+              padding: 15px;
+              background: #f9f9f9;
+              margin-bottom: 20px;
+            }
+            
+            .customer-info h4 {
+              font-size: 14pt;
+              margin: 0 0 10px 0;
+            }
+            
+            .payment-table {
+              width: 100%;
+              border-collapse: collapse;
+              border: 1px solid black;
+              margin-bottom: 20px;
+            }
+            
+            .payment-table th,
+            .payment-table td {
+              border: 1px solid black;
+              padding: 10px 8px;
+              text-align: left;
+            }
+            
+            .payment-table th {
+              background: #e0e0e0;
+              font-weight: bold;
+              font-size: 11pt;
+            }
+            
+            .payment-table .amount {
+              text-align: right;
+            }
+            
+            .payment-table .total-row {
+              background: #f0f0f0;
+              font-weight: bold;
+              font-size: 12pt;
+            }
+            
+            .payment-method {
+              background: #f9f9f9;
+              border: 1px solid #ccc;
+              padding: 15px;
+              margin-bottom: 30px;
+            }
+            
+            .footer {
+              text-align: center;
+              border-top: 1px solid #ccc;
+              padding-top: 15px;
+              font-size: 10pt;
+            }
+            
+            @media print {
+              body {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="receipt-container">
+            <!-- Government Headers -->
+            <div class="header">
+              <h1>${data.government_header}</h1>
+              <h2>${data.department_header}</h2>
+              <h3>${data.office_header}</h3>
+              <div class="receipt-title">${data.receipt_title}</div>
+            </div>
+
+            <!-- Receipt Details -->
+            <div class="receipt-details">
+              <div>
+                <strong>Receipt No:</strong> ${data.receipt_number}<br>
+                <strong>Transaction No:</strong> ${data.transaction_number}
+              </div>
+              <div style="text-align: right;">
+                <strong>Date:</strong> ${data.date}<br>
+                <strong>Location:</strong> ${data.location}
+              </div>
+            </div>
+
+            <!-- Customer Information -->
+            <div class="customer-info">
+              <h4>Customer Information</h4>
+              <strong>Name:</strong> ${data.person_name}<br>
+              <strong>ID Number:</strong> ${data.person_id}
+            </div>
+
+            <!-- Payment Details -->
+            <h4>Payment Details</h4>
+            <table class="payment-table">
+              <thead>
+                <tr>
+                  <th>Description</th>
+                  <th class="amount">Amount (${data.currency})</th>
+                </tr>
+              </thead>
+              <tbody>
+                 ${formattedItems.map((item: any) => `
+                   <tr>
+                     <td>${item.description}</td>
+                     <td class="amount">${item.formattedAmount}</td>
+                   </tr>
+                 `).join('')}
+               </tbody>
+               <tfoot>
+                 <tr class="total-row">
+                   <td>TOTAL</td>
+                   <td class="amount">${formattedTotal}</td>
+                 </tr>
+               </tfoot>
+            </table>
+
+            <!-- Payment Method -->
+            <div class="payment-method">
+              <strong>Payment Method:</strong> ${data.payment_method}<br>
+              ${data.payment_reference ? `<strong>Reference:</strong> ${data.payment_reference}<br>` : ''}
+              <strong>Processed By:</strong> ${data.processed_by}
+            </div>
+
+            <!-- Footer -->
+            <div class="footer">
+              ${data.footer}<br>
+              ${data.validity_note}<br>
+              ${data.contact_info}
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+      
+      // Open print window
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.open();
+        printWindow.document.write(printContent);
+        printWindow.document.close();
+        
+        // Wait for content to load, then print
+        printWindow.onload = () => {
+          setTimeout(() => {
+            printWindow.print();
+            printWindow.close();
+          }, 500);
+        };
+      }
+    } catch (err: any) {
+      setError('Failed to generate receipt for printing');
+    }
+  };
+
   const handleStartNewTransaction = () => {
     setActiveStep(0);
     setSearchIdNumber('');
@@ -874,7 +1109,7 @@ const TransactionPOSPage: React.FC = () => {
           <Button 
             variant="contained" 
             startIcon={<PrintIcon />}
-            onClick={() => window.print()}
+            onClick={handlePrintA4Receipt}
           >
             Print A4 Receipt
           </Button>
