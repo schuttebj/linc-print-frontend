@@ -51,6 +51,10 @@ import {
   ExpandLess,
   ExpandMore,
   Apps,
+  Payment,
+  Receipt,
+  PointOfSale,
+  AttachMoney,
 } from '@mui/icons-material';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -271,6 +275,22 @@ const DashboardLayout: React.FC = () => {
       icon: <CreditCard />,
       path: '/dashboard/cards',
       permission: 'cards.read',
+    },
+  ];
+
+  // Transaction navigation items
+  const transactionNavigationItems = [
+    {
+      text: 'Point of Sale',
+      icon: <PointOfSale />,
+      path: '/dashboard/transactions/pos',
+      permission: 'transactions.create',
+    },
+    {
+      text: 'Transaction History',
+      icon: <Receipt />,
+      path: '/dashboard/transactions',
+      permission: 'transactions.read',
     },
   ];
 
@@ -522,6 +542,51 @@ const DashboardLayout: React.FC = () => {
               />
             </ListItem>
             {cardNavigationItems.map((item) => {
+              // Check permissions
+              if (item.permission && !hasPermission(item.permission)) {
+                return null;
+              }
+
+              const isActive = location.pathname === item.path;
+
+              return (
+                <ListItem key={item.text} disablePadding>
+                  <ListItemButton
+                    selected={isActive}
+                    onClick={() => {
+                      navigate(item.path);
+                      if (isMobile) {
+                        setMobileOpen(false);
+                      }
+                    }}
+                  >
+                    <ListItemIcon>{item.icon}</ListItemIcon>
+                    <ListItemText primary={item.text} />
+                  </ListItemButton>
+                </ListItem>
+              );
+            })}
+          </List>
+        </>
+      )}
+
+      {/* Transactions Section */}
+      {transactionNavigationItems.some(item => !item.permission || hasPermission(item.permission)) && (
+        <>
+          <Divider />
+          <List>
+            <ListItem>
+              <ListItemText 
+                primary="Transactions" 
+                primaryTypographyProps={{ 
+                  variant: 'caption', 
+                  color: 'textSecondary',
+                  fontWeight: 'bold',
+                  textTransform: 'uppercase'
+                }} 
+              />
+            </ListItem>
+            {transactionNavigationItems.map((item) => {
               // Check permissions
               if (item.permission && !hasPermission(item.permission)) {
                 return null;

@@ -70,7 +70,7 @@ export interface Transaction {
   receipt_printed: boolean;
   receipt_printed_at?: string;
   notes?: string;
-  metadata?: any;
+  transaction_metadata?: any;
   created_at: string;
   updated_at?: string;
   items: TransactionItem[];
@@ -85,7 +85,7 @@ export interface TransactionItem {
   application_id?: string;
   card_order_id?: string;
   fee_structure_id?: string;
-  metadata?: any;
+  item_metadata?: any;
   created_at: string;
 }
 

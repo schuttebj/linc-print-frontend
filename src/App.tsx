@@ -42,6 +42,10 @@ import LicenseApprovalPage from './pages/licenses/LicenseApprovalPage';
 // Card Pages
 import CardListPage from './pages/cards/CardListPage';
 
+// Transaction Pages
+import TransactionPOSPage from './pages/transactions/TransactionPOSPage';
+import TransactionListPage from './pages/transactions/TransactionListPage';
+
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
 import UserManagementPage from './pages/admin/UserManagementPage';
@@ -303,6 +307,26 @@ function App() {
                 element={
                   <ProtectedRoute requiredPermission="cards.read">
                     <CardListPage />
+                  </ProtectedRoute>
+                } 
+              />
+            </Route>
+
+            {/* Transaction Management - requires transaction permissions */}
+            <Route path="transactions">
+              <Route 
+                index 
+                element={
+                  <ProtectedRoute requiredPermission="transactions.read">
+                    <TransactionListPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="pos" 
+                element={
+                  <ProtectedRoute requiredPermission="transactions.create">
+                    <TransactionPOSPage />
                   </ProtectedRoute>
                 } 
               />
