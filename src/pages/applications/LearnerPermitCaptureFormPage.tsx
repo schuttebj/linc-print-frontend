@@ -184,7 +184,6 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
     if (selectedPerson && !licenseCaptureData) {
       const newLicense: CapturedLicense = {
         id: `license-${Date.now()}`,
-        license_number: '',
         license_category: LicenseCategory.LEARNERS_1, // Default to LEARNERS_1 (only valid database value)
         issue_date: '',
         restrictions: {
@@ -408,8 +407,8 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
                   <Box key={license.id} sx={{ mb: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
                     <Grid container spacing={2}>
                       <Grid item xs={12} md={3}>
-                        <Typography variant="body2" color="text.secondary">License Number</Typography>
-                        <Typography variant="body1" fontWeight="bold">{license.license_number}</Typography>
+                        <Typography variant="body2" color="text.secondary">License ID</Typography>
+                        <Typography variant="body1" fontWeight="bold">{license.id.substring(0, 8)}</Typography>
                       </Grid>
                       <Grid item xs={12} md={2}>
                         <Typography variant="body2" color="text.secondary">Category</Typography>
