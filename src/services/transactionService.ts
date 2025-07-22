@@ -200,7 +200,14 @@ class TransactionService {
     status?: string;
   } = {}): Promise<Transaction[]> {
     try {
-      const response = await api.get<Transaction[]>(this.baseUrl, { params });
+      const queryParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          queryParams.append(key, value.toString());
+        }
+      });
+      const url = `${this.baseUrl}?${queryParams.toString()}`;
+      const response = await api.get<Transaction[]>(url);
       return response;
     } catch (error: any) {
       console.error('Error fetching transactions:', error);
@@ -260,10 +267,14 @@ class TransactionService {
     person_id?: string;
   } = {}): Promise<CardOrder[]> {
     try {
-      const response = await api.get<CardOrder[]>(
-        `${this.baseUrl}/card-orders`,
-        { params }
-      );
+      const queryParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          queryParams.append(key, value.toString());
+        }
+      });
+      const url = `${this.baseUrl}/card-orders?${queryParams.toString()}`;
+      const response = await api.get<CardOrder[]>(url);
       return response;
     } catch (error: any) {
       console.error('Error fetching card orders:', error);
@@ -311,15 +322,14 @@ class TransactionService {
     locationId?: string
   ): Promise<TransactionSummary> {
     try {
-      const params: any = { summary_date: date };
+      const queryParams = new URLSearchParams();
+      queryParams.append('summary_date', date);
       if (locationId) {
-        params.location_id = locationId;
+        queryParams.append('location_id', locationId);
       }
 
-      const response = await api.get<TransactionSummary>(
-        `${this.baseUrl}/reports/daily-summary`,
-        { params }
-      );
+      const url = `${this.baseUrl}/reports/daily-summary?${queryParams.toString()}`;
+      const response = await api.get<TransactionSummary>(url);
       return response;
     } catch (error: any) {
       console.error('Error fetching daily summary:', error);

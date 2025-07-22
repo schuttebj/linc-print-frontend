@@ -225,7 +225,7 @@ const TransactionPOSPage: React.FC = () => {
       return;
     }
 
-    if (!personSummary || !user?.location_id) {
+    if (!personSummary || !user?.primary_location_id) {
       setError('Missing required payment information');
       return;
     }
@@ -236,7 +236,7 @@ const TransactionPOSPage: React.FC = () => {
     try {
       const paymentData = {
         person_id: personSummary.person_id,
-        location_id: user.location_id,
+        location_id: user.primary_location_id,
         application_ids: selectedApplications,
         card_order_ids: selectedCardOrders,
         payment_method: paymentMethod,
