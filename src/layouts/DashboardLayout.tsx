@@ -292,6 +292,12 @@ const DashboardLayout: React.FC = () => {
       path: '/dashboard/transactions',
       permission: 'transactions.read',
     },
+    {
+      text: 'Fee Management',
+      icon: <AttachMoney />,
+      path: '/dashboard/transactions/fee-management',
+      permission: 'transactions.manage',
+    },
   ];
 
 

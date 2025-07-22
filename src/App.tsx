@@ -45,6 +45,7 @@ import CardListPage from './pages/cards/CardListPage';
 // Transaction Pages
 import TransactionPOSPage from './pages/transactions/TransactionPOSPage';
 import TransactionListPage from './pages/transactions/TransactionListPage';
+import FeeManagementPage from './pages/transactions/FeeManagementPage';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -327,6 +328,14 @@ function App() {
                 element={
                   <ProtectedRoute requiredPermission="transactions.create">
                     <TransactionPOSPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="fee-management" 
+                element={
+                  <ProtectedRoute requiredPermission="transactions.manage">
+                    <FeeManagementPage />
                   </ProtectedRoute>
                 } 
               />
