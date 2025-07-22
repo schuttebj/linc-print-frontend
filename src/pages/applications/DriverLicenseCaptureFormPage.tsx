@@ -51,9 +51,9 @@ import {
   ApplicationCreate,
   LicenseCaptureData,
   LicenseCategory,
-  Location,
-  CapturedLicense
+  Location
 } from '../../types';
+import { CapturedLicense } from '../../components/applications/LicenseCaptureForm';
 import { API_ENDPOINTS, getAuthToken } from '../../config/api';
 
 const DriverLicenseCaptureFormPage: React.FC = () => {
@@ -186,7 +186,10 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
         id: `license-${Date.now()}`,
         license_category: LicenseCategory.B, // Default to B category
         issue_date: '',
-        restrictions: [],
+        restrictions: {
+          driver_restrictions: [],
+          vehicle_restrictions: []
+        },
         verified: false,
         verification_notes: ''
       };
@@ -419,16 +422,40 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
                       </Grid>
                       <Grid item xs={12} md={6}>
                         <Typography variant="body2" color="text.secondary">Restrictions</Typography>
-                        {license.restrictions?.length > 0 ? (
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                            {license.restrictions.map((restriction, rIndex) => (
-                              <Chip 
-                                key={rIndex} 
-                                label={restriction} 
-                                size="small" 
-                                variant="outlined" 
-                              />
-                            ))}
+                        {(license.restrictions?.driver_restrictions?.length > 0 || license.restrictions?.vehicle_restrictions?.length > 0) ? (
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            {license.restrictions?.driver_restrictions?.length > 0 && (
+                              <Box>
+                                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>Driver:</Typography>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                  {license.restrictions.driver_restrictions.map((restriction, rIndex) => (
+                                    <Chip 
+                                      key={rIndex} 
+                                      label={restriction} 
+                                      size="small" 
+                                      variant="outlined"
+                                      color="primary"
+                                    />
+                                  ))}
+                                </Box>
+                              </Box>
+                            )}
+                            {license.restrictions?.vehicle_restrictions?.length > 0 && (
+                              <Box>
+                                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>Vehicle:</Typography>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                  {license.restrictions.vehicle_restrictions.map((restriction, rIndex) => (
+                                    <Chip 
+                                      key={rIndex} 
+                                      label={restriction} 
+                                      size="small" 
+                                      variant="outlined"
+                                      color="secondary"
+                                    />
+                                  ))}
+                                </Box>
+                              </Box>
+                            )}
                           </Box>
                         ) : (
                           <Typography variant="body1">None</Typography>

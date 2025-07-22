@@ -8,16 +8,9 @@ import {
   Box,
   Card,
   CardContent,
-  CardHeader,
   Typography,
-  Grid,
+  TextField,
   Button,
-  IconButton,
-  Tooltip,
-  Alert,
-  CircularProgress,
-  Stack,
-  Chip,
   Table,
   TableBody,
   TableCell,
@@ -25,738 +18,687 @@ import {
   TableHead,
   TableRow,
   Paper,
+  Checkbox,
+  FormControl,
+  InputLabel,
+  Alert,
+  Chip,
+  Divider,
+  Grid,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  FormControlLabel,
-  Checkbox,
-  FormGroup,
-  Divider,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  Badge,
+  CircularProgress,
   Stepper,
   Step,
   StepLabel,
-  Container
+  FormControlLabel,
+  FormGroup,
+  Select,
+  MenuItem
 } from '@mui/material';
 import {
-  Assignment as AssignmentIcon,
-  CheckCircle as ApproveIcon,
-  Cancel as RejectIcon,
-  Visibility as ViewIcon,
+  Search as SearchIcon,
+  CheckCircle as CheckIcon,
+  Cancel as CancelIcon,
   Person as PersonIcon,
-  Warning as WarningIcon,
-  Info as InfoIcon,
-  Security as SecurityIcon,
-  Refresh as RefreshIcon,
-  Print as PrintIcon,
-  CheckBox as CheckBoxIcon,
-  Gavel as ExaminerIcon,
-  LocalHospital as MedicalIcon,
-  DirectionsCar as DrivingIcon,
+  Assignment as AssignmentIcon,
+  Gavel as GavelIcon,
+  Visibility as VisibilityIcon,
   Error as ErrorIcon,
-  Done as DoneIcon
+  Warning as WarningIcon
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
-import { format, parseISO } from 'date-fns';
-
 import { useAuth } from '../../contexts/AuthContext';
-import { applicationService } from '../../services/applicationService';
-import { Application, ApplicationStatus } from '../../types';
+import { getAuthToken, API_ENDPOINTS } from '../../config/api';
 
-interface AuthorizationData {
-  // Test attendance
-  is_absent: boolean;
-  is_failed: boolean;
-  absent_failed_reason?: string;
-  
-  // Test results
-  eye_test_result: 'PASS' | 'FAIL' | '';
-  eye_test_notes?: string;
-  driving_test_result: 'PASS' | 'FAIL' | '';
-  driving_test_score?: number;
-  driving_test_notes?: string;
-  
-  // Vehicle restrictions
-  vehicle_restriction_none: boolean;
-  vehicle_restriction_automatic: boolean;
-  vehicle_restriction_electric: boolean;
-  vehicle_restriction_disabled: boolean;
-  
-  // Driver restrictions
-  driver_restriction_none: boolean;
-  driver_restriction_glasses: boolean;
-  driver_restriction_artificial_limb: boolean;
-  driver_restriction_glasses_and_limb: boolean;
-  
-  // Applied restrictions
-  applied_restrictions: string[];
-  
-  // Authorization decision
-  authorization_notes?: string;
+interface PersonApprovalSummary {
+  person: {
+    id: string;
+    name: string;
+    id_number: string;
+  };
+  applications: ApplicationForApproval[];
+  restrictions_info: Record<string, RestrictionInfo>;
 }
 
-interface ApplicationWithPersonInfo extends Application {
-  person_name?: string;
-  person_surname?: string;
-  person_id_number?: string;
+interface ApplicationForApproval {
+  id: string;
+  application_number: string;
+  application_type: string;
+  license_category: string;
+  status: string;
+  medical_information: any;
+}
+
+interface RestrictionInfo {
+  driver_restrictions: RestrictionOption[];
+  vehicle_restrictions: RestrictionOption[];
+  pre_selected_driver_restrictions: string[];
+}
+
+interface RestrictionOption {
+  code: string;
+  description: string;
+  pre_selected?: boolean;
+  locked?: boolean;
+}
+
+interface ApprovalOutcome {
+  outcome: 'PASSED' | 'FAILED' | 'ABSENT';
+  restrictions: {
+    driver_restrictions: string[];
+    vehicle_restrictions: string[];
+  };
+  location_id: string;
 }
 
 const LicenseApprovalPage: React.FC = () => {
-  const navigate = useNavigate();
   const { user } = useAuth();
-
-  // State management
-  const [pendingApplications, setPendingApplications] = useState<ApplicationWithPersonInfo[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [activeStep, setActiveStep] = useState(0);
+  const [searchIdNumber, setSearchIdNumber] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [personSummary, setPersonSummary] = useState<PersonApprovalSummary | null>(null);
+  const [selectedApplication, setSelectedApplication] = useState<ApplicationForApproval | null>(null);
+  const [selectedDriverRestrictions, setSelectedDriverRestrictions] = useState<string[]>([]);
+  const [selectedVehicleRestrictions, setSelectedVehicleRestrictions] = useState<string[]>([]);
+  const [lockedDriverRestrictions, setLockedDriverRestrictions] = useState<string[]>([]);
+  const [approvalOutcome, setApprovalOutcome] = useState<'PASSED' | 'FAILED' | 'ABSENT' | ''>('');
+  const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedApplication, setSelectedApplication] = useState<ApplicationWithPersonInfo | null>(null);
-  const [authorizationDialogOpen, setAuthorizationDialogOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [showMedicalInfo, setShowMedicalInfo] = useState(false);
 
-  // Authorization form state
-  const [authorizationData, setAuthorizationData] = useState<AuthorizationData>({
-    is_absent: false,
-    is_failed: false,
-    absent_failed_reason: '',
-    eye_test_result: '',
-    eye_test_notes: '',
-    driving_test_result: '',
-    driving_test_score: undefined,
-    driving_test_notes: '',
-    vehicle_restriction_none: true,
-    vehicle_restriction_automatic: false,
-    vehicle_restriction_electric: false,
-    vehicle_restriction_disabled: false,
-    driver_restriction_none: true,
-    driver_restriction_glasses: false,
-    driver_restriction_artificial_limb: false,
-    driver_restriction_glasses_and_limb: false,
-    applied_restrictions: [],
-    authorization_notes: ''
-  });
+  // Location selection for admin users
+  const [selectedLocationId, setSelectedLocationId] = useState('');
+  const [availableLocations, setAvailableLocations] = useState<any[]>([]);
 
-  // Load pending applications
-  const loadPendingApplications = async () => {
-    setLoading(true);
+  const steps = ['Search Person', 'Select Application', 'Review & Approve'];
+
+  // Load available locations for admin users
+  useEffect(() => {
+    const loadLocations = async () => {
+      if (user && !user.primary_location_id) {
+        try {
+          const token = getAuthToken();
+          if (!token) return;
+
+          const response = await fetch(API_ENDPOINTS.locations, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setAvailableLocations(data.locations || []);
+          }
+        } catch (error) {
+          console.error('Error loading locations:', error);
+        }
+      }
+    };
+    loadLocations();
+  }, [user]);
+
+  // Get location ID to use
+  const getLocationId = (): string => {
+    return user?.primary_location_id || selectedLocationId;
+  };
+
+  // Check if location is required and valid
+  const isLocationValid = (): boolean => {
+    return !!user?.primary_location_id || !!selectedLocationId;
+  };
+
+  const handleSearchPerson = async () => {
+    if (!searchIdNumber.trim()) {
+      setError('Please enter an ID number');
+      return;
+    }
+
+    setIsSearching(true);
+    setError(null);
+    
+    try {
+      const token = getAuthToken();
+      if (!token) throw new Error('No authentication token');
+
+      const response = await fetch(`${API_ENDPOINTS.applications}/search-for-approval/${searchIdNumber.trim()}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to search for person');
+      }
+
+      const summary = await response.json();
+      setPersonSummary(summary);
+      
+      if (summary.applications.length === 0) {
+        setError('No applications pending approval found for this person');
+      } else {
+        setActiveStep(1);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to search for person');
+      setPersonSummary(null);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSelectApplication = (application: ApplicationForApproval) => {
+    setSelectedApplication(application);
+    
+    // Get restriction info for this application
+    if (personSummary) {
+      const restrictionInfo = personSummary.restrictions_info[application.id];
+      const preSelectedDriver = restrictionInfo?.pre_selected_driver_restrictions || [];
+      
+      // Set pre-selected and locked restrictions based on medical information
+      setSelectedDriverRestrictions(preSelectedDriver);
+      setLockedDriverRestrictions(preSelectedDriver);
+      setSelectedVehicleRestrictions([]);
+    }
+    
+    setApprovalOutcome('');
+    setActiveStep(2);
+  };
+
+  const handleDriverRestrictionToggle = (restrictionCode: string) => {
+    // Don't allow toggling locked restrictions
+    if (lockedDriverRestrictions.includes(restrictionCode)) {
+      return;
+    }
+    
+    setSelectedDriverRestrictions(prev => 
+      prev.includes(restrictionCode)
+        ? prev.filter(code => code !== restrictionCode)
+        : [...prev, restrictionCode]
+    );
+  };
+
+  const handleVehicleRestrictionToggle = (restrictionCode: string) => {
+    setSelectedVehicleRestrictions(prev => 
+      prev.includes(restrictionCode)
+        ? prev.filter(code => code !== restrictionCode)
+        : [...prev, restrictionCode]
+    );
+  };
+
+  const handleProcessApproval = async () => {
+    if (!selectedApplication || !approvalOutcome) {
+      setError('Please select an outcome');
+      return;
+    }
+
+    if (!isLocationValid()) {
+      setError('Please select a location before proceeding');
+      return;
+    }
+
+    setIsProcessing(true);
     setError(null);
 
     try {
-      const applications = await applicationService.getPendingAuthorizationApplications();
-      setPendingApplications(applications);
+      const token = getAuthToken();
+      if (!token) throw new Error('No authentication token');
+
+      const approvalData: ApprovalOutcome = {
+        outcome: approvalOutcome,
+        restrictions: approvalOutcome === 'PASSED' ? {
+          driver_restrictions: selectedDriverRestrictions,
+          vehicle_restrictions: selectedVehicleRestrictions
+        } : {
+          driver_restrictions: [],
+          vehicle_restrictions: []
+        },
+        location_id: getLocationId()
+      };
+
+      const response = await fetch(`${API_ENDPOINTS.applications}/process-approval/${selectedApplication.id}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(approvalData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to process approval');
+      }
+
+      const result = await response.json();
+      setSuccess(result.message);
+      
+      // Reset form for next approval
+      setTimeout(() => {
+        handleStartNewApproval();
+      }, 3000);
+
     } catch (err: any) {
-      setError(err.message || 'Failed to load pending applications');
-      console.error('Error loading pending applications:', err);
+      setError(err.message || 'Failed to process approval');
     } finally {
-      setLoading(false);
+      setIsProcessing(false);
     }
   };
 
-  useEffect(() => {
-    loadPendingApplications();
-  }, []);
-
-  // Handle authorization dialog
-  const handleOpenAuthorizationDialog = (application: ApplicationWithPersonInfo) => {
-    setSelectedApplication(application);
-    setAuthorizationData({
-      is_absent: false,
-      is_failed: false,
-      absent_failed_reason: '',
-      eye_test_result: '',
-      eye_test_notes: '',
-      driving_test_result: '',
-      driving_test_score: undefined,
-      driving_test_notes: '',
-      vehicle_restriction_none: true,
-      vehicle_restriction_automatic: false,
-      vehicle_restriction_electric: false,
-      vehicle_restriction_disabled: false,
-      driver_restriction_none: true,
-      driver_restriction_glasses: false,
-      driver_restriction_artificial_limb: false,
-      driver_restriction_glasses_and_limb: false,
-      applied_restrictions: [],
-      authorization_notes: ''
-    });
-    setAuthorizationDialogOpen(true);
-  };
-
-  const handleCloseAuthorizationDialog = () => {
-    setAuthorizationDialogOpen(false);
+  const handleStartNewApproval = () => {
+    setActiveStep(0);
+    setSearchIdNumber('');
+    setPersonSummary(null);
     setSelectedApplication(null);
-  };
-
-  // Handle form changes
-  const handleAuthorizationChange = (field: keyof AuthorizationData, value: any) => {
-    setAuthorizationData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-
-    // Auto-calculate applied restrictions based on selected restrictions
-    if (field.includes('restriction')) {
-      const restrictions: string[] = [];
-      const updatedData = { ...authorizationData, [field]: value };
-      
-      if (updatedData.driver_restriction_glasses) restrictions.push('01');
-      if (updatedData.driver_restriction_artificial_limb) restrictions.push('02');
-      if (updatedData.driver_restriction_glasses_and_limb) restrictions.push('01', '02');
-      if (updatedData.vehicle_restriction_automatic) restrictions.push('03');
-      if (updatedData.vehicle_restriction_electric) restrictions.push('04');
-      if (updatedData.vehicle_restriction_disabled) restrictions.push('05');
-      
-      setAuthorizationData(prev => ({
-        ...prev,
-        applied_restrictions: [...new Set(restrictions)] // Remove duplicates
-      }));
+    setSelectedDriverRestrictions([]);
+    setSelectedVehicleRestrictions([]);
+    setLockedDriverRestrictions([]);
+    setApprovalOutcome('');
+    setError(null);
+    setSuccess(null);
+    setShowMedicalInfo(false);
+    // Reset location selection for admin users
+    if (!user?.primary_location_id) {
+      setSelectedLocationId('');
     }
   };
 
-  // Handle authorization submission
-  const handleSubmitAuthorization = async () => {
-    if (!selectedApplication) return;
-
-    setSubmitting(true);
-    try {
-      await applicationService.createApplicationAuthorization(
-        selectedApplication.id,
-        authorizationData
-      );
-
-      // Refresh the pending applications list
-      await loadPendingApplications();
-      
-      handleCloseAuthorizationDialog();
-      
-      // Show success message
-      setError(null);
-      
-    } catch (err: any) {
-      setError(err.message || 'Failed to submit authorization');
-      console.error('Error submitting authorization:', err);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  // Format functions
-  const formatDate = (dateString: string) => {
-    try {
-      return format(parseISO(dateString), 'dd/MM/yyyy HH:mm');
-    } catch {
-      return dateString;
-    }
-  };
-
-  const getStatusChip = (status: ApplicationStatus) => {
-    return (
-      <Chip
-        label={status.replace('_', ' ')}
-        color="warning"
-        size="small"
-        variant="filled"
-      />
-    );
-  };
-
-  const getTestResultChip = (result: string) => {
-    if (result === 'PASS') {
-      return <Chip label="PASS" color="success" size="small" icon={<DoneIcon />} />;
-    } else if (result === 'FAIL') {
-      return <Chip label="FAIL" color="error" size="small" icon={<ErrorIcon />} />;
-    }
-    return <Chip label="PENDING" color="default" size="small" />;
-  };
-
-  const canSubmitAuthorization = () => {
-    return (
-      authorizationData.eye_test_result !== '' &&
-      authorizationData.driving_test_result !== '' &&
-      !authorizationData.is_absent
-    );
-  };
-
-  const willBeApproved = () => {
-    return (
-      !authorizationData.is_absent &&
-      !authorizationData.is_failed &&
-      authorizationData.eye_test_result === 'PASS' &&
-      authorizationData.driving_test_result === 'PASS'
-    );
-  };
-
-  if (loading) {
-    return (
-      <Container maxWidth="xl">
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
-          <CircularProgress />
+  const renderSearchStep = () => (
+    <Card>
+      <CardContent>
+        <Box display="flex" alignItems="center" mb={2}>
+          <PersonIcon sx={{ mr: 1 }} />
+          <Typography variant="h6">Search Person by ID Number</Typography>
         </Box>
-      </Container>
-    );
-  }
+        
+        <Box display="flex" gap={2} alignItems="center">
+          <TextField
+            label="ID Number"
+            value={searchIdNumber}
+            onChange={(e) => setSearchIdNumber(e.target.value)}
+            placeholder="Enter Madagascar ID or passport number"
+            disabled={isSearching}
+            onKeyPress={(e) => e.key === 'Enter' && handleSearchPerson()}
+            sx={{ flexGrow: 1 }}
+          />
+          <Button
+            variant="contained"
+            onClick={handleSearchPerson}
+            disabled={isSearching || !searchIdNumber.trim()}
+            startIcon={isSearching ? <CircularProgress size={20} /> : <SearchIcon />}
+          >
+            {isSearching ? 'Searching...' : 'Search'}
+          </Button>
+        </Box>
 
-  return (
-    <Container maxWidth="xl">
-      <Box sx={{ py: 3 }}>
-        {/* Header */}
-        <Box sx={{ mb: 3 }}>
-          <Stack direction="row" alignItems="center" justifyContent="space-between">
-            <Box>
-              <Typography variant="h4" component="h1" gutterBottom>
-                License Approval
-              </Typography>
-              <Typography variant="body1" color="text.secondary">
-                Review and approve applications after test completion
-              </Typography>
+        {error && (
+          <Alert severity="error" sx={{ mt: 2 }}>
+            {error}
+          </Alert>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  const renderApplicationSelection = () => {
+    if (!personSummary) return null;
+
+    return (
+      <Box>
+        {/* Person Information */}
+        <Card sx={{ mb: 2 }}>
+          <CardContent>
+            <Box display="flex" alignItems="center" mb={1}>
+              <PersonIcon sx={{ mr: 1 }} />
+              <Typography variant="h6">Person Information</Typography>
             </Box>
-            <Box>
+            <Typography variant="body1">
+              <strong>Name:</strong> {personSummary.person.name}
+            </Typography>
+            <Typography variant="body1">
+              <strong>ID Number:</strong> {personSummary.person.id_number}
+            </Typography>
+          </CardContent>
+        </Card>
+
+        {/* Applications Pending Approval */}
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>Applications Pending Approval</Typography>
+
+            <TableContainer component={Paper}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Application #</TableCell>
+                    <TableCell>Type</TableCell>
+                    <TableCell>Category</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {personSummary.applications.map((app) => (
+                    <TableRow key={app.id}>
+                      <TableCell>{app.application_number}</TableCell>
+                      <TableCell>{app.application_type.replace('_', ' ')}</TableCell>
+                      <TableCell>{app.license_category}</TableCell>
+                      <TableCell>
+                        <Chip label={app.status} size="small" color="warning" />
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="small"
+                          variant="contained"
+                          onClick={() => handleSelectApplication(app)}
+                          startIcon={<AssignmentIcon />}
+                        >
+                          Select for Approval
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </CardContent>
+        </Card>
+
+        <Box mt={2} display="flex" justifyContent="space-between">
+          <Button onClick={() => setActiveStep(0)}>
+            Back to Search
+          </Button>
+        </Box>
+      </Box>
+    );
+  };
+
+  const renderApprovalStep = () => {
+    if (!selectedApplication || !personSummary) return null;
+
+    const restrictionInfo = personSummary.restrictions_info[selectedApplication.id];
+
+    return (
+      <Box>
+        {/* Application Summary */}
+        <Card sx={{ mb: 2 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>Application Details</Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <Typography variant="body2" color="text.secondary">Application Number</Typography>
+                <Typography variant="body1" fontWeight="bold">{selectedApplication.application_number}</Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="body2" color="text.secondary">Type</Typography>
+                <Typography variant="body1" fontWeight="bold">{selectedApplication.application_type.replace('_', ' ')}</Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="body2" color="text.secondary">License Category</Typography>
+                <Typography variant="body1" fontWeight="bold">{selectedApplication.license_category}</Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="body2" color="text.secondary">Status</Typography>
+                <Chip label={selectedApplication.status} size="small" color="warning" />
+              </Grid>
+            </Grid>
+
+            <Box mt={2}>
               <Button
                 variant="outlined"
-                startIcon={<RefreshIcon />}
-                onClick={loadPendingApplications}
-                disabled={loading}
+                onClick={() => setShowMedicalInfo(true)}
+                startIcon={<VisibilityIcon />}
               >
-                Refresh
+                View Medical Information
               </Button>
             </Box>
-          </Stack>
+          </CardContent>
+        </Card>
+
+        {/* Location Selection for Admin Users */}
+        {user && !user.primary_location_id && (
+          <Card sx={{ mb: 2 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>Processing Location</Typography>
+              <FormControl fullWidth required>
+                <InputLabel>Location</InputLabel>
+                <Select
+                  value={selectedLocationId}
+                  onChange={(e) => setSelectedLocationId(e.target.value)}
+                  label="Location"
+                >
+                  {availableLocations.map((location) => (
+                    <MenuItem key={location.id} value={location.id}>
+                      {location.name} ({location.full_code})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Approval Outcome */}
+        <Card sx={{ mb: 2 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>Approval Outcome</Typography>
+            
+            <Grid container spacing={2}>
+              <Grid item xs={4}>
+                <Button
+                  fullWidth
+                  variant={approvalOutcome === 'PASSED' ? 'contained' : 'outlined'}
+                  color="success"
+                  onClick={() => setApprovalOutcome('PASSED')}
+                  startIcon={<CheckIcon />}
+                  size="large"
+                >
+                  PASS
+                </Button>
+              </Grid>
+              <Grid item xs={4}>
+                <Button
+                  fullWidth
+                  variant={approvalOutcome === 'FAILED' ? 'contained' : 'outlined'}
+                  color="error"
+                  onClick={() => setApprovalOutcome('FAILED')}
+                  startIcon={<CancelIcon />}
+                  size="large"
+                >
+                  FAIL
+                </Button>
+              </Grid>
+              <Grid item xs={4}>
+                <Button
+                  fullWidth
+                  variant={approvalOutcome === 'ABSENT' ? 'contained' : 'outlined'}
+                  color="warning"
+                  onClick={() => setApprovalOutcome('ABSENT')}
+                  startIcon={<WarningIcon />}
+                  size="large"
+                >
+                  ABSENT
+                </Button>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+
+        {/* Restrictions (only shown for PASS) */}
+        {approvalOutcome === 'PASSED' && restrictionInfo && (
+          <Card sx={{ mb: 2 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>License Restrictions</Typography>
+              
+              {/* Driver Restrictions */}
+              {restrictionInfo.driver_restrictions.length > 0 && (
+                <Box mb={3}>
+                  <Typography variant="subtitle1" gutterBottom color="primary" fontWeight="bold">
+                    Driver Restrictions
+                  </Typography>
+                  <FormGroup>
+                    {restrictionInfo.driver_restrictions.map((restriction) => (
+                      <FormControlLabel
+                        key={restriction.code}
+                        control={
+                          <Checkbox
+                            checked={selectedDriverRestrictions.includes(restriction.code)}
+                            onChange={() => handleDriverRestrictionToggle(restriction.code)}
+                            disabled={restriction.locked}
+                          />
+                        }
+                        label={
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <Typography>{restriction.description}</Typography>
+                            {restriction.locked && (
+                              <Chip 
+                                label="Required by vision test" 
+                                size="small" 
+                                color="warning" 
+                                variant="outlined"
+                              />
+                            )}
+                          </Box>
+                        }
+                      />
+                    ))}
+                  </FormGroup>
+                </Box>
+              )}
+
+              {/* Vehicle Restrictions */}
+              {restrictionInfo.vehicle_restrictions.length > 0 && (
+                <Box mb={2}>
+                  <Typography variant="subtitle1" gutterBottom color="primary" fontWeight="bold">
+                    Vehicle Restrictions
+                  </Typography>
+                  <FormGroup>
+                    {restrictionInfo.vehicle_restrictions.map((restriction) => (
+                      <FormControlLabel
+                        key={restriction.code}
+                        control={
+                          <Checkbox
+                            checked={selectedVehicleRestrictions.includes(restriction.code)}
+                            onChange={() => handleVehicleRestrictionToggle(restriction.code)}
+                          />
+                        }
+                        label={restriction.description}
+                      />
+                    ))}
+                  </FormGroup>
+                </Box>
+              )}
+
+              {/* Selected Restrictions Summary */}
+              {(selectedDriverRestrictions.length > 0 || selectedVehicleRestrictions.length > 0) && (
+                <Box mt={2}>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    Selected Restrictions:
+                  </Typography>
+                  <Box display="flex" gap={1} flexWrap="wrap">
+                    {selectedDriverRestrictions.map((code) => (
+                      <Chip 
+                        key={`driver-${code}`} 
+                        label={`Driver: ${code}`} 
+                        size="small" 
+                        color="primary" 
+                        variant={lockedDriverRestrictions.includes(code) ? "filled" : "outlined"}
+                      />
+                    ))}
+                    {selectedVehicleRestrictions.map((code) => (
+                      <Chip 
+                        key={`vehicle-${code}`} 
+                        label={`Vehicle: ${code}`} 
+                        size="small" 
+                        color="secondary" 
+                        variant="outlined"
+                      />
+                    ))}
+                  </Box>
+                </Box>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        <Box display="flex" justifyContent="space-between">
+          <Button onClick={() => setActiveStep(1)}>
+            Back to Applications
+          </Button>
+          <Button
+            variant="contained"
+            color={approvalOutcome === 'PASSED' ? 'success' : approvalOutcome === 'FAILED' ? 'error' : 'warning'}
+            onClick={handleProcessApproval}
+            disabled={isProcessing || !approvalOutcome || !isLocationValid()}
+            startIcon={isProcessing ? <CircularProgress size={20} /> : <GavelIcon />}
+            size="large"
+          >
+            {isProcessing ? 'Processing...' : `Confirm ${approvalOutcome}`}
+          </Button>
         </Box>
 
-        {/* Error Display */}
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert severity="error" sx={{ mt: 2 }}>
             {error}
           </Alert>
         )}
 
-        {/* Summary Cards */}
-        <Grid container spacing={3} sx={{ mb: 3 }}>
-          <Grid item xs={12} md={4}>
-            <Card>
-              <CardContent>
-                <Stack direction="row" alignItems="center" spacing={2}>
-                  <AssignmentIcon color="primary" />
-                  <Box>
-                    <Typography variant="h6">{pendingApplications.length}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Pending Approval
-                    </Typography>
-                  </Box>
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Card>
-              <CardContent>
-                <Stack direction="row" alignItems="center" spacing={2}>
-                  <PersonIcon color="secondary" />
-                  <Box>
-                    <Typography variant="h6">{user?.username}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Logged in as Examiner
-                    </Typography>
-                  </Box>
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Card>
-              <CardContent>
-                <Stack direction="row" alignItems="center" spacing={2}>
-                  <ExaminerIcon color="success" />
-                  <Box>
-                    <Typography variant="h6">Authorization</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Ready for Review
-                    </Typography>
-                  </Box>
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-
-        {/* Applications Table */}
-        <Card>
-          <CardHeader
-            title="Applications Pending Authorization"
-            subheader={`${pendingApplications.length} applications requiring examiner approval`}
-          />
-          <CardContent>
-            {pendingApplications.length === 0 ? (
-              <Box textAlign="center" py={4}>
-                <Typography variant="h6" color="text.secondary">
-                  No applications pending authorization
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Applications will appear here after tests are completed
-                </Typography>
-              </Box>
-            ) : (
-              <TableContainer component={Paper} variant="outlined">
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Application #</TableCell>
-                      <TableCell>Applicant</TableCell>
-                      <TableCell>License Category</TableCell>
-                      <TableCell>Application Type</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell>Submitted Date</TableCell>
-                      <TableCell>Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {pendingApplications.map((application) => (
-                      <TableRow key={application.id} hover>
-                        <TableCell>
-                          <Typography variant="body2" fontWeight="bold">
-                            {application.application_number}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Stack>
-                            <Typography variant="body2">
-                              {application.person_name || 'Unknown'} {application.person_surname || ''}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              ID: {application.person_id_number || 'N/A'}
-                            </Typography>
-                          </Stack>
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={application.license_category}
-                            color="primary"
-                            size="small"
-                            variant="outlined"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {application.application_type.replace('_', ' ')}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          {getStatusChip(application.status)}
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {formatDate(application.created_at)}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Stack direction="row" spacing={1}>
-                            <Tooltip title="View Application">
-                              <IconButton
-                                size="small"
-                                onClick={() => navigate(`/applications/${application.id}`)}
-                              >
-                                <ViewIcon />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Authorize Application">
-                              <IconButton
-                                size="small"
-                                color="primary"
-                                onClick={() => handleOpenAuthorizationDialog(application)}
-                              >
-                                <ExaminerIcon />
-                              </IconButton>
-                            </Tooltip>
-                          </Stack>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Authorization Dialog */}
-        <Dialog
-          open={authorizationDialogOpen}
-          onClose={handleCloseAuthorizationDialog}
-          maxWidth="md"
-          fullWidth
-        >
-          <DialogTitle>
-            <Stack direction="row" alignItems="center" spacing={2}>
-              <ExaminerIcon color="primary" />
-              <Box>
-                <Typography variant="h6">
-                  Authorize Application
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {selectedApplication?.application_number} - {selectedApplication?.license_category}
-                </Typography>
-              </Box>
-            </Stack>
-          </DialogTitle>
-          <DialogContent>
-            <Grid container spacing={3}>
-              {/* Test Attendance */}
-              <Grid item xs={12}>
-                <Typography variant="h6" gutterBottom>
-                  Test Attendance
-                </Typography>
-                <FormGroup row>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={authorizationData.is_absent}
-                        onChange={(e) => handleAuthorizationChange('is_absent', e.target.checked)}
-                      />
-                    }
-                    label="Applicant was absent"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={authorizationData.is_failed}
-                        onChange={(e) => handleAuthorizationChange('is_failed', e.target.checked)}
-                      />
-                    }
-                    label="Applicant failed overall"
-                  />
-                </FormGroup>
-                {(authorizationData.is_absent || authorizationData.is_failed) && (
-                  <TextField
-                    fullWidth
-                    label="Reason for absence/failure"
-                    value={authorizationData.absent_failed_reason}
-                    onChange={(e) => handleAuthorizationChange('absent_failed_reason', e.target.value)}
-                    multiline
-                    rows={2}
-                    sx={{ mt: 2 }}
-                  />
-                )}
-              </Grid>
-
-              {/* Test Results */}
-              <Grid item xs={12}>
-                <Typography variant="h6" gutterBottom>
-                  Test Results
-                </Typography>
-                <Grid container spacing={2}>
-                  <Grid item xs={6}>
-                    <FormControl fullWidth>
-                      <InputLabel>Eye Test Result</InputLabel>
-                      <Select
-                        value={authorizationData.eye_test_result}
-                        onChange={(e) => handleAuthorizationChange('eye_test_result', e.target.value)}
-                        label="Eye Test Result"
-                      >
-                        <MenuItem value="PASS">PASS</MenuItem>
-                        <MenuItem value="FAIL">FAIL</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <FormControl fullWidth>
-                      <InputLabel>Driving Test Result</InputLabel>
-                      <Select
-                        value={authorizationData.driving_test_result}
-                        onChange={(e) => handleAuthorizationChange('driving_test_result', e.target.value)}
-                        label="Driving Test Result"
-                      >
-                        <MenuItem value="PASS">PASS</MenuItem>
-                        <MenuItem value="FAIL">FAIL</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                </Grid>
-              </Grid>
-
-              {/* Restrictions */}
-              <Grid item xs={12}>
-                <Typography variant="h6" gutterBottom>
-                  License Restrictions
-                </Typography>
-                <Grid container spacing={2}>
-                  <Grid item xs={6}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Driver Restrictions
-                    </Typography>
-                    <FormGroup>
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={authorizationData.driver_restriction_none}
-                            onChange={(e) => {
-                              handleAuthorizationChange('driver_restriction_none', e.target.checked);
-                              if (e.target.checked) {
-                                handleAuthorizationChange('driver_restriction_glasses', false);
-                                handleAuthorizationChange('driver_restriction_artificial_limb', false);
-                                handleAuthorizationChange('driver_restriction_glasses_and_limb', false);
-                              }
-                            }}
-                          />
-                        }
-                        label="No restrictions"
-                      />
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={authorizationData.driver_restriction_glasses}
-                            onChange={(e) => {
-                              handleAuthorizationChange('driver_restriction_glasses', e.target.checked);
-                              if (e.target.checked) {
-                                handleAuthorizationChange('driver_restriction_none', false);
-                              }
-                            }}
-                          />
-                        }
-                        label="Glasses/contact lenses required"
-                      />
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={authorizationData.driver_restriction_artificial_limb}
-                            onChange={(e) => {
-                              handleAuthorizationChange('driver_restriction_artificial_limb', e.target.checked);
-                              if (e.target.checked) {
-                                handleAuthorizationChange('driver_restriction_none', false);
-                              }
-                            }}
-                          />
-                        }
-                        label="Has artificial limb"
-                      />
-                    </FormGroup>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Vehicle Restrictions
-                    </Typography>
-                    <FormGroup>
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={authorizationData.vehicle_restriction_none}
-                            onChange={(e) => {
-                              handleAuthorizationChange('vehicle_restriction_none', e.target.checked);
-                              if (e.target.checked) {
-                                handleAuthorizationChange('vehicle_restriction_automatic', false);
-                                handleAuthorizationChange('vehicle_restriction_electric', false);
-                                handleAuthorizationChange('vehicle_restriction_disabled', false);
-                              }
-                            }}
-                          />
-                        }
-                        label="No restrictions"
-                      />
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={authorizationData.vehicle_restriction_automatic}
-                            onChange={(e) => {
-                              handleAuthorizationChange('vehicle_restriction_automatic', e.target.checked);
-                              if (e.target.checked) {
-                                handleAuthorizationChange('vehicle_restriction_none', false);
-                              }
-                            }}
-                          />
-                        }
-                        label="Automatic transmission only"
-                      />
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={authorizationData.vehicle_restriction_disabled}
-                            onChange={(e) => {
-                              handleAuthorizationChange('vehicle_restriction_disabled', e.target.checked);
-                              if (e.target.checked) {
-                                handleAuthorizationChange('vehicle_restriction_none', false);
-                              }
-                            }}
-                          />
-                        }
-                        label="Adapted for physically disabled"
-                      />
-                    </FormGroup>
-                  </Grid>
-                </Grid>
-              </Grid>
-
-              {/* Applied Restrictions Summary */}
-              {authorizationData.applied_restrictions.length > 0 && (
-                <Grid item xs={12}>
-                  <Alert severity="info">
-                    <Typography variant="subtitle2">Applied Restrictions:</Typography>
-                    <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                      {authorizationData.applied_restrictions.map((code) => (
-                        <Chip key={code} label={`Code ${code}`} size="small" />
-                      ))}
-                    </Stack>
-                  </Alert>
-                </Grid>
-              )}
-
-              {/* Authorization Notes */}
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Authorization Notes"
-                  value={authorizationData.authorization_notes}
-                  onChange={(e) => handleAuthorizationChange('authorization_notes', e.target.value)}
-                  multiline
-                  rows={3}
-                  placeholder="Additional notes for this authorization decision..."
-                />
-              </Grid>
-
-              {/* Decision Preview */}
-              <Grid item xs={12}>
-                <Paper sx={{ p: 2, bgcolor: willBeApproved() ? 'success.light' : 'error.light' }}>
-                  <Stack direction="row" alignItems="center" spacing={2}>
-                    {willBeApproved() ? <ApproveIcon color="success" /> : <RejectIcon color="error" />}
-                    <Box>
-                      <Typography variant="h6">
-                        {willBeApproved() ? 'Application will be APPROVED' : 'Application will be REJECTED'}
-                      </Typography>
-                      <Typography variant="body2">
-                        {willBeApproved() 
-                          ? 'License will be generated automatically upon approval'
-                          : 'Application will be moved back to test status for retesting'
-                        }
-                      </Typography>
-                    </Box>
-                  </Stack>
-                </Paper>
-              </Grid>
-            </Grid>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseAuthorizationDialog}>
-              Cancel
-            </Button>
-            <Button
-              variant="contained"
-              onClick={handleSubmitAuthorization}
-              disabled={!canSubmitAuthorization() || submitting}
-              startIcon={submitting ? <CircularProgress size={20} /> : <ExaminerIcon />}
-            >
-              {submitting ? 'Submitting...' : 'Submit Authorization'}
-            </Button>
-          </DialogActions>
-        </Dialog>
+        {success && (
+          <Alert severity="success" sx={{ mt: 2 }}>
+            {success}
+          </Alert>
+        )}
       </Box>
-    </Container>
+    );
+  };
+
+  return (
+    <Box p={3}>
+      <Typography variant="h4" gutterBottom>
+        License Application Approval
+      </Typography>
+
+      <Box mb={4}>
+        <Stepper activeStep={activeStep} alternativeLabel>
+          {steps.map((label) => (
+            <Step key={label}>
+              <StepLabel>{label}</StepLabel>
+            </Step>
+          ))}
+        </Stepper>
+      </Box>
+
+      {activeStep === 0 && renderSearchStep()}
+      {activeStep === 1 && renderApplicationSelection()}
+      {activeStep === 2 && renderApprovalStep()}
+
+      {/* Medical Information Dialog */}
+      <Dialog
+        open={showMedicalInfo}
+        onClose={() => setShowMedicalInfo(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Medical Information</DialogTitle>
+        <DialogContent>
+          {selectedApplication?.medical_information ? (
+            <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '12px' }}>
+              {JSON.stringify(selectedApplication.medical_information, null, 2)}
+            </pre>
+          ) : (
+            <Typography>No medical information available</Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowMedicalInfo(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 };
 

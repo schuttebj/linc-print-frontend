@@ -64,7 +64,10 @@ export interface CapturedLicense {
   id: string; // temp ID for form management
   license_category: LicenseCategory; // Single category only
   issue_date: string;
-  restrictions: string[]; // License restrictions (corrective lenses, disability modifications)
+  restrictions: {
+    driver_restrictions: string[];
+    vehicle_restrictions: string[];
+  }; // License restrictions in new structured format
   verified: boolean;
   verification_notes?: string;
   // license_number field removed as we're no longer capturing it
@@ -310,23 +313,27 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
   };
 
   const addLicense = () => {
-    const tempId = `license-${Date.now()}`;
-    const availableCategories = getAvailableCategories(tempId);
-    
     const newLicense: CapturedLicense = {
-      id: tempId,
-      license_category: availableCategories[0]?.value || LicenseCategory.B,
+      id: `license-${Date.now()}`,
+      license_category: applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE 
+        ? LicenseCategory.LEARNERS_1 
+        : LicenseCategory.B,
       issue_date: '',
-      restrictions: [],
+      restrictions: {
+        driver_restrictions: [],
+        vehicle_restrictions: []
+      },
       verified: false,
       verification_notes: ''
-      // license_number field removed
     };
 
-    updateCaptureData({
+    const newData = {
       ...captureData,
       captured_licenses: [...captureData.captured_licenses, newLicense]
-    });
+    };
+
+    setCaptureData(newData);
+    onChange(newData);
   };
 
   const updateLicense = (index: number, field: keyof CapturedLicense, value: any) => {
@@ -390,16 +397,24 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
   };
 
   const getRestrictionDisplayName = (code: string): string => {
-    const restrictionMap: Record<string, string> = {
+    // Driver restrictions mapping
+    const driverRestrictionMap: Record<string, string> = {
+      '00': 'No Driver Restrictions',
       '01': 'Corrective Lenses Required',
-      '02': 'Prosthetics',
-      '03': 'Automatic Transmission Only',
-      '04': 'Electric Vehicles Only',
-      '05': 'Disability Adapted Vehicles',
-      '06': 'Tractor Vehicles Only',
-      '07': 'Industrial/Agriculture Only'
+      '02': 'Artificial Limb/Prosthetics'
     };
-    return restrictionMap[code] || `Restriction ${code}`;
+    
+    // Vehicle restrictions mapping
+    const vehicleRestrictionMap: Record<string, string> = {
+      '00': 'No Vehicle Restrictions',
+      '01': 'Automatic Transmission Only',
+      '02': 'Electric Powered Vehicles Only',
+      '03': 'Vehicles Adapted for Physical Disabilities',
+      '04': 'Tractor Vehicles Only',
+      '05': 'Industrial/Agriculture Vehicles Only'
+    };
+    
+    return driverRestrictionMap[code] || vehicleRestrictionMap[code] || `Restriction ${code}`;
   };
 
   const validateDate = (dateValue: string): string => {
@@ -626,15 +641,18 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                 />
               </Grid>
 
-              {/* License Restrictions */}
-              <Grid item xs={12}>
+              {/* Driver Restrictions */}
+              <Grid item xs={12} md={6}>
                 <FormControl fullWidth>
-                  <InputLabel>License Restrictions</InputLabel>
+                  <InputLabel>Driver Restrictions</InputLabel>
                   <Select
                     multiple
-                    value={license.restrictions || []}
-                    label="License Restrictions"
-                    onChange={(e) => updateLicense(index, 'restrictions', Array.isArray(e.target.value) ? e.target.value : [])}
+                    value={license.restrictions?.driver_restrictions || []}
+                    label="Driver Restrictions"
+                    onChange={(e) => updateLicense(index, 'restrictions', {
+                      ...license.restrictions,
+                      driver_restrictions: Array.isArray(e.target.value) ? e.target.value : []
+                    })}
                     disabled={disabled}
                     renderValue={(selected) => (
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
@@ -642,36 +660,63 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                           <Chip 
                             key={value} 
                             label={getRestrictionDisplayName(value)} 
-                            size="small" 
+                            size="small"
+                            color="primary"
                           />
                         ))}
                       </Box>
                     )}
                   >
-                    <MenuItem value="01">
-                      01 - Corrective Lenses Required
-                    </MenuItem>
-                    <MenuItem value="02">
-                      02 - Prosthetics Required
-                    </MenuItem>
-                    <MenuItem value="03">
-                      03 - Automatic Transmission Only
-                    </MenuItem>
-                    <MenuItem value="04">
-                      04 - Electric Vehicles Only
-                    </MenuItem>
-                    <MenuItem value="05">
-                      05 - Disability Adapted Vehicles
-                    </MenuItem>
-                    <MenuItem value="06">
-                      06 - Tractor Vehicles Only
-                    </MenuItem>
-                    <MenuItem value="07">
-                      07 - Industrial/Agriculture Only
-                    </MenuItem>
+                    <MenuItem value="00">00 - No Driver Restrictions</MenuItem>
+                    <MenuItem value="01">01 - Corrective Lenses Required</MenuItem>
+                    <MenuItem value="02">02 - Artificial Limb/Prosthetics</MenuItem>
                   </Select>
                   <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-                    Select all restrictions that apply to this license (all 7 codes available for capture applications)
+                    Select driver-specific restrictions that apply
+                  </Typography>
+                </FormControl>
+              </Grid>
+
+              {/* Vehicle Restrictions */}
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Vehicle Restrictions</InputLabel>
+                  <Select
+                    multiple
+                    value={license.restrictions?.vehicle_restrictions || []}
+                    label="Vehicle Restrictions"
+                    onChange={(e) => updateLicense(index, 'restrictions', {
+                      ...license.restrictions,
+                      vehicle_restrictions: Array.isArray(e.target.value) ? e.target.value : []
+                    })}
+                    disabled={disabled}
+                    renderValue={(selected) => (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {(selected as string[]).map((value) => (
+                          <Chip 
+                            key={value} 
+                            label={getRestrictionDisplayName(value)} 
+                            size="small"
+                            color="secondary"
+                          />
+                        ))}
+                      </Box>
+                    )}
+                  >
+                    <MenuItem value="00">00 - No Vehicle Restrictions</MenuItem>
+                    <MenuItem value="01">01 - Automatic Transmission Only</MenuItem>
+                    <MenuItem value="02">02 - Electric Powered Vehicles Only</MenuItem>
+                    <MenuItem value="03">03 - Vehicles Adapted for Physical Disabilities</MenuItem>
+                    {applicationtype === ApplicationType.DRIVERS_LICENSE_CAPTURE && (
+                      <>
+                        <MenuItem value="04">04 - Tractor Vehicles Only</MenuItem>
+                        <MenuItem value="05">05 - Industrial/Agriculture Vehicles Only</MenuItem>
+                      </>
+                    )}
+                  </Select>
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                    Select vehicle-specific restrictions that apply
+                    {applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE && " (limited options for learner's permits)"}
                   </Typography>
                 </FormControl>
               </Grid>
@@ -781,7 +826,7 @@ export const transformCapturedDataForAuthorization = (captureData: LicenseCaptur
   const firstLicense = captureData.captured_licenses[0];
   
   return {
-    restrictions: firstLicense.restrictions || [],
+    restrictions: firstLicense.restrictions || { driver_restrictions: [], vehicle_restrictions: [] },
     medical_restrictions: [], // Empty for capture applications
     captured_license_data: {
       original_issue_date: firstLicense.issue_date,

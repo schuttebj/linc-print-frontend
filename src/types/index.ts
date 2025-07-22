@@ -531,10 +531,13 @@ export interface LicenseVerificationData {
 // License capture interface for DRIVERS_LICENSE_CAPTURE and LEARNERS_PERMIT_CAPTURE applications
 export interface CapturedLicense {
   id: string; // temp ID for form management
-  license_number?: string; // Made optional since we're no longer capturing it
+  license_number?: string; // For learner's permits
   license_category: LicenseCategory; // Single category only
   issue_date: string;
-  restrictions: string[]; // License restrictions (corrective lenses, disability modifications)
+  restrictions: {
+    driver_restrictions: string[];
+    vehicle_restrictions: string[];
+  }; // License restrictions in new structured format
   verified: boolean;
   verification_notes?: string;
 }
