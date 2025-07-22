@@ -3,7 +3,7 @@
  * Handles all transaction-related API communication including POS system
  */
 
-import { api } from '../config/api';
+import { api, API_BASE_URL } from '../config/api';
 
 export interface PersonPaymentSummary {
   person_id: string;
@@ -156,7 +156,7 @@ export interface FeeStructureUpdate {
 }
 
 class TransactionService {
-  private baseUrl = '/api/v1/transactions';
+  private baseUrl = `${API_BASE_URL}/api/v1/transactions`;
 
   /**
    * POS System - Search person for payment

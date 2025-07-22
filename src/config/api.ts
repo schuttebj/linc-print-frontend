@@ -152,6 +152,16 @@ export const API_ENDPOINTS = {
   renewLicense: (licenseId: string) => `${API_BASE_URL}/api/${API_VERSION}/licenses/${licenseId}/renew`,
   licenseStatistics: `${API_BASE_URL}/api/${API_VERSION}/licenses/statistics/summary`,
   licensePreview: (applicationId: string) => `${API_BASE_URL}/api/${API_VERSION}/licenses/applications/${applicationId}/preview`,
+
+  // Transaction endpoints (payment processing and POS system)
+  transactions: `${API_BASE_URL}/api/${API_VERSION}/transactions`,
+  transactionById: (id: string) => `${API_BASE_URL}/api/${API_VERSION}/transactions/${id}`,
+  transactionPOSSearch: (idNumber: string) => `${API_BASE_URL}/api/${API_VERSION}/transactions/pos/search/${idNumber}`,
+  transactionPOSPayment: `${API_BASE_URL}/api/${API_VERSION}/transactions/pos/process-payment`,
+  transactionReceipt: (id: string) => `${API_BASE_URL}/api/${API_VERSION}/transactions/${id}/receipt`,
+  cardOrders: `${API_BASE_URL}/api/${API_VERSION}/transactions/card-orders`,
+  feeStructures: `${API_BASE_URL}/api/${API_VERSION}/transactions/fee-structures`,
+  dailyTransactionSummary: `${API_BASE_URL}/api/${API_VERSION}/transactions/reports/daily-summary`,
 } as const;
 
 /**
