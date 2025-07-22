@@ -49,6 +49,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { transactionService } from '../../services/transactionService';
 import { formatCurrency } from '../../utils/currency';
+import { getAuthToken, API_ENDPOINTS } from '../../config/api';
 
 interface PersonPaymentSummary {
   person_id: string;
@@ -112,7 +113,53 @@ const TransactionPOSPage: React.FC = () => {
   const [showReceipt, setShowReceipt] = useState(false);
   const [receiptData, setReceiptData] = useState<any>(null);
 
+  // Location selection for admin users
+  const [selectedLocationId, setSelectedLocationId] = useState('');
+  const [availableLocations, setAvailableLocations] = useState<any[]>([]);
+
   const steps = ['Search Person', 'Select Items', 'Payment Details', 'Process Payment'];
+
+  // Load available locations for admin users
+  useEffect(() => {
+    const loadLocations = async () => {
+      if (user && !user.primary_location_id) {
+        try {
+          const token = getAuthToken();
+          if (!token) return;
+
+          const response = await fetch(API_ENDPOINTS.locations, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setAvailableLocations(data.locations || []);
+          }
+        } catch (error) {
+          console.error('Error loading locations:', error);
+        }
+      }
+    };
+    loadLocations();
+  }, [user]);
+
+  // Helper functions for location management
+  const handleLocationChange = (event: any) => {
+    setSelectedLocationId(event.target.value);
+    setError('');
+  };
+
+  // Get location ID to use
+  const getLocationId = (): string => {
+    return user?.primary_location_id || selectedLocationId;
+  };
+
+  // Check if location is required and valid
+  const isLocationValid = (): boolean => {
+    return !!user?.primary_location_id || !!selectedLocationId;
+  };
 
   const handleSearchPerson = async () => {
     if (!searchIdNumber.trim()) {
@@ -231,8 +278,8 @@ const TransactionPOSPage: React.FC = () => {
       return;
     }
 
-    if (!user?.primary_location_id) {
-      setError('User location not configured. Please contact system administrator.');
+    if (!isLocationValid()) {
+      setError('Please select a location before proceeding with payment.');
       return;
     }
 
@@ -242,7 +289,7 @@ const TransactionPOSPage: React.FC = () => {
     try {
       const paymentData = {
         person_id: personSummary.person_id,
-        location_id: user.primary_location_id,
+        location_id: getLocationId(),
         application_ids: selectedApplications,
         card_order_ids: selectedCardOrders,
         payment_method: paymentMethod,
@@ -286,6 +333,11 @@ const TransactionPOSPage: React.FC = () => {
     setError(null);
     setSuccess(null);
     setShowReceipt(false);
+    setReceiptData(null);
+    // Reset location selection for admin users
+    if (!user?.primary_location_id) {
+      setSelectedLocationId('');
+    }
   };
 
   const renderSearchStep = () => (
@@ -503,7 +555,42 @@ const TransactionPOSPage: React.FC = () => {
         <CardContent>
           <Typography variant="h6" gutterBottom>Payment Details</Typography>
           
+          {/* Location status for location users */}
+          {user?.primary_location_id ? (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Processing payments for location: {user.primary_location_id}
+            </Alert>
+          ) : selectedLocationId ? (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              Processing payments for selected location: {availableLocations.find(loc => loc.id === selectedLocationId)?.name}
+            </Alert>
+          ) : (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              Please select a location to process payments
+            </Alert>
+          )}
+          
           <Grid container spacing={3}>
+            {/* Location selection for admin users */}
+            {user && !user.primary_location_id && (
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth required>
+                  <InputLabel>Location</InputLabel>
+                  <Select
+                    value={selectedLocationId}
+                    onChange={handleLocationChange}
+                    label="Location"
+                  >
+                    {availableLocations.map((location) => (
+                      <MenuItem key={location.id} value={location.id}>
+                        {location.name} ({location.full_code})
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            )}
+
             <Grid item xs={12} md={6}>
               <FormControl fullWidth required>
                 <InputLabel>Payment Method</InputLabel>
