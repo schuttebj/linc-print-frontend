@@ -95,24 +95,26 @@ const CardOrderingPage: React.FC = () => {
 
     try {
       // Get applications that are ready for card ordering
+      // - APPROVED status means all payments completed and ready for card
+      // - CARD_PAYMENT_PENDING means test passed but card payment still needed
       const approvedApps = await applicationService.searchApplications({
-        status: 'APPROVED', // NEW_LICENSE and LEARNERS_PERMIT need APPROVED status
+        status: 'APPROVED',
         location_id: searchFilters.location_id || undefined,
         application_number: searchFilters.application_number || undefined,
         skip: 0,
         limit: 50
       });
 
-      const paidApps = await applicationService.searchApplications({
-        status: 'PAID', // Other applications need PAID status  
+      const cardPaymentPendingApps = await applicationService.searchApplications({
+        status: 'CARD_PAYMENT_PENDING',
         location_id: searchFilters.location_id || undefined,
         application_number: searchFilters.application_number || undefined,
         skip: 0,
         limit: 50
       });
 
-      // Combine and filter applications
-      const allApps = [...approvedApps, ...paidApps];
+      // Combine applications
+      const allApps = [...approvedApps, ...cardPaymentPendingApps];
 
       // Enrich applications with person and license data
       const enrichedApps = await Promise.all(
@@ -127,9 +129,22 @@ const CardOrderingPage: React.FC = () => {
               license.category !== 'LEARNERS_PERMIT'
             );
 
-            // Check if card can be ordered
-            const canOrderCard = cardLicenses.length > 0;
-            const orderReason = !canOrderCard ? 'No valid licenses for card' : '';
+            // Determine if card can be ordered based on application type and status
+            let canOrderCard = false;
+            let orderReason = '';
+
+            if (app.status === 'APPROVED') {
+              // APPROVED status means ready for card ordering
+              canOrderCard = cardLicenses.length > 0;
+              orderReason = !canOrderCard ? 'No valid licenses for card' : '';
+            } else if (app.status === 'CARD_PAYMENT_PENDING') {
+              // CARD_PAYMENT_PENDING means need to pay card fees first
+              canOrderCard = false;
+              orderReason = 'Card payment required (38,000 MGA)';
+            } else {
+              canOrderCard = false;
+              orderReason = 'Application not ready for card ordering';
+            }
 
             return {
               ...app,
@@ -244,17 +259,27 @@ const CardOrderingPage: React.FC = () => {
   // Get application status chip
   const getApplicationStatusChip = (app: ApplicationForOrdering) => {
     if (!app.can_order_card) {
+      if (app.status === 'CARD_PAYMENT_PENDING') {
+        return <Chip label="Card Payment Required" color="warning" size="small" />;
+      }
       return <Chip label={app.order_reason} color="error" size="small" />;
     }
 
     const statusColors: Record<string, 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'> = {
       'APPROVED': 'success',
-      'PAID': 'success'
+      'PAID': 'success',
+      'CARD_PAYMENT_PENDING': 'warning'
+    };
+
+    const statusLabels: Record<string, string> = {
+      'APPROVED': 'Ready for Card',
+      'PAID': 'Ready for Card',
+      'CARD_PAYMENT_PENDING': 'Card Payment Required'
     };
 
     return (
       <Chip 
-        label={`${app.status} - Ready for Card`} 
+        label={statusLabels[app.status] || `${app.status} - Ready for Card`} 
         color={statusColors[app.status] || 'default'} 
         size="small" 
       />
