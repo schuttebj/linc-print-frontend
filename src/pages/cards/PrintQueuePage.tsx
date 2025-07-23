@@ -42,7 +42,7 @@ import {
   Warning as WarningIcon,
   KeyboardArrowUp as MoveUpIcon,
   Assignment as AssignIcon,
-  Quality as QualityIcon,
+  AssignmentTurnedIn as QualityIcon,
   Refresh as RefreshIcon,
   ExpandMore as ExpandMoreIcon,
   Info as InfoIcon,

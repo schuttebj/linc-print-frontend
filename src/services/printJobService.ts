@@ -3,6 +3,21 @@
 
 import { api } from '../config/api';
 
+// Get API base URL function
+const getApiBaseUrl = (): string => {
+  const env = (import.meta as any).env;
+  
+  if (env?.VITE_API_BASE_URL) {
+    return env.VITE_API_BASE_URL;
+  }
+  
+  if (env?.DEV || env?.MODE === 'development') {
+    return 'http://localhost:8000';
+  }
+  
+  return 'https://madagascar-license-backend.onrender.com';
+};
+
 // Types for print job system
 export interface PrintJobCreateRequest {
   application_id: string;
@@ -23,6 +38,10 @@ export interface PrintJobResponse {
   person_name?: string;
   print_location_id: string;
   print_location_name?: string;
+  
+  // Assigned user information
+  assigned_to_user_id?: string;
+  assigned_to_user_name?: string;
   
   // Card details
   card_number: string;
@@ -177,7 +196,7 @@ export interface QualityCheckRequest {
 }
 
 class PrintJobService {
-  private baseURL = `${api.baseURL}/printing`;
+  private baseURL = `${getApiBaseUrl()}/api/v1/printing`;
 
   private async makeRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const token = localStorage.getItem('access_token');

@@ -46,31 +46,26 @@ import {
   Switch
 } from '@mui/material';
 import {
-  Print as PrintIcon,
-  Queue as QueueIcon,
-  PlayArrow as StartIcon,
-  CheckCircle as CompleteIcon,
-  Warning as WarningIcon,
-  KeyboardArrowUp as MoveUpIcon,
-  Assignment as AssignIcon,
-  QualityAssurance as QualityIcon,
-  Refresh as RefreshIcon,
-  ExpandMore as ExpandMoreIcon,
-  Info as InfoIcon,
-  Person as PersonIcon,
-  Schedule as ScheduleIcon,
-  Speed as SpeedIcon,
-  Assessment as AssessmentIcon,
-  Notifications as NotificationsIcon,
-  Settings as SettingsIcon,
-  FilterList as FilterIcon,
-  ViewList as ViewListIcon,
-  GridView as GridViewIcon,
-  Download as DownloadIcon,
-  Visibility as VisibilityIcon,
-  BatchPrediction as BatchIcon,
-  Timeline as TimelineIcon,
-  TrendingUp as TrendingUpIcon
+  Print,
+  Assignment,
+  CheckCircle,
+  Error,
+  Pending,
+  Schedule,
+  HighlightOff,
+  ReportProblem,
+  Verified,
+  Speed,
+  Person,
+  LocationOn,
+  CalendarToday,
+  AccessTime,
+  ArrowUpward,
+  Refresh,
+  Download,
+  PlayArrow,
+  Stop,
+  AssignmentTurnedIn
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import printJobService, { 
@@ -309,7 +304,7 @@ const PrintQueueDashboard: React.FC = () => {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
           <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <QueueIcon fontSize="large" />
+            <Print fontSize="large" />
             Print Queue Dashboard
           </Typography>
           <Typography variant="subtitle1" color="text.secondary">
@@ -331,7 +326,7 @@ const PrintQueueDashboard: React.FC = () => {
           
           <Button
             variant="outlined"
-            startIcon={<RefreshIcon />}
+            startIcon={<Refresh />}
             onClick={loadDashboardData}
             disabled={loading}
           >
@@ -340,7 +335,7 @@ const PrintQueueDashboard: React.FC = () => {
           
           <Button
             variant="outlined"
-            startIcon={<SettingsIcon />}
+            startIcon={<AssignmentTurnedIn />}
             onClick={() => setShowFilters(!showFilters)}
           >
             Settings
@@ -354,7 +349,7 @@ const PrintQueueDashboard: React.FC = () => {
           <Grid item xs={12} md={2}>
             <Card>
               <CardContent sx={{ textAlign: 'center' }}>
-                <QueueIcon sx={{ fontSize: 40, color: 'primary.main', mb: 1 }} />
+                <Pending fontSize="large" sx={{ color: 'primary.main', mb: 1 }} />
                 <Typography variant="h4" color="primary">
                   {dashboardStats.totalActive}
                 </Typography>
@@ -368,7 +363,7 @@ const PrintQueueDashboard: React.FC = () => {
           <Grid item xs={12} md={2}>
             <Card>
               <CardContent sx={{ textAlign: 'center' }}>
-                <TrendingUpIcon sx={{ fontSize: 40, color: 'success.main', mb: 1 }} />
+                <ArrowUpward fontSize="large" sx={{ color: 'success.main', mb: 1 }} />
                 <Typography variant="h4" color="success.main">
                   {dashboardStats.completionRate}%
                 </Typography>
@@ -382,7 +377,7 @@ const PrintQueueDashboard: React.FC = () => {
           <Grid item xs={12} md={2}>
             <Card>
               <CardContent sx={{ textAlign: 'center' }}>
-                <SpeedIcon sx={{ fontSize: 40, color: 'info.main', mb: 1 }} />
+                <Speed fontSize="large" sx={{ color: 'info.main', mb: 1 }} />
                 <Typography variant="h4" color="info.main">
                   {Math.round(dashboardStats.avgProcessingTime)}m
                 </Typography>
@@ -396,7 +391,7 @@ const PrintQueueDashboard: React.FC = () => {
           <Grid item xs={12} md={2}>
             <Card>
               <CardContent sx={{ textAlign: 'center' }}>
-                <QualityIcon sx={{ fontSize: 40, color: 'warning.main', mb: 1 }} />
+                <AssignmentTurnedIn fontSize="large" sx={{ color: 'warning.main', mb: 1 }} />
                 <Typography variant="h4" color="warning.main">
                   {dashboardStats.qaPassRate}%
                 </Typography>
@@ -410,7 +405,7 @@ const PrintQueueDashboard: React.FC = () => {
           <Grid item xs={12} md={2}>
             <Card>
               <CardContent sx={{ textAlign: 'center' }}>
-                <ScheduleIcon sx={{ fontSize: 40, color: 'secondary.main', mb: 1 }} />
+                <Schedule fontSize="large" sx={{ color: 'secondary.main', mb: 1 }} />
                 <Typography variant="body1" color="secondary.main" sx={{ fontSize: '1.2rem' }}>
                   {dashboardStats.estimatedCompletion ? 
                     dashboardStats.estimatedCompletion.toLocaleTimeString('en-GB', { 
@@ -429,7 +424,7 @@ const PrintQueueDashboard: React.FC = () => {
           <Grid item xs={12} md={2}>
             <Card>
               <CardContent sx={{ textAlign: 'center' }}>
-                <NotificationsIcon sx={{ fontSize: 40, color: 'error.main', mb: 1 }} />
+                <HighlightOff fontSize="large" sx={{ color: 'error.main', mb: 1 }} />
                 <Typography variant="h4" color="error.main">
                   {statistics?.failed_jobs || 0}
                 </Typography>
@@ -472,12 +467,12 @@ const PrintQueueDashboard: React.FC = () => {
               >
                 <MenuItem value="table">
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <ViewListIcon /> Table
+                    {/* ViewListIcon */}
                   </Box>
                 </MenuItem>
                 <MenuItem value="cards">
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <GridViewIcon /> Cards
+                    {/* GridViewIcon */}
                   </Box>
                 </MenuItem>
               </Select>
@@ -490,7 +485,7 @@ const PrintQueueDashboard: React.FC = () => {
                 <>
                   <Button
                     variant="contained"
-                    startIcon={<AssignIcon />}
+                    startIcon={<Assignment />}
                     onClick={() => handleBatchAction('assign')}
                     size="small"
                   >
@@ -498,7 +493,7 @@ const PrintQueueDashboard: React.FC = () => {
                   </Button>
                   <Button
                     variant="outlined"
-                    startIcon={<MoveUpIcon />}
+                    startIcon={<ArrowUpward />}
                     onClick={() => handleBatchAction('move_top')}
                     size="small"
                   >
@@ -538,15 +533,15 @@ const PrintQueueDashboard: React.FC = () => {
             sx={{ borderBottom: 1, borderColor: 'divider' }}
           >
             <Tab 
-              icon={<Badge badgeContent={queueData.queued_jobs.length} color="info"><QueueIcon /></Badge>}
+              icon={<Pending badgeContent={queueData.queued_jobs.length} color="info" />}
               label="Queue" 
             />
             <Tab 
-              icon={<Badge badgeContent={queueData.in_progress_jobs.length} color="warning"><PrintIcon /></Badge>}
+              icon={<PlayArrow badgeContent={queueData.in_progress_jobs.length} color="warning" />}
               label="In Progress" 
             />
             <Tab 
-              icon={<Badge badgeContent={statistics?.completed_jobs || 0} color="success"><CompleteIcon /></Badge>}
+              icon={<CheckCircle badgeContent={statistics?.completed_jobs || 0} color="success" />}
               label="Statistics" 
             />
           </Tabs>
@@ -627,7 +622,7 @@ const PrintQueueDashboard: React.FC = () => {
                                 color="primary"
                                 onClick={() => handleBatchAction('assign')}
                               >
-                                <AssignIcon />
+                                <Assignment />
                               </IconButton>
                             </Tooltip>
                             <Tooltip title="Download PDF">
@@ -636,7 +631,7 @@ const PrintQueueDashboard: React.FC = () => {
                                 color="secondary"
                                 onClick={() => downloadCardFile(job.id, 'combined-pdf')}
                               >
-                                <DownloadIcon />
+                                <Download />
                               </IconButton>
                             </Tooltip>
                             <Tooltip title="View Details">
@@ -644,7 +639,7 @@ const PrintQueueDashboard: React.FC = () => {
                                 size="small"
                                 onClick={() => viewJobDetails(job)}
                               >
-                                <VisibilityIcon />
+                                {/* VisibilityIcon */}
                               </IconButton>
                             </Tooltip>
                           </Box>
@@ -733,7 +728,7 @@ const PrintQueueDashboard: React.FC = () => {
                                 color="secondary"
                                 onClick={() => downloadCardFile(job.id, 'combined-pdf')}
                               >
-                                <DownloadIcon />
+                                <Download />
                               </IconButton>
                             </Tooltip>
                             <Tooltip title="View Details">
@@ -741,7 +736,7 @@ const PrintQueueDashboard: React.FC = () => {
                                 size="small"
                                 onClick={() => viewJobDetails(job)}
                               >
-                                <VisibilityIcon />
+                                {/* VisibilityIcon */}
                               </IconButton>
                             </Tooltip>
                           </Box>
@@ -766,28 +761,28 @@ const PrintQueueDashboard: React.FC = () => {
                       </Typography>
                       <List>
                         <ListItem>
-                          <ListItemIcon><AssessmentIcon /></ListItemIcon>
+                          <ListItemIcon><Assignment /></ListItemIcon>
                           <ListItemText 
                             primary="Total Jobs Processed" 
                             secondary={statistics.total_jobs}
                           />
                         </ListItem>
                         <ListItem>
-                          <ListItemIcon><CompleteIcon color="success" /></ListItemIcon>
+                          <ListItemIcon><CheckCircle color="success" /></ListItemIcon>
                           <ListItemText 
                             primary="Successfully Completed" 
                             secondary={`${statistics.completed_jobs} (${statistics.total_jobs > 0 ? (statistics.completed_jobs / statistics.total_jobs * 100).toFixed(1) : 0}%)`}
                           />
                         </ListItem>
                         <ListItem>
-                          <ListItemIcon><WarningIcon color="error" /></ListItemIcon>
+                          <ListItemIcon><HighlightOff color="error" /></ListItemIcon>
                           <ListItemText 
                             primary="Failed Jobs" 
                             secondary={statistics.failed_jobs}
                           />
                         </ListItem>
                         <ListItem>
-                          <ListItemIcon><QualityIcon color="warning" /></ListItemIcon>
+                          <ListItemIcon><AssignmentTurnedIn color="warning" /></ListItemIcon>
                           <ListItemText 
                             primary="QA Pass Rate" 
                             secondary={`${statistics.qa_pass_rate.toFixed(1)}%`}
@@ -806,7 +801,7 @@ const PrintQueueDashboard: React.FC = () => {
                       </Typography>
                       <List>
                         <ListItem>
-                          <ListItemIcon><TimelineIcon /></ListItemIcon>
+                          <ListItemIcon><CalendarToday /></ListItemIcon>
                           <ListItemText 
                             primary="Jobs Submitted Today" 
                             secondary={statistics.jobs_submitted_today}
@@ -820,7 +815,7 @@ const PrintQueueDashboard: React.FC = () => {
                           />
                         </ListItem>
                         <ListItem>
-                          <ListItemIcon><SpeedIcon /></ListItemIcon>
+                          <ListItemIcon><Speed /></ListItemIcon>
                           <ListItemText 
                             primary="Average Processing Time" 
                             secondary={statistics.average_completion_time_hours ? 
@@ -828,7 +823,7 @@ const PrintQueueDashboard: React.FC = () => {
                           />
                         </ListItem>
                         <ListItem>
-                          <ListItemIcon><BatchIcon /></ListItemIcon>
+                          <ListItemIcon><AssignmentTurnedIn /></ListItemIcon>
                           <ListItemText 
                             primary="Reprint Jobs" 
                             secondary={statistics.reprint_jobs}
@@ -988,21 +983,21 @@ const PrintQueueDashboard: React.FC = () => {
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   <Button
                     variant="outlined"
-                    startIcon={<DownloadIcon />}
+                    startIcon={<Download />}
                     onClick={() => downloadCardFile(selectedJobDetail.id, 'front')}
                   >
                     Front Image
                   </Button>
                   <Button
                     variant="outlined"
-                    startIcon={<DownloadIcon />}
+                    startIcon={<Download />}
                     onClick={() => downloadCardFile(selectedJobDetail.id, 'back')}
                   >
                     Back Image
                   </Button>
                   <Button
                     variant="contained"
-                    startIcon={<DownloadIcon />}
+                    startIcon={<Download />}
                     onClick={() => downloadCardFile(selectedJobDetail.id, 'combined-pdf')}
                   >
                     Combined PDF
@@ -1032,7 +1027,7 @@ const PrintQueueDashboard: React.FC = () => {
             opacity: 0.7
           }}
         >
-          <RefreshIcon />
+          <Refresh />
         </Fab>
       )}
     </Box>

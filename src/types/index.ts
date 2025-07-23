@@ -7,6 +7,7 @@ export interface Person {
   id: string;
   surname: string;
   first_name: string;
+  last_name?: string; // Added for compatibility
   middle_name?: string;
   person_nature: 'Male' | 'Female';
   birth_date?: string;
@@ -55,6 +56,7 @@ export interface User {
   user_type?: 'SYSTEM_USER' | 'NATIONAL_ADMIN' | 'PROVINCIAL_ADMIN' | 'LOCATION_USER';
   scope_province?: string;
   primary_location_id?: string;
+  primary_location?: string; // Added for UI display
   roles: Role[];
   permissions: string[];
   created_at: string;
@@ -1214,3 +1216,14 @@ export const LEARNERS_PERMIT_RULES: Record<string, LicenseCategoryRule> = {
     medical_requirements: ["Vision exam", "Medical fitness exam"]
   }
 };
+
+// Application for card ordering
+export interface ApplicationForOrdering {
+  id: string;
+  person_id: string;
+  application_type: string;
+  status: string;
+  person_name?: string;
+  created_at: string;
+  updated_at: string;
+}

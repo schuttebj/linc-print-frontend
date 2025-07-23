@@ -55,13 +55,7 @@ import applicationService, { Application } from '../../services/applicationServi
 import personService, { Person } from '../../services/personService';
 import licenseService, { License } from '../../services/licenseService';
 import printJobService, { PrintJobCreateRequest, PrintJobResponse } from '../../services/printJobService';
-
-interface ApplicationForOrdering extends Application {
-  person?: Person;
-  person_licenses?: License[];
-  can_order_card?: boolean;
-  order_reason?: string;
-}
+import { ApplicationForOrdering } from '../../types';
 
 interface SearchFilters {
   person_name: string;

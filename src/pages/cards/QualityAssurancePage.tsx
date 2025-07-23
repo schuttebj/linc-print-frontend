@@ -50,7 +50,7 @@ import {
   Rating
 } from '@mui/material';
 import {
-  QualityAssurance as QualityIcon,
+  AssignmentTurnedIn as QualityIcon,
   CheckCircle as PassIcon,
   Error as FailIcon,
   Warning as WarningIcon,
