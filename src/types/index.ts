@@ -1222,8 +1222,18 @@ export interface ApplicationForOrdering {
   id: string;
   person_id: string;
   application_type: string;
+  application_number?: string;
   status: string;
   person_name?: string;
   created_at: string;
   updated_at: string;
+  can_order_card?: boolean;
+  order_reason?: string;
+  person?: {
+    id: string;
+    first_name: string;
+    surname: string;
+    last_name?: string;
+    id_number?: string;
+  };
 }

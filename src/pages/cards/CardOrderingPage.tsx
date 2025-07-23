@@ -51,11 +51,11 @@ import {
   Info as InfoIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
-import applicationService, { Application } from '../../services/applicationService';
+import applicationService from '../../services/applicationService';
 import personService, { Person } from '../../services/personService';
 import licenseService, { License } from '../../services/licenseService';
 import printJobService, { PrintJobCreateRequest, PrintJobResponse } from '../../services/printJobService';
-import { ApplicationForOrdering } from '../../types';
+import { ApplicationForOrdering, Application } from '../../types';
 
 interface SearchFilters {
   person_name: string;
@@ -83,7 +83,7 @@ const CardOrderingPage: React.FC = () => {
     document_number: '',
     status: '',
     application_type: '',
-    location_id: user?.primary_location?.id || ''
+    location_id: user?.primary_location_id || ''
   });
 
   const orderSteps = ['Review Application', 'Confirm Licenses', 'Order Card'];
@@ -96,27 +96,25 @@ const CardOrderingPage: React.FC = () => {
     try {
       // Get applications that are ready for card ordering
       const approvedApps = await applicationService.searchApplications({
-        status: ['APPROVED'], // NEW_LICENSE and LEARNERS_PERMIT need APPROVED status
-        application_type: ['NEW_LICENSE', 'LEARNERS_PERMIT'],
+        status: 'APPROVED', // NEW_LICENSE and LEARNERS_PERMIT need APPROVED status
         location_id: searchFilters.location_id || undefined,
         person_name: searchFilters.person_name || undefined,
         application_number: searchFilters.application_number || undefined,
-        page: 1,
-        size: 50
+        skip: 0,
+        limit: 50
       });
 
       const paidApps = await applicationService.searchApplications({
-        status: ['PAID'], // Other applications need PAID status
-        application_type: ['RENEWAL', 'REPLACEMENT', 'TEMPORARY_LICENSE', 'INTERNATIONAL_PERMIT'],
+        status: 'PAID', // Other applications need PAID status  
         location_id: searchFilters.location_id || undefined,
         person_name: searchFilters.person_name || undefined,
         application_number: searchFilters.application_number || undefined,
-        page: 1,
-        size: 50
+        skip: 0,
+        limit: 50
       });
 
       // Combine and filter applications
-      const allApps = [...approvedApps.applications, ...paidApps.applications];
+      const allApps = [...approvedApps, ...paidApps];
 
       // Enrich applications with person and license data
       const enrichedApps = await Promise.all(
@@ -175,7 +173,7 @@ const CardOrderingPage: React.FC = () => {
       document_number: '',
       status: '',
       application_type: '',
-      location_id: user?.primary_location?.id || ''
+      location_id: user?.primary_location_id || ''
     });
   };
 
