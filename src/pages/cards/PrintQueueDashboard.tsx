@@ -101,7 +101,7 @@ const PrintQueueDashboard: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [queueData, setQueueData] = useState<PrintQueueResponse | null>(null);
   const [statistics, setStatistics] = useState<PrintJobStatistics | null>(null);
-  const [selectedLocation, setSelectedLocation] = useState<string>(user?.primary_location?.id || '');
+  const [selectedLocation, setSelectedLocation] = useState<string>(user?.primary_location_id || '');
   const [selectedJobs, setSelectedJobs] = useState<Set<string>>(new Set());
   const [tabValue, setTabValue] = useState(0);
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
@@ -448,9 +448,9 @@ const PrintQueueDashboard: React.FC = () => {
                 onChange={(e) => setSelectedLocation(e.target.value)}
                 label="Print Location"
               >
-                {user?.primary_location && (
-                  <MenuItem value={user.primary_location.id}>
-                    {user.primary_location.name}
+                {user?.primary_location_id && (
+                  <MenuItem value={user.primary_location_id}>
+                    {user.primary_location || `Location ${user.primary_location_id}`}
                   </MenuItem>
                 )}
               </Select>
@@ -533,15 +533,27 @@ const PrintQueueDashboard: React.FC = () => {
             sx={{ borderBottom: 1, borderColor: 'divider' }}
           >
             <Tab 
-              icon={<Pending badgeContent={queueData.queued_jobs.length} color="info" />}
+              icon={
+                <Badge badgeContent={queueData.queued_jobs.length} color="info">
+                  <Pending />
+                </Badge>
+              }
               label="Queue" 
             />
             <Tab 
-              icon={<PlayArrow badgeContent={queueData.in_progress_jobs.length} color="warning" />}
+              icon={
+                <Badge badgeContent={queueData.in_progress_jobs.length} color="warning">
+                  <PlayArrow />
+                </Badge>
+              }
               label="In Progress" 
             />
             <Tab 
-              icon={<CheckCircle badgeContent={statistics?.completed_jobs || 0} color="success" />}
+              icon={
+                <Badge badgeContent={statistics?.completed_jobs || 0} color="success">
+                  <CheckCircle />
+                </Badge>
+              }
               label="Statistics" 
             />
           </Tabs>

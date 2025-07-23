@@ -177,7 +177,7 @@ const QualityAssurancePage: React.FC = () => {
     try {
       // Get jobs with PRINTED status (ready for QA)
       const searchResult = await printJobService.searchPrintJobs({
-        location_id: user?.primary_location?.id,
+        location_id: user?.primary_location_id,
         status: ['PRINTED', 'QUALITY_CHECK']
       }, 1, 50);
 

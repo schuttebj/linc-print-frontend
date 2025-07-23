@@ -61,7 +61,7 @@ const PrintQueuePage: React.FC = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [queueData, setQueueData] = useState<PrintQueueResponse | null>(null);
-  const [selectedLocation, setSelectedLocation] = useState<string>(user?.primary_location?.id || '');
+  const [selectedLocation, setSelectedLocation] = useState<string>(user?.primary_location_id || '');
   const [selectedJob, setSelectedJob] = useState<PrintJobDetailResponse | null>(null);
   const [jobDetailDialogOpen, setJobDetailDialogOpen] = useState(false);
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
@@ -355,9 +355,9 @@ const PrintQueuePage: React.FC = () => {
                 onChange={(e) => setSelectedLocation(e.target.value)}
                 label="Print Location"
               >
-                {user?.primary_location && (
-                  <MenuItem value={user.primary_location.id}>
-                    {user.primary_location.name}
+                {user?.primary_location_id && (
+                  <MenuItem value={user.primary_location_id}>
+                    {user.primary_location || `Location ${user.primary_location_id}`}
                   </MenuItem>
                 )}
                 {/* Additional locations would be loaded here based on user permissions */}
