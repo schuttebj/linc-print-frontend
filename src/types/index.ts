@@ -215,6 +215,16 @@ export interface Application {
   rejected_at?: string;
   rejection_reason?: string;
   
+  // Payment stage tracking (for staged payments)
+  test_payment_completed?: boolean;
+  test_payment_date?: string;
+  card_payment_completed?: boolean;
+  card_payment_date?: string;
+  current_payment_stage?: string;
+  
+  // Card ordering
+  can_order_card?: boolean;
+  
   // Metadata
   created_by: string;
   updated_by?: string;
@@ -1228,6 +1238,9 @@ export interface ApplicationForOrdering {
   person_name?: string;
   created_at: string;
   updated_at: string;
+  test_result?: string;
+  test_payment_completed?: boolean;
+  card_payment_completed?: boolean;
   can_order_card?: boolean;
   order_reason?: string;
   person_licenses?: any[]; // Use any[] to be compatible with License[] from service

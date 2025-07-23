@@ -116,40 +116,44 @@ const CardOrderingPage: React.FC = () => {
       // Combine applications
       const allApps = [...approvedApps, ...cardPaymentPendingApps];
 
-      // Enrich applications with person and license data
+      // Enrich applications with person data
       const enrichedApps = await Promise.all(
         allApps.map(async (app) => {
           try {
             // Get person details
             const person = await personService.getPersonById(app.person_id);
             
-            // Get all person's licenses (excluding learners permits for card)
-            const personLicenses = await licenseService.getPersonLicenses(app.person_id, true);
-            const cardLicenses = personLicenses.filter(license => 
-              license.category !== 'LEARNERS_PERMIT'
-            );
-
-            // Determine if card can be ordered based on application type and status
+            // Use backend can_order_card calculation
             let canOrderCard = false;
             let orderReason = '';
 
-            if (app.status === 'APPROVED') {
-              // APPROVED status means ready for card ordering
-              canOrderCard = cardLicenses.length > 0;
-              orderReason = !canOrderCard ? 'No valid licenses for card' : '';
-            } else if (app.status === 'CARD_PAYMENT_PENDING') {
-              // CARD_PAYMENT_PENDING means need to pay card fees first
-              canOrderCard = false;
-              orderReason = 'Card payment required (38,000 MGA)';
+            if (app.can_order_card !== undefined) {
+              // Use backend calculation (preferred)
+              canOrderCard = app.can_order_card;
+              if (!canOrderCard) {
+                if (app.status === 'CARD_PAYMENT_PENDING') {
+                  orderReason = 'Card payment required (38,000 MGA)';
+                } else if (app.application_type === 'NEW_LICENSE' && !app.card_payment_completed) {
+                  orderReason = 'Card payment required (38,000 MGA)';
+                } else if (app.application_type === 'NEW_LICENSE' && app.test_result !== 'PASSED') {
+                  orderReason = 'Test not passed yet';
+                } else {
+                  orderReason = 'Not ready for card ordering';
+                }
+              }
             } else {
-              canOrderCard = false;
-              orderReason = 'Application not ready for card ordering';
+              // Fallback if backend doesn't provide can_order_card yet
+              if (app.status === 'APPROVED') {
+                canOrderCard = true;
+              } else {
+                canOrderCard = false;
+                orderReason = app.status === 'CARD_PAYMENT_PENDING' ? 'Card payment required' : 'Not ready for ordering';
+              }
             }
 
             return {
               ...app,
               person,
-              person_licenses: cardLicenses,
               can_order_card: canOrderCard,
               order_reason: orderReason
             } as unknown as ApplicationForOrdering;
