@@ -128,30 +128,121 @@ const PrintQueueDashboard: React.FC = () => {
   const REFRESH_INTERVAL = 15000; // 15 seconds for dashboard
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
-  // Load dashboard data
+  // State for accessible locations
+  const [accessibleQueues, setAccessibleQueues] = useState<any[]>([]);
+  const [selectedLocationId, setSelectedLocationId] = useState<string>('');
+
+  // Load accessible print queues on mount
+  useEffect(() => {
+    loadAccessibleQueues();
+  }, []);
+
+  const loadAccessibleQueues = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Get all queues accessible to the current user
+      const queues = await printJobService.getAccessiblePrintQueues();
+      setAccessibleQueues(queues);
+
+      // Auto-select first location if only one accessible
+      if (queues.length === 1) {
+        setSelectedLocationId(queues[0].location_id);
+      }
+    } catch (err: any) {
+      setError('Failed to load accessible print queues');
+      console.error('Error loading accessible queues:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load detailed queue for selected location
+  const loadDetailedQueue = async (locationId: string) => {
+    if (!locationId) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+
+      const queueData = await printJobService.getPrintQueueByLocation(locationId);
+      // Update your queue state with detailed data
+      // This replaces the old loadQueues function
+      console.log('Loaded detailed queue for location:', locationId, queueData);
+      
+    } catch (err: any) {
+      setError('Failed to load print queue details');
+      console.error('Error loading queue details:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle location selection
+  const handleLocationChange = (locationId: string) => {
+    setSelectedLocationId(locationId);
+    loadDetailedQueue(locationId);
+  };
+
+  // Location selector component
+  const LocationSelector = () => (
+    <FormControl fullWidth sx={{ mb: 2 }}>
+      <InputLabel>Print Location</InputLabel>
+      <Select
+        value={selectedLocationId}
+        onChange={(e) => handleLocationChange(e.target.value)}
+        label="Print Location"
+        disabled={loading}
+      >
+        {accessibleQueues.map((queue) => (
+          <MenuItem key={queue.location_id} value={queue.location_id}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+              <Typography>{queue.location_name}</Typography>
+              <Badge 
+                badgeContent={queue.current_queue_size} 
+                color="primary"
+                sx={{ ml: 2 }}
+              >
+                <Typography variant="caption" color="textSecondary">
+                  Queue
+                </Typography>
+              </Badge>
+            </Box>
+          </MenuItem>
+        ))}
+      </Select>
+    </FormControl>
+  );
+
+  // Update the loadDashboardData to use the new location-aware approach
   const loadDashboardData = useCallback(async () => {
-    if (!selectedLocation) return;
+    if (!selectedLocationId) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      // Load queue and statistics in parallel
+      // Load queue and statistics for the selected location
       const [queueResponse, statsResponse] = await Promise.all([
-        printJobService.getPrintQueue(selectedLocation),
-        printJobService.getPrintStatistics(selectedLocation, 7) // Last 7 days
+        printJobService.getPrintQueueByLocation(selectedLocationId),
+        printJobService.getPrintStatistics(selectedLocationId, 7) // Last 7 days
       ]);
 
       setQueueData(queueResponse);
       setStatistics(statsResponse);
       setLastRefresh(new Date());
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading dashboard data:', error);
-      setError('Failed to load dashboard data');
+      if (error.response?.status === 403) {
+        setError('Access denied to this location\'s print queue');
+      } else {
+        setError('Failed to load dashboard data');
+      }
     } finally {
       setLoading(false);
     }
-  }, [selectedLocation]);
+  }, [selectedLocationId]);
 
   // Handle job selection
   const handleJobSelection = (jobId: string, selected: boolean) => {
@@ -279,7 +370,7 @@ const PrintQueueDashboard: React.FC = () => {
 
   // Setup auto-refresh
   useEffect(() => {
-    if (selectedLocation && autoRefresh) {
+    if (selectedLocationId && autoRefresh) {
       loadDashboardData();
       
       const interval = setInterval(loadDashboardData, REFRESH_INTERVAL);
@@ -289,7 +380,7 @@ const PrintQueueDashboard: React.FC = () => {
         if (interval) clearInterval(interval);
       };
     }
-  }, [selectedLocation, autoRefresh, loadDashboardData]);
+  }, [selectedLocationId, autoRefresh, loadDashboardData]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -443,20 +534,7 @@ const PrintQueueDashboard: React.FC = () => {
       <Paper sx={{ p: 2, mb: 3 }}>
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={12} md={4}>
-            <FormControl fullWidth>
-              <InputLabel>Print Location</InputLabel>
-              <Select
-                value={selectedLocation}
-                onChange={(e) => setSelectedLocation(e.target.value)}
-                label="Print Location"
-              >
-                {user?.primary_location_id && (
-                  <MenuItem value={user.primary_location_id}>
-                    {user.primary_location || `Location ${user.primary_location_id}`}
-                  </MenuItem>
-                )}
-              </Select>
-            </FormControl>
+            <LocationSelector />
           </Grid>
 
           <Grid item xs={12} md={2}>

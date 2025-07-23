@@ -223,40 +223,50 @@ const CardOrderingPage: React.FC = () => {
     }
   };
 
-  // Create print job
-  const handleCreatePrintJob = async () => {
-    if (!selectedApplication) return;
+  // Create print job for application
+  const createPrintJob = async (application: ApplicationForOrdering) => {
+    if (!application.can_order_card) {
+      setError('Application is not ready for card ordering');
+      return;
+    }
 
-    setOrderLoading(true);
+    // Validate user has access to the application's location
+    if (!user?.can_access_location(application.location_id)) {
+      setError('You do not have permission to create print jobs for this location');
+      return;
+    }
+
     try {
-      // Check for other pending applications for same person
-      const personApplications = applications.filter(app => 
-        app.person_id === selectedApplication.person_id && 
-        app.id !== selectedApplication.id &&
-        app.can_order_card
-      );
+      setLoading(true);
+      setError(null);
 
-      const additionalApplicationIds = personApplications.map(app => app.id);
+      console.log('Creating print job for application:', application.id);
 
-      const printJobRequest: PrintJobCreateRequest = {
-        application_id: selectedApplication.id,
-        additional_application_ids: additionalApplicationIds.length > 0 ? additionalApplicationIds : undefined,
-        card_template: 'MADAGASCAR_STANDARD',
-        production_notes: `Card ordered for ${selectedApplication.person?.first_name} ${selectedApplication.person?.last_name}`
-      };
+      const printJob = await printJobService.createPrintJob({
+        application_id: application.id,
+        card_template: 'MADAGASCAR_STANDARD'
+      });
 
-      const printJob = await printJobService.createPrintJob(printJobRequest);
+      console.log('Print job created successfully:', printJob);
+
+      // Show success message
+      setSuccessMessage(`Print job created successfully! Job Number: ${printJob.job_number}`);
       
-      setOrderSuccess(printJob);
-      setOrderStep(orderSteps.length); // Move to success step
-      
-      // Refresh applications list
+      // Refresh applications to update status
       loadApplications();
-    } catch (error) {
+
+    } catch (error: any) {
       console.error('Error creating print job:', error);
-      setError('Failed to create print job. Please try again.');
+      
+      if (error.response?.status === 403) {
+        setError('Access denied: You cannot create print jobs for this location');
+      } else if (error.response?.status === 400) {
+        setError(error.response?.data?.detail || 'Invalid request for print job creation');
+      } else {
+        setError('Failed to create print job. Please try again.');
+      }
     } finally {
-      setOrderLoading(false);
+      setLoading(false);
     }
   };
 
