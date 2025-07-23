@@ -43,6 +43,8 @@ import LicenseApprovalPage from './pages/licenses/LicenseApprovalPage';
 import CardListPage from './pages/cards/CardListPage';
 import CardOrderingPage from './pages/cards/CardOrderingPage';
 import PrintQueuePage from './pages/cards/PrintQueuePage';
+import PrintQueueDashboard from './pages/cards/PrintQueueDashboard';
+import QualityAssurancePage from './pages/cards/QualityAssurancePage';
 
 // Transaction Pages
 import TransactionPOSPage from './pages/transactions/TransactionPOSPage';
@@ -326,6 +328,22 @@ function App() {
                 element={
                   <ProtectedRoute requiredPermission="printing.read">
                     <PrintQueuePage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="print-queue-dashboard" 
+                element={
+                  <ProtectedRoute requiredPermission="printing.read">
+                    <PrintQueueDashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="quality-assurance" 
+                element={
+                  <ProtectedRoute requiredPermission="printing.read">
+                    <QualityAssurancePage />
                   </ProtectedRoute>
                 } 
               />
