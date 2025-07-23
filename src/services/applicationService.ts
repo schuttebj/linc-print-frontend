@@ -7,17 +7,16 @@ import { api, API_ENDPOINTS, getAuthToken } from '../config/api';
 import type { AxiosResponse } from 'axios';
 import { 
   Application, 
-  ApplicationCreate, 
-  ApplicationUpdate, 
-  ApplicationLookups,
-  FeeStructure,
-  Person,
   ApplicationStatus, 
   ApplicationType, 
-  CreateApplicationRequest, 
+  ApplicationCreate,
+  ApplicationUpdate,
   TestResult,
+  Person,
   LicenseCategory,
-  ApplicationForOrdering
+  ApplicationForOrdering,
+  ApplicationLookups,
+  FeeStructure
 } from '../types';
 
 class ApplicationService {
