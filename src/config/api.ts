@@ -169,11 +169,32 @@ export const API_ENDPOINTS = {
  */
 let authToken: string | null = null;
 
+// Initialize auth token from localStorage on app start
+const initializeAuthToken = () => {
+  if (!authToken) {
+    authToken = localStorage.getItem('access_token');
+  }
+};
+
+// Call initialization
+initializeAuthToken();
+
 export const setAuthToken = (token: string | null) => {
   authToken = token;
+  
+  // Sync with localStorage
+  if (token) {
+    localStorage.setItem('access_token', token);
+  } else {
+    localStorage.removeItem('access_token');
+  }
 };
 
 export const getAuthToken = (): string | null => {
+  // Ensure token is loaded from localStorage if not in memory
+  if (!authToken) {
+    authToken = localStorage.getItem('access_token');
+  }
   return authToken;
 };
 
@@ -187,8 +208,12 @@ export const getDefaultHeaders = (includeAuth = true): HeadersInit => {
   };
 
   if (includeAuth) {
-    // Add authentication header if available (from memory, not localStorage)
-    const token = getAuthToken();
+    // Try to get token from memory first, then localStorage as fallback
+    let token = getAuthToken();
+    if (!token) {
+      token = localStorage.getItem('access_token');
+    }
+    
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }

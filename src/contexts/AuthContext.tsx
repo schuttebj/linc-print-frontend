@@ -126,6 +126,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       // Set auth token in memory for API calls
       setAuthToken(access_token);
+      
+      // Also store in localStorage as fallback for page reloads
+      localStorage.setItem('access_token', access_token);
 
       // Reset logout flag on successful login
       setIsLoggingOut(false);
@@ -201,6 +204,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     // Clear auth token from memory
     setAuthToken(null);
+    
+    // Clear auth token from localStorage
+    localStorage.removeItem('access_token');
     
     // Clear auth state
     setAuthState({
@@ -283,6 +289,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       // Set auth token in memory for API calls
       setAuthToken(access_token);
+      
+      // Also store in localStorage as fallback for page reloads
+      localStorage.setItem('access_token', access_token);
 
       // Update auth state with new token and user data
       setAuthState({
