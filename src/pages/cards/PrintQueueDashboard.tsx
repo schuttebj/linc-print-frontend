@@ -237,7 +237,7 @@ const PrintQueueDashboard: React.FC = () => {
       });
       
       if (!response.ok) {
-        throw new Error(`Download failed with status: ${response.status}`);
+        throw Error('Download failed');
       }
       
       const blob = await response.blob();
