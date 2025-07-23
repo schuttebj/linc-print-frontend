@@ -276,6 +276,18 @@ const DashboardLayout: React.FC = () => {
       path: '/dashboard/cards',
       permission: 'cards.read',
     },
+    {
+      text: 'Order Cards',
+      icon: <AddIcon />,
+      path: '/dashboard/cards/order',
+      permission: 'printing.create',
+    },
+    {
+      text: 'Print Queue',
+      icon: <Assessment />,
+      path: '/dashboard/cards/print-queue',
+      permission: 'printing.read',
+    },
   ];
 
   // Transaction navigation items
