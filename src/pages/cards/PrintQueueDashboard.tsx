@@ -49,7 +49,7 @@ import {
   Print,
   Assignment,
   CheckCircle,
-  Error,
+  Error as ErrorIcon,
   Pending,
   Schedule,
   HighlightOff,
