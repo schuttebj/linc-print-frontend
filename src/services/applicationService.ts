@@ -4,13 +4,20 @@
  */
 
 import { api, API_ENDPOINTS, getAuthToken } from '../config/api';
+import type { AxiosResponse } from 'axios';
 import { 
   Application, 
   ApplicationCreate, 
   ApplicationUpdate, 
   ApplicationLookups,
   FeeStructure,
-  Person
+  Person,
+  ApplicationStatus, 
+  ApplicationType, 
+  CreateApplicationRequest, 
+  TestResult,
+  LicenseCategory,
+  ApplicationForOrdering
 } from '../types';
 
 class ApplicationService {
@@ -624,6 +631,12 @@ class ApplicationService {
     // C, D, E categories require existing B license
     const heavyCategories = ['C', 'D', 'E'];
     return licenseCategories.some(cat => heavyCategories.includes(cat));
+  }
+
+  // Fix NEW_LICENSE application workflow
+  async fixNewLicenseWorkflow(applicationId: string): Promise<any> {
+    const response: AxiosResponse<any> = await api.post(`/applications/fix-new-license-workflow/${applicationId}`);
+    return response.data;
   }
 }
 
