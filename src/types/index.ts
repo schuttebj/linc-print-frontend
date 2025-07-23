@@ -1229,13 +1229,7 @@ export interface ApplicationForOrdering {
   updated_at: string;
   can_order_card?: boolean;
   order_reason?: string;
-  person_licenses?: Array<{
-    id: string;
-    license_type: string;
-    status: string;
-    issue_date?: string;
-    expiry_date?: string;
-  }>;
+  person_licenses?: any[]; // Use any[] to be compatible with License[] from service
   person?: {
     id: string;
     first_name: string;

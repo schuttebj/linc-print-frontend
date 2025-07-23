@@ -137,7 +137,7 @@ const CardOrderingPage: React.FC = () => {
               person_licenses: cardLicenses,
               can_order_card: canOrderCard,
               order_reason: orderReason
-            } as ApplicationForOrdering;
+            } as unknown as ApplicationForOrdering;
           } catch (error) {
             console.error(`Error enriching application ${app.id}:`, error);
             return {
