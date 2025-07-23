@@ -1,7 +1,5 @@
-"""
-Print Job Service for Madagascar License System
-Handles communication with print job backend for card ordering and queue management
-"""
+// Print Job Service for Madagascar License System
+// Handles communication with print job backend for card ordering and queue management
 
 import { api } from '../config/api';
 
