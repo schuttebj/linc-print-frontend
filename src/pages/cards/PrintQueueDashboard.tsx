@@ -236,7 +236,10 @@ const PrintQueueDashboard: React.FC = () => {
         }
       });
       
-      if (!response.ok) throw new Error('Download failed');
+      if (!response.ok) {
+        const errorMessage = 'Download failed';
+        throw new Error(errorMessage);
+      }
       
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);

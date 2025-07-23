@@ -98,7 +98,6 @@ const CardOrderingPage: React.FC = () => {
       const approvedApps = await applicationService.searchApplications({
         status: 'APPROVED', // NEW_LICENSE and LEARNERS_PERMIT need APPROVED status
         location_id: searchFilters.location_id || undefined,
-        person_name: searchFilters.person_name || undefined,
         application_number: searchFilters.application_number || undefined,
         skip: 0,
         limit: 50
@@ -107,7 +106,6 @@ const CardOrderingPage: React.FC = () => {
       const paidApps = await applicationService.searchApplications({
         status: 'PAID', // Other applications need PAID status  
         location_id: searchFilters.location_id || undefined,
-        person_name: searchFilters.person_name || undefined,
         application_number: searchFilters.application_number || undefined,
         skip: 0,
         limit: 50

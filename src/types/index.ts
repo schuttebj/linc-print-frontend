@@ -1229,11 +1229,19 @@ export interface ApplicationForOrdering {
   updated_at: string;
   can_order_card?: boolean;
   order_reason?: string;
+  person_licenses?: Array<{
+    id: string;
+    license_type: string;
+    status: string;
+    issue_date?: string;
+    expiry_date?: string;
+  }>;
   person?: {
     id: string;
     first_name: string;
     surname: string;
     last_name?: string;
     id_number?: string;
+    birth_date?: string;
   };
 }
