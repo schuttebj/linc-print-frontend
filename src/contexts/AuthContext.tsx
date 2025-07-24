@@ -101,7 +101,44 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   /**
-   * Login user with credentials
+   * Helper function to enhance user object with location access method
+   */
+  const enhanceUserWithLocationAccess = (userData: any): User => {
+    const can_access_location = (locationId: string): boolean => {
+      if (!userData) return false;
+      
+      // System and National admins have access to all locations
+      if (userData.is_superuser || 
+          userData.user_type === 'SYSTEM_USER' || 
+          userData.user_type === 'NATIONAL_ADMIN') {
+        return true;
+      }
+      
+      // Provincial admin has access to locations in their province
+      if (userData.user_type === 'PROVINCIAL_ADMIN') {
+        // This would need to be enhanced with actual location-to-province mapping
+        // For now, allow access if they have a scope_province
+        return !!userData.scope_province;
+      }
+      
+      // Location user can only access their primary location
+      if (userData.user_type === 'LOCATION_USER') {
+        return userData.primary_location_id === locationId;
+      }
+      
+      return false;
+    };
+
+    return {
+      ...userData,
+      roles: userData.roles || [],
+      permissions: userData.permissions || [],
+      can_access_location
+    };
+  };
+
+  /**
+   * Login user with username and password
    */
   const login = async (credentials: LoginCredentials): Promise<boolean> => {
     try {
@@ -134,11 +171,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsLoggingOut(false);
 
       setAuthState({
-        user: {
-          ...user,
-          roles: user.roles || [],
-          permissions: user.permissions || [],
-        },
+        user: enhanceUserWithLocationAccess(user),
         isAuthenticated: true,
         isLoading: false,
         accessToken: access_token,
@@ -295,11 +328,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       // Update auth state with new token and user data
       setAuthState({
-        user: {
-          ...userData,
-          roles: userData.roles || [],
-          permissions: userData.permissions || [],
-        },
+        user: enhanceUserWithLocationAccess(userData),
         isAuthenticated: true,
         isLoading: false,
         accessToken: access_token,

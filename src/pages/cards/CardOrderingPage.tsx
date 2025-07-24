@@ -85,8 +85,33 @@ const CardOrderingPage: React.FC = () => {
     application_type: '',
     location_id: user?.primary_location_id || ''
   });
+  
+  // Add state for accessible locations
+  const [accessibleLocations, setAccessibleLocations] = useState<any[]>([]);
 
   const orderSteps = ['Review Application', 'Confirm Licenses', 'Order Card'];
+
+  // Load accessible locations for admin users
+  useEffect(() => {
+    if (user && (user.is_superuser || user.user_type === 'SYSTEM_USER' || user.user_type === 'NATIONAL_ADMIN' || user.user_type === 'PROVINCIAL_ADMIN')) {
+      loadAccessibleLocations();
+    }
+  }, [user]);
+
+  const loadAccessibleLocations = async () => {
+    try {
+      // Get locations based on user access level
+      // This would need to be implemented in a locationService
+      // For now, we'll use the print job service to get accessible locations
+      const queues = await printJobService.getAccessiblePrintQueues();
+      setAccessibleLocations(queues.map(queue => ({
+        id: queue.location_id,
+        name: queue.location_name
+      })));
+    } catch (error) {
+      console.error('Error loading accessible locations:', error);
+    }
+  };
 
   // Load applications ready for card ordering
   const loadApplications = async () => {
@@ -120,8 +145,19 @@ const CardOrderingPage: React.FC = () => {
       const enrichedApps = await Promise.all(
         allApps.map(async (app) => {
           try {
-            // Get person details
-            const person = await personService.getPersonById(app.person_id);
+            // Get person details and licenses in parallel
+            const [person, personLicensesResponse] = await Promise.all([
+              personService.getPersonById(app.person_id),
+              licenseService.getPersonLicenses(app.person_id, true) // Only active licenses
+            ]);
+            
+            // Filter out learners permits (they don't go on cards)
+            const cardLicenses = personLicensesResponse.filter(license => 
+              license.category !== 'LEARNERS_PERMIT' && 
+              license.category !== '1' && 
+              license.category !== '2' && 
+              license.category !== '3'
+            );
             
             // Use backend can_order_card calculation
             let canOrderCard = false;
@@ -137,23 +173,27 @@ const CardOrderingPage: React.FC = () => {
                   orderReason = 'Card payment required (38,000 MGA)';
                 } else if (app.application_type === 'NEW_LICENSE' && app.test_result !== 'PASSED') {
                   orderReason = 'Test not passed yet';
+                } else if (cardLicenses.length === 0) {
+                  orderReason = 'No valid licenses for card';
                 } else {
                   orderReason = 'Not ready for card ordering';
                 }
               }
             } else {
               // Fallback if backend doesn't provide can_order_card yet
-              if (app.status === 'APPROVED') {
+              if (app.status === 'APPROVED' && cardLicenses.length > 0) {
                 canOrderCard = true;
               } else {
                 canOrderCard = false;
-                orderReason = app.status === 'CARD_PAYMENT_PENDING' ? 'Card payment required' : 'Not ready for ordering';
+                orderReason = cardLicenses.length === 0 ? 'No valid licenses for card' : 
+                            (app.status === 'CARD_PAYMENT_PENDING' ? 'Card payment required' : 'Not ready for ordering');
               }
             }
 
             return {
               ...app,
               person,
+              person_licenses: cardLicenses, // Add licenses to the application object
               can_order_card: canOrderCard,
               order_reason: orderReason
             } as unknown as ApplicationForOrdering;
@@ -368,10 +408,33 @@ const CardOrderingPage: React.FC = () => {
               >
                 <MenuItem value="">All</MenuItem>
                 <MenuItem value="APPROVED">Approved</MenuItem>
+                <MenuItem value="CARD_PAYMENT_PENDING">Card Payment Pending</MenuItem>
                 <MenuItem value="PAID">Paid</MenuItem>
               </Select>
             </FormControl>
           </Grid>
+          
+          {/* Location Selector - Show for System/National/Provincial Admins */}
+          {user && (user.is_superuser || user.user_type === 'SYSTEM_USER' || user.user_type === 'NATIONAL_ADMIN' || user.user_type === 'PROVINCIAL_ADMIN') && (
+            <Grid item xs={12} md={3}>
+              <FormControl fullWidth>
+                <InputLabel>Location</InputLabel>
+                <Select
+                  value={searchFilters.location_id || ''}
+                  onChange={(e) => setSearchFilters({...searchFilters, location_id: e.target.value})}
+                  label="Location"
+                >
+                  <MenuItem value="">All Accessible Locations</MenuItem>
+                  {accessibleLocations.map((location) => (
+                    <MenuItem key={location.id} value={location.id}>
+                      {location.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+          )}
+          
           <Grid item xs={12} md={2}>
             <Button
               fullWidth
