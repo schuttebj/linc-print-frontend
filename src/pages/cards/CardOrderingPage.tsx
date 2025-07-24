@@ -88,6 +88,9 @@ const CardOrderingPage: React.FC = () => {
   
   // Add state for accessible locations
   const [accessibleLocations, setAccessibleLocations] = useState<any[]>([]);
+  
+  // Add state for selected print location (for admin users)
+  const [selectedPrintLocation, setSelectedPrintLocation] = useState<string>('');
 
   const orderSteps = ['Review Application', 'Confirm Licenses', 'Order Card'];
 
@@ -255,6 +258,7 @@ const CardOrderingPage: React.FC = () => {
     setOrderDialogOpen(true);
     setOrderStep(0);
     setOrderSuccess(null);
+    setSelectedPrintLocation(''); // Reset location selection
   };
 
   // Close order dialog
@@ -263,6 +267,7 @@ const CardOrderingPage: React.FC = () => {
     setSelectedApplication(null);
     setOrderStep(0);
     setOrderSuccess(null);
+    setSelectedPrintLocation(''); // Reset location selection
   };
 
   // Handle order step navigation
@@ -285,21 +290,33 @@ const CardOrderingPage: React.FC = () => {
       return;
     }
 
-    // Validate user has access to the application's location
-    if (!user?.can_access_location(application.location_id)) {
+    // For admin users, validate location selection
+    const isAdmin = user?.is_superuser || user?.user_type === 'SYSTEM_USER' || user?.user_type === 'NATIONAL_ADMIN' || user?.user_type === 'PROVINCIAL_ADMIN';
+    if (isAdmin && !selectedPrintLocation) {
+      setError('Please select a location to handle the print job');
+      return;
+    }
+
+    // Determine the location for the print job
+    const printLocationId = isAdmin ? selectedPrintLocation : application.location_id;
+
+    // Validate user has access to the print location
+    if (!user?.can_access_location(printLocationId)) {
       setError('You do not have permission to create print jobs for this location');
       return;
     }
 
     try {
-      setLoading(true);
+      setOrderLoading(true);
       setError(null);
 
       console.log('Creating print job for application:', application.id);
+      console.log('Print location:', printLocationId);
 
       const printJob = await printJobService.createPrintJob({
         application_id: application.id,
-        card_template: 'MADAGASCAR_STANDARD'
+        card_template: 'MADAGASCAR_STANDARD',
+        location_id: printLocationId // Add location_id to the request
       });
 
       console.log('Print job created successfully:', printJob);
@@ -321,7 +338,7 @@ const CardOrderingPage: React.FC = () => {
         setError('Failed to create print job. Please try again.');
       }
     } finally {
-      setLoading(false);
+      setOrderLoading(false);
     }
   };
 
@@ -746,6 +763,35 @@ const CardOrderingPage: React.FC = () => {
                         {formatLicenseCategories(selectedApplication.person_licenses || [])}
                       </Typography>
                     </Grid>
+
+                    {/* Location Selection for Admin Users */}
+                    {(user?.is_superuser || user?.user_type === 'SYSTEM_USER' || user?.user_type === 'NATIONAL_ADMIN' || user?.user_type === 'PROVINCIAL_ADMIN') && (
+                      <Grid item xs={12}>
+                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                          Print Location *
+                        </Typography>
+                        <FormControl fullWidth required>
+                          <InputLabel>Select Location to Handle Print Job</InputLabel>
+                          <Select
+                            value={selectedPrintLocation}
+                            onChange={(e) => setSelectedPrintLocation(e.target.value)}
+                            label="Select Location to Handle Print Job"
+                          >
+                            <MenuItem value="">
+                              <em>Select a location...</em>
+                            </MenuItem>
+                            {accessibleLocations.map((location) => (
+                              <MenuItem key={location.id} value={location.id}>
+                                {location.name} ({location.code})
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                          This location will handle the card printing and be responsible for the print job.
+                        </Typography>
+                      </Grid>
+                    )}
 
                     <Grid item xs={12}>
                       <Typography variant="subtitle2" color="text.secondary">
