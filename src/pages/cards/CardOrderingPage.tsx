@@ -250,7 +250,7 @@ const CardOrderingPage: React.FC = () => {
       console.log('Print job created successfully:', printJob);
 
       // Show success message
-      setSuccessMessage(`Print job created successfully! Job Number: ${printJob.job_number}`);
+      setOrderSuccess(printJob);
       
       // Refresh applications to update status
       loadApplications();
@@ -267,6 +267,13 @@ const CardOrderingPage: React.FC = () => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handler for order card button
+  const handleCreatePrintJob = () => {
+    if (selectedApplication) {
+      createPrintJob(selectedApplication);
     }
   };
 

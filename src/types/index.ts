@@ -60,6 +60,9 @@ export interface User {
   roles: Role[];
   permissions: string[];
   created_at: string;
+  
+  // Method to check location access (will be added by AuthContext)
+  can_access_location?: (locationId: string) => boolean;
 }
 
 export interface LoginCredentials {
@@ -1232,6 +1235,7 @@ export const LEARNERS_PERMIT_RULES: Record<string, LicenseCategoryRule> = {
 export interface ApplicationForOrdering {
   id: string;
   person_id: string;
+  location_id: string;
   application_type: string;
   application_number?: string;
   status: string;

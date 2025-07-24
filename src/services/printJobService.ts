@@ -220,20 +220,20 @@ class PrintJobService {
 
   // Get accessible print queues based on user's role
   async getAccessiblePrintQueues(): Promise<any[]> {
-    const response = await this.makeRequest('GET', '/printing/queues');
-    return response;
+    return await this.makeRequest<any[]>('/printing/queues');
   }
 
   // Get specific print queue for a location (with access validation)
   async getPrintQueueByLocation(locationId: string): Promise<any> {
-    const response = await this.makeRequest('GET', `/printing/queue/${locationId}`);
-    return response;
+    return await this.makeRequest<any>(`/printing/queue/${locationId}`);
   }
 
   // Create print job with location validation
   async createPrintJob(printJobData: any): Promise<any> {
-    const response = await this.makeRequest('POST', '/printing/jobs', printJobData);
-    return response;
+    return await this.makeRequest<any>('/printing/jobs', {
+      method: 'POST',
+      body: JSON.stringify(printJobData)
+    });
   }
 
   // Get print queue for location
