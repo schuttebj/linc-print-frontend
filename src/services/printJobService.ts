@@ -24,6 +24,7 @@ export interface PrintJobCreateRequest {
   additional_application_ids?: string[];
   card_template?: string;
   production_notes?: string;
+  location_id?: string; // Optional location for admin users to specify print location
 }
 
 export interface PrintJobResponse {
