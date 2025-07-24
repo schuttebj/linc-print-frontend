@@ -350,13 +350,31 @@ const PrintQueuePage: React.FC = () => {
   // Load card images for preview
   const loadCardImages = async (jobId: string) => {
     try {
+      // Get the API base URL (same pattern as printJobService)
+      const getApiBaseUrl = (): string => {
+        const env = (import.meta as any).env;
+        
+        if (env?.VITE_API_BASE_URL) {
+          return env.VITE_API_BASE_URL;
+        }
+        
+        if (env?.DEV || env?.MODE === 'development') {
+          return 'http://localhost:8000';
+        }
+        
+        return 'https://linc-print-backend.onrender.com';
+      };
+      
+      const baseURL = getApiBaseUrl();
+      const token = localStorage.getItem('access_token');
+      
       // Load front and back card images
       const [frontResponse, backResponse] = await Promise.all([
-        fetch(`/api/v1/printing/jobs/${jobId}/files/front`, {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+        fetch(`${baseURL}/api/v1/printing/jobs/${jobId}/files/front`, {
+          headers: { 'Authorization': `Bearer ${token}` }
         }),
-        fetch(`/api/v1/printing/jobs/${jobId}/files/back`, {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+        fetch(`${baseURL}/api/v1/printing/jobs/${jobId}/files/back`, {
+          headers: { 'Authorization': `Bearer ${token}` }
         })
       ]);
 
