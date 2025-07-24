@@ -120,9 +120,10 @@ const CardOrderingByIdPage: React.FC = () => {
     setSearchResult(null);
 
     try {
-      const response = await fetch(`/api/v1/printing/card-ordering/search/${searchId.trim()}`, {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`https://linc-print-backend.onrender.com/api/v1/printing/card-ordering/search/${searchId.trim()}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
 
@@ -166,11 +167,12 @@ const CardOrderingByIdPage: React.FC = () => {
     setError(null);
 
     try {
-      const response = await fetch('/api/v1/printing/jobs', {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch('https://linc-print-backend.onrender.com/api/v1/printing/jobs', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           application_id: selectedApplication,

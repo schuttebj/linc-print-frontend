@@ -277,8 +277,8 @@ const DashboardLayout: React.FC = () => {
       permission: 'cards.read',
     },
     {
-      text: 'Order Cards',
-      icon: <AddIcon />,
+      text: 'Order Cards by ID',
+      icon: <Search />,
       path: '/dashboard/cards/order',
       permission: 'printing.create',
     },
