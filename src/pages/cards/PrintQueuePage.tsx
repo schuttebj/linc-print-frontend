@@ -58,10 +58,11 @@ import printJobService, {
 } from '../../services/printJobService';
 
 const PrintQueuePage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [loading, setLoading] = useState(false);
   const [queueData, setQueueData] = useState<PrintQueueResponse | null>(null);
-  const [selectedLocation, setSelectedLocation] = useState<string>(user?.primary_location_id || '');
+  const [selectedLocation, setSelectedLocation] = useState<string>('');
+  const [accessibleLocations, setAccessibleLocations] = useState<any[]>([]);
   const [selectedJob, setSelectedJob] = useState<PrintJobDetailResponse | null>(null);
   const [jobDetailDialogOpen, setJobDetailDialogOpen] = useState(false);
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
@@ -73,6 +74,39 @@ const PrintQueuePage: React.FC = () => {
 
   // Auto-refresh interval (30 seconds)
   const REFRESH_INTERVAL = 30000;
+
+  // Load accessible locations based on user role
+  const loadAccessibleLocations = async () => {
+    try {
+      setLoading(true);
+      
+      // For location roles (printer, supervisor, clerk), they can only see their assigned location
+      if (user?.primary_location_id && 
+          (user?.user_type === 'LOCATION_USER' || !user?.user_type)) {
+        // Location users see only their assigned location
+        setAccessibleLocations([{
+          id: user.primary_location_id,
+          name: user.primary_location || `Location ${user.primary_location_id}`,
+          current_queue_size: 0
+        }]);
+        setSelectedLocation(user.primary_location_id);
+      } else {
+        // For admins (national, provincial, system), load all accessible queues
+        const queues = await printJobService.getAccessiblePrintQueues();
+        setAccessibleLocations(queues);
+        
+        // Auto-select first location if available
+        if (queues.length > 0) {
+          setSelectedLocation(queues[0].location_id);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading accessible locations:', error);
+      setError('Failed to load accessible locations');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Load print queue
   const loadPrintQueue = async () => {
@@ -243,7 +277,24 @@ const PrintQueuePage: React.FC = () => {
     };
   };
 
-  // Setup auto-refresh
+  // Check if user has printer permission or permissions
+  const hasQueueAccess = () => {
+    // Check for printing.read permission (minimum required)
+    return hasPermission?.('printing.read') || user?.is_superuser;
+  };
+
+  // Check specific printing permissions
+  const canAssignJobs = () => hasPermission?.('printing.assign') || user?.is_superuser;
+  const canStartPrinting = () => hasPermission?.('printing.print') || user?.is_superuser;
+  const canManageQueue = () => hasPermission?.('printing.queue_manage') || user?.is_superuser;
+  const canPerformQA = () => hasPermission?.('printing.quality_check') || user?.is_superuser;
+
+  // Load locations on mount
+  useEffect(() => {
+    loadAccessibleLocations();
+  }, [user]);
+
+  // Setup auto-refresh when location is selected
   useEffect(() => {
     if (selectedLocation) {
       loadPrintQueue();
@@ -266,6 +317,23 @@ const PrintQueuePage: React.FC = () => {
   }, [refreshInterval]);
 
   const stats = getQueueStats();
+
+  // Check if user has access to print queues
+  if (!hasQueueAccess()) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="warning">
+          <Typography variant="h6" gutterBottom>
+            Access Restricted
+          </Typography>
+          <Typography>
+            Print queue access is restricted to users with Printer, Supervisor, or Admin roles.
+            Please contact your system administrator if you believe you should have access.
+          </Typography>
+        </Alert>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 3 }}>
@@ -355,12 +423,11 @@ const PrintQueuePage: React.FC = () => {
                 onChange={(e) => setSelectedLocation(e.target.value)}
                 label="Print Location"
               >
-                {user?.primary_location_id && (
-                  <MenuItem value={user.primary_location_id}>
-                    {user.primary_location || `Location ${user.primary_location_id}`}
+                {accessibleLocations.map((loc) => (
+                  <MenuItem key={loc.id} value={loc.id}>
+                    {loc.name}
                   </MenuItem>
-                )}
-                {/* Additional locations would be loaded here based on user permissions */}
+                ))}
               </Select>
             </FormControl>
           </Grid>

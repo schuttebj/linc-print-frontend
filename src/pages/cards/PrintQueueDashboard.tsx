@@ -97,7 +97,7 @@ function TabPanel(props: TabPanelProps) {
 }
 
 const PrintQueueDashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [loading, setLoading] = useState(false);
   const [queueData, setQueueData] = useState<PrintQueueResponse | null>(null);
   const [statistics, setStatistics] = useState<PrintJobStatistics | null>(null);
@@ -131,6 +131,14 @@ const PrintQueueDashboard: React.FC = () => {
   // State for accessible locations
   const [accessibleQueues, setAccessibleQueues] = useState<any[]>([]);
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
+
+  // Permission-based access checks
+  const hasQueueAccess = () => hasPermission('printing.read') || user?.is_superuser;
+  const canManageQueue = () => hasPermission('printing.queue_manage') || user?.is_superuser;
+  const canAssignJobs = () => hasPermission('printing.assign') || user?.is_superuser;
+  const canStartPrinting = () => hasPermission('printing.print') || user?.is_superuser;
+  const canPerformQA = () => hasPermission('printing.quality_check') || user?.is_superuser;
+  const canViewStatistics = () => hasPermission('printing.read') || user?.is_superuser;
 
   // Load accessible print queues on mount
   useEffect(() => {
@@ -167,8 +175,10 @@ const PrintQueueDashboard: React.FC = () => {
       setError(null);
 
       const queueData = await printJobService.getPrintQueueByLocation(locationId);
-      // Update your queue state with detailed data
-      // This replaces the old loadQueues function
+      
+      // ✅ Actually update the state with fetched data!
+      setQueueData(queueData);
+      
       console.log('Loaded detailed queue for location:', locationId, queueData);
       
     } catch (err: any) {
@@ -390,6 +400,23 @@ const PrintQueueDashboard: React.FC = () => {
   }, [refreshInterval]);
 
   const dashboardStats = getDashboardStats();
+
+  // Check if user has access to print queue dashboard
+  if (!hasQueueAccess()) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="warning">
+          <Typography variant="h6" gutterBottom>
+            Access Restricted
+          </Typography>
+          <Typography>
+            Print queue dashboard access requires the 'printing.read' permission.
+            Please contact your system administrator if you believe you should have access.
+          </Typography>
+        </Alert>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 3 }}>
