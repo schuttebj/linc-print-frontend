@@ -32,7 +32,8 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  LinearProgress
+  LinearProgress,
+  Divider
 } from '@mui/material';
 import {
   Print as PrintIcon,
@@ -47,7 +48,11 @@ import {
   ExpandMore as ExpandMoreIcon,
   Info as InfoIcon,
   Person as PersonIcon,
-  Schedule as ScheduleIcon
+  Schedule as ScheduleIcon,
+  Search as SearchIcon,
+  Visibility as VisibilityIcon,
+  Clear as ClearIcon,
+  CheckCircle as CheckCircle
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import printJobService, { 
@@ -72,8 +77,26 @@ const PrintQueuePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null);
 
+  // Enhanced features state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<PrintJobResponse[]>([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  
+  // Print preview state
+  const [printPreviewOpen, setPrintPreviewOpen] = useState(false);
+  const [previewJob, setPreviewJob] = useState<PrintJobDetailResponse | null>(null);
+  const [cardImages, setCardImages] = useState<{front?: string, back?: string}>({});
+  
+  // Admin location selection
+  const [adminSelectedLocation, setAdminSelectedLocation] = useState<string>('');
+  const [availableLocations, setAvailableLocations] = useState<any[]>([]);
+
   // Auto-refresh interval (30 seconds)
   const REFRESH_INTERVAL = 30000;
+
+  // Role-based UI controls
+  const isLocationUser = () => user?.user_type === 'LOCATION_USER' || user?.primary_location_id;
+  const isAdmin = () => ['NATIONAL_ADMIN', 'PROVINCIAL_ADMIN', 'SYSTEM_USER'].includes(user?.user_type || '');
 
   // Load accessible locations based on user role
   const loadAccessibleLocations = async () => {
@@ -126,58 +149,128 @@ const PrintQueuePage: React.FC = () => {
     }
   };
 
-  // Handle job action (assign, start, complete, etc.)
-  const handleJobAction = async (job: PrintJobResponse, action: string) => {
-    setSelectedJob(null);
-    
-    // Load full job details
-    try {
-      const jobDetails = await printJobService.getPrintJob(job.id);
-      setSelectedJob(jobDetails);
-    } catch (error) {
-      console.error('Error loading job details:', error);
+  // Get available actions for a job based on new simplified workflow
+  const getAvailableActions = (job: PrintJobResponse) => {
+    const actions = [];
+
+    // Always show view/details action
+    actions.push({
+      action: 'view',
+      label: 'View Details',
+      icon: <InfoIcon />,
+      color: 'info' as const
+    });
+
+    switch (job.status) {
+      case 'QUEUED':
+        // Only show start printing if user has print permission
+        if (canStartPrinting()) {
+          actions.push({ 
+            action: 'start_print', 
+            label: 'Start Printing', 
+            icon: <StartIcon />, 
+            color: 'success' as const 
+          });
+        }
+        
+        // Show preview for anyone with read access
+        actions.push({
+          action: 'preview',
+          label: 'Preview Card',
+          icon: <VisibilityIcon />,
+          color: 'primary' as const
+        });
+        break;
+        
+      case 'ASSIGNED':
+      case 'PRINTING':
+        // Show complete button if user is assigned to this job
+        if (job.assigned_to_user_id === user?.id && canStartPrinting()) {
+          actions.push({ 
+            action: 'complete', 
+            label: 'Mark Complete', 
+            icon: <CompleteIcon />, 
+            color: 'success' as const 
+          });
+        }
+        
+        // Show preview
+        actions.push({
+          action: 'preview',
+          label: 'Preview Card',
+          icon: <VisibilityIcon />,
+          color: 'primary' as const
+        });
+        break;
+        
+      case 'PRINTED':
+        // Ready for QA - show in info color
+        actions.push({
+          action: 'view',
+          label: 'Ready for QA',
+          icon: <QualityIcon />,
+          color: 'warning' as const
+        });
+        break;
+        
+      case 'COMPLETED':
+        // Show completed status
+        actions.push({
+          action: 'view',
+          label: 'Completed',
+          icon: <CheckCircle />,
+          color: 'success' as const
+        });
+        break;
     }
 
-    setActionType(action);
-    setActionReason('');
-    setActionDialogOpen(true);
+    return actions;
   };
 
-  // Execute job action
-  const executeJobAction = async () => {
-    if (!selectedJob) return;
+  // Handle job actions - simplified workflow
+  const handleJobAction = async (job: PrintJobResponse, action: string) => {
+    switch (action) {
+      case 'start_print':
+        await handleStartPrinting(job);
+        break;
+        
+      case 'preview':
+        await handlePreviewCard(job);
+        break;
+        
+      case 'complete':
+        await handleCompletePrinting(job);
+        break;
+        
+      case 'view':
+      default:
+        await viewJobDetails(job);
+        break;
+    }
+  };
 
-    setActionLoading(true);
+  // Preview card without starting printing
+  const handlePreviewCard = async (job: PrintJobResponse) => {
     try {
-      switch (actionType) {
-        case 'assign':
-          await printJobService.assignJobToPrinter(selectedJob.id, user?.id || '');
-          break;
-        case 'start':
-          await printJobService.startPrintingJob(selectedJob.id);
-          break;
-        case 'complete':
-          await printJobService.completePrintingJob(selectedJob.id, actionReason);
-          break;
-        case 'move_top':
-          await printJobService.moveJobToTop(selectedJob.id, actionReason);
-          break;
-        case 'qa_start':
-          await printJobService.startQualityCheck(selectedJob.id);
-          break;
-        case 'qa_pass':
-          await printJobService.completeQualityCheck(selectedJob.id, 'PASSED', actionReason);
-          break;
-        case 'qa_fail':
-          await printJobService.completeQualityCheck(selectedJob.id, 'FAILED_PRINTING', actionReason);
-          break;
-      }
+      const jobDetails = await printJobService.getPrintJob(job.id);
+      setPreviewJob(jobDetails);
+      await loadCardImages(job.id);
+      setPrintPreviewOpen(true);
+    } catch (error) {
+      console.error('Error loading card preview:', error);
+      setError('Failed to load card preview');
+    }
+  };
 
-      setActionDialogOpen(false);
+  // Complete printing job
+  const handleCompletePrinting = async (job: PrintJobResponse) => {
+    try {
+      setActionLoading(true);
+      await printJobService.completePrintingJob(job.id, 'Printing completed');
       loadPrintQueue(); // Refresh queue
     } catch (error) {
-      console.error('Error executing job action:', error);
-      setError('Failed to execute action. Please try again.');
+      console.error('Error completing print job:', error);
+      setError('Failed to complete print job');
     } finally {
       setActionLoading(false);
     }
@@ -193,72 +286,6 @@ const PrintQueuePage: React.FC = () => {
       console.error('Error loading job details:', error);
       setError('Failed to load job details');
     }
-  };
-
-  // Get available actions for a job
-  const getAvailableActions = (job: PrintJobResponse) => {
-    const actions = [];
-
-    switch (job.status) {
-      case 'QUEUED':
-        actions.push({ 
-          action: 'assign', 
-          label: 'Assign to Me', 
-          icon: <AssignIcon />, 
-          color: 'primary' as const 
-        });
-        actions.push({ 
-          action: 'move_top', 
-          label: 'Move to Top', 
-          icon: <MoveUpIcon />, 
-          color: 'warning' as const 
-        });
-        break;
-      case 'ASSIGNED':
-        if (job.assigned_to_user_id === user?.id) {
-          actions.push({ 
-            action: 'start', 
-            label: 'Start Printing', 
-            icon: <StartIcon />, 
-            color: 'success' as const 
-          });
-        }
-        break;
-      case 'PRINTING':
-        if (job.assigned_to_user_id === user?.id) {
-          actions.push({ 
-            action: 'complete', 
-            label: 'Complete Printing', 
-            icon: <CompleteIcon />, 
-            color: 'success' as const 
-          });
-        }
-        break;
-      case 'PRINTED':
-        actions.push({ 
-          action: 'qa_start', 
-          label: 'Start QA', 
-          icon: <QualityIcon />, 
-          color: 'info' as const 
-        });
-        break;
-      case 'QUALITY_CHECK':
-        actions.push({ 
-          action: 'qa_pass', 
-          label: 'QA Pass', 
-          icon: <CompleteIcon />, 
-          color: 'success' as const 
-        });
-        actions.push({ 
-          action: 'qa_fail', 
-          label: 'QA Fail', 
-          icon: <WarningIcon />, 
-          color: 'error' as const 
-        });
-        break;
-    }
-
-    return actions;
   };
 
   // Get queue statistics
@@ -277,17 +304,129 @@ const PrintQueuePage: React.FC = () => {
     };
   };
 
-  // Check if user has printer permission or permissions
-  const hasQueueAccess = () => {
-    // Check for printing.read permission (minimum required)
-    return hasPermission?.('printing.read') || user?.is_superuser;
+  // Permission-based access checks
+  const hasQueueAccess = () => hasPermission('printing.read') || user?.is_superuser;
+  const canAssignJobs = () => hasPermission('printing.assign') || user?.is_superuser;
+  const canStartPrinting = () => hasPermission('printing.print') || user?.is_superuser;
+  const canManageQueue = () => hasPermission('printing.queue_manage') || user?.is_superuser;
+  const canPerformQA = () => hasPermission('printing.quality_check') || user?.is_superuser;
+
+  // Search for print jobs by ID or person details
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) {
+      setShowSearchResults(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Search for jobs using the search API
+      const response = await printJobService.searchPrintJobs({
+        job_number: searchQuery,  // Search by job number
+        // Add location filter for location users
+        ...(isLocationUser() && user?.primary_location_id && {
+          location_id: user.primary_location_id
+        })
+      });
+
+      setSearchResults(response.jobs);
+      setShowSearchResults(true);
+    } catch (error) {
+      console.error('Error searching print jobs:', error);
+      setError('Failed to search print jobs');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Check specific printing permissions
-  const canAssignJobs = () => hasPermission?.('printing.assign') || user?.is_superuser;
-  const canStartPrinting = () => hasPermission?.('printing.print') || user?.is_superuser;
-  const canManageQueue = () => hasPermission?.('printing.queue_manage') || user?.is_superuser;
-  const canPerformQA = () => hasPermission?.('printing.quality_check') || user?.is_superuser;
+  // Clear search results
+  const clearSearch = () => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowSearchResults(false);
+  };
+
+  // Load card images for preview
+  const loadCardImages = async (jobId: string) => {
+    try {
+      // Load front and back card images
+      const [frontResponse, backResponse] = await Promise.all([
+        fetch(`/api/v1/printing/jobs/${jobId}/files/front`, {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+        }),
+        fetch(`/api/v1/printing/jobs/${jobId}/files/back`, {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+        })
+      ]);
+
+      const images: {front?: string, back?: string} = {};
+      
+      if (frontResponse.ok) {
+        const frontBlob = await frontResponse.blob();
+        images.front = URL.createObjectURL(frontBlob);
+      }
+      
+      if (backResponse.ok) {
+        const backBlob = await backResponse.blob();
+        images.back = URL.createObjectURL(backBlob);
+      }
+
+      setCardImages(images);
+    } catch (error) {
+      console.error('Error loading card images:', error);
+      setError('Failed to load card images');
+    }
+  };
+
+  // Start printing with preview
+  const handleStartPrinting = async (job: PrintJobResponse) => {
+    try {
+      // Load full job details
+      const jobDetails = await printJobService.getPrintJob(job.id);
+      setPreviewJob(jobDetails);
+      
+      // Load card images
+      await loadCardImages(job.id);
+      
+      // Show preview dialog
+      setPrintPreviewOpen(true);
+    } catch (error) {
+      console.error('Error starting print preview:', error);
+      setError('Failed to load print preview');
+    }
+  };
+
+  // Confirm printing start (auto-assigns to current user)
+  const confirmStartPrinting = async () => {
+    if (!previewJob) return;
+
+    try {
+      setActionLoading(true);
+      
+      // Auto-assign job to current user and start printing
+      await printJobService.assignJobToPrinter(previewJob.id, user?.id || '');
+      await printJobService.startPrintingJob(previewJob.id);
+      
+      setPrintPreviewOpen(false);
+      setPreviewJob(null);
+      
+      // Cleanup image URLs
+      Object.values(cardImages).forEach(url => {
+        if (url) URL.revokeObjectURL(url);
+      });
+      setCardImages({});
+      
+      // Refresh queue
+      loadPrintQueue();
+      
+    } catch (error) {
+      console.error('Error starting printing:', error);
+      setError('Failed to start printing');
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   // Load locations on mount
   useEffect(() => {
@@ -412,42 +551,96 @@ const PrintQueuePage: React.FC = () => {
         </Grid>
       )}
 
-      {/* Controls */}
+      {/* Enhanced Controls */}
       <Paper sx={{ p: 2, mb: 3 }}>
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={6}>
-            <FormControl fullWidth>
-              <InputLabel>Print Location</InputLabel>
-              <Select
-                value={selectedLocation}
-                onChange={(e) => setSelectedLocation(e.target.value)}
-                label="Print Location"
-              >
-                {accessibleLocations.map((loc) => (
-                  <MenuItem key={loc.id} value={loc.id}>
-                    {loc.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <Button
+          {/* Search Bar */}
+          <Grid item xs={12} md={4}>
+            <TextField
               fullWidth
-              variant="outlined"
-              startIcon={<RefreshIcon />}
-              onClick={loadPrintQueue}
-              disabled={loading}
-            >
-              Refresh Queue
-            </Button>
+              label="Search Jobs"
+              placeholder="Search by ID number, person name, or job number"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              InputProps={{
+                endAdornment: (
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <IconButton onClick={handleSearch} disabled={loading}>
+                      <SearchIcon />
+                    </IconButton>
+                    {showSearchResults && (
+                      <IconButton onClick={clearSearch}>
+                        <ClearIcon />
+                      </IconButton>
+                    )}
+                  </Box>
+                )
+              }}
+            />
           </Grid>
-          <Grid item xs={12} md={3}>
-            <Typography variant="body2" color="text.secondary" textAlign="center">
-              Auto-refresh: 30s
-            </Typography>
+
+          {/* Location Selector - Only for Admin Users */}
+          {isAdmin() && (
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth>
+                <InputLabel>Print Location</InputLabel>
+                <Select
+                  value={selectedLocation}
+                  onChange={(e) => setSelectedLocation(e.target.value)}
+                  label="Print Location"
+                >
+                  {accessibleLocations.map((loc) => (
+                    <MenuItem key={loc.id} value={loc.id}>
+                      {loc.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+          )}
+
+          {/* Location Users Info */}
+          {isLocationUser() && (
+            <Grid item xs={12} md={4}>
+              <Box sx={{ p: 2, bgcolor: 'primary.50', borderRadius: 1 }}>
+                <Typography variant="body2" color="primary">
+                  <strong>Location:</strong> {user?.primary_location || 'Your Location'}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Showing jobs for your assigned location only
+                </Typography>
+              </Box>
+            </Grid>
+          )}
+
+          {/* Controls */}
+          <Grid item xs={12} md={isAdmin() ? 4 : 8}>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                variant="outlined"
+                startIcon={<RefreshIcon />}
+                onClick={loadPrintQueue}
+                disabled={loading}
+              >
+                Refresh
+              </Button>
+              <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', ml: 2 }}>
+                Auto-refresh: 30s
+              </Typography>
+            </Box>
           </Grid>
         </Grid>
+
+        {/* Search Results Indicator */}
+        {showSearchResults && (
+          <Box sx={{ mt: 2, p: 1, bgcolor: 'info.50', borderRadius: 1 }}>
+            <Typography variant="body2" color="info.main">
+              <SearchIcon sx={{ fontSize: 16, mr: 1, verticalAlign: 'middle' }} />
+              Showing {searchResults.length} search results for "{searchQuery}"
+            </Typography>
+          </Box>
+        )}
       </Paper>
 
       {/* Error Display */}
@@ -464,160 +657,230 @@ const PrintQueuePage: React.FC = () => {
         </Box>
       )}
 
-      {/* Queue Sections */}
-      {queueData && (
-        <>
-          {/* Queued Jobs */}
-          <Accordion defaultExpanded>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography variant="h6">
-                <Badge badgeContent={queueData.queued_jobs.length} color="info">
-                  Queued Jobs
-                </Badge>
-              </Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              {queueData.queued_jobs.length === 0 ? (
-                <Alert severity="info">No jobs in queue</Alert>
-              ) : (
-                <TableContainer component={Paper}>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Position</TableCell>
-                        <TableCell>Job Number</TableCell>
-                        <TableCell>Person</TableCell>
-                        <TableCell>Card Number</TableCell>
-                        <TableCell>Priority</TableCell>
-                        <TableCell>Submitted</TableCell>
-                        <TableCell>Actions</TableCell>
+      {/* Search Results */}
+      {showSearchResults ? (
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Search Results ({searchResults.length} jobs found)
+            </Typography>
+            {searchResults.length === 0 ? (
+              <Alert severity="info">No jobs found matching your search criteria</Alert>
+            ) : (
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Job Number</TableCell>
+                      <TableCell>Person</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Location</TableCell>
+                      <TableCell>Submitted</TableCell>
+                      <TableCell>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {searchResults.map((job) => (
+                      <TableRow key={job.id}>
+                        <TableCell>
+                          <Button
+                            variant="text"
+                            onClick={() => viewJobDetails(job)}
+                          >
+                            {job.job_number}
+                          </Button>
+                        </TableCell>
+                        <TableCell>{job.person_name || 'Unknown'}</TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={job.status}
+                            color={printJobService.getStatusColor(job.status)}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>{job.print_location_name || 'Unknown'}</TableCell>
+                        <TableCell>
+                          {printJobService.formatShortDate(job.submitted_at)}
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            {getAvailableActions(job).map((action) => (
+                              <Tooltip key={action.action} title={action.label}>
+                                <IconButton
+                                  size="small"
+                                  color={action.color}
+                                  onClick={() => handleJobAction(job, action.action)}
+                                >
+                                  {action.icon}
+                                </IconButton>
+                              </Tooltip>
+                            ))}
+                          </Box>
+                        </TableCell>
                       </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {queueData.queued_jobs.map((job) => (
-                        <TableRow key={job.id}>
-                          <TableCell>{job.queue_position}</TableCell>
-                          <TableCell>
-                            <Button
-                              variant="text"
-                              onClick={() => viewJobDetails(job)}
-                            >
-                              {job.job_number}
-                            </Button>
-                          </TableCell>
-                          <TableCell>{job.person_name || 'Unknown'}</TableCell>
-                          <TableCell>{job.card_number}</TableCell>
-                          <TableCell>
-                            <Chip 
-                              label={printJobService.getPriorityDisplayName(job.priority)}
-                              color={printJobService.getPriorityColor(job.priority)}
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            {printJobService.formatShortDate(job.submitted_at)}
-                          </TableCell>
-                          <TableCell>
-                            <Box sx={{ display: 'flex', gap: 1 }}>
-                              {getAvailableActions(job).map((action) => (
-                                <Tooltip key={action.action} title={action.label}>
-                                  <IconButton
-                                    size="small"
-                                    color={action.color}
-                                    onClick={() => handleJobAction(job, action.action)}
-                                  >
-                                    {action.icon}
-                                  </IconButton>
-                                </Tooltip>
-                              ))}
-                            </Box>
-                          </TableCell>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        /* Queue Sections - Regular View */
+        queueData && (
+          <>
+            {/* Queued Jobs */}
+            <Accordion defaultExpanded>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography variant="h6">
+                  <Badge badgeContent={queueData.queued_jobs.length} color="info">
+                    Queued Jobs
+                  </Badge>
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                {queueData.queued_jobs.length === 0 ? (
+                  <Alert severity="info">No jobs in queue</Alert>
+                ) : (
+                  <TableContainer component={Paper}>
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Position</TableCell>
+                          <TableCell>Job Number</TableCell>
+                          <TableCell>Person</TableCell>
+                          <TableCell>Card Number</TableCell>
+                          <TableCell>Priority</TableCell>
+                          <TableCell>Submitted</TableCell>
+                          <TableCell>Actions</TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
-            </AccordionDetails>
-          </Accordion>
+                      </TableHead>
+                      <TableBody>
+                        {queueData.queued_jobs.map((job) => (
+                          <TableRow key={job.id}>
+                            <TableCell>{job.queue_position}</TableCell>
+                            <TableCell>
+                              <Button
+                                variant="text"
+                                onClick={() => viewJobDetails(job)}
+                              >
+                                {job.job_number}
+                              </Button>
+                            </TableCell>
+                            <TableCell>{job.person_name || 'Unknown'}</TableCell>
+                            <TableCell>{job.card_number}</TableCell>
+                            <TableCell>
+                              <Chip 
+                                label={printJobService.getPriorityDisplayName(job.priority)}
+                                color={printJobService.getPriorityColor(job.priority)}
+                                size="small"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              {printJobService.formatShortDate(job.submitted_at)}
+                            </TableCell>
+                            <TableCell>
+                              <Box sx={{ display: 'flex', gap: 1 }}>
+                                {getAvailableActions(job).map((action) => (
+                                  <Tooltip key={action.action} title={action.label}>
+                                    <IconButton
+                                      size="small"
+                                      color={action.color}
+                                      onClick={() => handleJobAction(job, action.action)}
+                                    >
+                                      {action.icon}
+                                    </IconButton>
+                                  </Tooltip>
+                                ))}
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                )}
+              </AccordionDetails>
+            </Accordion>
 
-          {/* In Progress Jobs */}
-          <Accordion>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography variant="h6">
-                <Badge badgeContent={queueData.in_progress_jobs.length} color="warning">
-                  In Progress Jobs
-                </Badge>
-              </Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              {queueData.in_progress_jobs.length === 0 ? (
-                <Alert severity="info">No jobs in progress</Alert>
-              ) : (
-                <TableContainer component={Paper}>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Job Number</TableCell>
-                        <TableCell>Person</TableCell>
-                        <TableCell>Status</TableCell>
-                        <TableCell>Assigned To</TableCell>
-                        <TableCell>Started</TableCell>
-                        <TableCell>Actions</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {queueData.in_progress_jobs.map((job) => (
-                        <TableRow key={job.id}>
-                          <TableCell>
-                            <Button
-                              variant="text"
-                              onClick={() => viewJobDetails(job)}
-                            >
-                              {job.job_number}
-                            </Button>
-                          </TableCell>
-                          <TableCell>{job.person_name || 'Unknown'}</TableCell>
-                          <TableCell>
-                            <Chip 
-                              label={printJobService.getStatusDisplayName(job.status)}
-                              color={printJobService.getStatusColor(job.status)}
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            {job.assigned_to_user_name || 'Unassigned'}
-                          </TableCell>
-                          <TableCell>
-                            {job.printing_started_at ? 
-                              printJobService.formatShortDate(job.printing_started_at) : 
-                              'Not started'
-                            }
-                          </TableCell>
-                          <TableCell>
-                            <Box sx={{ display: 'flex', gap: 1 }}>
-                              {getAvailableActions(job).map((action) => (
-                                <Tooltip key={action.action} title={action.label}>
-                                  <IconButton
-                                    size="small"
-                                    color={action.color}
-                                    onClick={() => handleJobAction(job, action.action)}
-                                  >
-                                    {action.icon}
-                                  </IconButton>
-                                </Tooltip>
-                              ))}
-                            </Box>
-                          </TableCell>
+            {/* In Progress Jobs */}
+            <Accordion>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography variant="h6">
+                  <Badge badgeContent={queueData.in_progress_jobs.length} color="warning">
+                    In Progress Jobs
+                  </Badge>
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                {queueData.in_progress_jobs.length === 0 ? (
+                  <Alert severity="info">No jobs in progress</Alert>
+                ) : (
+                  <TableContainer component={Paper}>
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Job Number</TableCell>
+                          <TableCell>Person</TableCell>
+                          <TableCell>Status</TableCell>
+                          <TableCell>Assigned To</TableCell>
+                          <TableCell>Started</TableCell>
+                          <TableCell>Actions</TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
-            </AccordionDetails>
-          </Accordion>
-        </>
+                      </TableHead>
+                      <TableBody>
+                        {queueData.in_progress_jobs.map((job) => (
+                          <TableRow key={job.id}>
+                            <TableCell>
+                              <Button
+                                variant="text"
+                                onClick={() => viewJobDetails(job)}
+                              >
+                                {job.job_number}
+                              </Button>
+                            </TableCell>
+                            <TableCell>{job.person_name || 'Unknown'}</TableCell>
+                            <TableCell>
+                              <Chip 
+                                label={printJobService.getStatusDisplayName(job.status)}
+                                color={printJobService.getStatusColor(job.status)}
+                                size="small"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              {job.assigned_to_user_name || 'Unassigned'}
+                            </TableCell>
+                            <TableCell>
+                              {job.printing_started_at ? 
+                                printJobService.formatShortDate(job.printing_started_at) : 
+                                'Not started'
+                              }
+                            </TableCell>
+                            <TableCell>
+                              <Box sx={{ display: 'flex', gap: 1 }}>
+                                {getAvailableActions(job).map((action) => (
+                                  <Tooltip key={action.action} title={action.label}>
+                                    <IconButton
+                                      size="small"
+                                      color={action.color}
+                                      onClick={() => handleJobAction(job, action.action)}
+                                    >
+                                      {action.icon}
+                                    </IconButton>
+                                  </Tooltip>
+                                ))}
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                )}
+              </AccordionDetails>
+            </Accordion>
+          </>
+        )
       )}
 
       {/* Job Detail Dialog */}
@@ -704,49 +967,80 @@ const PrintQueuePage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Action Dialog */}
-      <Dialog 
-        open={actionDialogOpen} 
-        onClose={() => setActionDialogOpen(false)}
-        maxWidth="sm"
+      {/* Print Preview Dialog */}
+      <Dialog
+        open={printPreviewOpen}
+        onClose={() => setPrintPreviewOpen(false)}
+        maxWidth="md"
         fullWidth
       >
         <DialogTitle>
-          Confirm Action
+          Print Card Preview
+          {previewJob && (
+            <Typography variant="subtitle2" color="text.secondary">
+              Job: {previewJob.job_number} | Person: {previewJob.person_name}
+            </Typography>
+          )}
         </DialogTitle>
         <DialogContent>
-          <Typography variant="body1" gutterBottom>
-            Are you sure you want to {actionType.replace('_', ' ')} this print job?
-          </Typography>
-          
-          {(actionType === 'move_top' || actionType === 'complete' || actionType.includes('qa')) && (
-            <TextField
-              fullWidth
-              multiline
-              rows={3}
-              label={
-                actionType === 'move_top' ? 'Reason for moving to top' :
-                actionType === 'complete' ? 'Production notes' :
-                'Quality check notes'
-              }
-              value={actionReason}
-              onChange={(e) => setActionReason(e.target.value)}
-              margin="normal"
-              required={actionType === 'move_top' || actionType === 'qa_fail'}
-            />
+          {cardImages.front || cardImages.back ? (
+            <Grid container spacing={2}>
+              {cardImages.front && (
+                <Grid item xs={12} md={6}>
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Typography variant="h6" gutterBottom>Card Front</Typography>
+                    <img 
+                      src={cardImages.front} 
+                      alt="Card Front" 
+                      style={{ 
+                        maxWidth: '100%', 
+                        height: 'auto', 
+                        border: '1px solid #ccc',
+                        borderRadius: '8px'
+                      }} 
+                    />
+                  </Box>
+                </Grid>
+              )}
+              {cardImages.back && (
+                <Grid item xs={12} md={6}>
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Typography variant="h6" gutterBottom>Card Back</Typography>
+                    <img 
+                      src={cardImages.back} 
+                      alt="Card Back" 
+                      style={{ 
+                        maxWidth: '100%', 
+                        height: 'auto', 
+                        border: '1px solid #ccc',
+                        borderRadius: '8px'
+                      }} 
+                    />
+                  </Box>
+                </Grid>
+              )}
+            </Grid>
+          ) : (
+            <Alert severity="info">
+              Card images are being loaded...
+            </Alert>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setActionDialogOpen(false)}>
-            Cancel
+          <Button onClick={() => setPrintPreviewOpen(false)}>
+            Close Preview
           </Button>
-          <Button 
-            onClick={executeJobAction}
-            variant="contained"
-            disabled={actionLoading || ((actionType === 'move_top' || actionType === 'qa_fail') && !actionReason.trim())}
-          >
-            {actionLoading ? <CircularProgress size={20} /> : 'Confirm'}
-          </Button>
+          {previewJob?.status === 'QUEUED' && canStartPrinting() && (
+            <Button
+              onClick={confirmStartPrinting}
+              variant="contained"
+              color="success"
+              disabled={actionLoading}
+              startIcon={actionLoading ? <CircularProgress size={20} /> : <StartIcon />}
+            >
+              {actionLoading ? 'Starting...' : 'Start Printing'}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </Box>
