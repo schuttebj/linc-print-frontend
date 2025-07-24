@@ -93,23 +93,38 @@ const CardOrderingPage: React.FC = () => {
 
   // Load accessible locations for admin users
   useEffect(() => {
+    console.log('User object for location check:', user);
+    console.log('User type check:', user?.user_type);
+    console.log('Is superuser:', user?.is_superuser);
+    
     if (user && (user.is_superuser || user.user_type === 'SYSTEM_USER' || user.user_type === 'NATIONAL_ADMIN' || user.user_type === 'PROVINCIAL_ADMIN')) {
+      console.log('Loading accessible locations for admin user');
       loadAccessibleLocations();
+    } else {
+      console.log('User is not admin, not loading locations');
     }
   }, [user]);
 
   const loadAccessibleLocations = async () => {
     try {
+      console.log('Starting to load accessible locations...');
       // Get locations based on user access level
-      // This would need to be implemented in a locationService
-      // For now, we'll use the print job service to get accessible locations
       const queues = await printJobService.getAccessiblePrintQueues();
-      setAccessibleLocations(queues.map(queue => ({
+      console.log('Loaded queues:', queues);
+      
+      const locations = queues.map(queue => ({
         id: queue.location_id,
         name: queue.location_name
-      })));
+      }));
+      
+      setAccessibleLocations(locations);
+      console.log('Set accessible locations:', locations);
     } catch (error) {
       console.error('Error loading accessible locations:', error);
+      
+      // Fallback: If the accessible queues endpoint fails, set empty array
+      // In production, you might want to call a dedicated locations endpoint
+      setAccessibleLocations([]);
     }
   };
 
@@ -415,25 +430,32 @@ const CardOrderingPage: React.FC = () => {
           </Grid>
           
           {/* Location Selector - Show for System/National/Provincial Admins */}
-          {user && (user.is_superuser || user.user_type === 'SYSTEM_USER' || user.user_type === 'NATIONAL_ADMIN' || user.user_type === 'PROVINCIAL_ADMIN') && (
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth>
-                <InputLabel>Location</InputLabel>
-                <Select
-                  value={searchFilters.location_id || ''}
-                  onChange={(e) => setSearchFilters({...searchFilters, location_id: e.target.value})}
-                  label="Location"
-                >
-                  <MenuItem value="">All Accessible Locations</MenuItem>
-                  {accessibleLocations.map((location) => (
-                    <MenuItem key={location.id} value={location.id}>
-                      {location.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-          )}
+          {(() => {
+            const shouldShowLocationSelector = user && (user.is_superuser || user.user_type === 'SYSTEM_USER' || user.user_type === 'NATIONAL_ADMIN' || user.user_type === 'PROVINCIAL_ADMIN');
+            console.log('Should show location selector:', shouldShowLocationSelector);
+            console.log('User for location selector:', user);
+            console.log('Accessible locations count:', accessibleLocations.length);
+            
+            return shouldShowLocationSelector ? (
+              <Grid item xs={12} md={3}>
+                <FormControl fullWidth>
+                  <InputLabel>Location</InputLabel>
+                  <Select
+                    value={searchFilters.location_id || ''}
+                    onChange={(e) => setSearchFilters({...searchFilters, location_id: e.target.value})}
+                    label="Location"
+                  >
+                    <MenuItem value="">All Accessible Locations</MenuItem>
+                    {accessibleLocations.map((location) => (
+                      <MenuItem key={location.id} value={location.id}>
+                        {location.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            ) : null;
+          })()}
           
           <Grid item xs={12} md={2}>
             <Button
