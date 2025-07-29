@@ -2013,18 +2013,23 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                   </Grid>
                   <Grid item xs={12} sm={4}>
                     <Box display="flex" alignItems="center" gap={1}>
-                      <CreateIcon color={formData.biometric_data.signature ? "success" : "action"} />
-                      <Typography variant="body1" sx={{ fontWeight: formData.biometric_data.signature ? 600 : 400 }}>
-                        Signature: {formData.biometric_data.signature ? "✓ Captured" : "Optional"}
-                      </Typography>
+                      <Stack direction="row" spacing={2} alignItems="center">
+                        <EditIcon color={formData.biometric_data.signature ? 'success' : (formData.license_category && !['1', '2', '3'].includes(formData.license_category) ? 'warning' : 'inherit')} />
+                        <Typography>
+                          Signature: {formData.biometric_data.signature ? "✓ Captured" : (formData.license_category && !['1', '2', '3'].includes(formData.license_category) ? "⚠ Required" : "Optional")}
+                        </Typography>
+                      </Stack>
                     </Box>
                   </Grid>
+                       
                   <Grid item xs={12} sm={4}>
                     <Box display="flex" alignItems="center" gap={1}>
-                      <FingerprintIcon color={formData.biometric_data.fingerprint ? "success" : "action"} />
-                      <Typography variant="body1" sx={{ fontWeight: formData.biometric_data.fingerprint ? 600 : 400 }}>
-                        Fingerprint: {formData.biometric_data.fingerprint ? "✓ Captured" : "Optional"}
-                      </Typography>
+                      <Stack direction="row" spacing={2} alignItems="center">
+                        <FingerprintIcon color={formData.biometric_data.fingerprint ? 'success' : 'inherit'} />
+                        <Typography>
+                          Fingerprint: {formData.biometric_data.fingerprint ? "✓ Captured" : "Optional"}
+                        </Typography>
+                      </Stack>
                     </Box>
                   </Grid>
                 </Grid>

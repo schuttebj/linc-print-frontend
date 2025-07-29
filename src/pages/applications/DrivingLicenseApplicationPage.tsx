@@ -805,7 +805,7 @@ const DrivingLicenseApplicationPage: React.FC = () => {
                   {/* Signature Status */}
                   <Grid item xs={12} md={4}>
                     <Stack direction="row" spacing={2} alignItems="center">
-                      <EditIcon color={biometricData.signature ? 'success' : (selectedCategory && !['1', '2', '3'].includes(selectedCategory) ? 'warning' : 'default')} />
+                      <EditIcon color={biometricData.signature ? 'success' : (selectedCategory && !['1', '2', '3'].includes(selectedCategory) ? 'warning' : 'inherit')} />
                       <Typography variant="body2">
                         Signature
                       </Typography>
@@ -820,7 +820,7 @@ const DrivingLicenseApplicationPage: React.FC = () => {
                   {/* Fingerprint Status */}
                   <Grid item xs={12} md={4}>
                     <Stack direction="row" spacing={2} alignItems="center">
-                      <FingerprintIcon color={biometricData.fingerprint ? 'success' : 'default'} />
+                      <FingerprintIcon color={biometricData.fingerprint ? 'success' : 'inherit'} />
                       <Typography variant="body2">
                         Fingerprint
                       </Typography>

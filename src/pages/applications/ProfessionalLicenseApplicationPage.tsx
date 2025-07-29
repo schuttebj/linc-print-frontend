@@ -189,7 +189,7 @@ const ProfessionalLicenseApplicationPage: React.FC = () => {
       case 4:
         const finalHasPhoto = !!biometricData.photo;
         const finalHasRequiredSignature = !!biometricData.signature; // Required for professional licenses
-        return !!selectedPerson && !!selectedPerson.id && !!selectedCategories.length > 0 && finalHasPhoto && finalHasRequiredSignature;
+        return !!selectedPerson && !!selectedPerson.id && selectedCategories.length > 0 && finalHasPhoto && finalHasRequiredSignature;
       default:
         return false;
     }
