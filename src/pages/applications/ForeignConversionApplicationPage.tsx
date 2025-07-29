@@ -203,10 +203,15 @@ const ForeignConversionApplicationPage: React.FC = () => {
         const isMedicalMandatory = requiresMedicalAlways(selectedCategory) || 
                                  (age >= 60 && requiresMedical60Plus(selectedCategory));
         return !isMedicalMandatory || (medicalInformation?.medical_clearance === true);
-      case 3: // Biometric step
-        return !!biometricData.photo;
-      case 4: // Review step
-        return true;
+      case 3:
+        // Biometric step - photo and signature required for foreign conversion (card-eligible)
+        const hasPhoto = !!biometricData.photo;
+        const hasRequiredSignature = !!biometricData.signature; // Required for foreign conversions
+        return hasPhoto && hasRequiredSignature;
+      case 4:
+        const finalHasPhoto = !!biometricData.photo;
+        const finalHasRequiredSignature = !!biometricData.signature; // Required for foreign conversions
+        return !!selectedPerson && !!selectedPerson.id && !!selectedCategory && !!foreignLicenseNumber && finalHasPhoto && finalHasRequiredSignature;
       default:
         return false;
     }
@@ -836,10 +841,10 @@ const ForeignConversionApplicationPage: React.FC = () => {
                   </Grid>
                   <Grid item xs={12} md={4}>
                     <Typography variant="body2" color="text.secondary">Digital Signature</Typography>
-                    <Chip 
-                      label={biometricData.signature ? 'Captured' : 'Not Captured'} 
-                      size="small" 
-                      color={biometricData.signature ? 'success' : 'default'} 
+                    <Chip
+                      label={biometricData.signature ? 'Captured' : 'Required'}
+                      color={biometricData.signature ? 'success' : 'warning'}
+                      size="small"
                     />
                   </Grid>
                   <Grid item xs={12} md={4}>

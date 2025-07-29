@@ -28,7 +28,8 @@ import {
   Select,
   MenuItem,
   FormHelperText,
-  TextField
+  TextField,
+  Stack
 } from '@mui/material';
 import {
   PersonSearch as PersonSearchIcon,
@@ -40,7 +41,8 @@ import {
   ArrowBack as ArrowBackIcon,
   CheckCircle as CheckCircleIcon,
   LocationOn as LocationOnIcon,
-  Warning as WarningIcon
+  Warning as WarningIcon,
+  Edit as EditIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -155,23 +157,23 @@ const RenewDrivingLicensePage: React.FC = () => {
       case 0:
         return !!selectedPerson && !!selectedPerson.id;
       case 1:
-        const hasReason = !!replacementReason;
-        const hasOffice = !!officeOfIssue.trim();
-        const hasDate = !!dateOfChange;
+        const hasValidLicenses = licenseVerification?.all_license_categories?.length > 0;
         const hasLocation = !!user?.primary_location_id || !!selectedLocationId;
-        const hasLicenseVerification = !!licenseVerification;
-        const hasRenewableLicenses = licenseVerification?.all_license_categories?.length > 0;
-        return hasReason && hasOffice && hasDate && hasLocation && hasLicenseVerification && hasRenewableLicenses && !!selectedPerson && !!selectedPerson.id;
+        return hasValidLicenses && hasLocation && !!selectedPerson && !!selectedPerson.id;
       case 2:
         const age = selectedPerson?.birth_date ? calculateAge(selectedPerson.birth_date) : 0;
-        // For renewals, medical assessment is required for age 60+ or if existing license requires it
-        const isMedicalMandatory = age >= 60 || 
-                                 licenseVerification?.all_license_categories?.some(cat => requiresMedicalAlways(cat as LicenseCategory));
+        const isMedicalMandatory = licenseVerification?.all_license_categories?.some(cat => requiresMedicalAlways(cat as LicenseCategory)) || 
+                                 (age >= 60 && licenseVerification?.all_license_categories?.some(cat => requiresMedical60Plus(cat as LicenseCategory)));
         return isMedicalMandatory ? !!medicalInformation?.medical_clearance : true;
       case 3:
-        return !!biometricData.photo;
+        // Biometric step - photo and signature required for driving license renewals (card-eligible)
+        const hasPhoto = !!biometricData.photo;
+        const hasRequiredSignature = !!biometricData.signature; // Always required for renewals
+        return hasPhoto && hasRequiredSignature;
       case 4:
-        return !!selectedPerson && !!selectedPerson.id && !!replacementReason && !!licenseVerification;
+        const finalHasPhoto = !!biometricData.photo;
+        const finalHasRequiredSignature = !!biometricData.signature; // Always required for renewals
+        return !!selectedPerson && !!selectedPerson.id && !!licenseVerification && finalHasPhoto && finalHasRequiredSignature;
       default:
         return false;
     }
@@ -477,8 +479,8 @@ const RenewDrivingLicensePage: React.FC = () => {
             
             {(() => {
               const age = selectedPerson?.birth_date ? calculateAge(selectedPerson.birth_date) : 0;
-              const isMedicalMandatory = age >= 60 || 
-                                       licenseVerification?.all_license_categories?.some(cat => requiresMedicalAlways(cat as LicenseCategory));
+              const isMedicalMandatory = licenseVerification?.all_license_categories?.some(cat => requiresMedicalAlways(cat as LicenseCategory)) || 
+                                       (age >= 60 && licenseVerification?.all_license_categories?.some(cat => requiresMedical60Plus(cat as LicenseCategory)));
 
               return (
                 <>
@@ -693,12 +695,17 @@ const RenewDrivingLicensePage: React.FC = () => {
                     />
                   </Grid>
                   <Grid item xs={12} md={4}>
-                    <Typography variant="body2" color="text.secondary">Digital Signature</Typography>
-                    <Chip 
-                      label={biometricData.signature ? 'Captured' : 'Not Captured'} 
-                      size="small" 
-                      color={biometricData.signature ? 'success' : 'default'} 
-                    />
+                    <Stack direction="row" spacing={2} alignItems="center">
+                      <EditIcon color={biometricData.signature ? 'success' : 'warning'} />
+                      <Typography variant="body2">
+                        Signature
+                      </Typography>
+                      <Chip
+                        label={biometricData.signature ? 'Captured' : 'Required'}
+                        color={biometricData.signature ? 'success' : 'warning'}
+                        size="small"
+                      />
+                    </Stack>
                   </Grid>
                   <Grid item xs={12} md={4}>
                     <Typography variant="body2" color="text.secondary">Fingerprint</Typography>

@@ -24,7 +24,8 @@ import {
   FormControlLabel,
   Checkbox,
   TextField,
-  CircularProgress
+  CircularProgress,
+  Stack
 } from '@mui/material';
 import {
   PersonSearch as PersonSearchIcon,
@@ -38,7 +39,8 @@ import {
   AccessTime as AccessTimeIcon,
   ArrowForward as ArrowForwardIcon,
   ArrowBack as ArrowBackIcon,
-  CheckCircle as CheckCircleIcon
+  CheckCircle as CheckCircleIcon,
+  Edit as EditIcon
 } from '@mui/icons-material';
 
 import PersonFormWrapper from '../../components/PersonFormWrapper';
@@ -179,21 +181,28 @@ const TemporaryLicenseApplicationPage: React.FC = () => {
   // Step validation
   const isStepValid = (step: number): boolean => {
     switch (step) {
-      case 0: // Person step
-        return selectedPerson !== null && selectedPerson.id !== undefined;
-      case 1: // Category step
-        const locationValid = user?.primary_location_id || selectedLocationId;
-        return locationValid && selectedCategory !== null && tempReason.trim() !== '';
-      case 2: // Medical step
-        if (!selectedPerson || !selectedCategory) return false;
-        const age = selectedPerson.birth_date ? calculateAge(selectedPerson.birth_date) : 0;
+      case 0:
+        return !!selectedPerson && !!selectedPerson.id;
+      case 1:
+        const hasReason = !!tempReason.trim();
+        const hasLocation = !!user?.primary_location_id || !!selectedLocationId;
+        const hasLicenseVerification = !!selectedCategory;
+        const hasEligibleLicenses = selectedCategory !== null;
+        return hasReason && hasLocation && hasLicenseVerification && hasEligibleLicenses && !!selectedPerson && !!selectedPerson.id;
+      case 2:
+        const age = selectedPerson?.birth_date ? calculateAge(selectedPerson.birth_date) : 0;
         const isMedicalMandatory = requiresMedicalAlways(selectedCategory) || 
                                  (age >= 60 && requiresMedical60Plus(selectedCategory));
-        return !isMedicalMandatory || (medicalInformation?.medical_clearance === true);
-      case 3: // Biometric step
-        return !!biometricData.photo;
-      case 4: // Review step
-        return true;
+        return isMedicalMandatory ? !!medicalInformation?.medical_clearance : true;
+      case 3:
+        // Biometric step - photo and signature required for temporary licenses (card-eligible)
+        const hasPhoto = !!biometricData.photo;
+        const hasRequiredSignature = !!biometricData.signature; // Required for temporary licenses
+        return hasPhoto && hasRequiredSignature;
+      case 4:
+        const finalHasPhoto = !!biometricData.photo;
+        const finalHasRequiredSignature = !!biometricData.signature; // Required for temporary licenses
+        return !!selectedPerson && !!selectedPerson.id && !!tempReason && !!selectedCategory && finalHasPhoto && finalHasRequiredSignature;
       default:
         return false;
     }
@@ -724,12 +733,17 @@ const TemporaryLicenseApplicationPage: React.FC = () => {
                     />
                   </Grid>
                   <Grid item xs={12} md={4}>
-                    <Typography variant="body2" color="text.secondary">Digital Signature</Typography>
-                    <Chip 
-                      label={biometricData.signature ? 'Captured' : 'Not Captured'} 
-                      size="small" 
-                      color={biometricData.signature ? 'success' : 'default'} 
-                    />
+                    <Stack direction="row" spacing={2} alignItems="center">
+                      <EditIcon color={biometricData.signature ? 'success' : 'warning'} />
+                      <Typography variant="body2">
+                        Signature
+                      </Typography>
+                      <Chip
+                        label={biometricData.signature ? 'Captured' : 'Required'}
+                        color={biometricData.signature ? 'success' : 'warning'}
+                        size="small"
+                      />
+                    </Stack>
                   </Grid>
                   <Grid item xs={12} md={4}>
                     <Typography variant="body2" color="text.secondary">Fingerprint</Typography>

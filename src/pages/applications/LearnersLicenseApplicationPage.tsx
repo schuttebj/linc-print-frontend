@@ -190,7 +190,7 @@ const LearnersLicenseApplicationPage: React.FC = () => {
                                  (age >= 60 && requiresMedical60Plus(selectedCategory));
         return isMedicalMandatory ? !!medicalInformation?.medical_clearance : true;
       case 3:
-        // Biometric step - photo is required
+        // Biometric step - photo is required for learners permits (signature not needed)
         return !!biometricData.photo;
       case 4:
         return !!selectedPerson && !!selectedPerson.id && !!selectedCategory && !!biometricData.photo;

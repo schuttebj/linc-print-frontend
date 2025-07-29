@@ -30,7 +30,8 @@ import {
   FormHelperText,
   FormControlLabel,
   Checkbox,
-  TextField
+  TextField,
+  Stack
 } from '@mui/material';
 import {
   PersonSearch as PersonSearchIcon,
@@ -43,7 +44,10 @@ import {
   CheckCircle as CheckCircleIcon,
   LocationOn as LocationOnIcon,
   Warning as WarningIcon,
-  Error as ErrorIcon
+  Error as ErrorIcon,
+  PhotoCamera as PhotoCameraIcon,
+  Edit as EditIcon,
+  Fingerprint as FingerprintIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -229,10 +233,16 @@ const DrivingLicenseApplicationPage: React.FC = () => {
                                  (age >= 60 && requiresMedical60Plus(selectedCategory));
         return isMedicalMandatory ? !!medicalInformation?.medical_clearance : true;
       case 3:
-        // Biometric step - photo is required
-        return !!biometricData.photo;
+        // Biometric step - photo is always required, signature required for card-eligible licenses
+        const hasPhoto = !!biometricData.photo;
+        const isCardEligible = selectedCategory && !['1', '2', '3'].includes(selectedCategory);
+        const hasRequiredSignature = !isCardEligible || !!biometricData.signature;
+        return hasPhoto && hasRequiredSignature;
       case 4:
-        return !!selectedPerson && !!selectedPerson.id && !!selectedCategory && prerequisiteErrors.length === 0 && !!biometricData.photo;
+        const finalHasPhoto = !!biometricData.photo;
+        const finalIsCardEligible = selectedCategory && !['1', '2', '3'].includes(selectedCategory);
+        const finalHasRequiredSignature = !finalIsCardEligible || !!biometricData.signature;
+        return !!selectedPerson && !!selectedPerson.id && !!selectedCategory && prerequisiteErrors.length === 0 && finalHasPhoto && finalHasRequiredSignature;
       default:
         return false;
     }
@@ -777,29 +787,49 @@ const DrivingLicenseApplicationPage: React.FC = () => {
               <CardHeader title="Biometric Data" />
               <CardContent>
                 <Grid container spacing={2}>
+                  {/* Photo Status */}
                   <Grid item xs={12} md={4}>
-                    <Typography variant="body2" color="text.secondary">License Photo</Typography>
-                    <Chip 
-                      label={biometricData.photo ? 'Captured' : 'Required'} 
-                      size="small" 
-                      color={biometricData.photo ? 'success' : 'error'} 
-                    />
+                    <Stack direction="row" spacing={2} alignItems="center">
+                      <PhotoCameraIcon color={biometricData.photo ? 'success' : 'warning'} />
+                      <Typography variant="body2">
+                        Photo
+                      </Typography>
+                      <Chip
+                        label={biometricData.photo ? 'Captured' : 'Required'}
+                        color={biometricData.photo ? 'success' : 'warning'}
+                        size="small"
+                      />
+                    </Stack>
                   </Grid>
+                  
+                  {/* Signature Status */}
                   <Grid item xs={12} md={4}>
-                    <Typography variant="body2" color="text.secondary">Digital Signature</Typography>
-                    <Chip 
-                      label={biometricData.signature ? 'Captured' : 'Optional'} 
-                      size="small" 
-                      color={biometricData.signature ? 'success' : 'default'} 
-                    />
+                    <Stack direction="row" spacing={2} alignItems="center">
+                      <EditIcon color={biometricData.signature ? 'success' : (selectedCategory && !['1', '2', '3'].includes(selectedCategory) ? 'warning' : 'default')} />
+                      <Typography variant="body2">
+                        Signature
+                      </Typography>
+                      <Chip
+                        label={biometricData.signature ? 'Captured' : (selectedCategory && !['1', '2', '3'].includes(selectedCategory) ? 'Required' : 'Optional')}
+                        color={biometricData.signature ? 'success' : (selectedCategory && !['1', '2', '3'].includes(selectedCategory) ? 'warning' : 'default')}
+                        size="small"
+                      />
+                    </Stack>
                   </Grid>
+                  
+                  {/* Fingerprint Status */}
                   <Grid item xs={12} md={4}>
-                    <Typography variant="body2" color="text.secondary">Fingerprint</Typography>
-                    <Chip 
-                      label={biometricData.fingerprint ? 'Captured' : 'Optional'} 
-                      size="small" 
-                      color={biometricData.fingerprint ? 'success' : 'default'} 
-                    />
+                    <Stack direction="row" spacing={2} alignItems="center">
+                      <FingerprintIcon color={biometricData.fingerprint ? 'success' : 'default'} />
+                      <Typography variant="body2">
+                        Fingerprint
+                      </Typography>
+                      <Chip
+                        label={biometricData.fingerprint ? 'Captured' : 'Optional'}
+                        color={biometricData.fingerprint ? 'success' : 'default'}
+                        size="small"
+                      />
+                    </Stack>
                   </Grid>
                 </Grid>
                 {biometricData.photo && (

@@ -180,10 +180,15 @@ const InternationalPermitApplicationPage: React.FC = () => {
         const isMedicalMandatory = age >= 60 || 
                                  licenseVerification?.all_license_categories?.some(cat => requiresMedicalAlways(cat as LicenseCategory));
         return !isMedicalMandatory || (medicalInformation?.medical_clearance === true);
-      case 3: // Biometric step
-        return !!biometricData.photo;
-      case 4: // Review step
-        return true;
+      case 3:
+        // Biometric step - photo and signature required for international permits (card-eligible)
+        const hasPhoto = !!biometricData.photo;
+        const hasRequiredSignature = !!biometricData.signature; // Required for international permits
+        return hasPhoto && hasRequiredSignature;
+      case 4:
+        const finalHasPhoto = !!biometricData.photo;
+        const finalHasRequiredSignature = !!biometricData.signature; // Required for international permits
+        return !!selectedPerson && !!selectedPerson.id && !!licenseVerification && finalHasPhoto && finalHasRequiredSignature;
       default:
         return false;
     }
@@ -784,9 +789,9 @@ const InternationalPermitApplicationPage: React.FC = () => {
                   <Grid item xs={12} md={4}>
                     <Typography variant="body2" color="text.secondary">Digital Signature</Typography>
                     <Chip 
-                      label={biometricData.signature ? 'Captured' : 'Optional'} 
+                      label={biometricData.signature ? 'Captured' : 'Required'} 
                       size="small" 
-                      color={biometricData.signature ? 'success' : 'default'} 
+                      color={biometricData.signature ? 'success' : 'warning'} 
                     />
                   </Grid>
                   <Grid item xs={12} md={4}>

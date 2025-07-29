@@ -54,7 +54,8 @@ import {
   AccordionDetails,
   Badge,
   Tooltip,
-  IconButton
+  IconButton,
+  Stack
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -74,7 +75,8 @@ import {
   PhotoCamera as PhotoCameraIcon,
   CloudUpload as CloudUploadIcon,
   Visibility as VisibilityIcon,
-  Delete as DeleteIcon
+  Delete as DeleteIcon,
+  Edit as EditIcon
 } from '@mui/icons-material';
 
 import PersonFormWrapper from '../PersonFormWrapper';
@@ -772,6 +774,12 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         // Photo is required for license production
         if (!formData.biometric_data.photo) {
           errors.push('License photo is required for card production');
+        }
+        
+        // Signature is required for card-eligible licenses (not learners permits)
+        const isCardEligible = formData.license_category && !['1', '2', '3'].includes(formData.license_category);
+        if (isCardEligible && !formData.biometric_data.signature) {
+          errors.push('Digital signature is required for driver license cards');
         }
         break;
 

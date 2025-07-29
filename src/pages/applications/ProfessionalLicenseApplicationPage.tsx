@@ -181,10 +181,15 @@ const ProfessionalLicenseApplicationPage: React.FC = () => {
         const age = selectedPerson.birth_date ? calculateAge(selectedPerson.birth_date) : 0;
         const isMedicalMandatory = age >= 60; // Professional permits typically require medical for 60+
         return !isMedicalMandatory || (medicalInformation?.medical_clearance === true);
-      case 3: // Biometric step
-        return !!biometricData.photo;
-      case 4: // Review step
-        return true;
+      case 3:
+        // Biometric step - photo and signature required for professional licenses (card-eligible)
+        const hasPhoto = !!biometricData.photo;
+        const hasRequiredSignature = !!biometricData.signature; // Required for professional licenses
+        return hasPhoto && hasRequiredSignature;
+      case 4:
+        const finalHasPhoto = !!biometricData.photo;
+        const finalHasRequiredSignature = !!biometricData.signature; // Required for professional licenses
+        return !!selectedPerson && !!selectedPerson.id && !!selectedCategories.length > 0 && finalHasPhoto && finalHasRequiredSignature;
       default:
         return false;
     }
@@ -761,9 +766,9 @@ const ProfessionalLicenseApplicationPage: React.FC = () => {
                   <Grid item xs={12} md={4}>
                     <Typography variant="body2" color="text.secondary">Digital Signature</Typography>
                     <Chip 
-                      label={biometricData.signature ? 'Captured' : 'Optional'} 
+                      label={biometricData.signature ? 'Captured' : 'Required'} 
                       size="small" 
-                      color={biometricData.signature ? 'success' : 'default'} 
+                      color={biometricData.signature ? 'success' : 'warning'} 
                     />
                   </Grid>
                   <Grid item xs={12} md={4}>

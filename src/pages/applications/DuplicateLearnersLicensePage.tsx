@@ -171,9 +171,10 @@ const DuplicateLearnersLicensePage: React.FC = () => {
         const isMedicalMandatory = age >= 60; // Simplified for duplicates
         return isMedicalMandatory ? !!medicalInformation?.medical_clearance : true;
       case 3:
+        // Biometric step - photo required, signature optional for learners permits
         return !!biometricData.photo;
       case 4:
-        return !!selectedPerson && !!selectedPerson.id && !!replacementReason;
+        return !!selectedPerson && !!selectedPerson.id && !!replacementReason && !!biometricData.photo;
       default:
         return false;
     }
