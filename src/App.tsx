@@ -59,6 +59,9 @@ import LocationManagementPage from './pages/admin/LocationManagementPage';
 import LocationFormPage from './pages/admin/LocationFormPage';
 import AuditLogViewer from './pages/admin/AuditLogViewer';
 
+// Analytics Pages
+import AnalyticsDashboard from './pages/analytics/AnalyticsDashboard';
+
 function App() {
   return (
     <AuthProvider>
@@ -440,6 +443,18 @@ function App() {
                 element={
                   <ProtectedRoute requiredPermission="admin.audit">
                     <AuditLogViewer />
+                  </ProtectedRoute>
+                } 
+              />
+            </Route>
+
+            {/* Analytics Dashboard - requires analytics permissions */}
+            <Route path="analytics">
+              <Route 
+                index 
+                element={
+                  <ProtectedRoute requiredPermission="analytics.read">
+                    <AnalyticsDashboard />
                   </ProtectedRoute>
                 } 
               />

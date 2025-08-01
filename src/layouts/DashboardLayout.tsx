@@ -55,6 +55,8 @@ import {
   Receipt,
   PointOfSale,
   AttachMoney,
+  Analytics,
+  BarChart,
 } from '@mui/icons-material';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -351,6 +353,16 @@ const DashboardLayout: React.FC = () => {
       icon: <Assessment />,
       path: '/dashboard/admin/audit',
       permission: 'admin.audit',
+    },
+  ];
+
+  // Analytics navigation items
+  const analyticsNavigationItems = [
+    {
+      text: 'Analytics Dashboard',
+      icon: <BarChart />,
+      path: '/dashboard/analytics',
+      permission: 'analytics.read',
     },
   ];
 
@@ -677,6 +689,51 @@ const DashboardLayout: React.FC = () => {
               />
             </ListItem>
             {adminNavigationItems.map((item) => {
+              // Check permissions
+              if (item.permission && !hasPermission(item.permission)) {
+                return null;
+              }
+
+              const isActive = location.pathname === item.path;
+
+              return (
+                <ListItem key={item.text} disablePadding>
+                  <ListItemButton
+                    selected={isActive}
+                    onClick={() => {
+                      navigate(item.path);
+                      if (isMobile) {
+                        setMobileOpen(false);
+                      }
+                    }}
+                  >
+                    <ListItemIcon>{item.icon}</ListItemIcon>
+                    <ListItemText primary={item.text} />
+                  </ListItemButton>
+                </ListItem>
+              );
+            })}
+          </List>
+        </>
+      )}
+
+      {/* Analytics Section */}
+      {analyticsNavigationItems.some(item => !item.permission || hasPermission(item.permission)) && (
+        <>
+          <Divider />
+          <List>
+            <ListItem>
+              <ListItemText 
+                primary="Analytics" 
+                primaryTypographyProps={{ 
+                  variant: 'caption', 
+                  color: 'textSecondary',
+                  fontWeight: 'bold',
+                  textTransform: 'uppercase'
+                }} 
+              />
+            </ListItem>
+            {analyticsNavigationItems.map((item) => {
               // Check permissions
               if (item.permission && !hasPermission(item.permission)) {
                 return null;
