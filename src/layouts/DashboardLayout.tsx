@@ -231,6 +231,13 @@ const DashboardLayout: React.FC = () => {
           path: '/dashboard/applications/learner-permit-capture',
           permission: 'applications.create',
         },
+        {
+          text: 'Learner Permit (Compact)',
+          icon: <Assignment />,
+          path: '/dashboard/applications/learner-permit-capture-compact',
+          permission: 'applications.create',
+          isNew: true,
+        },
       ]
     },
     {
@@ -426,7 +433,21 @@ const DashboardLayout: React.FC = () => {
                     }}
                   >
                     <ListItemIcon>{item.icon}</ListItemIcon>
-                    <ListItemText primary={item.text} />
+                    <ListItemText 
+                      primary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          {item.text}
+                          {(item as any).isNew && (
+                            <Chip 
+                              label="NEW" 
+                              size="small" 
+                              color="warning" 
+                              sx={{ fontSize: '0.7rem', height: 18 }} 
+                            />
+                          )}
+                        </Box>
+                      } 
+                    />
                   </ListItemButton>
                 </ListItem>
               );

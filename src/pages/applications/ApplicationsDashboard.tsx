@@ -129,6 +129,14 @@ const ApplicationsDashboard: React.FC = () => {
           path: '/dashboard/applications/learner-permit-capture',
           permission: 'applications.create',
         },
+        {
+          title: 'Learner Permit Capture (Compact)',
+          description: 'Compact layout - no scrolling, keyboard-friendly',
+          icon: <Assignment />,
+          path: '/dashboard/applications/learner-permit-capture-compact',
+          permission: 'applications.create',
+          isNew: true,
+        },
       ]
     }
   ];
@@ -211,8 +219,18 @@ const ApplicationsDashboard: React.FC = () => {
                       >
                         <CardContent>
                           <Stack spacing={2}>
-                            <Box sx={{ color: `${category.color}.main` }}>
-                              {app.icon}
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                              <Box sx={{ color: `${category.color}.main` }}>
+                                {app.icon}
+                              </Box>
+                              {(app as any).isNew && (
+                                <Chip 
+                                  label="NEW" 
+                                  size="small" 
+                                  color="warning" 
+                                  sx={{ fontSize: '0.7rem', height: 20 }} 
+                                />
+                              )}
                             </Box>
                             <Typography variant="h6" component="h3">
                               {app.title}
