@@ -6,20 +6,20 @@
 import { useState, useEffect, useCallback } from 'react';
 
 interface AnalyticsData {
-  applications: any[];
-  licenses: any[];
-  printing: any[];
-  financial: any[];
-  system: any[];
+  applications: any;
+  licenses: any;
+  printing: any;
+  financial: any;
+  system: any;
 }
 
 export const useAnalyticsData = (dateRange: string, selectedLocation: string) => {
   const [data, setData] = useState<AnalyticsData>({
-    applications: [],
-    licenses: [],
-    printing: [],
-    financial: [],
-    system: []
+    applications: {},
+    licenses: {},
+    printing: {},
+    financial: {},
+    system: {}
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
