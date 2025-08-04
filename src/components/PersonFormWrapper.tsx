@@ -1270,9 +1270,16 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     };
 
     const renderLookupStep = () => (
-        <Card>
-            <CardContent>
-                <Typography variant="h6" gutterBottom>
+        <Paper 
+            elevation={0}
+            sx={{ 
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2
+            }}
+        >
+            <Box sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
                     Document Lookup
                 </Typography>
 
@@ -1281,15 +1288,15 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 </Typography>
 
                 <form onSubmit={lookupForm.handleSubmit(performLookup)}>
-                    <Grid container spacing={3}>
+                    <Grid container spacing={2}>
                         <Grid item xs={12} md={4}>
                             <Controller
                                 name="document_type"
                                 control={lookupForm.control}
                                 render={({ field }) => (
-                                    <FormControl fullWidth error={!!lookupForm.formState.errors.document_type}>
+                                    <FormControl fullWidth size="small" error={!!lookupForm.formState.errors.document_type}>
                                         <InputLabel>Document Type *</InputLabel>
-                                                                <Select {...field} label="Document Type *">
+                                        <Select {...field} label="Document Type *">
                             {documentTypes.map((option) => (
                                 <MenuItem key={option.value} value={option.value}>
                                     {option.label}
@@ -1313,6 +1320,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                         name={field.name}
                                         value={field.value || ''}
                                         fullWidth
+                                        size="small"
                                         label="Document Number *"
                                         error={!!lookupForm.formState.errors.document_number}
                                         helperText={lookupForm.formState.errors.document_number?.message || 'Enter document number (numbers only)'}
@@ -1340,23 +1348,35 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                 type="submit"
                                 variant="contained"
                                 fullWidth
+                                size="small"
                                 disabled={lookupLoading}
                                 startIcon={<SearchIcon />}
-                                sx={{ height: '56px' }}
+                                sx={{ 
+                                    height: '40px',
+                                    boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
+                                }}
                             >
                                 {lookupLoading ? 'Searching...' : 'Search'}
                             </Button>
                         </Grid>
                     </Grid>
                 </form>
-            </CardContent>
-        </Card>
+            </Box>
+        </Paper>
     );
 
     const renderPersonalInformationStep = () => (
-        <Card key="personal-info-step">
-            <CardContent>
-                <Typography variant="h6" gutterBottom>
+        <Paper 
+            key="personal-info-step"
+            elevation={0}
+            sx={{ 
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2
+            }}
+        >
+            <Box sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
                     Personal Information
                 </Typography>
 
@@ -1373,7 +1393,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     </Alert>
                 )}
 
-                <Grid container spacing={3}>
+                <Grid container spacing={2}>
                     <Grid item xs={12} md={6}>
                         <Controller
                             name="surname"
@@ -1384,6 +1404,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                     name={field.name}
                                     value={field.value || ''}
                                     fullWidth
+                                    size="small"
                                     label="Surname *"
                                     error={!!personForm.formState.errors.surname}
                                     helperText={personForm.formState.errors.surname?.message || 'Family name'}
@@ -1408,6 +1429,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                     name={field.name}
                                     value={field.value || ''}
                                     fullWidth
+                                    size="small"
                                     label="First Name *"
                                     error={!!personForm.formState.errors.first_name}
                                     helperText={personForm.formState.errors.first_name?.message || 'Given name'}
@@ -1432,6 +1454,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                     name={field.name}
                                     value={field.value || ''}
                                     fullWidth
+                                    size="small"
                                     label="Middle Name"
                                     helperText="Middle name (optional)"
                                     inputProps={{ maxLength: 50 }}
@@ -1450,7 +1473,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                             name="person_nature"
                             control={personForm.control}
                             render={({ field }) => (
-                                <FormControl fullWidth error={!!personForm.formState.errors.person_nature}>
+                                <FormControl fullWidth size="small" error={!!personForm.formState.errors.person_nature}>
                                     <InputLabel>Gender *</InputLabel>
                                     <Select
                                         id="person-nature-select"
@@ -1487,6 +1510,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                     name={field.name}
                                     value={field.value || ''}
                                     fullWidth
+                                    size="small"
                                     type="date"
                                     label="Date of Birth"
                                     InputLabelProps={{ shrink: true }}
@@ -1507,7 +1531,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                             name="nationality_code"
                             control={personForm.control}
                             render={({ field }) => (
-                                <FormControl fullWidth>
+                                <FormControl fullWidth size="small">
                                     <InputLabel>Nationality *</InputLabel>
                                     <Select
                                         id="nationality-code-select"
@@ -1534,7 +1558,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                             name="preferred_language"
                             control={personForm.control}
                             render={({ field }) => (
-                                <FormControl fullWidth error={!!personForm.formState.errors.preferred_language}>
+                                <FormControl fullWidth size="small" error={!!personForm.formState.errors.preferred_language}>
                                     <InputLabel>Preferred Language *</InputLabel>
                                     <Select
                                         id="preferred-language-select"
@@ -1561,18 +1585,26 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                         />
                     </Grid>
                 </Grid>
-            </CardContent>
-        </Card>
+            </Box>
+        </Paper>
     );
 
     const renderContactDetailsStep = () => (
-        <Card key="contact-details-step">
-            <CardContent>
-                <Typography variant="h6" gutterBottom>
+        <Paper 
+            key="contact-details-step"
+            elevation={0}
+            sx={{ 
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2
+            }}
+        >
+            <Box sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
                     Contact Information
                 </Typography>
 
-                <Grid container spacing={3}>
+                <Grid container spacing={2}>
                     <Grid item xs={12} md={6}>
                         <Controller
                             name="email_address"
@@ -1583,6 +1615,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                     name={field.name}
                                     value={field.value || ''}
                                     fullWidth
+                                    size="small"
                                     type="email"
                                     label="Email Address"
                                     error={!!personForm.formState.errors.email_address}
@@ -1608,6 +1641,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                     name={field.name}
                                     value={field.value || ''}
                                     fullWidth
+                                    size="small"
                                     label="Work Phone"
                                     error={!!personForm.formState.errors.work_phone}
                                     helperText={personForm.formState.errors.work_phone?.message || 'Work phone number (optional)'}
@@ -1637,7 +1671,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                             name="cell_phone_country_code"
                             control={personForm.control}
                             render={({ field }) => (
-                                <FormControl fullWidth>
+                                <FormControl fullWidth size="small">
                                     <InputLabel>Country Code *</InputLabel>
                                     <Select
                                         id="cell-phone-country-code-select"
@@ -1672,6 +1706,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                     name={field.name}
                                     value={field.value || ''}
                                     fullWidth
+                                    size="small"
                                     label="Cell Phone Number"
                                     placeholder="Example: 0815598453"
                                     error={!!personForm.formState.errors.cell_phone}
@@ -1702,30 +1737,37 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                         />
                     </Grid>
                 </Grid>
-            </CardContent>
-        </Card>
+            </Box>
+        </Paper>
     );
 
     const renderIdDocumentsStep = () => (
-        <Card>
-            <CardContent>
-                <Typography variant="h6" gutterBottom>
+        <Paper 
+            elevation={0}
+            sx={{ 
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2
+            }}
+        >
+            <Box sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
                     Identification Documents
                 </Typography>
 
                 {aliasFields.map((field, index) => (
-                    <Box key={field.id} sx={{ mb: 4, p: 3, border: '1px solid #e0e0e0', borderRadius: 2, backgroundColor: '#fafafa' }}>
+                    <Box key={field.id} sx={{ mb: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: 2, backgroundColor: '#fafafa' }}>
                         <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, color: 'primary.main' }}>
                             {index === 0 ? 'Primary Document' : `Additional Document ${index}`}
                         </Typography>
 
-                        <Grid container spacing={3}>
+                        <Grid container spacing={2}>
                             <Grid item xs={12} md={4}>
                                 <Controller
                                     name={`aliases.${index}.document_type`}
                                     control={personForm.control}
                                     render={({ field }) => (
-                                        <FormControl fullWidth>
+                                        <FormControl fullWidth size="small">
                                             <InputLabel>Document Type</InputLabel>
                                             <Select {...field} label="Document Type" disabled={index === 0}>
                                                 {documentTypes.map((option) => (
@@ -1751,6 +1793,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                             name={field.name}
                                             value={field.value || ''}
                                             fullWidth
+                                            size="small"
                                             label="Document Number"
                                             disabled={index === 0}
                                             helperText={index === 0 ? 'From lookup step' : 'Additional document number (numbers only)'}
@@ -1773,7 +1816,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                         <FormControlLabel
                                             control={<Checkbox {...field} checked={field.value} />}
                                             label="Current"
-                                            sx={{ mt: 2 }}
+                                            sx={{ mt: 1 }}
                                         />
                                     )}
                                 />
@@ -1789,6 +1832,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                             name={field.name}
                                             value={field.value || ''}
                                             fullWidth
+                                            size="small"
                                             label="Name in Document"
                                             helperText="Name as it appears in the document (will be capitalized)"
                                             onChange={(e) => {
@@ -1808,7 +1852,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                             name={`aliases.${index}.country_of_issue`}
                                             control={personForm.control}
                                             render={({ field }) => (
-                                                <FormControl fullWidth>
+                                                <FormControl fullWidth size="small">
                                                     <InputLabel>Country of Issue *</InputLabel>
                                                     <Select {...field} label="Country of Issue *">
                                                         <MenuItem value="MG">Madagascar</MenuItem>
@@ -1832,6 +1876,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                                     name={field.name}
                                                     value={field.value || ''}
                                                     fullWidth
+                                                    size="small"
                                                     type="date"
                                                     label="Expiry Date *"
                                                     InputLabelProps={{ shrink: true }}
@@ -1855,7 +1900,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                         variant="outlined"
                                         color="error"
                                         onClick={() => removeAlias(index)}
-                                        sx={{ mt: 2 }}
+                                        size="small"
+                                        sx={{ mt: 1 }}
                                     >
                                         Remove Document
                                     </Button>
@@ -1877,23 +1923,31 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                         expiry_date: '',
                     })}
                     startIcon={<PersonAddIcon />}
+                    size="small"
                 >
                     Add Additional Document
                 </Button>
-            </CardContent>
-        </Card>
+            </Box>
+        </Paper>
     );
 
     const renderAddressStep = () => (
-        <Card>
-            <CardContent>
-                <Typography variant="h6" gutterBottom>
+        <Paper 
+            elevation={0}
+            sx={{ 
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2
+            }}
+        >
+            <Box sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
                     Address Information
                 </Typography>
 
                 {addressFields.map((field, index) => (
-                    <Box key={field.id} sx={{ mb: 4, p: 3, border: '1px solid #e0e0e0', borderRadius: 2, backgroundColor: '#fafafa' }}>
-                        <Grid container spacing={3}>
+                    <Box key={field.id} sx={{ mb: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: 2, backgroundColor: '#fafafa' }}>
+                        <Grid container spacing={2}>
                             <Grid item xs={12}>
                                 <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, color: 'primary.main' }}>
                                     {index === 0 ? 'Primary Address' : `Additional Address ${index}`}
@@ -1905,7 +1959,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                     name={`addresses.${index}.address_type`}
                                     control={personForm.control}
                                     render={({ field }) => (
-                                        <FormControl fullWidth>
+                                        <FormControl fullWidth size="small">
                                             <InputLabel>Address Type *</InputLabel>
                                             <Select {...field} label="Address Type *">
                                                 <MenuItem value="RESIDENTIAL">Residential</MenuItem>
@@ -1924,7 +1978,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                         <FormControlLabel
                                             control={<Checkbox {...field} checked={field.value} />}
                                             label="Primary Address"
-                                            sx={{ mt: 2 }}
+                                            sx={{ mt: 1 }}
                                         />
                                     )}
                                 />
@@ -1938,6 +1992,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                         <TextField
                                             {...field}
                                             fullWidth
+                                            size="small"
                                             label="Address Line 1"
                                             helperText="Street address line 1"
                                             onChange={(e) => {
@@ -1957,6 +2012,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                         <TextField
                                             {...field}
                                             fullWidth
+                                            size="small"
                                             label="Address Line 2"
                                             helperText="Street address line 2 (optional)"
                                             onChange={(e) => {
@@ -1976,6 +2032,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                         <TextField
                                             {...field}
                                             fullWidth
+                                            size="small"
                                             label="Locality *"
                                             error={!!personForm.formState.errors.addresses?.[index]?.locality}
                                             helperText={personForm.formState.errors.addresses?.[index]?.locality?.message || 'Village, quartier, or city'}
@@ -1996,6 +2053,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                         <TextField
                                             {...field}
                                             fullWidth
+                                            size="small"
                                             label="Postal Code *"
                                             placeholder="### (3 digits)"
                                             error={!!personForm.formState.errors.addresses?.[index]?.postal_code}
@@ -2022,6 +2080,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                         <TextField
                                             {...field}
                                             fullWidth
+                                            size="small"
                                             label="Town *"
                                             error={!!personForm.formState.errors.addresses?.[index]?.town}
                                             helperText={personForm.formState.errors.addresses?.[index]?.town?.message || 'Town or city'}
@@ -2039,7 +2098,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                     name={`addresses.${index}.province_code`}
                                     control={personForm.control}
                                     render={({ field }) => (
-                                        <FormControl fullWidth>
+                                        <FormControl fullWidth size="small">
                                             <InputLabel>Province</InputLabel>
                                             <Select {...field} label="Province">
                                                 {provinces.map((option) => (
@@ -2062,6 +2121,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                         <TextField
                                             {...field}
                                             fullWidth
+                                            size="small"
                                             label="Country"
                                             disabled
                                             helperText="Madagascar addresses only"
@@ -2076,7 +2136,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                         variant="outlined"
                                         color="error"
                                         onClick={() => removeAddress(index)}
-                                        sx={{ mt: 2 }}
+                                        size="small"
+                                        sx={{ mt: 1 }}
                                     >
                                         Remove Address
                                     </Button>
@@ -2099,20 +2160,28 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                         province_code: '',
                         is_primary: false,
                     })}
+                    size="small"
                 >
                     Add Additional Address
                 </Button>
-            </CardContent>
-        </Card>
+            </Box>
+        </Paper>
     );
 
     const renderReviewStep = () => {
         const formData = personForm.getValues();
 
         return (
-            <Card>
-                <CardContent>
-                    <Typography variant="h6" gutterBottom>
+            <Paper 
+                elevation={0}
+                sx={{ 
+                    bgcolor: 'white',
+                    boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                    borderRadius: 2
+                }}
+            >
+                <Box sx={{ p: 3 }}>
+                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
                         Review & Submit
                     </Typography>
 
@@ -2139,7 +2208,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     </Box>
 
                     {/* Personal Information Summary */}
-                    <Box sx={{ mb: 4, p: 3, border: '1px solid #e0e0e0', borderRadius: 2, backgroundColor: '#fafafa' }}>
+                    <Box sx={{ mb: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: 2, backgroundColor: '#fafafa' }}>
                         <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, color: 'primary.main' }}>
                             Personal Information
                         </Typography>
@@ -2182,7 +2251,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     </Box>
 
                     {/* Contact Information Summary */}
-                    <Box sx={{ mb: 4, p: 3, border: '1px solid #e0e0e0', borderRadius: 2, backgroundColor: '#fafafa' }}>
+                    <Box sx={{ mb: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: 2, backgroundColor: '#fafafa' }}>
                         <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, color: 'primary.main' }}>
                             Contact Information
                         </Typography>
@@ -2273,8 +2342,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                             • Contact Methods: {[formData.email_address, formData.work_phone, formData.cell_phone].filter(Boolean).length} method(s)
                         </Typography>
                     </Alert>
-                </CardContent>
-            </Card>
+                </Box>
+            </Paper>
         );
     };
 
@@ -2290,129 +2359,174 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     }
 
     return (
-        <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
-            {showHeader && (
-                <>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                        <Typography variant="h4" component="h1">
-                            {title}
+        <>
+        <Box sx={{ bgcolor: '#f8f9fa', minHeight: '100vh', p: 2 }}>
+            <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
+                {showHeader && (
+                    <Paper 
+                        elevation={0}
+                        sx={{ 
+                            p: 3, 
+                            mb: 3,
+                            bgcolor: 'white',
+                            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                            borderRadius: 2
+                        }}
+                    >
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                            <Typography variant="h5" component="h1" sx={{ fontWeight: 600 }}>
+                                {title}
+                            </Typography>
+
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                {mode === 'standalone' && (
+                                    <Button
+                                        variant="outlined"
+                                        onClick={resetForm}
+                                        startIcon={<ClearIcon />}
+                                        size="small"
+                                    >
+                                        Start Over
+                                    </Button>
+                                )}
+                                {(mode === 'application' || mode === 'search') && onCancel && (
+                                    <Button
+                                        variant="outlined"
+                                        onClick={handleFormCancel}
+                                        size="small"
+                                    >
+                                        Cancel
+                                    </Button>
+                                )}
+                            </Box>
+                        </Box>
+
+                        <Typography variant="body2" color="text.secondary">
+                            {subtitle}
                         </Typography>
+                    </Paper>
+                )}
+
+                {/* Stepper */}
+                <Paper 
+                    elevation={0}
+                    sx={{ 
+                        p: 3, 
+                        mb: 3,
+                        bgcolor: 'white',
+                        boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                        borderRadius: 2
+                    }}
+                >
+                    <Stepper activeStep={currentStep} alternativeLabel>
+                        {steps.map((label, index) => {
+                            const canNavigate = (index < currentStep || stepValidation[index] || (index === 0 && !isNewPerson)) && !(skipFirstStep && index === 0);
+                            const isDisabled = skipFirstStep && index === 0;
+                            return (
+                                <Step key={label} completed={stepValidation[index]} disabled={isDisabled}>
+                                    <StepLabel
+                                        onClick={() => canNavigate && handleStepClick(index)}
+                                        sx={{
+                                            cursor: canNavigate ? 'pointer' : 'default',
+                                            '&:hover': canNavigate ? { opacity: 0.8 } : {},
+                                            opacity: isDisabled ? 0.4 : 1,
+                                        }}
+                                    >
+                                        {label}
+                                    </StepLabel>
+                                </Step>
+                            );
+                        })}
+                    </Stepper>
+                </Paper>
+
+                {/* Step Content */}
+                <Box sx={{ mb: 3 }}>
+                    {renderStepContent()}
+                </Box>
+
+                {/* Navigation */}
+                <Paper 
+                    elevation={0}
+                    sx={{ 
+                        p: 3,
+                        bgcolor: 'white',
+                        boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                        borderRadius: 2
+                    }}
+                >
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Button
+                            disabled={currentStep === (skipFirstStep ? 1 : 0)}
+                            onClick={handleBack}
+                            size="small"
+                        >
+                            Back
+                        </Button>
 
                         <Box sx={{ display: 'flex', gap: 1 }}>
-                            {mode === 'standalone' && (
+                            {currentStep < steps.length - 1 ? (
                                 <Button
-                                    variant="outlined"
-                                    onClick={resetForm}
-                                    startIcon={<ClearIcon />}
+                                    variant="contained"
+                                    onClick={handleNext}
+                                    disabled={lookupLoading}
+                                    size="small"
+                                    sx={{
+                                        boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
+                                    }}
                                 >
-                                    Start Over
+                                    {currentStep === 0 ? 'Search' : 'Next'}
                                 </Button>
-                            )}
-                            {(mode === 'application' || mode === 'search') && onCancel && (
-                                <Button
-                                    variant="outlined"
-                                    onClick={handleFormCancel}
-                                >
-                                    Cancel
-                                </Button>
+                            ) : (
+                                // Special handling for review step in application mode
+                                mode === 'application' && !isNewPerson ? (
+                                    <Button
+                                        variant="contained"
+                                        onClick={() => {
+                                            // Trigger completion callback for application mode
+                                            // For existing persons, pass the actual person object with ID
+                                            const personToPass = personFound || {
+                                                id: currentPersonId,
+                                                ...personForm.getValues()
+                                            };
+                                            
+                                            console.log('Passing existing person to onSuccess:', personToPass);
+                                            
+                                            if (onComplete) {
+                                                onComplete(personToPass);
+                                            }
+                                            if (onSuccess) {
+                                                onSuccess(personToPass, true); // true indicates this is an edit/existing person
+                                            }
+                                        }}
+                                        startIcon={<ArrowForwardIcon />}
+                                        size="small"
+                                        sx={{
+                                            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
+                                        }}
+                                    >
+                                        Confirm and Continue
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        variant="contained"
+                                        onClick={handleSubmit}
+                                        disabled={submitLoading || duplicateCheckLoading}
+                                        startIcon={<PersonAddIcon />}
+                                        size="small"
+                                        sx={{
+                                            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
+                                        }}
+                                    >
+                                        {duplicateCheckLoading ? 'Checking for Duplicates...' : submitLoading ? (isEditMode ? 'Updating...' : 'Submitting...') : (isEditMode ? 'Update Person' : 'Submit')}
+                                    </Button>
+                                )
                             )}
                         </Box>
                     </Box>
-
-                    <Typography variant="body1" color="text.secondary" gutterBottom>
-                        {subtitle}
-                    </Typography>
-                </>
-            )}
-
-            {/* Stepper */}
-            <Paper sx={{ p: 3, mb: 3 }}>
-                <Stepper activeStep={currentStep} alternativeLabel>
-                    {steps.map((label, index) => {
-                        const canNavigate = (index < currentStep || stepValidation[index] || (index === 0 && !isNewPerson)) && !(skipFirstStep && index === 0);
-                        const isDisabled = skipFirstStep && index === 0;
-                        return (
-                            <Step key={label} completed={stepValidation[index]} disabled={isDisabled}>
-                                <StepLabel
-                                    onClick={() => canNavigate && handleStepClick(index)}
-                                    sx={{
-                                        cursor: canNavigate ? 'pointer' : 'default',
-                                        '&:hover': canNavigate ? { opacity: 0.8 } : {},
-                                        opacity: isDisabled ? 0.4 : 1,
-                                    }}
-                                >
-                                    {label}
-                                </StepLabel>
-                            </Step>
-                        );
-                    })}
-                </Stepper>
-            </Paper>
-
-            {/* Step Content */}
-            <Box sx={{ mb: 3 }}>
-                {renderStepContent()}
+                </Paper>
             </Box>
-
-            {/* Navigation */}
-            <Paper sx={{ p: 3 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Button
-                        disabled={currentStep === (skipFirstStep ? 1 : 0)}
-                        onClick={handleBack}
-                    >
-                        Back
-                    </Button>
-
-                    <Box sx={{ display: 'flex', gap: 2 }}>
-                        {currentStep < steps.length - 1 ? (
-                            <Button
-                                variant="contained"
-                                onClick={handleNext}
-                                disabled={lookupLoading}
-                            >
-                                {currentStep === 0 ? 'Search' : 'Next'}
-                            </Button>
-                        ) : (
-                            // Special handling for review step in application mode
-                            mode === 'application' && !isNewPerson ? (
-                                <Button
-                                    variant="contained"
-                                    onClick={() => {
-                                        // Trigger completion callback for application mode
-                                        // For existing persons, pass the actual person object with ID
-                                        const personToPass = personFound || {
-                                            id: currentPersonId,
-                                            ...personForm.getValues()
-                                        };
-                                        
-                                        console.log('Passing existing person to onSuccess:', personToPass);
-                                        
-                                        if (onComplete) {
-                                            onComplete(personToPass);
-                                        }
-                                        if (onSuccess) {
-                                            onSuccess(personToPass, true); // true indicates this is an edit/existing person
-                                        }
-                                    }}
-                                    startIcon={<ArrowForwardIcon />}
-                                >
-                                    Confirm and Continue
-                                </Button>
-                            ) : (
-                                <Button
-                                    variant="contained"
-                                    onClick={handleSubmit}
-                                    disabled={submitLoading || duplicateCheckLoading}
-                                    startIcon={<PersonAddIcon />}
-                                >
-                                    {duplicateCheckLoading ? 'Checking for Duplicates...' : submitLoading ? (isEditMode ? 'Updating...' : 'Submitting...') : (isEditMode ? 'Update Person' : 'Submit')}
-                                </Button>
-                            )
-                        )}
-                    </Box>
-                </Box>
-            </Paper>
+        </Box>
 
             {/* Duplicate Detection Dialog */}
             <Dialog
@@ -2620,7 +2734,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     )}
                 </DialogActions>
             </Dialog>
-        </Box>
+        </>
     );
 };
 
