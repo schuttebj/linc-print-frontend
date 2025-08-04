@@ -18,6 +18,8 @@ import {
     Button,
     FormHelperText,
     Alert,
+    Tabs,
+    Tab,
     Stepper,
     Step,
     StepLabel,
@@ -33,6 +35,7 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
+    Container,
 } from '@mui/material';
 import {
     Search as SearchIcon,
@@ -43,6 +46,11 @@ import {
     Warning as WarningIcon,
     ArrowForward as ArrowForwardIcon,
     ArrowBack as ArrowBackIcon,
+    Person as PersonIcon,
+    ContactPhone as ContactIcon,
+    Badge as DocumentIcon,
+    Home as AddressIcon,
+    Preview as ReviewIcon,
 } from '@mui/icons-material';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -208,12 +216,12 @@ const personSchema = yup.object({
 });
 
 const steps = [
-    'Document Lookup',
-    'Personal Information',
-    'Contact Details',
-    'ID Documents',
-    'Address Information',
-    'Review & Submit',
+    { label: 'Document Lookup', icon: <SearchIcon fontSize="small" />, key: 'lookup' },
+    { label: 'Personal Info', icon: <PersonIcon fontSize="small" />, key: 'personal' },
+    { label: 'Contact', icon: <ContactIcon fontSize="small" />, key: 'contact' },
+    { label: 'Documents', icon: <DocumentIcon fontSize="small" />, key: 'documents' },
+    { label: 'Address', icon: <AddressIcon fontSize="small" />, key: 'address' },
+    { label: 'Review', icon: <ReviewIcon fontSize="small" />, key: 'review' }
 ];
 
 // Props interface for PersonFormWrapper
@@ -1270,618 +1278,624 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     };
 
     const renderLookupStep = () => (
-        <Card>
-            <CardContent>
-                <Typography variant="h6" gutterBottom>
-                    Document Lookup
-                </Typography>
+        <Box>
+            <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600 }}>
+                Document Lookup
+            </Typography>
 
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                    Enter document details to search for existing person or register new person.
-                </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Enter document details to search for existing person or register new person.
+            </Typography>
 
-                <form onSubmit={lookupForm.handleSubmit(performLookup)}>
-                    <Grid container spacing={3}>
-                        <Grid item xs={12} md={4}>
-                            <Controller
-                                name="document_type"
-                                control={lookupForm.control}
-                                render={({ field }) => (
-                                    <FormControl fullWidth error={!!lookupForm.formState.errors.document_type}>
-                                        <InputLabel>Document Type *</InputLabel>
-                                                                <Select {...field} label="Document Type *">
-                            {documentTypes.map((option) => (
-                                <MenuItem key={option.value} value={option.value}>
-                                    {option.label}
-                                </MenuItem>
-                            ))}
-                                        </Select>
-                                        <FormHelperText>
-                                            {lookupForm.formState.errors.document_type?.message || 'Select document type'}
-                                        </FormHelperText>
-                                    </FormControl>
-                                )}
-                            />
-                        </Grid>
-
-                        <Grid item xs={12} md={6}>
-                            <Controller
-                                name="document_number"
-                                control={lookupForm.control}
-                                render={({ field }) => (
-                                    <TextField
-                                        name={field.name}
-                                        value={field.value || ''}
-                                        fullWidth
-                                        label="Document Number *"
-                                        error={!!lookupForm.formState.errors.document_number}
-                                        helperText={lookupForm.formState.errors.document_number?.message || 'Enter document number (numbers only)'}
-                                        onChange={(e) => {
-                                            const value = e.target.value.replace(/\D/g, '');
-                                            field.onChange(value);
-                                        }}
-                                        onBlur={field.onBlur}
-                                        InputProps={{
-                                            endAdornment: field.value && (
-                                                <InputAdornment position="end">
-                                                    <IconButton onClick={() => lookupForm.setValue('document_number', '')} size="small">
-                                                        <ClearIcon />
-                                                    </IconButton>
-                                                </InputAdornment>
-                                            ),
-                                        }}
-                                    />
-                                )}
-                            />
-                        </Grid>
-
-                        <Grid item xs={12} md={2}>
-                            <Button
-                                type="submit"
-                                variant="contained"
-                                fullWidth
-                                disabled={lookupLoading}
-                                startIcon={<SearchIcon />}
-                                sx={{ height: '56px' }}
-                            >
-                                {lookupLoading ? 'Searching...' : 'Search'}
-                            </Button>
-                        </Grid>
-                    </Grid>
-                </form>
-            </CardContent>
-        </Card>
-    );
-
-    const renderPersonalInformationStep = () => (
-        <Card key="personal-info-step">
-            <CardContent>
-                <Typography variant="h6" gutterBottom>
-                    Personal Information
-                </Typography>
-
-                {/* Show alert when person was found but has incomplete information */}
-                {mode === 'application' && !isNewPerson && personDataWasIncomplete && (
-                    <Alert severity="warning" sx={{ mb: 3 }}>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                            Incomplete Person Information
-                        </Typography>
-                        <Typography variant="body2">
-                            This person exists in the system but has missing required information for license applications. 
-                            Please complete all missing fields to proceed with the application.
-                        </Typography>
-                    </Alert>
-                )}
-
-                <Grid container spacing={3}>
-                    <Grid item xs={12} md={6}>
+            <form onSubmit={lookupForm.handleSubmit(performLookup)}>
+                <Grid container spacing={2}>
+                    <Grid item xs={12} md={4}>
                         <Controller
-                            name="surname"
-                            control={personForm.control}
+                            name="document_type"
+                            control={lookupForm.control}
                             render={({ field }) => (
-                                <TextField
-                                    id="person-surname"
-                                    name={field.name}
-                                    value={field.value || ''}
-                                    fullWidth
-                                    label="Surname *"
-                                    error={!!personForm.formState.errors.surname}
-                                    helperText={personForm.formState.errors.surname?.message || 'Family name'}
-                                    inputProps={{ maxLength: 50 }}
-                                    onChange={(e) => {
-                                        const value = e.target.value.toUpperCase();
-                                        field.onChange(value);
-                                    }}
-                                    onBlur={field.onBlur}
-                                />
-                            )}
-                        />
-                    </Grid>
-
-                    <Grid item xs={12} md={6}>
-                        <Controller
-                            name="first_name"
-                            control={personForm.control}
-                            render={({ field }) => (
-                                <TextField
-                                    id="person-first-name"
-                                    name={field.name}
-                                    value={field.value || ''}
-                                    fullWidth
-                                    label="First Name *"
-                                    error={!!personForm.formState.errors.first_name}
-                                    helperText={personForm.formState.errors.first_name?.message || 'Given name'}
-                                    inputProps={{ maxLength: 50 }}
-                                    onChange={(e) => {
-                                        const value = e.target.value.toUpperCase();
-                                        field.onChange(value);
-                                    }}
-                                    onBlur={field.onBlur}
-                                />
-                            )}
-                        />
-                    </Grid>
-
-                    <Grid item xs={12} md={6}>
-                        <Controller
-                            name="middle_name"
-                            control={personForm.control}
-                            render={({ field }) => (
-                                <TextField
-                                    id="person-middle-name"
-                                    name={field.name}
-                                    value={field.value || ''}
-                                    fullWidth
-                                    label="Middle Name"
-                                    helperText="Middle name (optional)"
-                                    inputProps={{ maxLength: 50 }}
-                                    onChange={(e) => {
-                                        const value = e.target.value.toUpperCase();
-                                        field.onChange(value);
-                                    }}
-                                    onBlur={field.onBlur}
-                                />
-                            )}
-                        />
-                    </Grid>
-
-                    <Grid item xs={12} md={6}>
-                        <Controller
-                            name="person_nature"
-                            control={personForm.control}
-                            render={({ field }) => (
-                                <FormControl fullWidth error={!!personForm.formState.errors.person_nature}>
-                                    <InputLabel>Gender *</InputLabel>
-                                    <Select
-                                        id="person-nature-select"
-                                        name={field.name}
-                                        value={field.value || ''}
-                                        onChange={field.onChange}
-                                        onBlur={field.onBlur}
-                                        label="Gender *"
-                                        MenuProps={{
-                                            id: "person-nature-menu"
-                                        }}
-                                    >
-                                        {personNatures.map((option) => (
+                                <FormControl fullWidth size="small" error={!!lookupForm.formState.errors.document_type}>
+                                    <InputLabel>Document Type *</InputLabel>
+                                    <Select {...field} label="Document Type *">
+                                        {documentTypes.map((option) => (
                                             <MenuItem key={option.value} value={option.value}>
                                                 {option.label}
                                             </MenuItem>
                                         ))}
                                     </Select>
                                     <FormHelperText>
-                                        {personForm.formState.errors.person_nature?.message || 'Select gender'}
+                                        {lookupForm.formState.errors.document_type?.message || 'Select document type'}
                                     </FormHelperText>
                                 </FormControl>
                             )}
                         />
                     </Grid>
 
-                    <Grid item xs={12} md={4}>
-                        <Controller
-                            name="birth_date"
-                            control={personForm.control}
-                            render={({ field }) => (
-                                <TextField
-                                    id="person-birth-date"
-                                    name={field.name}
-                                    value={field.value || ''}
-                                    fullWidth
-                                    type="date"
-                                    label="Date of Birth"
-                                    InputLabelProps={{ shrink: true }}
-                                    helperText="Date of birth"
-                                    inputProps={{
-                                        min: "1900-01-01",
-                                        max: new Date().toISOString().split('T')[0]
-                                    }}
-                                    onChange={field.onChange}
-                                    onBlur={field.onBlur}
-                                />
-                            )}
-                        />
-                    </Grid>
-
-                    <Grid item xs={12} md={4}>
-                        <Controller
-                            name="nationality_code"
-                            control={personForm.control}
-                            render={({ field }) => (
-                                <FormControl fullWidth>
-                                    <InputLabel>Nationality *</InputLabel>
-                                    <Select
-                                        id="nationality-code-select"
-                                        name={field.name}
-                                        value={field.value || 'MG'}
-                                        onChange={field.onChange}
-                                        onBlur={field.onBlur}
-                                        label="Nationality *"
-                                        MenuProps={{
-                                            id: "nationality-menu"
-                                        }}
-                                    >
-                                        <MenuItem value="MG">MALAGASY</MenuItem>
-                                        <MenuItem value="FR">FRENCH</MenuItem>
-                                        <MenuItem value="US">AMERICAN</MenuItem>
-                                    </Select>
-                                </FormControl>
-                            )}
-                        />
-                    </Grid>
-
-                    <Grid item xs={12} md={4}>
-                        <Controller
-                            name="preferred_language"
-                            control={personForm.control}
-                            render={({ field }) => (
-                                <FormControl fullWidth error={!!personForm.formState.errors.preferred_language}>
-                                    <InputLabel>Preferred Language *</InputLabel>
-                                    <Select
-                                        id="preferred-language-select"
-                                        name={field.name}
-                                        value={field.value || (languages.length > 0 ? languages[0].value : 'MG')}
-                                        onChange={field.onChange}
-                                        onBlur={field.onBlur}
-                                        label="Preferred Language *"
-                                        MenuProps={{
-                                            id: "preferred-language-menu"
-                                        }}
-                                    >
-                                        {languages.map((option) => (
-                                            <MenuItem key={option.value} value={option.value}>
-                                                {option.label}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                    <FormHelperText>
-                                        {personForm.formState.errors.preferred_language?.message || 'Select preferred language'}
-                                    </FormHelperText>
-                                </FormControl>
-                            )}
-                        />
-                    </Grid>
-                </Grid>
-            </CardContent>
-        </Card>
-    );
-
-    const renderContactDetailsStep = () => (
-        <Card key="contact-details-step">
-            <CardContent>
-                <Typography variant="h6" gutterBottom>
-                    Contact Information
-                </Typography>
-
-                <Grid container spacing={3}>
                     <Grid item xs={12} md={6}>
                         <Controller
-                            name="email_address"
-                            control={personForm.control}
+                            name="document_number"
+                            control={lookupForm.control}
                             render={({ field }) => (
                                 <TextField
-                                    id="contact-email-address"
                                     name={field.name}
                                     value={field.value || ''}
                                     fullWidth
-                                    type="email"
-                                    label="Email Address"
-                                    error={!!personForm.formState.errors.email_address}
-                                    helperText={personForm.formState.errors.email_address?.message || 'Email address (optional)'}
-                                    inputProps={{ maxLength: 100 }}
-                                    onChange={(e) => {
-                                        const value = e.target.value.toUpperCase();
-                                        field.onChange(value);
-                                    }}
-                                    onBlur={field.onBlur}
-                                />
-                            )}
-                        />
-                    </Grid>
-
-                    <Grid item xs={12} md={6}>
-                        <Controller
-                            name="work_phone"
-                            control={personForm.control}
-                            render={({ field }) => (
-                                <TextField
-                                    id="contact-work-phone"
-                                    name={field.name}
-                                    value={field.value || ''}
-                                    fullWidth
-                                    label="Work Phone"
-                                    error={!!personForm.formState.errors.work_phone}
-                                    helperText={personForm.formState.errors.work_phone?.message || 'Work phone number (optional)'}
-                                    inputProps={{
-                                        maxLength: 20,
-                                        pattern: '[0-9]*',
-                                        inputMode: 'numeric'
-                                    }}
+                                    size="small"
+                                    label="Document Number *"
+                                    error={!!lookupForm.formState.errors.document_number}
+                                    helperText={lookupForm.formState.errors.document_number?.message || 'Enter document number (numbers only)'}
                                     onChange={(e) => {
                                         const value = e.target.value.replace(/\D/g, '');
                                         field.onChange(value);
                                     }}
                                     onBlur={field.onBlur}
+                                    InputProps={{
+                                        endAdornment: field.value && (
+                                            <InputAdornment position="end">
+                                                <IconButton onClick={() => lookupForm.setValue('document_number', '')} size="small">
+                                                    <ClearIcon />
+                                                </IconButton>
+                                            </InputAdornment>
+                                        ),
+                                    }}
                                 />
                             )}
                         />
                     </Grid>
 
-                    <Grid item xs={12}>
-                        <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 500, mt: 2 }}>
-                            Cell Phone (Must be 10 digits starting with 0, e.g., 0815598453)
-                        </Typography>
-                    </Grid>
-
-                    <Grid item xs={12} md={3}>
-                        <Controller
-                            name="cell_phone_country_code"
-                            control={personForm.control}
-                            render={({ field }) => (
-                                <FormControl fullWidth>
-                                    <InputLabel>Country Code *</InputLabel>
-                                    <Select
-                                        id="cell-phone-country-code-select"
-                                        name={field.name}
-                                        value={field.value || '+261'}
-                                        onChange={field.onChange}
-                                        onBlur={field.onBlur}
-                                        label="Country Code *"
-                                        MenuProps={{
-                                            id: "country-code-menu"
-                                        }}
-                                    >
-                                        <MenuItem value="+261">+261 (MADAGASCAR)</MenuItem>
-                                        <MenuItem value="+27">+27 (SOUTH AFRICA)</MenuItem>
-                                        <MenuItem value="+33">+33 (FRANCE)</MenuItem>
-                                        <MenuItem value="+1">+1 (USA)</MenuItem>
-                                        <MenuItem value="+44">+44 (UK)</MenuItem>
-                                    </Select>
-                                    <FormHelperText>Select country code</FormHelperText>
-                                </FormControl>
-                            )}
-                        />
-                    </Grid>
-
-                    <Grid item xs={12} md={9}>
-                        <Controller
-                            name="cell_phone"
-                            control={personForm.control}
-                            render={({ field }) => (
-                                <TextField
-                                    id="contact-cell-phone"
-                                    name={field.name}
-                                    value={field.value || ''}
-                                    fullWidth
-                                    label="Cell Phone Number"
-                                    placeholder="Example: 0815598453"
-                                    error={!!personForm.formState.errors.cell_phone}
-                                    helperText={personForm.formState.errors.cell_phone?.message || 'Madagascar cell phone (10 digits, will auto-add 0 if missing)'}
-                                    inputProps={{
-                                        maxLength: 10,
-                                        pattern: '[0-9]*',
-                                        inputMode: 'numeric',
-                                    }}
-                                    onChange={(e) => {
-                                        let value = e.target.value.replace(/\D/g, '');
-
-                                        // Ensure Madagascar format: must start with 0 and be exactly 10 digits
-                                        if (value.length > 0 && !value.startsWith('0')) {
-                                            value = '0' + value;
-                                        }
-
-                                        // Limit to 10 digits max
-                                        if (value.length > 10) {
-                                            value = value.substring(0, 10);
-                                        }
-
-                                        field.onChange(value);
-                                    }}
-                                    onBlur={field.onBlur}
-                                />
-                            )}
-                        />
+                    <Grid item xs={12} md={2}>
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            fullWidth
+                            size="small"
+                            disabled={lookupLoading}
+                            startIcon={<SearchIcon />}
+                            sx={{ height: '40px' }}
+                        >
+                            {lookupLoading ? 'Searching...' : 'Search'}
+                        </Button>
                     </Grid>
                 </Grid>
-            </CardContent>
-        </Card>
+            </form>
+        </Box>
+    );
+
+    const renderPersonalInformationStep = () => (
+        <Box>
+            <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600 }}>
+                Personal Information
+            </Typography>
+
+            {/* Show alert when person was found but has incomplete information */}
+            {mode === 'application' && !isNewPerson && personDataWasIncomplete && (
+                <Alert severity="warning" sx={{ mb: 2, py: 1 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                        Incomplete Person Information
+                    </Typography>
+                    <Typography variant="body2">
+                        This person exists in the system but has missing required information for license applications. 
+                        Please complete all missing fields to proceed with the application.
+                    </Typography>
+                </Alert>
+            )}
+
+            <Grid container spacing={2}>
+                <Grid item xs={12} md={4}>
+                    <Controller
+                        name="surname"
+                        control={personForm.control}
+                        render={({ field }) => (
+                            <TextField
+                                id="person-surname"
+                                name={field.name}
+                                value={field.value || ''}
+                                fullWidth
+                                size="small"
+                                label="Surname *"
+                                error={!!personForm.formState.errors.surname}
+                                helperText={personForm.formState.errors.surname?.message || 'Family name'}
+                                inputProps={{ maxLength: 50 }}
+                                onChange={(e) => {
+                                    const value = e.target.value.toUpperCase();
+                                    field.onChange(value);
+                                }}
+                                onBlur={field.onBlur}
+                            />
+                        )}
+                    />
+                </Grid>
+
+                <Grid item xs={12} md={4}>
+                    <Controller
+                        name="first_name"
+                        control={personForm.control}
+                        render={({ field }) => (
+                            <TextField
+                                id="person-first-name"
+                                name={field.name}
+                                value={field.value || ''}
+                                fullWidth
+                                size="small"
+                                label="First Name *"
+                                error={!!personForm.formState.errors.first_name}
+                                helperText={personForm.formState.errors.first_name?.message || 'Given name'}
+                                inputProps={{ maxLength: 50 }}
+                                onChange={(e) => {
+                                    const value = e.target.value.toUpperCase();
+                                    field.onChange(value);
+                                }}
+                                onBlur={field.onBlur}
+                            />
+                        )}
+                    />
+                </Grid>
+
+                <Grid item xs={12} md={4}>
+                    <Controller
+                        name="middle_name"
+                        control={personForm.control}
+                        render={({ field }) => (
+                            <TextField
+                                id="person-middle-name"
+                                name={field.name}
+                                value={field.value || ''}
+                                fullWidth
+                                size="small"
+                                label="Middle Name"
+                                helperText="Middle name (optional)"
+                                inputProps={{ maxLength: 50 }}
+                                onChange={(e) => {
+                                    const value = e.target.value.toUpperCase();
+                                    field.onChange(value);
+                                }}
+                                onBlur={field.onBlur}
+                            />
+                        )}
+                    />
+                </Grid>
+
+                <Grid item xs={12} md={3}>
+                    <Controller
+                        name="person_nature"
+                        control={personForm.control}
+                        render={({ field }) => (
+                            <FormControl fullWidth size="small" error={!!personForm.formState.errors.person_nature}>
+                                <InputLabel>Gender *</InputLabel>
+                                <Select
+                                    id="person-nature-select"
+                                    name={field.name}
+                                    value={field.value || ''}
+                                    onChange={field.onChange}
+                                    onBlur={field.onBlur}
+                                    label="Gender *"
+                                    MenuProps={{
+                                        id: "person-nature-menu"
+                                    }}
+                                >
+                                    {personNatures.map((option) => (
+                                        <MenuItem key={option.value} value={option.value}>
+                                            {option.label}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                                <FormHelperText>
+                                    {personForm.formState.errors.person_nature?.message || 'Select gender'}
+                                </FormHelperText>
+                            </FormControl>
+                        )}
+                    />
+                </Grid>
+
+                <Grid item xs={12} md={3}>
+                    <Controller
+                        name="birth_date"
+                        control={personForm.control}
+                        render={({ field }) => (
+                            <TextField
+                                id="person-birth-date"
+                                name={field.name}
+                                value={field.value || ''}
+                                fullWidth
+                                size="small"
+                                type="date"
+                                label="Date of Birth"
+                                InputLabelProps={{ shrink: true }}
+                                helperText="Date of birth"
+                                inputProps={{
+                                    min: "1900-01-01",
+                                    max: new Date().toISOString().split('T')[0]
+                                }}
+                                onChange={field.onChange}
+                                onBlur={field.onBlur}
+                            />
+                        )}
+                    />
+                </Grid>
+
+                <Grid item xs={12} md={3}>
+                    <Controller
+                        name="nationality_code"
+                        control={personForm.control}
+                        render={({ field }) => (
+                            <FormControl fullWidth size="small">
+                                <InputLabel>Nationality *</InputLabel>
+                                <Select
+                                    id="nationality-code-select"
+                                    name={field.name}
+                                    value={field.value || 'MG'}
+                                    onChange={field.onChange}
+                                    onBlur={field.onBlur}
+                                    label="Nationality *"
+                                    MenuProps={{
+                                        id: "nationality-menu"
+                                    }}
+                                >
+                                    <MenuItem value="MG">MALAGASY</MenuItem>
+                                    <MenuItem value="FR">FRENCH</MenuItem>
+                                    <MenuItem value="US">AMERICAN</MenuItem>
+                                </Select>
+                            </FormControl>
+                        )}
+                    />
+                </Grid>
+
+                <Grid item xs={12} md={3}>
+                    <Controller
+                        name="preferred_language"
+                        control={personForm.control}
+                        render={({ field }) => (
+                            <FormControl fullWidth size="small" error={!!personForm.formState.errors.preferred_language}>
+                                <InputLabel>Preferred Language *</InputLabel>
+                                <Select
+                                    id="preferred-language-select"
+                                    name={field.name}
+                                    value={field.value || (languages.length > 0 ? languages[0].value : 'MG')}
+                                    onChange={field.onChange}
+                                    onBlur={field.onBlur}
+                                    label="Preferred Language *"
+                                    MenuProps={{
+                                        id: "preferred-language-menu"
+                                    }}
+                                >
+                                    {languages.map((option) => (
+                                        <MenuItem key={option.value} value={option.value}>
+                                            {option.label}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                                <FormHelperText>
+                                    {personForm.formState.errors.preferred_language?.message || 'Select preferred language'}
+                                </FormHelperText>
+                            </FormControl>
+                        )}
+                    />
+                </Grid>
+            </Grid>
+        </Box>
+    );
+
+    const renderContactDetailsStep = () => (
+        <Box>
+            <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600 }}>
+                Contact Information
+            </Typography>
+
+            <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                    <Controller
+                        name="email_address"
+                        control={personForm.control}
+                        render={({ field }) => (
+                            <TextField
+                                id="contact-email-address"
+                                name={field.name}
+                                value={field.value || ''}
+                                fullWidth
+                                size="small"
+                                type="email"
+                                label="Email Address"
+                                error={!!personForm.formState.errors.email_address}
+                                helperText={personForm.formState.errors.email_address?.message || 'Email address (optional)'}
+                                inputProps={{ maxLength: 100 }}
+                                onChange={(e) => {
+                                    const value = e.target.value.toUpperCase();
+                                    field.onChange(value);
+                                }}
+                                onBlur={field.onBlur}
+                            />
+                        )}
+                    />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                    <Controller
+                        name="work_phone"
+                        control={personForm.control}
+                        render={({ field }) => (
+                            <TextField
+                                id="contact-work-phone"
+                                name={field.name}
+                                value={field.value || ''}
+                                fullWidth
+                                size="small"
+                                label="Work Phone"
+                                error={!!personForm.formState.errors.work_phone}
+                                helperText={personForm.formState.errors.work_phone?.message || 'Work phone number (optional)'}
+                                inputProps={{
+                                    maxLength: 20,
+                                    pattern: '[0-9]*',
+                                    inputMode: 'numeric'
+                                }}
+                                onChange={(e) => {
+                                    const value = e.target.value.replace(/\D/g, '');
+                                    field.onChange(value);
+                                }}
+                                onBlur={field.onBlur}
+                            />
+                        )}
+                    />
+                </Grid>
+
+                <Grid item xs={12}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 500, mt: 1, mb: 1 }}>
+                        Cell Phone (Must be 10 digits starting with 0, e.g., 0815598453)
+                    </Typography>
+                </Grid>
+
+                <Grid item xs={12} md={3}>
+                    <Controller
+                        name="cell_phone_country_code"
+                        control={personForm.control}
+                        render={({ field }) => (
+                            <FormControl fullWidth size="small">
+                                <InputLabel>Country Code *</InputLabel>
+                                <Select
+                                    id="cell-phone-country-code-select"
+                                    name={field.name}
+                                    value={field.value || '+261'}
+                                    onChange={field.onChange}
+                                    onBlur={field.onBlur}
+                                    label="Country Code *"
+                                    MenuProps={{
+                                        id: "country-code-menu"
+                                    }}
+                                >
+                                    <MenuItem value="+261">+261 (MADAGASCAR)</MenuItem>
+                                    <MenuItem value="+27">+27 (SOUTH AFRICA)</MenuItem>
+                                    <MenuItem value="+33">+33 (FRANCE)</MenuItem>
+                                    <MenuItem value="+1">+1 (USA)</MenuItem>
+                                    <MenuItem value="+44">+44 (UK)</MenuItem>
+                                </Select>
+                                <FormHelperText>Select country code</FormHelperText>
+                            </FormControl>
+                        )}
+                    />
+                </Grid>
+
+                <Grid item xs={12} md={9}>
+                    <Controller
+                        name="cell_phone"
+                        control={personForm.control}
+                        render={({ field }) => (
+                            <TextField
+                                id="contact-cell-phone"
+                                name={field.name}
+                                value={field.value || ''}
+                                fullWidth
+                                size="small"
+                                label="Cell Phone Number"
+                                placeholder="Example: 0815598453"
+                                error={!!personForm.formState.errors.cell_phone}
+                                helperText={personForm.formState.errors.cell_phone?.message || 'Madagascar cell phone (10 digits, will auto-add 0 if missing)'}
+                                inputProps={{
+                                    maxLength: 10,
+                                    pattern: '[0-9]*',
+                                    inputMode: 'numeric',
+                                }}
+                                onChange={(e) => {
+                                    let value = e.target.value.replace(/\D/g, '');
+
+                                    // Ensure Madagascar format: must start with 0 and be exactly 10 digits
+                                    if (value.length > 0 && !value.startsWith('0')) {
+                                        value = '0' + value;
+                                    }
+
+                                    // Limit to 10 digits max
+                                    if (value.length > 10) {
+                                        value = value.substring(0, 10);
+                                    }
+
+                                    field.onChange(value);
+                                }}
+                                onBlur={field.onBlur}
+                            />
+                        )}
+                    />
+                </Grid>
+            </Grid>
+        </Box>
     );
 
     const renderIdDocumentsStep = () => (
-        <Card>
-            <CardContent>
-                <Typography variant="h6" gutterBottom>
-                    Identification Documents
-                </Typography>
+        <Box>
+            <Typography variant="subtitle1" sx={{ mb: 1.5, fontWeight: 600 }}>
+                Identification Documents
+            </Typography>
 
-                {aliasFields.map((field, index) => (
-                    <Box key={field.id} sx={{ mb: 4, p: 3, border: '1px solid #e0e0e0', borderRadius: 2, backgroundColor: '#fafafa' }}>
-                        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, color: 'primary.main' }}>
-                            {index === 0 ? 'Primary Document' : `Additional Document ${index}`}
-                        </Typography>
+            {aliasFields.map((field, index) => (
+                <Box key={field.id} sx={{ mb: 2, p: 2, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
+                    <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600, color: 'primary.main' }}>
+                        {index === 0 ? 'Primary Document' : `Additional Document ${index}`}
+                    </Typography>
 
-                        <Grid container spacing={3}>
-                            <Grid item xs={12} md={4}>
-                                <Controller
-                                    name={`aliases.${index}.document_type`}
-                                    control={personForm.control}
-                                    render={({ field }) => (
-                                        <FormControl fullWidth>
-                                            <InputLabel>Document Type</InputLabel>
-                                            <Select {...field} label="Document Type" disabled={index === 0}>
-                                                {documentTypes.map((option) => (
-                                                    <MenuItem key={option.value} value={option.value}>
-                                                        {option.label}
-                                                    </MenuItem>
-                                                ))}
-                                            </Select>
-                                            {index === 0 && (
-                                                <FormHelperText>Primary document from lookup</FormHelperText>
-                                            )}
-                                        </FormControl>
-                                    )}
-                                />
-                            </Grid>
-
-                            <Grid item xs={12} md={6}>
-                                <Controller
-                                    name={`aliases.${index}.document_number`}
-                                    control={personForm.control}
-                                    render={({ field }) => (
-                                        <TextField
-                                            name={field.name}
-                                            value={field.value || ''}
-                                            fullWidth
-                                            label="Document Number"
-                                            disabled={index === 0}
-                                            helperText={index === 0 ? 'From lookup step' : 'Additional document number (numbers only)'}
-                                            onChange={(e) => {
-                                                // Allow only numbers for document numbers
-                                                const value = e.target.value.replace(/\D/g, '');
-                                                field.onChange(value);
-                                            }}
-                                            onBlur={field.onBlur}
-                                        />
-                                    )}
-                                />
-                            </Grid>
-
-                            <Grid item xs={12} md={2}>
-                                <Controller
-                                    name={`aliases.${index}.is_current`}
-                                    control={personForm.control}
-                                    render={({ field }) => (
-                                        <FormControlLabel
-                                            control={<Checkbox {...field} checked={field.value} />}
-                                            label="Current"
-                                            sx={{ mt: 2 }}
-                                        />
-                                    )}
-                                />
-                            </Grid>
-
-                            {/* Name in Document field - CAPITALIZED */}
-                            <Grid item xs={12} md={12}>
-                                <Controller
-                                    name={`aliases.${index}.name_in_document`}
-                                    control={personForm.control}
-                                    render={({ field }) => (
-                                        <TextField
-                                            name={field.name}
-                                            value={field.value || ''}
-                                            fullWidth
-                                            label="Name in Document"
-                                            helperText="Name as it appears in the document (will be capitalized)"
-                                            onChange={(e) => {
-                                                const value = e.target.value.toUpperCase();
-                                                field.onChange(value);
-                                            }}
-                                            onBlur={field.onBlur}
-                                        />
-                                    )}
-                                />
-                            </Grid>
-
-                            {personForm.watch(`aliases.${index}.document_type`) === 'PASSPORT' && (
-                                <>
-                                    <Grid item xs={12} md={4}>
-                                        <Controller
-                                            name={`aliases.${index}.country_of_issue`}
-                                            control={personForm.control}
-                                            render={({ field }) => (
-                                                <FormControl fullWidth>
-                                                    <InputLabel>Country of Issue *</InputLabel>
-                                                    <Select {...field} label="Country of Issue *">
-                                                        <MenuItem value="MG">Madagascar</MenuItem>
-                                                        <MenuItem value="FR">France</MenuItem>
-                                                        <MenuItem value="US">United States</MenuItem>
-                                                        <MenuItem value="GB">United Kingdom</MenuItem>
-                                                        <MenuItem value="ZA">South Africa</MenuItem>
-                                                        <MenuItem value="OTHER">Other</MenuItem>
-                                                    </Select>
-                                                    <FormHelperText>Country that issued the passport</FormHelperText>
-                                                </FormControl>
-                                            )}
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12} md={4}>
-                                        <Controller
-                                            name={`aliases.${index}.expiry_date`}
-                                            control={personForm.control}
-                                            render={({ field }) => (
-                                                <TextField
-                                                    name={field.name}
-                                                    value={field.value || ''}
-                                                    fullWidth
-                                                    type="date"
-                                                    label="Expiry Date *"
-                                                    InputLabelProps={{ shrink: true }}
-                                                    helperText="Required for passports"
-                                                    inputProps={{
-                                                        min: new Date().toISOString().split('T')[0],
-                                                        max: "2050-12-31"
-                                                    }}
-                                                    onChange={field.onChange}
-                                                    onBlur={field.onBlur}
-                                                />
-                                            )}
-                                        />
-                                    </Grid>
-                                </>
-                            )}
-
-                            {index > 0 && (
-                                <Grid item xs={12}>
-                                    <Button
-                                        variant="outlined"
-                                        color="error"
-                                        onClick={() => removeAlias(index)}
-                                        sx={{ mt: 2 }}
-                                    >
-                                        Remove Document
-                                    </Button>
-                                </Grid>
-                            )}
+                    <Grid container spacing={2}>
+                        <Grid item xs={12} md={3}>
+                            <Controller
+                                name={`aliases.${index}.document_type`}
+                                control={personForm.control}
+                                render={({ field }) => (
+                                    <FormControl fullWidth size="small">
+                                        <InputLabel>Document Type</InputLabel>
+                                        <Select {...field} label="Document Type" disabled={index === 0}>
+                                            {documentTypes.map((option) => (
+                                                <MenuItem key={option.value} value={option.value}>
+                                                    {option.label}
+                                                </MenuItem>
+                                            ))}
+                                        </Select>
+                                        {index === 0 && (
+                                            <FormHelperText>Primary document from lookup</FormHelperText>
+                                        )}
+                                    </FormControl>
+                                )}
+                            />
                         </Grid>
-                    </Box>
-                ))}
 
-                <Button
-                    variant="outlined"
-                    onClick={() => appendAlias({
-                        document_type: 'PASSPORT',
-                        document_number: '',
-                        country_of_issue: 'MG',
-                        name_in_document: '',
-                        is_primary: false,
-                        is_current: true,
-                        expiry_date: '',
-                    })}
-                    startIcon={<PersonAddIcon />}
-                >
-                    Add Additional Document
-                </Button>
-            </CardContent>
-        </Card>
+                        <Grid item xs={12} md={4}>
+                            <Controller
+                                name={`aliases.${index}.document_number`}
+                                control={personForm.control}
+                                render={({ field }) => (
+                                    <TextField
+                                        name={field.name}
+                                        value={field.value || ''}
+                                        fullWidth
+                                        size="small"
+                                        label="Document Number"
+                                        disabled={index === 0}
+                                        helperText={index === 0 ? 'From lookup step' : 'Additional document number (numbers only)'}
+                                        onChange={(e) => {
+                                            // Allow only numbers for document numbers
+                                            const value = e.target.value.replace(/\D/g, '');
+                                            field.onChange(value);
+                                        }}
+                                        onBlur={field.onBlur}
+                                    />
+                                )}
+                            />
+                        </Grid>
+
+                        <Grid item xs={12} md={5}>
+                            <Controller
+                                name={`aliases.${index}.name_in_document`}
+                                control={personForm.control}
+                                render={({ field }) => (
+                                    <TextField
+                                        name={field.name}
+                                        value={field.value || ''}
+                                        fullWidth
+                                        size="small"
+                                        label="Name in Document"
+                                        helperText="Name as it appears in the document (will be capitalized)"
+                                        onChange={(e) => {
+                                            const value = e.target.value.toUpperCase();
+                                            field.onChange(value);
+                                        }}
+                                        onBlur={field.onBlur}
+                                    />
+                                )}
+                            />
+                        </Grid>
+
+                        {personForm.watch(`aliases.${index}.document_type`) === 'PASSPORT' && (
+                            <>
+                                <Grid item xs={12} md={4}>
+                                    <Controller
+                                        name={`aliases.${index}.country_of_issue`}
+                                        control={personForm.control}
+                                        render={({ field }) => (
+                                            <FormControl fullWidth size="small">
+                                                <InputLabel>Country of Issue *</InputLabel>
+                                                <Select {...field} label="Country of Issue *">
+                                                    <MenuItem value="MG">Madagascar</MenuItem>
+                                                    <MenuItem value="FR">France</MenuItem>
+                                                    <MenuItem value="US">United States</MenuItem>
+                                                    <MenuItem value="GB">United Kingdom</MenuItem>
+                                                    <MenuItem value="ZA">South Africa</MenuItem>
+                                                    <MenuItem value="OTHER">Other</MenuItem>
+                                                </Select>
+                                                <FormHelperText>Country that issued the passport</FormHelperText>
+                                            </FormControl>
+                                        )}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} md={4}>
+                                    <Controller
+                                        name={`aliases.${index}.expiry_date`}
+                                        control={personForm.control}
+                                        render={({ field }) => (
+                                            <TextField
+                                                name={field.name}
+                                                value={field.value || ''}
+                                                fullWidth
+                                                size="small"
+                                                type="date"
+                                                label="Expiry Date *"
+                                                InputLabelProps={{ shrink: true }}
+                                                helperText="Required for passports"
+                                                inputProps={{
+                                                    min: new Date().toISOString().split('T')[0],
+                                                    max: "2050-12-31"
+                                                }}
+                                                onChange={field.onChange}
+                                                onBlur={field.onBlur}
+                                            />
+                                        )}
+                                    />
+                                </Grid>
+                            </>
+                        )}
+
+                        <Grid item xs={12} md={4}>
+                            <Controller
+                                name={`aliases.${index}.is_current`}
+                                control={personForm.control}
+                                render={({ field }) => (
+                                    <FormControlLabel
+                                        control={<Checkbox {...field} checked={field.value} size="small" />}
+                                        label="Current"
+                                        sx={{ mt: 1 }}
+                                    />
+                                )}
+                            />
+                        </Grid>
+
+                        {index > 0 && (
+                            <Grid item xs={12}>
+                                <Button
+                                    variant="outlined"
+                                    color="error"
+                                    size="small"
+                                    onClick={() => removeAlias(index)}
+                                    sx={{ mt: 1 }}
+                                >
+                                    Remove Document
+                                </Button>
+                            </Grid>
+                        )}
+                    </Grid>
+                </Box>
+            ))}
+
+            <Button
+                variant="outlined"
+                size="small"
+                onClick={() => appendAlias({
+                    document_type: 'PASSPORT',
+                    document_number: '',
+                    country_of_issue: 'MG',
+                    name_in_document: '',
+                    is_primary: false,
+                    is_current: true,
+                    expiry_date: '',
+                })}
+                startIcon={<PersonAddIcon />}
+                sx={{ mt: 1 }}
+            >
+                Add Additional Document
+            </Button>
+        </Box>
     );
 
     const renderAddressStep = () => (
@@ -2290,129 +2304,166 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     }
 
     return (
-        <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
+        <Container maxWidth="xl" sx={{ py: 1, px: 2, height: '100vh', display: 'flex', flexDirection: 'column' }}>
+            {/* Compact Header */}
             {showHeader && (
-                <>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                        <Typography variant="h4" component="h1">
-                            {title}
-                        </Typography>
-
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                            {mode === 'standalone' && (
-                                <Button
-                                    variant="outlined"
-                                    onClick={resetForm}
-                                    startIcon={<ClearIcon />}
-                                >
-                                    Start Over
-                                </Button>
-                            )}
-                            {(mode === 'application' || mode === 'search') && onCancel && (
-                                <Button
-                                    variant="outlined"
-                                    onClick={handleFormCancel}
-                                >
-                                    Cancel
-                                </Button>
-                            )}
-                        </Box>
-                    </Box>
-
-                    <Typography variant="body1" color="text.secondary" gutterBottom>
+                <Box sx={{ mb: 1.5 }}>
+                    <Typography variant="h6" sx={{ mb: 0.5, fontWeight: 600 }}>
+                        {title}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
                         {subtitle}
                     </Typography>
-                </>
+                </Box>
             )}
 
-            {/* Stepper */}
-            <Paper sx={{ p: 3, mb: 3 }}>
-                <Stepper activeStep={currentStep} alternativeLabel>
-                    {steps.map((label, index) => {
+            {/* Horizontal Tab Navigation */}
+            <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+                <Tabs 
+                    value={currentStep} 
+                    onChange={(event, newValue) => {
+                        const canNavigate = (newValue < currentStep || stepValidation[newValue] || (newValue === 0 && !isNewPerson)) && !(skipFirstStep && newValue === 0);
+                        if (canNavigate) {
+                            setCurrentStep(newValue);
+                        }
+                    }}
+                    variant="fullWidth"
+                    sx={{ minHeight: 48 }}
+                >
+                    {steps.map((step, index) => {
                         const canNavigate = (index < currentStep || stepValidation[index] || (index === 0 && !isNewPerson)) && !(skipFirstStep && index === 0);
                         const isDisabled = skipFirstStep && index === 0;
+                        
                         return (
-                            <Step key={label} completed={stepValidation[index]} disabled={isDisabled}>
-                                <StepLabel
-                                    onClick={() => canNavigate && handleStepClick(index)}
-                                    sx={{
-                                        cursor: canNavigate ? 'pointer' : 'default',
-                                        '&:hover': canNavigate ? { opacity: 0.8 } : {},
-                                        opacity: isDisabled ? 0.4 : 1,
-                                    }}
-                                >
-                                    {label}
-                                </StepLabel>
-                            </Step>
+                            <Tab
+                                key={step.key}
+                                label={step.label}
+                                icon={step.icon}
+                                iconPosition="start"
+                                disabled={!canNavigate || isDisabled}
+                                sx={{ 
+                                    minHeight: 48,
+                                    textTransform: 'none',
+                                    fontWeight: stepValidation[index] ? 600 : 400,
+                                    '&.Mui-selected': {
+                                        fontWeight: 600
+                                    },
+                                    opacity: isDisabled ? 0.4 : 1,
+                                }}
+                            />
                         );
                     })}
-                </Stepper>
-            </Paper>
-
-            {/* Step Content */}
-            <Box sx={{ mb: 3 }}>
-                {renderStepContent()}
+                </Tabs>
             </Box>
 
-            {/* Navigation */}
-            <Paper sx={{ p: 3 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            {/* Content Area */}
+            <Paper 
+                elevation={0} 
+                sx={{ 
+                    flex: 1, 
+                    p: 2, 
+                    overflow: 'auto',
+                    bgcolor: 'grey.50',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: 1
+                }}
+            >
+                {renderStepContent()}
+            </Paper>
+
+            {/* Fixed Bottom Navigation */}
+            <Box 
+                sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    py: 1.5,
+                    borderTop: 1,
+                    borderColor: 'divider',
+                    bgcolor: 'background.paper'
+                }}
+            >
+                {(mode === 'application' || mode === 'search') && onCancel ? (
                     <Button
-                        disabled={currentStep === (skipFirstStep ? 1 : 0)}
+                        onClick={handleFormCancel}
+                        disabled={submitLoading || duplicateCheckLoading || lookupLoading}
+                        color="secondary"
+                        size="small"
+                    >
+                        Cancel
+                    </Button>
+                ) : mode === 'standalone' ? (
+                    <Button
+                        onClick={resetForm}
+                        disabled={submitLoading || duplicateCheckLoading || lookupLoading}
+                        startIcon={<ClearIcon />}
+                        size="small"
+                    >
+                        Start Over
+                    </Button>
+                ) : <Box />}
+                
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button
+                        disabled={currentStep === (skipFirstStep ? 1 : 0) || submitLoading || duplicateCheckLoading || lookupLoading}
                         onClick={handleBack}
+                        startIcon={<ArrowBackIcon />}
+                        size="small"
                     >
                         Back
                     </Button>
-
-                    <Box sx={{ display: 'flex', gap: 2 }}>
-                        {currentStep < steps.length - 1 ? (
+                    
+                    {currentStep < steps.length - 1 ? (
+                        <Button
+                            variant="contained"
+                            onClick={handleNext}
+                            disabled={lookupLoading || submitLoading || duplicateCheckLoading}
+                            endIcon={<ArrowForwardIcon />}
+                            size="small"
+                        >
+                            {currentStep === 0 ? 'Search' : 'Next'}
+                        </Button>
+                    ) : (
+                        // Special handling for review step in application mode
+                        mode === 'application' && !isNewPerson ? (
                             <Button
                                 variant="contained"
-                                onClick={handleNext}
-                                disabled={lookupLoading}
+                                onClick={() => {
+                                    // Trigger completion callback for application mode
+                                    // For existing persons, pass the actual person object with ID
+                                    const personToPass = personFound || {
+                                        id: currentPersonId,
+                                        ...personForm.getValues()
+                                    };
+                                    
+                                    console.log('Passing existing person to onSuccess:', personToPass);
+                                    
+                                    if (onComplete) {
+                                        onComplete(personToPass);
+                                    }
+                                    if (onSuccess) {
+                                        onSuccess(personToPass, true); // true indicates this is an edit/existing person
+                                    }
+                                }}
+                                endIcon={<ArrowForwardIcon />}
+                                size="small"
                             >
-                                {currentStep === 0 ? 'Search' : 'Next'}
+                                Confirm and Continue
                             </Button>
                         ) : (
-                            // Special handling for review step in application mode
-                            mode === 'application' && !isNewPerson ? (
-                                <Button
-                                    variant="contained"
-                                    onClick={() => {
-                                        // Trigger completion callback for application mode
-                                        // For existing persons, pass the actual person object with ID
-                                        const personToPass = personFound || {
-                                            id: currentPersonId,
-                                            ...personForm.getValues()
-                                        };
-                                        
-                                        console.log('Passing existing person to onSuccess:', personToPass);
-                                        
-                                        if (onComplete) {
-                                            onComplete(personToPass);
-                                        }
-                                        if (onSuccess) {
-                                            onSuccess(personToPass, true); // true indicates this is an edit/existing person
-                                        }
-                                    }}
-                                    startIcon={<ArrowForwardIcon />}
-                                >
-                                    Confirm and Continue
-                                </Button>
-                            ) : (
-                                <Button
-                                    variant="contained"
-                                    onClick={handleSubmit}
-                                    disabled={submitLoading || duplicateCheckLoading}
-                                    startIcon={<PersonAddIcon />}
-                                >
-                                    {duplicateCheckLoading ? 'Checking for Duplicates...' : submitLoading ? (isEditMode ? 'Updating...' : 'Submitting...') : (isEditMode ? 'Update Person' : 'Submit')}
-                                </Button>
-                            )
-                        )}
-                    </Box>
+                            <Button
+                                variant="contained"
+                                onClick={handleSubmit}
+                                disabled={submitLoading || duplicateCheckLoading}
+                                endIcon={<PersonAddIcon />}
+                                size="small"
+                            >
+                                {duplicateCheckLoading ? 'Checking...' : submitLoading ? (isEditMode ? 'Updating...' : 'Submitting...') : (isEditMode ? 'Update' : 'Submit')}
+                            </Button>
+                        )
+                    )}
                 </Box>
-            </Paper>
+            </Box>
 
             {/* Duplicate Detection Dialog */}
             <Dialog
@@ -2620,7 +2671,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     )}
                 </DialogActions>
             </Dialog>
-        </Box>
+        </Container>
     );
 };
 
