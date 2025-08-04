@@ -251,15 +251,7 @@ function App() {
                 } 
               />
               
-              {/* Generic application form (fallback) */}
-              <Route 
-                path="create" 
-                element={
-                  <ProtectedRoute requiredPermission="applications.create">
-                    <ApplicationFormPage />
-                  </ProtectedRoute>
-                } 
-              />
+
               
               {/* Application details and editing */}
               <Route 

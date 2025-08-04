@@ -169,17 +169,6 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
       permission: 'applications.create',
     },
     {
-      id: 'action-new-application',
-      label: 'Create New Application',
-      description: 'Start a new application process',
-      icon: <Apps />,
-      action: () => navigate('/dashboard/applications/create'),
-      shortcut: 'C A',
-      category: 'actions',
-      keywords: ['application', 'create', 'new'],
-      permission: 'applications.create',
-    },
-    {
       id: 'action-pos',
       label: 'Open Point of Sale',
       description: 'Process transactions',
@@ -333,12 +322,16 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [open, filteredCommands, selectedIndex, onClose]);
 
-  // Reset search and selection when opened
+  // Reset search and selection when opened with auto focus
   useEffect(() => {
     if (open) {
       setSearchQuery('');
       setSelectedIndex(0);
-      setTimeout(() => searchInputRef.current?.focus(), 100);
+      // Auto focus with a small delay to ensure modal is fully rendered
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select(); // Select any existing text
+      }, 150);
     }
   }, [open]);
 

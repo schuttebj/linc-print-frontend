@@ -77,6 +77,7 @@ const DashboardLayout: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [applicationsExpanded, setApplicationsExpanded] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [createApplicationsExpanded, setCreateApplicationsExpanded] = useState(false);
 
   // Function to get user location display text
   const getUserLocationText = (): string => {
@@ -117,6 +118,10 @@ const DashboardLayout: React.FC = () => {
 
   const handleApplicationsToggle = () => {
     setApplicationsExpanded(!applicationsExpanded);
+  };
+
+  const handleCreateApplicationsToggle = () => {
+    setCreateApplicationsExpanded(!createApplicationsExpanded);
   };
 
   const handleOpenCommandPalette = () => {
@@ -394,6 +399,101 @@ const DashboardLayout: React.FC = () => {
   // Check if user has permission to create applications
   const canCreateApplications = hasPermission('applications.create');
 
+  // Define all available application types from the applications folder
+  const allApplicationTypes = [
+    // New License Applications
+    {
+      category: 'New License Applications',
+      applications: [
+        {
+          text: "Learner's License Application",
+          icon: <School />,
+          path: '/dashboard/applications/learners-license',
+          permission: 'applications.create',
+        },
+        {
+          text: 'Driving License Application',
+          icon: <DirectionsCar />,
+          path: '/dashboard/applications/driving-license',
+          permission: 'applications.create',
+        },
+        {
+          text: 'Professional License Application',
+          icon: <DirectionsCar />,
+          path: '/dashboard/applications/professional-license',
+          permission: 'applications.create',
+        },
+        {
+          text: 'Temporary License Application',
+          icon: <Assignment />,
+          path: '/dashboard/applications/temporary-license',
+          permission: 'applications.create',
+        },
+      ]
+    },
+    // Renewals & Duplicates
+    {
+      category: 'Renewals & Duplicates',
+      applications: [
+        {
+          text: 'Renew Driving License',
+          icon: <Refresh />,
+          path: '/dashboard/applications/renew-license',
+          permission: 'applications.create',
+        },
+        {
+          text: "Duplicate Learner's License",
+          icon: <FileCopy />,
+          path: '/dashboard/applications/duplicate-learners',
+          permission: 'applications.create',
+        },
+      ]
+    },
+    // Conversions & International
+    {
+      category: 'Conversions & International',
+      applications: [
+        {
+          text: 'Convert Foreign License',
+          icon: <Assessment />,
+          path: '/dashboard/applications/foreign-conversion',
+          permission: 'applications.create',
+        },
+        {
+          text: 'International Driving Permit',
+          icon: <CreditCard />,
+          path: '/dashboard/applications/international-permit',
+          permission: 'applications.create',
+        },
+      ]
+    },
+    // License Capture
+    {
+      category: 'License Capture',
+      applications: [
+        {
+          text: 'Driver License Capture',
+          icon: <CreditCard />,
+          path: '/dashboard/applications/driver-license-capture',
+          permission: 'applications.create',
+        },
+        {
+          text: 'Learner Permit Capture',
+          icon: <Assignment />,
+          path: '/dashboard/applications/learner-permit-capture',
+          permission: 'applications.create',
+        },
+        {
+          text: 'Learner Permit Capture (Compact)',
+          icon: <Assignment />,
+          path: '/dashboard/applications/learner-permit-capture-compact',
+          permission: 'applications.create',
+          isNew: true,
+        },
+      ]
+    }
+  ];
+
   // Flatten all navigation items for cleaner display
   const allNavigationItems = [
     // Core navigation
@@ -402,22 +502,8 @@ const DashboardLayout: React.FC = () => {
     // Applications (show first few important ones)
     ...applicationNavigationItems.filter(item => !item.permission || hasPermission(item.permission)),
     
-    // Selected application types (most used ones)
-    ...(canCreateApplications ? [
-      {
-        text: 'New Applications',
-        icon: <Apps />,
-        path: '/dashboard/applications/create',
-        permission: 'applications.create',
-        hasNotification: true,
-      },
-      {
-        text: 'Learner Permit Capture',
-        icon: <Assignment />,
-        path: '/dashboard/applications/learner-permit-capture-compact',
-        permission: 'applications.create',
-      },
-    ] : []),
+    // Application types (moved to dropdown - see below)
+    ...(canCreateApplications ? [] : []),
     
     // Licenses
     ...licenseNavigationItems.filter(item => !item.permission || hasPermission(item.permission)),
@@ -468,7 +554,7 @@ const DashboardLayout: React.FC = () => {
             LINC Print
           </Typography>
           <KeyboardArrowDown sx={{ color: '#666', fontSize: 18 }} />
-        </Box>
+                      </Box>
         
         {/* Quick Actions Search Trigger */}
         <Box
@@ -494,8 +580,8 @@ const DashboardLayout: React.FC = () => {
             sx={{ 
               flex: 1, 
               color: '#999', 
-              fontSize: '0.875rem' 
-            }}
+                                    fontSize: '0.875rem'
+                                  }} 
           >
             Quick actions
           </Typography>
@@ -513,25 +599,25 @@ const DashboardLayout: React.FC = () => {
           >
             ⌘K
           </Typography>
-        </Box>
+                      </Box>
       </Box>
 
       {/* Navigation Items */}
       <Box sx={{ flex: 1, overflow: 'auto', py: 1 }}>
-        <List dense sx={{ px: 1 }}>
+                <List dense sx={{ px: 1 }}>
           {sidebarNavItems.map((item) => {
-            const isActive = location.pathname === item.path;
-            
-            return (
+              const isActive = location.pathname === item.path;
+
+              return (
               <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
-                <ListItemButton
-                  selected={isActive}
-                  onClick={() => {
-                    navigate(item.path);
-                    if (isMobile) {
-                      setMobileOpen(false);
-                    }
-                  }}
+                  <ListItemButton
+                    selected={isActive}
+                    onClick={() => {
+                      navigate(item.path);
+                      if (isMobile) {
+                        setMobileOpen(false);
+                      }
+                    }}
                   sx={{
                     borderRadius: '6px',
                     minHeight: '36px',
@@ -578,19 +664,152 @@ const DashboardLayout: React.FC = () => {
                       item.icon
                     )}
                   </ListItemIcon>
-                  <ListItemText 
+                    <ListItemText 
                     primary={item.text} 
                     primaryTypographyProps={{
                       fontSize: '0.875rem',
                       fontWeight: isActive ? 500 : 400,
                       color: isActive ? 'white' : '#333',
                     }}
+                    />
+                  </ListItemButton>
+                </ListItem>
+              );
+            })}
+
+            {/* Create Applications Dropdown */}
+            {canCreateApplications && (
+              <>
+              <ListItem disablePadding sx={{ mb: 0.5 }}>
+                <ListItemButton
+                  onClick={handleCreateApplicationsToggle}
+                  sx={{
+                    borderRadius: '6px',
+                    minHeight: '36px',
+                    py: 0.75,
+                    px: 1.5,
+                    '&:hover': {
+                      backgroundColor: '#f0f0f0',
+                      borderRadius: '6px',
+                    },
+                  }}
+                >
+                  <ListItemIcon sx={{ 
+                    minWidth: '32px',
+                    color: '#666',
+                    '& .MuiSvgIcon-root': {
+                      fontSize: '20px',
+                    },
+                  }}>
+                    <AddIcon />
+                    </ListItemIcon>
+                  <ListItemText 
+                    primary="Create Applications" 
+                    primaryTypographyProps={{
+                      fontSize: '0.875rem',
+                      fontWeight: 400,
+                      color: '#333',
+                    }}
                   />
-                </ListItemButton>
-              </ListItem>
-            );
-          })}
-        </List>
+                  {createApplicationsExpanded ? <ExpandLess /> : <ExpandMore />}
+                  </ListItemButton>
+                </ListItem>
+                
+              <Collapse in={createApplicationsExpanded} timeout="auto" unmountOnExit>
+                <List component="div" disablePadding sx={{ pl: 2 }}>
+                  {allApplicationTypes.map((categoryGroup) => (
+                      <Box key={categoryGroup.category}>
+                        {/* Category Header */}
+                      <ListItem sx={{ py: 0.5, pl: 1 }}>
+                          <Chip 
+                            label={categoryGroup.category} 
+                            size="small" 
+                            variant="outlined"
+                            sx={{ fontSize: '0.7rem', height: '20px' }}
+                          />
+                        </ListItem>
+                        
+                        {/* Category Items */}
+                      {categoryGroup.applications.map((app) => {
+                          // Check permissions
+                        if (app.permission && !hasPermission(app.permission)) {
+                            return null;
+                          }
+
+                        const isActive = location.pathname === app.path;
+
+                          return (
+                          <ListItem key={app.text} disablePadding sx={{ mb: 0.25 }}>
+                              <ListItemButton
+                                selected={isActive}
+                                onClick={() => {
+                                navigate(app.path);
+                                  if (isMobile) {
+                                    setMobileOpen(false);
+                                  }
+                                }}
+                              sx={{
+                                borderRadius: '6px',
+                                minHeight: '32px',
+                                py: 0.5,
+                                px: 1,
+                                ml: 1,
+                                '&.Mui-selected': {
+                                  backgroundColor: '#1976d2',
+                                  color: 'white',
+                                  '& .MuiListItemIcon-root': {
+                                    color: 'white',
+                                  },
+                                  '&:hover': {
+                                    backgroundColor: '#1565c0',
+                                  },
+                                },
+                                '&:hover': {
+                                  backgroundColor: isActive ? '#1565c0' : '#f0f0f0',
+                                  borderRadius: '6px',
+                                },
+                              }}
+                            >
+                              <ListItemIcon sx={{ 
+                                minWidth: '28px',
+                                color: isActive ? 'white' : '#666',
+                                '& .MuiSvgIcon-root': {
+                                  fontSize: '18px',
+                                },
+                              }}>
+                                {app.icon}
+                                </ListItemIcon>
+                                <ListItemText 
+                                primary={
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    {app.text}
+                                    {(app as any).isNew && (
+                                      <Chip 
+                                        label="NEW" 
+                                        size="small" 
+                                        color="warning" 
+                                        sx={{ fontSize: '0.6rem', height: 16 }} 
+                                      />
+                                    )}
+                                  </Box>
+                                }
+                                  primaryTypographyProps={{ 
+                                  fontSize: '0.8rem',
+                                  fontWeight: isActive ? 500 : 400,
+                                  color: isActive ? 'white' : '#333',
+                                  }} 
+                                />
+                              </ListItemButton>
+                            </ListItem>
+                          );
+                        })}
+                      </Box>
+                    ))}
+                  </List>
+                </Collapse>
+              </>
+            )}
+          </List>
       </Box>
 
       {/* User Profile Section */}
