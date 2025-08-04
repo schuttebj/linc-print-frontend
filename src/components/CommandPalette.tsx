@@ -156,18 +156,120 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
       permission: 'analytics.read',
     },
 
-    // Quick Actions
+    // Quick Actions - Applications
     {
-      id: 'action-learner-permit',
-      label: 'Create Learner Permit Capture',
+      id: 'action-learners-license',
+      label: 'Learner\'s License Application',
+      description: 'Apply for a new learner\'s permit',
+      icon: <School />,
+      action: () => navigate('/dashboard/applications/learners-license'),
+      category: 'actions',
+      keywords: ['learner', 'permit', 'license', 'new', 'create'],
+      permission: 'applications.create',
+    },
+    {
+      id: 'action-driving-license',
+      label: 'Driving License Application',
+      description: 'Apply for a new driving license',
+      icon: <DirectionsCar />,
+      action: () => navigate('/dashboard/applications/driving-license'),
+      category: 'actions',
+      keywords: ['driving', 'license', 'new', 'create'],
+      permission: 'applications.create',
+    },
+    {
+      id: 'action-professional-license',
+      label: 'Professional License Application',
+      description: 'Apply for professional driving license',
+      icon: <DirectionsCar />,
+      action: () => navigate('/dashboard/applications/professional-license'),
+      category: 'actions',
+      keywords: ['professional', 'license', 'commercial', 'create'],
+      permission: 'applications.create',
+    },
+    {
+      id: 'action-temporary-license',
+      label: 'Temporary License Application',
+      description: 'Apply for temporary license',
+      icon: <Assignment />,
+      action: () => navigate('/dashboard/applications/temporary-license'),
+      category: 'actions',
+      keywords: ['temporary', 'license', 'short', 'create'],
+      permission: 'applications.create',
+    },
+    {
+      id: 'action-renew-license',
+      label: 'Renew Driving License',
+      description: 'Renew existing driving license',
+      icon: <Refresh />,
+      action: () => navigate('/dashboard/applications/renew-license'),
+      category: 'actions',
+      keywords: ['renew', 'renewal', 'license', 'extend'],
+      permission: 'applications.create',
+    },
+    {
+      id: 'action-duplicate-learners',
+      label: 'Duplicate Learner\'s License',
+      description: 'Request duplicate learner\'s license',
+      icon: <FileCopy />,
+      action: () => navigate('/dashboard/applications/duplicate-learners'),
+      category: 'actions',
+      keywords: ['duplicate', 'copy', 'learner', 'lost'],
+      permission: 'applications.create',
+    },
+    {
+      id: 'action-foreign-conversion',
+      label: 'Convert Foreign License',
+      description: 'Convert foreign license to Madagascar license',
+      icon: <Assessment />,
+      action: () => navigate('/dashboard/applications/foreign-conversion'),
+      category: 'actions',
+      keywords: ['foreign', 'convert', 'international', 'exchange'],
+      permission: 'applications.create',
+    },
+    {
+      id: 'action-international-permit',
+      label: 'International Driving Permit',
+      description: 'Apply for international driving permit',
+      icon: <CreditCard />,
+      action: () => navigate('/dashboard/applications/international-permit'),
+      category: 'actions',
+      keywords: ['international', 'permit', 'travel', 'foreign'],
+      permission: 'applications.create',
+    },
+    {
+      id: 'action-driver-license-capture',
+      label: 'Driver License Capture',
+      description: 'Capture existing driver license',
+      icon: <CreditCard />,
+      action: () => navigate('/dashboard/applications/driver-license-capture'),
+      category: 'actions',
+      keywords: ['capture', 'driver', 'existing', 'record'],
+      permission: 'applications.create',
+    },
+    {
+      id: 'action-learner-permit-capture',
+      label: 'Learner Permit Capture',
+      description: 'Capture existing learner permit',
+      icon: <Assignment />,
+      action: () => navigate('/dashboard/applications/learner-permit-capture'),
+      category: 'actions',
+      keywords: ['capture', 'learner', 'permit', 'existing'],
+      permission: 'applications.create',
+    },
+    {
+      id: 'action-learner-permit-compact',
+      label: 'Learner Permit Capture (Compact)',
       description: 'Quick capture for learner permits',
       icon: <Assignment />,
       action: () => navigate('/dashboard/applications/learner-permit-capture-compact'),
       shortcut: 'C L',
       category: 'actions',
-      keywords: ['learner', 'permit', 'capture', 'create'],
+      keywords: ['learner', 'permit', 'capture', 'compact', 'quick'],
       permission: 'applications.create',
     },
+
+    // Other Quick Actions
     {
       id: 'action-pos',
       label: 'Open Point of Sale',
@@ -328,10 +430,17 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
       setSearchQuery('');
       setSelectedIndex(0);
       // Auto focus with a small delay to ensure modal is fully rendered
-      setTimeout(() => {
-        searchInputRef.current?.focus();
-        searchInputRef.current?.select(); // Select any existing text
-      }, 150);
+      const focusTimer = setTimeout(() => {
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+          // Force focus if it didn't work the first time
+          requestAnimationFrame(() => {
+            searchInputRef.current?.focus();
+          });
+        }
+      }, 100);
+      
+      return () => clearTimeout(focusTimer);
     }
   }, [open]);
 
@@ -444,30 +553,31 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
       <DialogContent sx={{ p: 0 }}>
         {/* Search Input */}
         <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0' }}>
-          <TextField
-            ref={searchInputRef}
-            fullWidth
-            variant="outlined"
-            placeholder="Type a command or search..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search sx={{ color: '#666', fontSize: 20 }} />
-                </InputAdornment>
-              ),
-            }}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: '8px',
-                '& fieldset': {
-                  border: 'none',
-                },
-                backgroundColor: '#f8f9fa',
+                  <TextField
+          ref={searchInputRef}
+          fullWidth
+          variant="outlined"
+          placeholder="Type a command or search..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          autoFocus
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <Search sx={{ color: '#666', fontSize: 20 }} />
+              </InputAdornment>
+            ),
+          }}
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              borderRadius: '8px',
+              '& fieldset': {
+                border: 'none',
               },
-            }}
-          />
+              backgroundColor: '#f8f9fa',
+            },
+          }}
+        />
         </Box>
 
         {/* Commands List */}
