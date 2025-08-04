@@ -525,7 +525,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
         key: event.key,
         isShortcutMode,
         currentSequence: shortcutSequence,
-        target: event.target?.tagName,
+        target: (event.target as HTMLElement)?.tagName || 'unknown',
         ctrlKey: event.ctrlKey,
         metaKey: event.metaKey,
         altKey: event.altKey
