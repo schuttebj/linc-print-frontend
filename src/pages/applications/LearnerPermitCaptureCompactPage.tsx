@@ -14,8 +14,6 @@ import {
   Container,
   Box,
   Typography,
-  Tabs,
-  Tab,
   Button,
   Alert,
   CircularProgress,
@@ -28,7 +26,11 @@ import {
   FormHelperText,
   Chip,
   Divider,
-  Paper
+  Paper,
+  Stepper,
+  Step,
+  StepLabel,
+  StepContent,
 } from '@mui/material';
 import {
   Person as PersonIcon,
@@ -112,9 +114,9 @@ const LearnerPermitCaptureCompactPage: React.FC = () => {
 
   // Step definitions
   const steps = [
-    { label: 'Person', icon: <PersonIcon fontSize="small" />, key: 'person' },
-    { label: 'License', icon: <LicenseIcon fontSize="small" />, key: 'license' },
-    { label: 'Review', icon: <ReviewIcon fontSize="small" />, key: 'review' }
+    { label: 'Person Information', icon: <PersonIcon />, key: 'person', description: 'Select or create person' },
+    { label: 'License Capture', icon: <LicenseIcon />, key: 'license', description: 'Capture license details' },
+    { label: 'Review & Submit', icon: <ReviewIcon />, key: 'review', description: 'Review and submit application' }
   ];
 
   // Keyboard navigation hook
@@ -210,9 +212,9 @@ const LearnerPermitCaptureCompactPage: React.FC = () => {
   };
 
   // Navigation handlers
-  const handleStepClick = (event: React.SyntheticEvent, newValue: number) => {
-    if (isStepAccessible(newValue)) {
-      setActiveStep(newValue);
+  const handleStepClick = (stepIndex: number) => {
+    if (isStepAccessible(stepIndex)) {
+      setActiveStep(stepIndex);
     }
   };
 
@@ -335,295 +337,285 @@ const LearnerPermitCaptureCompactPage: React.FC = () => {
     }
   };
 
-  // Render step content
+  // Render step content for active step only
   const renderStepContent = () => {
-    switch (activeStep) {
-      case 0: // Person step
-        return (
-          <CompactPersonForm
-            onPersonSelected={handlePersonSelected}
-            onCancel={() => navigate('/dashboard')}
+    if (activeStep === 0) {
+      // Person step
+      return (
+        <CompactPersonForm
+          onPersonSelected={handlePersonSelected}
+          onCancel={() => navigate('/dashboard')}
+        />
+      );
+    } else if (activeStep === 1) {
+      // License capture step
+      return (
+        <Box>
+          {/* Location Selection for Admin Users */}
+          {user && !user.primary_location_id && (
+            <CompactSection title="Processing Location" required>
+              <FormControl 
+                size="small" 
+                fullWidth 
+                required 
+                error={!!error && !selectedLocationId}
+                sx={{ mb: 2 }}
+              >
+                <InputLabel>Location</InputLabel>
+                <Select
+                  ref={locationSelectRef}
+                  value={selectedLocationId}
+                  onChange={handleLocationChange}
+                  label="Location"
+                >
+                  {availableLocations.map((location) => (
+                    <MenuItem key={location.id} value={location.id}>
+                      {location.name} ({location.code})
+                    </MenuItem>
+                  ))}
+                </Select>
+                {!!error && !selectedLocationId && (
+                  <FormHelperText>Please select a processing location</FormHelperText>
+                )}
+              </FormControl>
+            </CompactSection>
+          )}
+
+          <LicenseCaptureForm
+            applicationtype={ApplicationType.LEARNERS_PERMIT_CAPTURE}
+            value={licenseCaptureData}
+            onChange={handleLicenseCaptureChange}
+            personBirthDate={selectedPerson?.birth_date}
           />
-        );
-
-      case 1: // License capture step
-        return (
-          <Box>
-            {/* Location Selection for Admin Users */}
-            {user && !user.primary_location_id && (
-              <CompactSection title="Processing Location" required>
-                <FormControl 
+        </Box>
+      );
+    } else if (activeStep === 2) {
+      // Review step
+      return (
+        <Box>
+          {/* Location */}
+          <CompactSection title="Processing Location">
+            <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <LocationIcon fontSize="small" color="primary" />
+              {user?.primary_location_id ? (
+                `User's assigned location: ${user.primary_location_id}`
+              ) : (
+                availableLocations.find(loc => loc.id === selectedLocationId)?.name || 'No location selected'
+              )}
+              {selectedLocationId && (
+                <Chip 
+                  label={availableLocations.find(loc => loc.id === selectedLocationId)?.code || selectedLocationId} 
                   size="small" 
-                  fullWidth 
-                  required 
-                  error={!!error && !selectedLocationId}
-                  sx={{ mb: 2 }}
-                >
-                  <InputLabel>Location</InputLabel>
-                  <Select
-                    ref={locationSelectRef}
-                    value={selectedLocationId}
-                    onChange={handleLocationChange}
-                    label="Location"
-                  >
-                    {availableLocations.map((location) => (
-                      <MenuItem key={location.id} value={location.id}>
-                        {location.name} ({location.code})
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {!!error && !selectedLocationId && (
-                    <FormHelperText>Please select a processing location</FormHelperText>
-                  )}
-                </FormControl>
-              </CompactSection>
-            )}
-
-            <LicenseCaptureForm
-              applicationtype={ApplicationType.LEARNERS_PERMIT_CAPTURE}
-              value={licenseCaptureData}
-              onChange={handleLicenseCaptureChange}
-              personBirthDate={selectedPerson?.birth_date}
-            />
-          </Box>
-        );
-
-      case 2: // Review step
-        return (
-          <Box>
-            {/* Location */}
-            <CompactSection title="Processing Location">
-              <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <LocationIcon fontSize="small" color="primary" />
-                {user?.primary_location_id ? (
-                  `User's assigned location: ${user.primary_location_id}`
-                ) : (
-                  availableLocations.find(loc => loc.id === selectedLocationId)?.name || 'No location selected'
-                )}
-                {selectedLocationId && (
-                  <Chip 
-                    label={availableLocations.find(loc => loc.id === selectedLocationId)?.code || selectedLocationId} 
-                    size="small" 
-                    variant="outlined"
-                  />
-                )}
-              </Typography>
-            </CompactSection>
-
-            <Divider sx={{ my: 1.5 }} />
-
-            {/* Person Details */}
-            <CompactSection title="Permit Holder">
-              <Grid container spacing={1}>
-                <InlineField 
-                  label="Name" 
-                  value={`${selectedPerson?.surname}, ${selectedPerson?.first_name} ${selectedPerson?.middle_name || ''}`} 
+                  variant="outlined"
                 />
-                <InlineField 
-                  label="ID" 
-                  value={selectedPerson?.aliases?.find(alias => alias.is_primary)?.document_number} 
-                />
-                <InlineField 
-                  label="Birth Date" 
-                  value={selectedPerson?.birth_date} 
-                />
-                <InlineField 
-                  label="Nationality" 
-                  value={selectedPerson?.nationality_code} 
-                />
-              </Grid>
-            </CompactSection>
+              )}
+            </Typography>
+          </CompactSection>
 
-            <Divider sx={{ my: 1.5 }} />
+          <Divider sx={{ my: 1.5 }} />
 
-            {/* Captured Licenses */}
-            <CompactSection title={`Captured Permits (${licenseCaptureData?.captured_licenses?.length || 0})`}>
-              {licenseCaptureData?.captured_licenses?.map((license, index) => (
-                <Box 
-                  key={license.id} 
-                  sx={{ 
-                    p: 1, 
-                    bgcolor: 'grey.50', 
-                    borderRadius: 1, 
-                    border: 1, 
-                    borderColor: 'grey.200',
-                    mb: index < (licenseCaptureData?.captured_licenses?.length || 0) - 1 ? 1 : 0
-                  }}
-                >
-                  <Grid container spacing={1} alignItems="center">
-                    <Grid item xs={12} sm={3}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="caption" color="text.secondary">ID:</Typography>
-                        <Chip label={license.id.substring(0, 8)} size="small" />
-                      </Box>
-                    </Grid>
-                    <Grid item xs={12} sm={2}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="caption" color="text.secondary">Category:</Typography>
-                        <Chip label={license.license_category} size="small" color="primary" />
-                      </Box>
-                    </Grid>
-                    <Grid item xs={12} sm={2}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="caption" color="text.secondary">Issued:</Typography>
-                        <Typography variant="body2">{license.issue_date}</Typography>
-                      </Box>
-                    </Grid>
-                    <Grid item xs={12} sm={5}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                        <Typography variant="caption" color="text.secondary">Restrictions:</Typography>
-                        {license.restrictions?.driver_restrictions?.length > 0 || license.restrictions?.vehicle_restrictions?.length > 0 ? (
-                          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                            {license.restrictions?.driver_restrictions?.map((restriction, rIndex) => (
-                              <Chip key={rIndex} label={restriction} size="small" variant="outlined" color="primary" />
-                            ))}
-                            {license.restrictions?.vehicle_restrictions?.map((restriction, rIndex) => (
-                              <Chip key={rIndex} label={restriction} size="small" variant="outlined" color="secondary" />
-                            ))}
-                          </Box>
-                        ) : (
-                          <Typography variant="body2" color="text.secondary">None</Typography>
-                        )}
-                      </Box>
-                    </Grid>
-                    {license.verification_notes && (
-                      <Grid item xs={12}>
-                        <Typography variant="caption" color="text.secondary">Notes: </Typography>
-                        <Typography variant="body2" component="span">{license.verification_notes}</Typography>
-                      </Grid>
-                    )}
+          {/* Person Details */}
+          <CompactSection title="Permit Holder">
+            <Grid container spacing={1}>
+              <InlineField 
+                label="Name" 
+                value={`${selectedPerson?.surname}, ${selectedPerson?.first_name} ${selectedPerson?.middle_name || ''}`} 
+              />
+              <InlineField 
+                label="ID" 
+                value={selectedPerson?.aliases?.find(alias => alias.is_primary)?.document_number} 
+              />
+              <InlineField 
+                label="Birth Date" 
+                value={selectedPerson?.birth_date} 
+              />
+              <InlineField 
+                label="Nationality" 
+                value={selectedPerson?.nationality_code} 
+              />
+            </Grid>
+          </CompactSection>
+
+          <Divider sx={{ my: 1.5 }} />
+
+          {/* Captured Licenses */}
+          <CompactSection title={`Captured Permits (${licenseCaptureData?.captured_licenses?.length || 0})`}>
+            {licenseCaptureData?.captured_licenses?.map((license, index) => (
+              <Box 
+                key={license.id} 
+                sx={{ 
+                  p: 1, 
+                  bgcolor: 'grey.50', 
+                  borderRadius: 1, 
+                  border: 1, 
+                  borderColor: 'grey.200',
+                  mb: index < (licenseCaptureData?.captured_licenses?.length || 0) - 1 ? 1 : 0
+                }}
+              >
+                <Grid container spacing={1} alignItems="center">
+                  <Grid item xs={12} sm={3}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography variant="caption" color="text.secondary">ID:</Typography>
+                      <Chip label={license.id.substring(0, 8)} size="small" />
+                    </Box>
                   </Grid>
-                </Box>
-              ))}
-            </CompactSection>
+                  <Grid item xs={12} sm={2}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography variant="caption" color="text.secondary">Category:</Typography>
+                      <Chip label={license.license_category} size="small" color="primary" />
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} sm={2}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography variant="caption" color="text.secondary">Issued:</Typography>
+                      <Typography variant="body2">{license.issue_date}</Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} sm={5}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                      <Typography variant="caption" color="text.secondary">Restrictions:</Typography>
+                      {license.restrictions?.driver_restrictions?.length > 0 || license.restrictions?.vehicle_restrictions?.length > 0 ? (
+                        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                          {license.restrictions?.driver_restrictions?.map((restriction, rIndex) => (
+                            <Chip key={rIndex} label={restriction} size="small" variant="outlined" color="primary" />
+                          ))}
+                          {license.restrictions?.vehicle_restrictions?.map((restriction, rIndex) => (
+                            <Chip key={rIndex} label={restriction} size="small" variant="outlined" color="secondary" />
+                          ))}
+                        </Box>
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">None</Typography>
+                      )}
+                    </Box>
+                  </Grid>
+                  {license.verification_notes && (
+                    <Grid item xs={12}>
+                      <Typography variant="caption" color="text.secondary">Notes: </Typography>
+                      <Typography variant="body2" component="span">{license.verification_notes}</Typography>
+                    </Grid>
+                  )}
+                </Grid>
+              </Box>
+            ))}
+          </CompactSection>
 
-            <Alert severity="info" sx={{ mt: 2, py: 1 }}>
-              <Typography variant="body2">
-                <strong>Next:</strong> Captured permits will be created and marked as completed. 
-                Permit holder can apply for full licenses based on these credentials.
-              </Typography>
-            </Alert>
-          </Box>
-        );
-
-      default:
-        return <Typography>Unknown step</Typography>;
+          <Alert severity="info" sx={{ mt: 2, py: 1 }}>
+            <Typography variant="body2">
+              <strong>Next:</strong> Captured permits will be created and marked as completed. 
+              Permit holder can apply for full licenses based on these credentials.
+            </Typography>
+          </Alert>
+        </Box>
+      );
     }
+    
+    return <Typography>Unknown step</Typography>;
   };
 
   return (
-    <Container maxWidth="xl" sx={{ py: 1, px: 2, height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <Container maxWidth="lg" sx={{ py: 2, bgcolor: '#f8f9fa', minHeight: '100vh' }}>
       {/* Compact Header */}
-      <Box sx={{ mb: 1.5 }}>
-        <Typography variant="h6" sx={{ mb: 0.5, fontWeight: 600 }}>
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
           Learner's Permit Capture
         </Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="body2" color="text.secondary">
           Capture existing learner's permit details • Use Ctrl+← → to navigate steps • Ctrl+Enter to submit
         </Typography>
       </Box>
 
       {/* Error/Success Messages */}
       {error && (
-        <Alert severity="error" sx={{ mb: 1.5, py: 0.5 }}>
+        <Alert severity="error" sx={{ mb: 3, py: 1 }}>
           <Typography variant="body2">{error}</Typography>
         </Alert>
       )}
       
       {success && (
-        <Alert severity="success" sx={{ mb: 1.5, py: 0.5 }}>
+        <Alert severity="success" sx={{ mb: 3, py: 1 }}>
           <Typography variant="body2">{success}</Typography>
         </Alert>
       )}
 
-      {/* Horizontal Step Navigation */}
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-        <Tabs 
-          value={activeStep} 
-          onChange={handleStepClick}
-          variant="fullWidth"
-          sx={{ minHeight: 48 }}
-        >
-          {steps.map((step, index) => (
-            <Tab
-              key={step.key}
-              label={step.label}
-              icon={step.icon}
-              iconPosition="start"
-              disabled={!isStepAccessible(index)}
-              sx={{ 
-                minHeight: 48,
-                textTransform: 'none',
-                fontWeight: isStepValid(index) ? 600 : 400,
-                '&.Mui-selected': {
-                  fontWeight: 600
-                }
-              }}
-            />
-          ))}
-        </Tabs>
-      </Box>
-
-      {/* Content Area */}
+      {/* Vertical Stepper */}
       <Paper 
-        elevation={1} 
+        elevation={0}
         sx={{ 
-          flex: 1, 
-          p: 2, 
-          overflow: 'auto',
-          bgcolor: 'grey.50'
+          bgcolor: 'white',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2
         }}
-        ref={contentRef}
       >
-        {renderStepContent()}
+        <Stepper activeStep={activeStep} orientation="vertical" sx={{ p: 3 }}>
+          {steps.map((step, index) => (
+            <Step key={step.key} completed={isStepValid(index)}>
+              <StepLabel
+                icon={step.icon}
+                onClick={() => handleStepClick(index)}
+                sx={{ 
+                  cursor: isStepAccessible(index) ? 'pointer' : 'default',
+                  '& .MuiStepLabel-label': {
+                    fontWeight: 600,
+                    fontSize: '1rem'
+                  },
+                  '&:hover': isStepAccessible(index) ? { opacity: 0.8 } : {}
+                }}
+              >
+                {step.label}
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  {step.description}
+                </Typography>
+              </StepLabel>
+              <StepContent>
+                <Box sx={{ pt: 2, pb: 1 }}>
+                  {activeStep === index && renderStepContent()}
+                </Box>
+                
+                {/* Step Navigation - only show for active step */}
+                {activeStep === index && (
+                  <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                    <Button
+                      disabled={activeStep === 0 || loading}
+                      onClick={handleBack}
+                      startIcon={<BackIcon />}
+                      size="small"
+                    >
+                      Back
+                    </Button>
+                    
+                    <Button
+                      variant="contained"
+                      onClick={activeStep === steps.length - 1 ? handleSubmit : handleNext}
+                      disabled={!isStepValid(activeStep) || loading}
+                      startIcon={loading ? <CircularProgress size={16} /> : undefined}
+                      endIcon={
+                        loading ? undefined : 
+                        activeStep === steps.length - 1 ? <SubmitIcon /> : <NextIcon />
+                      }
+                      size="small"
+                      sx={{
+                        boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
+                      }}
+                    >
+                      {loading ? 'Submitting...' : activeStep === steps.length - 1 ? 'Submit' : 'Next'}
+                    </Button>
+                    
+                    <Button
+                      onClick={handleCancel}
+                      disabled={loading}
+                      color="secondary"
+                      size="small"
+                      sx={{ ml: 'auto' }}
+                    >
+                      Cancel
+                    </Button>
+                  </Box>
+                )}
+              </StepContent>
+            </Step>
+          ))}
+        </Stepper>
       </Paper>
-
-      {/* Fixed Bottom Navigation */}
-      <Box 
-        sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          py: 1.5,
-          borderTop: 1,
-          borderColor: 'divider',
-          bgcolor: 'background.paper'
-        }}
-      >
-        <Button
-          onClick={handleCancel}
-          disabled={loading}
-          color="secondary"
-          size="small"
-        >
-          Cancel
-        </Button>
-        
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            disabled={activeStep === 0 || loading}
-            onClick={handleBack}
-            startIcon={<BackIcon />}
-            size="small"
-          >
-            Back
-          </Button>
-          
-          <Button
-            variant="contained"
-            onClick={activeStep === steps.length - 1 ? handleSubmit : handleNext}
-            disabled={!isStepValid(activeStep) || loading}
-            startIcon={loading ? <CircularProgress size={16} /> : undefined}
-            endIcon={
-              loading ? undefined : 
-              activeStep === steps.length - 1 ? <SubmitIcon /> : <NextIcon />
-            }
-            size="small"
-          >
-            {loading ? 'Submitting...' : activeStep === steps.length - 1 ? 'Submit' : 'Next'}
-          </Button>
-        </Box>
-      </Box>
     </Container>
   );
 };
