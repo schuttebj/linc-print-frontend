@@ -74,6 +74,8 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [shortcutSequence, setShortcutSequence] = useState('');
+  const [shortcutTimeout, setShortcutTimeout] = useState<NodeJS.Timeout | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Define all available commands
@@ -354,6 +356,63 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
     },
   ];
 
+  // Clear shortcut sequence after timeout
+  const clearShortcutSequence = useCallback(() => {
+    if (shortcutTimeout) {
+      clearTimeout(shortcutTimeout);
+    }
+    setShortcutSequence('');
+    setShortcutTimeout(null);
+  }, [shortcutTimeout]);
+
+  // Handle shortcut sequence input
+  const handleShortcutInput = useCallback((key: string) => {
+    const newSequence = shortcutSequence + key.toUpperCase();
+    
+    // Clear any existing timeout
+    if (shortcutTimeout) {
+      clearTimeout(shortcutTimeout);
+    }
+
+    // Check if any command matches the current sequence
+    const matchingCommand = allCommands.find(command => 
+      command.shortcut && command.shortcut.replace(/\s/g, '') === newSequence
+    );
+
+    if (matchingCommand) {
+      // Execute the command
+      if (!matchingCommand.permission || hasPermission(matchingCommand.permission)) {
+        matchingCommand.action();
+        onClose();
+      }
+      clearShortcutSequence();
+      return true; // Shortcut was handled
+    }
+
+    // Check if any commands start with this sequence (partial match)
+    const hasPartialMatch = allCommands.some(command => 
+      command.shortcut && command.shortcut.replace(/\s/g, '').startsWith(newSequence)
+    );
+
+    if (hasPartialMatch) {
+      // Continue building the sequence
+      setShortcutSequence(newSequence);
+      
+      // Set timeout to clear sequence if no more input
+      const timeout = setTimeout(() => {
+        setShortcutSequence('');
+        setShortcutTimeout(null);
+      }, 1500); // 1.5 second timeout
+      
+      setShortcutTimeout(timeout);
+      return true; // Sequence is being built
+    }
+
+    // No match, clear sequence
+    clearShortcutSequence();
+    return false; // Let normal search handle this
+  }, [shortcutSequence, shortcutTimeout, allCommands, hasPermission, onClose]);
+
   // Filter commands based on permissions and search query
   const filteredCommands = allCommands.filter(command => {
     // Check permissions
@@ -399,50 +458,81 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
     if (!open) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      // Handle navigation and special keys first
       if (event.key === 'ArrowDown') {
         event.preventDefault();
         setSelectedIndex(prev => 
           prev < filteredCommands.length - 1 ? prev + 1 : 0
         );
-      } else if (event.key === 'ArrowUp') {
+        return;
+      } 
+      
+      if (event.key === 'ArrowUp') {
         event.preventDefault();
         setSelectedIndex(prev => 
           prev > 0 ? prev - 1 : filteredCommands.length - 1
         );
-      } else if (event.key === 'Enter') {
+        return;
+      } 
+      
+      if (event.key === 'Enter') {
         event.preventDefault();
         if (filteredCommands[selectedIndex]) {
           filteredCommands[selectedIndex].action();
           onClose();
         }
-      } else if (event.key === 'Escape') {
+        return;
+      } 
+      
+      if (event.key === 'Escape') {
         onClose();
+        return;
+      }
+
+      // Handle "/" key to focus search input
+      if (event.key === '/' && event.target !== searchInputRef.current) {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+
+      // Handle shortcut sequences for single letter keys (not in input field)
+      if (event.target !== searchInputRef.current && 
+          event.key.length === 1 && 
+          /^[A-Za-z]$/.test(event.key) &&
+          !event.ctrlKey && 
+          !event.metaKey && 
+          !event.altKey) {
+        
+        event.preventDefault();
+        const handled = handleShortcutInput(event.key);
+        
+        // If shortcut wasn't handled, add to search query and focus input
+        if (!handled) {
+          setSearchQuery(event.key);
+          searchInputRef.current?.focus();
+        }
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [open, filteredCommands, selectedIndex, onClose]);
+  }, [open, filteredCommands, selectedIndex, onClose, handleShortcutInput]);
 
-  // Reset search and selection when opened with auto focus
+  // Reset search and selection when opened
   useEffect(() => {
     if (open) {
       setSearchQuery('');
       setSelectedIndex(0);
-      // Auto focus with a small delay to ensure modal is fully rendered
-      const focusTimer = setTimeout(() => {
-        if (searchInputRef.current) {
-          searchInputRef.current.focus();
-          // Force focus if it didn't work the first time
-          requestAnimationFrame(() => {
-            searchInputRef.current?.focus();
-          });
-        }
-      }, 100);
+      clearShortcutSequence(); // Clear any existing shortcut sequence
       
-      return () => clearTimeout(focusTimer);
+      // Don't auto-focus the search input so shortcuts work immediately
+      // User can click the input or press '/' to start searching
+    } else {
+      // Clean up when closing
+      clearShortcutSequence();
     }
-  }, [open]);
+  }, [open, clearShortcutSequence]);
 
   // Update selected index when filtered commands change
   useEffect(() => {
@@ -557,14 +647,27 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
           ref={searchInputRef}
           fullWidth
           variant="outlined"
-          placeholder="Type a command or search..."
+          placeholder="Click here or press '/' to search..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          autoFocus
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
                 <Search sx={{ color: '#666', fontSize: 20 }} />
+              </InputAdornment>
+            ),
+            endAdornment: shortcutSequence && (
+              <InputAdornment position="end">
+                <Chip
+                  label={`Shortcut: ${shortcutSequence.split('').join(' ')}`}
+                  size="small"
+                  color="primary"
+                  sx={{
+                    height: 20,
+                    fontSize: '0.7rem',
+                    fontFamily: 'monospace',
+                  }}
+                />
               </InputAdornment>
             ),
           }}
@@ -610,6 +713,14 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
               <Chip label="↵" size="small" variant="outlined" sx={{ height: 20, fontSize: '0.7rem' }} />
               <Typography variant="caption" color="text.secondary">to select</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Chip label="G D" size="small" variant="outlined" sx={{ height: 20, fontSize: '0.7rem' }} />
+              <Typography variant="caption" color="text.secondary">shortcuts</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Chip label="/" size="small" variant="outlined" sx={{ height: 20, fontSize: '0.7rem' }} />
+              <Typography variant="caption" color="text.secondary">to search</Typography>
             </Box>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
