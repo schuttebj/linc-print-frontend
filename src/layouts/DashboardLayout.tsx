@@ -24,6 +24,7 @@ import {
   useMediaQuery,
   Collapse,
   Chip,
+  Badge,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -57,9 +58,11 @@ import {
   AttachMoney,
   Analytics,
   BarChart,
+  KeyboardArrowDown,
 } from '@mui/icons-material';
 
 import { useAuth } from '../contexts/AuthContext';
+import CommandPalette from '../components/CommandPalette';
 
 const DRAWER_WIDTH = 240;
 
@@ -73,6 +76,7 @@ const DashboardLayout: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [applicationsExpanded, setApplicationsExpanded] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
   // Function to get user location display text
   const getUserLocationText = (): string => {
@@ -114,6 +118,27 @@ const DashboardLayout: React.FC = () => {
   const handleApplicationsToggle = () => {
     setApplicationsExpanded(!applicationsExpanded);
   };
+
+  const handleOpenCommandPalette = () => {
+    setCommandPaletteOpen(true);
+  };
+
+  const handleCloseCommandPalette = () => {
+    setCommandPaletteOpen(false);
+  };
+
+  // Keyboard shortcut for command palette (Cmd+K)
+  React.useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+        event.preventDefault();
+        setCommandPaletteOpen(true);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Navigation items
   const navigationItems = [
@@ -369,398 +394,264 @@ const DashboardLayout: React.FC = () => {
   // Check if user has permission to create applications
   const canCreateApplications = hasPermission('applications.create');
 
+  // Flatten all navigation items for cleaner display
+  const allNavigationItems = [
+    // Core navigation
+    ...navigationItems.filter(item => !item.permission || hasPermission(item.permission)),
+    
+    // Applications (show first few important ones)
+    ...applicationNavigationItems.filter(item => !item.permission || hasPermission(item.permission)),
+    
+    // Selected application types (most used ones)
+    ...(canCreateApplications ? [
+      {
+        text: 'New Applications',
+        icon: <Apps />,
+        path: '/dashboard/applications/create',
+        permission: 'applications.create',
+        hasNotification: true,
+      },
+      {
+        text: 'Learner Permit Capture',
+        icon: <Assignment />,
+        path: '/dashboard/applications/learner-permit-capture-compact',
+        permission: 'applications.create',
+      },
+    ] : []),
+    
+    // Licenses
+    ...licenseNavigationItems.filter(item => !item.permission || hasPermission(item.permission)),
+    
+    // Cards  
+    ...cardNavigationItems.filter(item => !item.permission || hasPermission(item.permission)),
+    
+    // Transactions
+    ...transactionNavigationItems.filter(item => !item.permission || hasPermission(item.permission)),
+    
+    // Analytics
+    ...analyticsNavigationItems.filter(item => !item.permission || hasPermission(item.permission)),
+    
+    // Admin
+    ...adminNavigationItems.filter(item => !item.permission || hasPermission(item.permission)),
+  ];
+
+  // Use all navigation items for sidebar (no filtering here - filtering happens in command palette)
+  const sidebarNavItems = allNavigationItems;
+
   const drawer = (
-    <Box>
-      <Toolbar>
-        <Typography variant="h6" noWrap component="div">
-          Madagascar DLS
-        </Typography>
-      </Toolbar>
-      <Divider />
-      
-      {/* Main Navigation */}
-      <List>
-        {navigationItems.map((item) => {
-          // Check permissions
-          if (item.permission && !hasPermission(item.permission)) {
-            return null;
-          }
+    <Box sx={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      height: '100%',
+      bgcolor: '#fafafa'
+    }}>
+      {/* Header */}
+      <Box sx={{ 
+        p: 2, 
+        borderBottom: '1px solid #e0e0e0',
+        bgcolor: 'white'
+      }}>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          mb: 1.5
+        }}>
+          <Typography 
+            variant="h6" 
+            sx={{ 
+              fontWeight: 600,
+              color: '#1a1a1a',
+              fontSize: '0.95rem'
+            }}
+          >
+            LINC Print
+          </Typography>
+          <KeyboardArrowDown sx={{ color: '#666', fontSize: 18 }} />
+        </Box>
+        
+        {/* Quick Actions Search Trigger */}
+        <Box
+          onClick={handleOpenCommandPalette}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            p: 1.5,
+            backgroundColor: '#f5f5f5',
+            borderRadius: '6px',
+            border: '1px solid #e0e0e0',
+            cursor: 'pointer',
+            '&:hover': {
+              borderColor: '#d0d0d0',
+              backgroundColor: '#f0f0f0',
+            },
+          }}
+        >
+          <Search sx={{ color: '#666', fontSize: 18 }} />
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              flex: 1, 
+              color: '#999', 
+              fontSize: '0.875rem' 
+            }}
+          >
+            Quick actions
+          </Typography>
+          <Typography 
+            variant="caption" 
+            sx={{ 
+              color: '#999', 
+              fontSize: '0.7rem',
+              backgroundColor: '#e8e8e8',
+              px: 0.5,
+              py: 0.25,
+              borderRadius: '3px',
+              fontFamily: 'monospace',
+            }}
+          >
+            ⌘K
+          </Typography>
+        </Box>
+      </Box>
 
-          const isActive = location.pathname === item.path;
-
-          return (
-            <ListItem key={item.text} disablePadding>
-              <ListItemButton
-                selected={isActive}
-                onClick={() => {
-                  navigate(item.path);
-                  if (isMobile) {
-                    setMobileOpen(false);
-                  }
-                }}
-              >
-                <ListItemIcon>{item.icon}</ListItemIcon>
-                <ListItemText primary={item.text} />
-              </ListItemButton>
-            </ListItem>
-          );
-        })}
-      </List>
-
-      {/* Applications Section */}
-      {(applicationNavigationItems.some(item => !item.permission || hasPermission(item.permission)) || canCreateApplications) && (
-        <>
-          <Divider />
-          <List>
-            <ListItem>
-              <ListItemText 
-                primary="Applications" 
-                primaryTypographyProps={{ 
-                  variant: 'caption', 
-                  color: 'textSecondary',
-                  fontWeight: 'bold',
-                  textTransform: 'uppercase'
-                }} 
-              />
-            </ListItem>
+      {/* Navigation Items */}
+      <Box sx={{ flex: 1, overflow: 'auto', py: 1 }}>
+        <List dense sx={{ px: 1 }}>
+          {sidebarNavItems.map((item) => {
+            const isActive = location.pathname === item.path;
             
-            {/* View Applications */}
-            {applicationNavigationItems.map((item) => {
-              // Check permissions
-              if (item.permission && !hasPermission(item.permission)) {
-                return null;
-              }
-
-              const isActive = location.pathname === item.path;
-
-              return (
-                <ListItem key={item.text} disablePadding>
-                  <ListItemButton
-                    selected={isActive}
-                    onClick={() => {
-                      navigate(item.path);
-                      if (isMobile) {
-                        setMobileOpen(false);
-                      }
+            return (
+              <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
+                <ListItemButton
+                  selected={isActive}
+                  onClick={() => {
+                    navigate(item.path);
+                    if (isMobile) {
+                      setMobileOpen(false);
+                    }
+                  }}
+                  sx={{
+                    borderRadius: '6px',
+                    minHeight: '36px',
+                    py: 0.75,
+                    px: 1.5,
+                    '&.Mui-selected': {
+                      backgroundColor: '#1976d2',
+                      color: 'white',
+                      '& .MuiListItemIcon-root': {
+                        color: 'white',
+                      },
+                      '&:hover': {
+                        backgroundColor: '#1565c0',
+                      },
+                    },
+                    '&:hover': {
+                      backgroundColor: isActive ? '#1565c0' : '#f0f0f0',
+                      borderRadius: '6px',
+                    },
+                  }}
+                >
+                  <ListItemIcon sx={{ 
+                    minWidth: '32px',
+                    color: isActive ? 'white' : '#666',
+                    '& .MuiSvgIcon-root': {
+                      fontSize: '20px',
+                    },
+                  }}>
+                    {(item as any).hasNotification ? (
+                      <Badge 
+                        variant="dot" 
+                        color="primary"
+                        sx={{
+                          '& .MuiBadge-dot': {
+                            backgroundColor: '#2196f3',
+                            top: 6,
+                            right: 6,
+                          },
+                        }}
+                      >
+                        {item.icon}
+                      </Badge>
+                    ) : (
+                      item.icon
+                    )}
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary={item.text} 
+                    primaryTypographyProps={{
+                      fontSize: '0.875rem',
+                      fontWeight: isActive ? 500 : 400,
+                      color: isActive ? 'white' : '#333',
                     }}
-                  >
-                    <ListItemIcon>{item.icon}</ListItemIcon>
-                    <ListItemText 
-                      primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          {item.text}
-                          {(item as any).isNew && (
-                            <Chip 
-                              label="NEW" 
-                              size="small" 
-                              color="warning" 
-                              sx={{ fontSize: '0.7rem', height: 18 }} 
-                            />
-                          )}
-                        </Box>
-                      } 
-                    />
-                  </ListItemButton>
-                </ListItem>
-              );
-            })}
+                  />
+                </ListItemButton>
+              </ListItem>
+            );
+          })}
+        </List>
+      </Box>
 
-            {/* Create Applications Dropdown */}
-            {canCreateApplications && (
-              <>
-                <ListItem disablePadding>
-                  <ListItemButton onClick={handleApplicationsToggle}>
-                    <ListItemIcon>
-                      <Apps />
-                    </ListItemIcon>
-                    <ListItemText primary="Create Applications" />
-                    {applicationsExpanded ? <ExpandLess /> : <ExpandMore />}
-                  </ListItemButton>
-                </ListItem>
-                
-                <Collapse in={applicationsExpanded} timeout="auto" unmountOnExit>
-                  <List component="div" disablePadding>
-                    {applicationDropdownItems.map((categoryGroup) => (
-                      <Box key={categoryGroup.category}>
-                        {/* Category Header */}
-                        <ListItem sx={{ pl: 4, py: 0.5 }}>
-                          <Chip 
-                            label={categoryGroup.category} 
-                            size="small" 
-                            variant="outlined"
-                            sx={{ fontSize: '0.7rem', height: '20px' }}
-                          />
-                        </ListItem>
-                        
-                        {/* Category Items */}
-                        {categoryGroup.items.map((item) => {
-                          // Check permissions
-                          if (item.permission && !hasPermission(item.permission)) {
-                            return null;
-                          }
-
-                          const isActive = location.pathname === item.path;
-
-                          return (
-                            <ListItem key={item.text} disablePadding>
-                              <ListItemButton
-                                selected={isActive}
-                                sx={{ pl: 6 }}
-                                onClick={() => {
-                                  navigate(item.path);
-                                  if (isMobile) {
-                                    setMobileOpen(false);
-                                  }
-                                }}
-                              >
-                                <ListItemIcon sx={{ minWidth: 36 }}>
-                                  {item.icon}
-                                </ListItemIcon>
-                                <ListItemText 
-                                  primary={item.text} 
-                                  primaryTypographyProps={{ 
-                                    variant: 'body2',
-                                    fontSize: '0.875rem'
-                                  }} 
-                                />
-                              </ListItemButton>
-                            </ListItem>
-                          );
-                        })}
-                      </Box>
-                    ))}
-                  </List>
-                </Collapse>
-              </>
-            )}
-          </List>
-        </>
-      )}
-
-      {/* License Management Section */}
-      {licenseNavigationItems.some(item => !item.permission || hasPermission(item.permission)) && (
-        <>
-          <Divider />
-          <List>
-            <ListItem>
-              <ListItemText 
-                primary="Licenses" 
-                primaryTypographyProps={{ 
-                  variant: 'caption', 
-                  color: 'textSecondary',
-                  fontWeight: 'bold',
-                  textTransform: 'uppercase'
-                }} 
-              />
-            </ListItem>
-            {licenseNavigationItems.map((item) => {
-              // Check permissions
-              if (item.permission && !hasPermission(item.permission)) {
-                return null;
-              }
-
-              const isActive = location.pathname === item.path;
-
-              return (
-                <ListItem key={item.text} disablePadding>
-                  <ListItemButton
-                    selected={isActive}
-                    onClick={() => {
-                      navigate(item.path);
-                      if (isMobile) {
-                        setMobileOpen(false);
-                      }
-                    }}
-                  >
-                    <ListItemIcon>{item.icon}</ListItemIcon>
-                    <ListItemText primary={item.text} />
-                  </ListItemButton>
-                </ListItem>
-              );
-            })}
-          </List>
-        </>
-      )}
-
-      {/* Card Management Section */}
-      {cardNavigationItems.some(item => !item.permission || hasPermission(item.permission)) && (
-        <>
-          <Divider />
-          <List>
-            <ListItem>
-              <ListItemText 
-                primary="Cards" 
-                primaryTypographyProps={{ 
-                  variant: 'caption', 
-                  color: 'textSecondary',
-                  fontWeight: 'bold',
-                  textTransform: 'uppercase'
-                }} 
-              />
-            </ListItem>
-            {cardNavigationItems.map((item) => {
-              // Check permissions
-              if (item.permission && !hasPermission(item.permission)) {
-                return null;
-              }
-
-              const isActive = location.pathname === item.path;
-
-              return (
-                <ListItem key={item.text} disablePadding>
-                  <ListItemButton
-                    selected={isActive}
-                    onClick={() => {
-                      navigate(item.path);
-                      if (isMobile) {
-                        setMobileOpen(false);
-                      }
-                    }}
-                  >
-                    <ListItemIcon>{item.icon}</ListItemIcon>
-                    <ListItemText primary={item.text} />
-                  </ListItemButton>
-                </ListItem>
-              );
-            })}
-          </List>
-        </>
-      )}
-
-      {/* Transactions Section */}
-      {transactionNavigationItems.some(item => !item.permission || hasPermission(item.permission)) && (
-        <>
-          <Divider />
-          <List>
-            <ListItem>
-              <ListItemText 
-                primary="Transactions" 
-                primaryTypographyProps={{ 
-                  variant: 'caption', 
-                  color: 'textSecondary',
-                  fontWeight: 'bold',
-                  textTransform: 'uppercase'
-                }} 
-              />
-            </ListItem>
-            {transactionNavigationItems.map((item) => {
-              // Check permissions
-              if (item.permission && !hasPermission(item.permission)) {
-                return null;
-              }
-
-              const isActive = location.pathname === item.path;
-
-              return (
-                <ListItem key={item.text} disablePadding>
-                  <ListItemButton
-                    selected={isActive}
-                    onClick={() => {
-                      navigate(item.path);
-                      if (isMobile) {
-                        setMobileOpen(false);
-                      }
-                    }}
-                  >
-                    <ListItemIcon>{item.icon}</ListItemIcon>
-                    <ListItemText primary={item.text} />
-                  </ListItemButton>
-                </ListItem>
-              );
-            })}
-          </List>
-        </>
-      )}
-
-      {/* Admin Section */}
-      {adminNavigationItems.some(item => !item.permission || hasPermission(item.permission)) && (
-        <>
-          <Divider />
-          <List>
-            <ListItem>
-              <ListItemText 
-                primary="Administration" 
-                primaryTypographyProps={{ 
-                  variant: 'caption', 
-                  color: 'textSecondary',
-                  fontWeight: 'bold',
-                  textTransform: 'uppercase'
-                }} 
-              />
-            </ListItem>
-            {adminNavigationItems.map((item) => {
-              // Check permissions
-              if (item.permission && !hasPermission(item.permission)) {
-                return null;
-              }
-
-              const isActive = location.pathname === item.path;
-
-              return (
-                <ListItem key={item.text} disablePadding>
-                  <ListItemButton
-                    selected={isActive}
-                    onClick={() => {
-                      navigate(item.path);
-                      if (isMobile) {
-                        setMobileOpen(false);
-                      }
-                    }}
-                  >
-                    <ListItemIcon>{item.icon}</ListItemIcon>
-                    <ListItemText primary={item.text} />
-                  </ListItemButton>
-                </ListItem>
-              );
-            })}
-          </List>
-        </>
-      )}
-
-      {/* Analytics Section */}
-      {analyticsNavigationItems.some(item => !item.permission || hasPermission(item.permission)) && (
-        <>
-          <Divider />
-          <List>
-            <ListItem>
-              <ListItemText 
-                primary="Analytics" 
-                primaryTypographyProps={{ 
-                  variant: 'caption', 
-                  color: 'textSecondary',
-                  fontWeight: 'bold',
-                  textTransform: 'uppercase'
-                }} 
-              />
-            </ListItem>
-            {analyticsNavigationItems.map((item) => {
-              // Check permissions
-              if (item.permission && !hasPermission(item.permission)) {
-                return null;
-              }
-
-              const isActive = location.pathname === item.path;
-
-              return (
-                <ListItem key={item.text} disablePadding>
-                  <ListItemButton
-                    selected={isActive}
-                    onClick={() => {
-                      navigate(item.path);
-                      if (isMobile) {
-                        setMobileOpen(false);
-                      }
-                    }}
-                  >
-                    <ListItemIcon>{item.icon}</ListItemIcon>
-                    <ListItemText primary={item.text} />
-                  </ListItemButton>
-                </ListItem>
-              );
-            })}
-          </List>
-        </>
-      )}
+      {/* User Profile Section */}
+      <Box sx={{ 
+        borderTop: '1px solid #e0e0e0',
+        p: 2,
+        bgcolor: 'white'
+      }}>
+        <Box 
+          onClick={handleProfileMenuOpen}
+          sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 1.5,
+            cursor: 'pointer',
+            p: 1,
+            borderRadius: '6px',
+            '&:hover': {
+              backgroundColor: '#f5f5f5',
+            },
+          }}
+        >
+          <Avatar sx={{ 
+            width: 32, 
+            height: 32, 
+            backgroundColor: '#1976d2',
+            fontSize: '0.875rem'
+          }}>
+            {user?.first_name?.[0]}{user?.last_name?.[0]}
+          </Avatar>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                fontWeight: 500,
+                fontSize: '0.875rem',
+                color: '#1a1a1a',
+                lineHeight: 1.2,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {user?.first_name} {user?.last_name}
+            </Typography>
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                color: '#666',
+                fontSize: '0.75rem',
+                lineHeight: 1.2,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {user?.email || `${user?.username}@system.local`}
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
     </Box>
   );
 
@@ -843,7 +734,12 @@ const DashboardLayout: React.FC = () => {
           }}
           sx={{
             display: { xs: 'block', md: 'none' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: DRAWER_WIDTH },
+            '& .MuiDrawer-paper': { 
+              boxSizing: 'border-box', 
+              width: DRAWER_WIDTH,
+              borderRight: '1px solid #e0e0e0',
+              boxShadow: 'none',
+            },
           }}
         >
           {drawer}
@@ -852,7 +748,12 @@ const DashboardLayout: React.FC = () => {
           variant="permanent"
           sx={{
             display: { xs: 'none', md: 'block' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: DRAWER_WIDTH },
+            '& .MuiDrawer-paper': { 
+              boxSizing: 'border-box', 
+              width: DRAWER_WIDTH,
+              borderRight: '1px solid #e0e0e0',
+              boxShadow: 'none',
+            },
           }}
           open
         >
@@ -899,6 +800,12 @@ const DashboardLayout: React.FC = () => {
           Logout
         </MenuItem>
       </Menu>
+
+      {/* Command Palette */}
+      <CommandPalette 
+        open={commandPaletteOpen} 
+        onClose={handleCloseCommandPalette} 
+      />
     </Box>
   );
 };
