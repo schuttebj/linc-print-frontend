@@ -41,7 +41,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import PersonFormWrapper from '../../components/PersonFormWrapper';
+import CompactPersonForm from '../../components/CompactPersonForm';
 import LicenseCaptureForm from '../../components/applications/LicenseCaptureForm';
 import { applicationService } from '../../services/applicationService';
 import {
@@ -340,12 +340,9 @@ const LearnerPermitCaptureCompactPage: React.FC = () => {
     switch (activeStep) {
       case 0: // Person step
         return (
-          <PersonFormWrapper
-            mode="application"
-            onSuccess={handlePersonSelected}
-            title=""
-            subtitle=""
-            showHeader={false}
+          <CompactPersonForm
+            onPersonSelected={handlePersonSelected}
+            onCancel={() => navigate('/dashboard')}
           />
         );
 

@@ -179,12 +179,6 @@ const DashboardLayout: React.FC = () => {
       path: '/dashboard/persons/search',
       permission: 'persons.read',
     },
-    {
-      text: 'Person UI Test (Temp)',
-      icon: <Person />,
-      path: '/dashboard/persons/temp',
-      permission: 'persons.create',
-    },
   ];
 
   // Application navigation items
@@ -622,14 +616,14 @@ const DashboardLayout: React.FC = () => {
           {/* Core Navigation - Dashboard */}
           {coreNavigationItems.map((item) => {
             if (item.permission && !hasPermission(item.permission)) return null;
-            const isActive = location.pathname === item.path;
-            
-            return (
+              const isActive = location.pathname === item.path;
+
+              return (
               <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
-                <ListItemButton
-                  selected={isActive}
-                  onClick={() => {
-                    navigate(item.path);
+                  <ListItemButton
+                    selected={isActive}
+                    onClick={() => {
+                      navigate(item.path);
                     if (isMobile) setMobileOpen(false);
                   }}
                   sx={{
@@ -655,18 +649,18 @@ const DashboardLayout: React.FC = () => {
                   }}>
                     {item.icon}
                   </ListItemIcon>
-                  <ListItemText 
+                    <ListItemText 
                     primary={item.text} 
                     primaryTypographyProps={{
                       fontSize: '0.875rem',
                       fontWeight: isActive ? 500 : 400,
                       color: isActive ? 'white' : '#333',
                     }}
-                  />
-                </ListItemButton>
-              </ListItem>
-            );
-          })}
+                    />
+                  </ListItemButton>
+                </ListItem>
+              );
+            })}
 
           <Divider sx={{ my: 1 }} />
 
@@ -690,7 +684,7 @@ const DashboardLayout: React.FC = () => {
                     '& .MuiSvgIcon-root': { fontSize: '20px' },
                   }}>
                     <People />
-                  </ListItemIcon>
+                    </ListItemIcon>
                   <ListItemText 
                     primary="Persons" 
                     primaryTypographyProps={{
@@ -700,21 +694,21 @@ const DashboardLayout: React.FC = () => {
                     }}
                   />
                   {personsExpanded ? <ExpandLess /> : <ExpandMore />}
-                </ListItemButton>
-              </ListItem>
-              
+                  </ListItemButton>
+                </ListItem>
+                
               <Collapse in={personsExpanded} timeout="auto" unmountOnExit>
                 <List component="div" disablePadding sx={{ pl: 2 }}>
                   {personNavigationItems.map((item) => {
                     if (item.permission && !hasPermission(item.permission)) return null;
-                    const isActive = location.pathname === item.path;
+                          const isActive = location.pathname === item.path;
 
-                    return (
+                          return (
                       <ListItem key={item.text} disablePadding sx={{ mb: 0.25 }}>
-                        <ListItemButton
-                          selected={isActive}
-                          onClick={() => {
-                            navigate(item.path);
+                              <ListItemButton
+                                selected={isActive}
+                                onClick={() => {
+                                  navigate(item.path);
                             if (isMobile) setMobileOpen(false);
                           }}
                           sx={{
@@ -739,24 +733,24 @@ const DashboardLayout: React.FC = () => {
                             color: isActive ? 'white' : '#666',
                             '& .MuiSvgIcon-root': { fontSize: '18px' },
                           }}>
-                            {item.icon}
-                          </ListItemIcon>
-                          <ListItemText 
-                            primary={item.text}
-                            primaryTypographyProps={{
+                                  {item.icon}
+                                </ListItemIcon>
+                                <ListItemText 
+                                  primary={item.text} 
+                                  primaryTypographyProps={{ 
                               fontSize: '0.8rem',
                               fontWeight: isActive ? 500 : 400,
                               color: isActive ? 'white' : '#333',
-                            }}
-                          />
-                        </ListItemButton>
-                      </ListItem>
-                    );
-                  })}
-                </List>
-              </Collapse>
-            </>
-          )}
+                                  }} 
+                                />
+                              </ListItemButton>
+                            </ListItem>
+                          );
+                        })}
+                  </List>
+                </Collapse>
+        </>
+      )}
 
           <Divider sx={{ my: 1 }} />
 
@@ -765,7 +759,7 @@ const DashboardLayout: React.FC = () => {
             applicationNavigationItems.map((item) => {
               if (item.permission && !hasPermission(item.permission)) return null;
               const isActive = location.pathname === item.path;
-              
+
               return (
                 <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
                   <ListItemButton
@@ -797,9 +791,9 @@ const DashboardLayout: React.FC = () => {
                     }}>
                       {item.icon}
                     </ListItemIcon>
-                    <ListItemText 
+              <ListItemText 
                       primary={item.text} 
-                      primaryTypographyProps={{
+                primaryTypographyProps={{ 
                         fontSize: '0.875rem',
                         fontWeight: isActive ? 500 : 400,
                         color: isActive ? 'white' : '#333',
@@ -832,9 +826,9 @@ const DashboardLayout: React.FC = () => {
                   }}>
                     <AddIcon />
                   </ListItemIcon>
-                  <ListItemText 
+              <ListItemText 
                     primary="Create Applications" 
-                    primaryTypographyProps={{
+                primaryTypographyProps={{ 
                       fontSize: '0.875rem',
                       fontWeight: 400,
                       color: '#333',
@@ -842,7 +836,7 @@ const DashboardLayout: React.FC = () => {
                   />
                   {createApplicationsExpanded ? <ExpandLess /> : <ExpandMore />}
                 </ListItemButton>
-              </ListItem>
+            </ListItem>
               
               <Collapse in={createApplicationsExpanded} timeout="auto" unmountOnExit>
                 <List component="div" disablePadding sx={{ pl: 2 }}>
@@ -851,11 +845,11 @@ const DashboardLayout: React.FC = () => {
                       if (app.permission && !hasPermission(app.permission)) return null;
                       const isActive = location.pathname === app.path;
 
-                      return (
+              return (
                         <ListItem key={app.text} disablePadding sx={{ mb: 0.25 }}>
-                          <ListItemButton
-                            selected={isActive}
-                            onClick={() => {
+                  <ListItemButton
+                    selected={isActive}
+                    onClick={() => {
                               navigate(app.path);
                               if (isMobile) setMobileOpen(false);
                             }}
@@ -903,15 +897,15 @@ const DashboardLayout: React.FC = () => {
                                 color: isActive ? 'white' : '#333',
                               }}
                             />
-                          </ListItemButton>
-                        </ListItem>
-                      );
+                  </ListItemButton>
+                </ListItem>
+              );
                     })
                   )}
-                </List>
+          </List>
               </Collapse>
-            </>
-          )}
+        </>
+      )}
 
           <Divider sx={{ my: 1 }} />
 
@@ -936,9 +930,9 @@ const DashboardLayout: React.FC = () => {
                   }}>
                     <CreditCard />
                   </ListItemIcon>
-                  <ListItemText 
+              <ListItemText 
                     primary="Licenses" 
-                    primaryTypographyProps={{
+                primaryTypographyProps={{ 
                       fontSize: '0.875rem',
                       fontWeight: 400,
                       color: '#333',
@@ -946,20 +940,20 @@ const DashboardLayout: React.FC = () => {
                   />
                   {licensesExpanded ? <ExpandLess /> : <ExpandMore />}
                 </ListItemButton>
-              </ListItem>
-              
+            </ListItem>
+
               <Collapse in={licensesExpanded} timeout="auto" unmountOnExit>
                 <List component="div" disablePadding sx={{ pl: 2 }}>
                   {licenseNavigationItems.map((item) => {
                     if (item.permission && !hasPermission(item.permission)) return null;
-                    const isActive = location.pathname === item.path;
+              const isActive = location.pathname === item.path;
 
-                    return (
+              return (
                       <ListItem key={item.text} disablePadding sx={{ mb: 0.25 }}>
-                        <ListItemButton
-                          selected={isActive}
-                          onClick={() => {
-                            navigate(item.path);
+                  <ListItemButton
+                    selected={isActive}
+                    onClick={() => {
+                      navigate(item.path);
                             if (isMobile) setMobileOpen(false);
                           }}
                           sx={{
@@ -994,14 +988,14 @@ const DashboardLayout: React.FC = () => {
                               color: isActive ? 'white' : '#333',
                             }}
                           />
-                        </ListItemButton>
-                      </ListItem>
-                    );
-                  })}
-                </List>
+                  </ListItemButton>
+                </ListItem>
+              );
+            })}
+          </List>
               </Collapse>
-            </>
-          )}
+        </>
+      )}
 
           <Divider sx={{ my: 1 }} />
 
@@ -1010,7 +1004,7 @@ const DashboardLayout: React.FC = () => {
             .filter(item => !item.permission || hasPermission(item.permission))
             .map((item) => {
               const isActive = location.pathname === item.path;
-              
+
               return (
                 <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
                   <ListItemButton
@@ -1054,7 +1048,7 @@ const DashboardLayout: React.FC = () => {
                 </ListItem>
               );
             })}
-        </List>
+          </List>
       </Box>
 
       {/* User Profile Section */}
