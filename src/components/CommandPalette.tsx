@@ -76,6 +76,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [shortcutSequence, setShortcutSequence] = useState('');
   const [shortcutTimeout, setShortcutTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [isShortcutMode, setIsShortcutMode] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Define all available commands
@@ -365,6 +366,22 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
     setShortcutTimeout(null);
   }, [shortcutTimeout]);
 
+  // Toggle shortcut mode
+  const toggleShortcutMode = useCallback(() => {
+    setIsShortcutMode(prev => {
+      const newMode = !prev;
+      if (!newMode) {
+        // Exiting shortcut mode, clear sequence and focus search
+        clearShortcutSequence();
+        setTimeout(() => searchInputRef.current?.focus(), 50);
+      } else {
+        // Entering shortcut mode, blur search input
+        searchInputRef.current?.blur();
+      }
+      return newMode;
+    });
+  }, [clearShortcutSequence]);
+
   // Handle shortcut sequence input
   const handleShortcutInput = useCallback((key: string) => {
     const newSequence = shortcutSequence + key.toUpperCase();
@@ -489,15 +506,15 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
         return;
       }
 
-      // Handle "/" key to focus search input
-      if (event.key === '/' && event.target !== searchInputRef.current) {
+      // Handle "\" key to toggle shortcut mode
+      if (event.key === '\\') {
         event.preventDefault();
-        searchInputRef.current?.focus();
+        toggleShortcutMode();
         return;
       }
 
-      // Handle shortcut sequences for single letter keys (not in input field)
-      if (event.target !== searchInputRef.current && 
+      // Handle shortcut sequences ONLY when in shortcut mode
+      if (isShortcutMode && 
           event.key.length === 1 && 
           /^[A-Za-z]$/.test(event.key) &&
           !event.ctrlKey && 
@@ -505,31 +522,29 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
           !event.altKey) {
         
         event.preventDefault();
-        const handled = handleShortcutInput(event.key);
-        
-        // If shortcut wasn't handled, add to search query and focus input
-        if (!handled) {
-          setSearchQuery(event.key);
-          searchInputRef.current?.focus();
-        }
+        handleShortcutInput(event.key);
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [open, filteredCommands, selectedIndex, onClose, handleShortcutInput]);
+  }, [open, filteredCommands, selectedIndex, onClose, handleShortcutInput, isShortcutMode, toggleShortcutMode]);
 
   // Reset search and selection when opened
   useEffect(() => {
     if (open) {
       setSearchQuery('');
       setSelectedIndex(0);
+      setIsShortcutMode(false); // Start in search mode
       clearShortcutSequence(); // Clear any existing shortcut sequence
       
-      // Don't auto-focus the search input so shortcuts work immediately
-      // User can click the input or press '/' to start searching
+      // Auto-focus search input since that's the default mode
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 100);
     } else {
       // Clean up when closing
+      setIsShortcutMode(false);
       clearShortcutSequence();
     }
   }, [open, clearShortcutSequence]);
@@ -647,27 +662,47 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
           ref={searchInputRef}
           fullWidth
           variant="outlined"
-          placeholder="Click here or press '/' to search..."
+          placeholder={isShortcutMode ? "Shortcut mode: Press letters for shortcuts" : "Search commands..."}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
+          disabled={isShortcutMode}
+          autoFocus={!isShortcutMode}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
                 <Search sx={{ color: '#666', fontSize: 20 }} />
               </InputAdornment>
             ),
-            endAdornment: shortcutSequence && (
+            endAdornment: (
               <InputAdornment position="end">
-                <Chip
-                  label={`Shortcut: ${shortcutSequence.split('').join(' ')}`}
-                  size="small"
-                  color="primary"
-                  sx={{
-                    height: 20,
-                    fontSize: '0.7rem',
-                    fontFamily: 'monospace',
-                  }}
-                />
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                  {/* Mode indicator */}
+                  <Chip
+                    label={isShortcutMode ? "SHORTCUT" : "SEARCH"}
+                    size="small"
+                    color={isShortcutMode ? "warning" : "primary"}
+                    variant={isShortcutMode ? "filled" : "outlined"}
+                    sx={{
+                      height: 20,
+                      fontSize: '0.65rem',
+                      fontWeight: 'bold',
+                    }}
+                  />
+                  
+                  {/* Shortcut sequence */}
+                  {shortcutSequence && (
+                    <Chip
+                      label={shortcutSequence.split('').join(' ')}
+                      size="small"
+                      color="secondary"
+                      sx={{
+                        height: 20,
+                        fontSize: '0.7rem',
+                        fontFamily: 'monospace',
+                      }}
+                    />
+                  )}
+                </Box>
               </InputAdornment>
             ),
           }}
@@ -715,13 +750,15 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
               <Typography variant="caption" color="text.secondary">to select</Typography>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <Chip label="G D" size="small" variant="outlined" sx={{ height: 20, fontSize: '0.7rem' }} />
-              <Typography variant="caption" color="text.secondary">shortcuts</Typography>
+              <Chip label="\" size="small" variant="outlined" sx={{ height: 20, fontSize: '0.7rem' }} />
+              <Typography variant="caption" color="text.secondary">toggle mode</Typography>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <Chip label="/" size="small" variant="outlined" sx={{ height: 20, fontSize: '0.7rem' }} />
-              <Typography variant="caption" color="text.secondary">to search</Typography>
-            </Box>
+            {isShortcutMode && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Chip label="G D" size="small" variant="outlined" sx={{ height: 20, fontSize: '0.7rem' }} />
+                <Typography variant="caption" color="text.secondary">shortcuts</Typography>
+              </Box>
+            )}
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <Chip label="esc" size="small" variant="outlined" sx={{ height: 20, fontSize: '0.7rem' }} />
