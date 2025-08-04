@@ -4,7 +4,7 @@
  * Multi-step registration/editing adapted for Madagascar natural persons
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     Box,
     Typography,
@@ -246,6 +246,9 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     // URL parameters for editing
     const [searchParams] = useSearchParams();
 
+    // Ref for auto-scrolling to active step content
+    const stepContentRef = useRef<HTMLDivElement>(null);
+
     // State management
     const [currentStep, setCurrentStep] = useState(skipFirstStep ? 1 : 0);
     const [personFound, setPersonFound] = useState<ExistingPerson | null>(null);
@@ -462,6 +465,16 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             fetchPersonForEditing(editPersonId);
         }
     }, [searchParams, initialPersonId, accessToken]);
+
+    // Auto-scroll to step content when step changes
+    useEffect(() => {
+        if (stepContentRef.current) {
+            stepContentRef.current.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start' 
+            });
+        }
+    }, [currentStep]);
 
 
 
@@ -779,7 +792,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
         // Populate addresses if they exist - ALL CAPITALIZED
         if (existingPerson.addresses && existingPerson.addresses.length > 0) {
-            console.log('Populating addresses:', existingPerson.addresses);
+            console.log('✅ Populating addresses from existing person:', existingPerson.addresses);
             const transformedAddresses = existingPerson.addresses.map(address => ({
                 address_type: address.address_type?.toUpperCase() || 'RESIDENTIAL',
                 street_line1: address.street_line1?.toUpperCase() || '',
@@ -794,7 +807,15 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
             // Clear existing addresses first, then set new ones
             personForm.setValue('addresses', transformedAddresses);
-            console.log('Addresses set to:', transformedAddresses);
+            console.log('✅ Addresses successfully set to form:', transformedAddresses);
+            
+            // Verify the addresses were set correctly
+            setTimeout(() => {
+                const currentAddresses = personForm.getValues('addresses');
+                console.log('🔍 Current form addresses after setting:', currentAddresses);
+            }, 100);
+        } else {
+            console.log('⚠️ No addresses found for existing person or addresses array is empty');
         }
     };
 
@@ -891,7 +912,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
         try {
             const formData = personForm.getValues();
-            console.log('Raw form data:', formData);
+            console.log('📝 Raw form data from PersonFormWrapper:', formData);
+            console.log('📍 Raw address data from form:', formData.addresses);
 
             // Transform form data to match backend schema with FULL CAPITALIZATION
             const personPayload = {
@@ -924,9 +946,14 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
                 // Transform addresses to match backend schema - ALL CAPITALIZED
                 addresses: formData.addresses
-                    .filter(address => address.locality && address.postal_code && address.town)
+                    .filter(address => 
+                        // Include address if it has at least locality, postal_code, or town filled
+                        (address.locality && address.locality.trim()) ||
+                        (address.postal_code && address.postal_code.trim()) ||
+                        (address.town && address.town.trim())
+                    )
                     .map(address => ({
-                        address_type: address.address_type?.toUpperCase() || '',
+                        address_type: address.address_type?.toUpperCase() || 'RESIDENTIAL',
                         is_primary: address.is_primary,
                         street_line1: address.street_line1?.toUpperCase() || undefined,
                         street_line2: address.street_line2?.toUpperCase() || undefined,
@@ -939,7 +966,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     })),
             };
 
-            console.log('Transformed person payload:', personPayload);
+            console.log('✅ Transformed person payload for submission:', personPayload);
+            console.log('📍 Address data being sent:', personPayload.addresses);
 
             if (isEditMode && currentPersonId) {
                 // Update existing person
@@ -1287,80 +1315,61 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     Enter document details to search for existing person or register new person.
                 </Typography>
 
-                <form onSubmit={lookupForm.handleSubmit(performLookup)}>
-                    <Grid container spacing={2}>
-                        <Grid item xs={12} md={4}>
-                            <Controller
-                                name="document_type"
-                                control={lookupForm.control}
-                                render={({ field }) => (
-                                    <FormControl fullWidth size="small" error={!!lookupForm.formState.errors.document_type}>
-                                        <InputLabel>Document Type *</InputLabel>
-                                        <Select {...field} label="Document Type *">
-                            {documentTypes.map((option) => (
-                                <MenuItem key={option.value} value={option.value}>
-                                    {option.label}
-                                </MenuItem>
-                            ))}
-                                        </Select>
-                                        <FormHelperText>
-                                            {lookupForm.formState.errors.document_type?.message || 'Select document type'}
-                                        </FormHelperText>
-                                    </FormControl>
-                                )}
-                            />
-                        </Grid>
-
-                        <Grid item xs={12} md={6}>
-                            <Controller
-                                name="document_number"
-                                control={lookupForm.control}
-                                render={({ field }) => (
-                                    <TextField
-                                        name={field.name}
-                                        value={field.value || ''}
-                                        fullWidth
-                                        size="small"
-                                        label="Document Number *"
-                                        error={!!lookupForm.formState.errors.document_number}
-                                        helperText={lookupForm.formState.errors.document_number?.message || 'Enter document number (numbers only)'}
-                                        onChange={(e) => {
-                                            const value = e.target.value.replace(/\D/g, '');
-                                            field.onChange(value);
-                                        }}
-                                        onBlur={field.onBlur}
-                                        InputProps={{
-                                            endAdornment: field.value && (
-                                                <InputAdornment position="end">
-                                                    <IconButton onClick={() => lookupForm.setValue('document_number', '')} size="small">
-                                                        <ClearIcon />
-                                                    </IconButton>
-                                                </InputAdornment>
-                                            ),
-                                        }}
-                                    />
-                                )}
-                            />
-                        </Grid>
-
-                        <Grid item xs={12} md={2}>
-                            <Button
-                                type="submit"
-                                variant="contained"
-                                fullWidth
-                                size="small"
-                                disabled={lookupLoading}
-                                startIcon={<SearchIcon />}
-                                sx={{ 
-                                    height: '40px',
-                                    boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
-                                }}
-                            >
-                                {lookupLoading ? 'Searching...' : 'Search'}
-                            </Button>
-                        </Grid>
+                <Grid container spacing={2}>
+                    <Grid item xs={12} md={6}>
+                        <Controller
+                            name="document_type"
+                            control={lookupForm.control}
+                            render={({ field }) => (
+                                <FormControl fullWidth size="small" error={!!lookupForm.formState.errors.document_type}>
+                                    <InputLabel>Document Type *</InputLabel>
+                                    <Select {...field} label="Document Type *">
+                        {documentTypes.map((option) => (
+                            <MenuItem key={option.value} value={option.value}>
+                                {option.label}
+                            </MenuItem>
+                        ))}
+                                    </Select>
+                                    <FormHelperText>
+                                        {lookupForm.formState.errors.document_type?.message || 'Select document type'}
+                                    </FormHelperText>
+                                </FormControl>
+                            )}
+                        />
                     </Grid>
-                </form>
+
+                    <Grid item xs={12} md={6}>
+                        <Controller
+                            name="document_number"
+                            control={lookupForm.control}
+                            render={({ field }) => (
+                                <TextField
+                                    name={field.name}
+                                    value={field.value || ''}
+                                    fullWidth
+                                    size="small"
+                                    label="Document Number *"
+                                    error={!!lookupForm.formState.errors.document_number}
+                                    helperText={lookupForm.formState.errors.document_number?.message || 'Enter document number (numbers only)'}
+                                    onChange={(e) => {
+                                        const value = e.target.value.replace(/\D/g, '');
+                                        field.onChange(value);
+                                    }}
+                                    onBlur={field.onBlur}
+                                    InputProps={{
+                                        endAdornment: field.value && (
+                                            <InputAdornment position="end">
+                                                <IconButton onClick={() => lookupForm.setValue('document_number', '')} size="small">
+                                                    <ClearIcon />
+                                                </IconButton>
+                                            </InputAdornment>
+                                        ),
+                                    }}
+                                />
+                            )}
+                        />
+                    </Grid>
+                </Grid>
             </Box>
         </Paper>
     );
@@ -1382,13 +1391,9 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
                 {/* Show alert when person was found but has incomplete information */}
                 {mode === 'application' && !isNewPerson && personDataWasIncomplete && (
-                    <Alert severity="warning" sx={{ mb: 3 }}>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    <Alert severity="warning" sx={{ mb: 2, py: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
                             Incomplete Person Information
-                        </Typography>
-                        <Typography variant="body2">
-                            This person exists in the system but has missing required information for license applications. 
-                            Please complete all missing fields to proceed with the application.
                         </Typography>
                     </Alert>
                 )}
@@ -2435,7 +2440,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 </Paper>
 
                 {/* Step Content */}
-                <Box sx={{ mb: 3 }}>
+                <Box ref={stepContentRef} sx={{ mb: 3 }}>
                     {renderStepContent()}
                 </Box>
 
