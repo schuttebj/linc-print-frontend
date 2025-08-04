@@ -197,12 +197,14 @@ const personSchema = yup.object({
     addresses: yup.array().of(
         yup.object({
             address_type: yup.string().required('Address type is required'),
+            street_line1: yup.string().required('Street address is required'),
             locality: yup.string().required('Locality is required'),
             postal_code: yup.string()
                 .required('Postal code is required')
                 .matches(/^\d{3}$/, 'Madagascar postal code must be exactly 3 digits'),
             town: yup.string().required('Town is required'),
             country: yup.string().required('Country is required'),
+            province_code: yup.string().required('Province is required'),
         })
     ).min(1, 'At least one address is required'),
 });
@@ -469,9 +471,12 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     // Auto-scroll to step content when step changes
     useEffect(() => {
         if (stepContentRef.current) {
-            stepContentRef.current.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'start' 
+            const elementTop = stepContentRef.current.offsetTop;
+            const offsetPosition = elementTop - 80; // 80px offset for fixed headers
+            
+            window.scrollTo({
+                top: offsetPosition,
+                behavior: 'smooth'
             });
         }
     }, [currentStep]);
@@ -629,6 +634,12 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         const defaultCountry = countries.length > 0 ? countries[0].value : 'MG';
         const defaultAddressType = addressTypes.length > 0 ? addressTypes[0].value : 'RESIDENTIAL';
         const defaultProvinceCode = provinces.length > 0 ? provinces[0].code : 'T';
+        
+        console.log('🏗️ Setting up new person form with defaults:', {
+            defaultAddressType,
+            defaultProvinceCode,
+            provinces: provinces.slice(0, 3) // Show first 3 provinces for debugging
+        });
 
         // Reset form with primary document from lookup - CAPITALIZED
         personForm.reset({
@@ -861,7 +872,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             ['surname', 'first_name', 'person_nature', 'nationality_code', 'preferred_language'], // Only required fields for step 1
             [], // Contact step - don't validate on transition, let user fill optional fields
             [], // ID Documents step - complex validation handled separately
-            [], // Address step - complex validation handled separately  
+            ['addresses'], // Address step - validate all addresses
             [], // Review step
         ];
         return stepFieldMap[step] || [];
@@ -946,22 +957,36 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
                 // Transform addresses to match backend schema - ALL CAPITALIZED
                 addresses: formData.addresses
-                    .filter(address => 
-                        // Include address if it has at least locality, postal_code, or town filled
-                        (address.locality && address.locality.trim()) ||
-                        (address.postal_code && address.postal_code.trim()) ||
-                        (address.town && address.town.trim())
-                    )
+                    .filter(address => {
+                        // Include address if it has the required fields filled
+                        const hasRequiredFields = address.street_line1 && address.street_line1.trim() &&
+                                                address.locality && address.locality.trim() &&
+                                                address.postal_code && address.postal_code.trim() &&
+                                                address.town && address.town.trim() &&
+                                                address.province_code && address.province_code.trim();
+                        
+                        console.log('🔍 Address validation check:', {
+                            address,
+                            hasRequiredFields,
+                            street_line1: !!address.street_line1?.trim(),
+                            locality: !!address.locality?.trim(),
+                            postal_code: !!address.postal_code?.trim(),
+                            town: !!address.town?.trim(),
+                            province_code: !!address.province_code?.trim()
+                        });
+                        
+                        return hasRequiredFields;
+                    })
                     .map(address => ({
                         address_type: address.address_type?.toUpperCase() || 'RESIDENTIAL',
                         is_primary: address.is_primary,
-                        street_line1: address.street_line1?.toUpperCase() || undefined,
+                        street_line1: address.street_line1?.toUpperCase() || '',
                         street_line2: address.street_line2?.toUpperCase() || undefined,
                         locality: address.locality?.toUpperCase() || '',
                         postal_code: address.postal_code || '',
                         town: address.town?.toUpperCase() || '',
                         country: address.country?.toUpperCase() || 'MADAGASCAR',
-                        province_code: address.province_code?.toUpperCase() || undefined,
+                        province_code: address.province_code?.toUpperCase() || '',
                         is_verified: false,
                     })),
             };
@@ -1315,6 +1340,16 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     Enter document details to search for existing person or register new person.
                 </Typography>
 
+                <Box 
+                    component="form" 
+                    onSubmit={lookupForm.handleSubmit(performLookup)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            lookupForm.handleSubmit(performLookup)();
+                        }
+                    }}
+                >
                 <Grid container spacing={2}>
                     <Grid item xs={12} md={6}>
                         <Controller
@@ -1370,6 +1405,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                         />
                     </Grid>
                 </Grid>
+                </Box>
             </Box>
         </Paper>
     );
@@ -1384,7 +1420,15 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 borderRadius: 2
             }}
         >
-            <Box sx={{ p: 2 }}>
+            <Box 
+                sx={{ p: 2 }}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleNext();
+                    }
+                }}
+            >
                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
                     Personal Information
                 </Typography>
@@ -1604,7 +1648,15 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 borderRadius: 2
             }}
         >
-            <Box sx={{ p: 2 }}>
+            <Box 
+                sx={{ p: 2 }}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleNext();
+                    }
+                }}
+            >
                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
                     Contact Information
                 </Typography>
@@ -1755,7 +1807,15 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 borderRadius: 2
             }}
         >
-            <Box sx={{ p: 2 }}>
+            <Box 
+                sx={{ p: 2 }}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleNext();
+                    }
+                }}
+            >
                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
                     Identification Documents
                 </Typography>
@@ -1945,7 +2005,15 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 borderRadius: 2
             }}
         >
-            <Box sx={{ p: 2 }}>
+            <Box 
+                sx={{ p: 2 }}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleNext();
+                    }
+                }}
+            >
                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
                     Address Information
                 </Typography>
@@ -1964,12 +2032,15 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                     name={`addresses.${index}.address_type`}
                                     control={personForm.control}
                                     render={({ field }) => (
-                                        <FormControl fullWidth size="small">
+                                        <FormControl fullWidth size="small" error={!!personForm.formState.errors.addresses?.[index]?.address_type}>
                                             <InputLabel>Address Type *</InputLabel>
                                             <Select {...field} label="Address Type *">
                                                 <MenuItem value="RESIDENTIAL">Residential</MenuItem>
                                                 <MenuItem value="POSTAL">Postal</MenuItem>
                                             </Select>
+                                            <FormHelperText>
+                                                {personForm.formState.errors.addresses?.[index]?.address_type?.message || 'Select address type'}
+                                            </FormHelperText>
                                         </FormControl>
                                     )}
                                 />
@@ -1998,8 +2069,9 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                             {...field}
                                             fullWidth
                                             size="small"
-                                            label="Address Line 1"
-                                            helperText="Street address line 1"
+                                            label="Address Line 1 *"
+                                            error={!!personForm.formState.errors.addresses?.[index]?.street_line1}
+                                            helperText={personForm.formState.errors.addresses?.[index]?.street_line1?.message || 'Street address line 1 (required)'}
                                             onChange={(e) => {
                                                 const value = e.target.value.toUpperCase();
                                                 field.onChange(value);
@@ -2103,16 +2175,18 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                     name={`addresses.${index}.province_code`}
                                     control={personForm.control}
                                     render={({ field }) => (
-                                        <FormControl fullWidth size="small">
-                                            <InputLabel>Province</InputLabel>
-                                            <Select {...field} label="Province">
+                                        <FormControl fullWidth size="small" error={!!personForm.formState.errors.addresses?.[index]?.province_code}>
+                                            <InputLabel>Province *</InputLabel>
+                                            <Select {...field} label="Province *">
                                                 {provinces.map((option) => (
                                                     <MenuItem key={option.code} value={option.code}>
                                                         {option.name}
                                                     </MenuItem>
                                                 ))}
                                             </Select>
-                                            <FormHelperText>Madagascar province/region</FormHelperText>
+                                            <FormHelperText>
+                                                {personForm.formState.errors.addresses?.[index]?.province_code?.message || 'Madagascar province/region (required)'}
+                                            </FormHelperText>
                                         </FormControl>
                                     )}
                                 />
