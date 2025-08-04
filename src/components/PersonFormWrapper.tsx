@@ -1278,7 +1278,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 borderRadius: 2
             }}
         >
-            <Box sx={{ p: 3 }}>
+            <Box sx={{ p: 2 }}>
                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
                     Document Lookup
                 </Typography>
@@ -1375,7 +1375,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 borderRadius: 2
             }}
         >
-            <Box sx={{ p: 3 }}>
+            <Box sx={{ p: 2 }}>
                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
                     Personal Information
                 </Typography>
@@ -1599,7 +1599,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 borderRadius: 2
             }}
         >
-            <Box sx={{ p: 3 }}>
+            <Box sx={{ p: 2 }}>
                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
                     Contact Information
                 </Typography>
@@ -1750,7 +1750,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 borderRadius: 2
             }}
         >
-            <Box sx={{ p: 3 }}>
+            <Box sx={{ p: 2 }}>
                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
                     Identification Documents
                 </Typography>
@@ -1940,7 +1940,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 borderRadius: 2
             }}
         >
-            <Box sx={{ p: 3 }}>
+            <Box sx={{ p: 2 }}>
                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
                     Address Information
                 </Typography>
@@ -2180,12 +2180,12 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     borderRadius: 2
                 }}
             >
-                <Box sx={{ p: 3 }}>
-                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+                <Box sx={{ p: 2 }}>
+                    <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, fontSize: '1.1rem' }}>
                         Review & Submit
                     </Typography>
 
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                         {mode === 'application' && !isNewPerson ? (
                             <Alert severity="success" sx={{ flex: 1, mr: 2 }}>
                                 Person information is complete and ready for license application.
@@ -2208,39 +2208,39 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     </Box>
 
                     {/* Personal Information Summary */}
-                    <Box sx={{ mb: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: 2, backgroundColor: '#fafafa' }}>
-                        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, color: 'primary.main' }}>
+                    <Box sx={{ mb: 2, p: 1.5, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
+                        <Typography variant="body1" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.95rem' }}>
                             Personal Information
                         </Typography>
 
-                        <Grid container spacing={2}>
+                        <Grid container spacing={1.5}>
                             <Grid item xs={12} md={6}>
-                                <Typography variant="subtitle2" color="text.secondary">Full Name</Typography>
-                                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                <Typography variant="caption" color="text.secondary">Full Name</Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
                                     {[formData.surname, formData.first_name, formData.middle_name].filter(Boolean).join(' ')}
                                 </Typography>
                             </Grid>
-                            <Grid item xs={12} md={3}>
-                                <Typography variant="subtitle2" color="text.secondary">Gender</Typography>
-                                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                            <Grid item xs={6} md={3}>
+                                <Typography variant="caption" color="text.secondary">Gender</Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
                                     {personNatures.find(n => n.value === formData.person_nature)?.label || 'NOT SPECIFIED'}
                                 </Typography>
                             </Grid>
-                            <Grid item xs={12} md={3}>
-                                <Typography variant="subtitle2" color="text.secondary">Language</Typography>
-                                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                            <Grid item xs={6} md={3}>
+                                <Typography variant="caption" color="text.secondary">Language</Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
                                     {languages.find(l => l.value === formData.preferred_language)?.label || 'NOT SPECIFIED'}
                                 </Typography>
                             </Grid>
-                            <Grid item xs={12} md={3}>
-                                <Typography variant="subtitle2" color="text.secondary">Birth Date</Typography>
-                                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                            <Grid item xs={6} md={3}>
+                                <Typography variant="caption" color="text.secondary">Birth Date</Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
                                     {formData.birth_date || 'NOT PROVIDED'}
                                 </Typography>
                             </Grid>
-                            <Grid item xs={12} md={3}>
-                                <Typography variant="subtitle2" color="text.secondary">Nationality</Typography>
-                                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                            <Grid item xs={6} md={3}>
+                                <Typography variant="caption" color="text.secondary">Nationality</Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
                                     {formData.nationality_code === 'MG' ? 'MALAGASY' :
                                         formData.nationality_code === 'FR' ? 'FRENCH' :
                                             formData.nationality_code === 'US' ? 'AMERICAN' :
@@ -2251,95 +2251,89 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     </Box>
 
                     {/* Contact Information Summary */}
-                    <Box sx={{ mb: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: 2, backgroundColor: '#fafafa' }}>
-                        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, color: 'primary.main' }}>
-                            Contact Information
-                        </Typography>
+                    {(formData.email_address || formData.cell_phone) && (
+                        <Box sx={{ mb: 2, p: 1.5, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
+                            <Typography variant="body1" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.95rem' }}>
+                                Contact Information
+                            </Typography>
 
-                        <Grid container spacing={2}>
-                            {formData.email_address && (
-                                <Grid item xs={12} md={6}>
-                                    <Typography variant="subtitle2" color="text.secondary">Email</Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                        {formData.email_address}
-                                    </Typography>
-                                </Grid>
-                            )}
-                            {formData.cell_phone && (
-                                <Grid item xs={12} md={6}>
-                                    <Typography variant="subtitle2" color="text.secondary">Cell Phone</Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                        {formData.cell_phone_country_code} {formData.cell_phone}
-                                    </Typography>
-                                </Grid>
-                            )}
+                            <Grid container spacing={1.5}>
+                                {formData.email_address && (
+                                    <Grid item xs={12} md={6}>
+                                        <Typography variant="caption" color="text.secondary">Email</Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                            {formData.email_address}
+                                        </Typography>
+                                    </Grid>
+                                )}
+                                {formData.cell_phone && (
+                                    <Grid item xs={12} md={6}>
+                                        <Typography variant="caption" color="text.secondary">Cell Phone</Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                            {formData.cell_phone_country_code} {formData.cell_phone}
+                                        </Typography>
+                                    </Grid>
+                                )}
+                            </Grid>
+                        </Box>
+                    )}
+
+                    {/* Documents & Addresses in a more compact layout */}
+                    <Grid container spacing={2}>
+                        {/* Documents Summary */}
+                        <Grid item xs={12} md={6}>
+                            <Typography variant="body1" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.95rem' }}>
+                                Documents ({formData.aliases?.length || 0})
+                            </Typography>
+                            {formData.aliases?.map((alias, index) => (
+                                <Box key={index} sx={{ mb: 1, p: 1.5, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <Box>
+                                            <Typography variant="caption" color="text.secondary">
+                                                {documentTypes.find(type => type.value === alias.document_type)?.label || alias.document_type}
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                                {alias.document_number}
+                                            </Typography>
+                                        </Box>
+                                        <Box>
+                                            {alias.is_primary && <Chip label="PRIMARY" size="small" color="primary" sx={{ fontSize: '0.65rem', height: '20px' }} />}
+                                        </Box>
+                                    </Box>
+                                </Box>
+                            ))}
                         </Grid>
-                    </Box>
 
-                    {/* Documents Summary */}
-                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', mt: 3 }}>
-                        Documents ({formData.aliases?.length || 0})
-                    </Typography>
-                    {formData.aliases?.map((alias, index) => (
-                        <Box key={index} sx={{ mb: 2, p: 2, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
-                            <Grid container spacing={2}>
-                                <Grid item xs={12} md={4}>
-                                    <Typography variant="subtitle2" color="text.secondary">Document Type</Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                        {documentTypes.find(type => type.value === alias.document_type)?.label || alias.document_type}
-                                    </Typography>
-                                </Grid>
-                                <Grid item xs={12} md={4}>
-                                    <Typography variant="subtitle2" color="text.secondary">Document Number</Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                        {alias.document_number}
-                                    </Typography>
-                                </Grid>
-                                <Grid item xs={12} md={4}>
-                                    <Typography variant="subtitle2" color="text.secondary">Status</Typography>
-                                    <Stack direction="row" spacing={1}>
-                                        {alias.is_primary && <Chip label="PRIMARY" size="small" color="primary" />}
-                                        {alias.is_current && <Chip label="CURRENT" size="small" color="success" />}
-                                    </Stack>
-                                </Grid>
-                            </Grid>
-                        </Box>
-                    ))}
+                        {/* Addresses Summary */}
+                        <Grid item xs={12} md={6}>
+                            <Typography variant="body1" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.95rem' }}>
+                                Addresses ({formData.addresses?.length || 0})
+                            </Typography>
+                            {formData.addresses?.map((address, index) => (
+                                <Box key={index} sx={{ mb: 1, p: 1.5, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                        <Box sx={{ flex: 1 }}>
+                                            <Typography variant="caption" color="text.secondary">
+                                                {address.address_type === 'RESIDENTIAL' ? 'RESIDENTIAL' : 'POSTAL'}
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                                                {[address.street_line1, address.street_line2, address.locality, address.town].filter(Boolean).join(', ')}
+                                                {address.postal_code && ` - ${address.postal_code}`}
+                                            </Typography>
+                                        </Box>
+                                        {address.is_primary && <Chip label="PRIMARY" size="small" color="primary" sx={{ fontSize: '0.65rem', height: '20px' }} />}
+                                    </Box>
+                                </Box>
+                            ))}
+                        </Grid>
+                    </Grid>
 
-                    {/* Addresses Summary */}
-                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', mt: 3 }}>
-                        Addresses ({formData.addresses?.length || 0})
-                    </Typography>
-                    {formData.addresses?.map((address, index) => (
-                        <Box key={index} sx={{ mb: 2, p: 2, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
-                            <Grid container spacing={2}>
-                                <Grid item xs={12}>
-                                    <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'primary.main' }}>
-                                        {address.address_type === 'RESIDENTIAL' ? 'RESIDENTIAL ADDRESS' : 'POSTAL ADDRESS'}
-                                        {address.is_primary && <Chip label="PRIMARY" size="small" color="primary" sx={{ ml: 1 }} />}
-                                    </Typography>
-                                </Grid>
-                                <Grid item xs={12}>
-                                    <Typography variant="subtitle2" color="text.secondary">Full Address</Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                        {[address.street_line1, address.street_line2, address.locality, address.town].filter(Boolean).join(', ')}
-                                        {address.postal_code && ` - ${address.postal_code}`}
-                                    </Typography>
-                                </Grid>
-                            </Grid>
-                        </Box>
-                    ))}
-
-                    <Alert severity="success" sx={{ mt: 3 }}>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    <Alert severity="success" sx={{ mt: 2 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
                             Ready to Create Person Record
                         </Typography>
-                        <Typography variant="body2">
-                            • Documents: {formData.aliases?.length || 0} document(s)
-                            <br />
-                            • Addresses: {formData.addresses?.length || 0} address(es)
-                            <br />
-                            • Contact Methods: {[formData.email_address, formData.work_phone, formData.cell_phone].filter(Boolean).length} method(s)
+                        <Typography variant="caption">
+                            {formData.aliases?.length || 0} document(s) • {formData.addresses?.length || 0} address(es) • {[formData.email_address, formData.work_phone, formData.cell_phone].filter(Boolean).length} contact method(s)
                         </Typography>
                     </Alert>
                 </Box>
@@ -2360,13 +2354,13 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
     return (
         <>
-        <Box sx={{ bgcolor: '#f8f9fa', minHeight: '100vh', p: 2 }}>
+        <Box sx={{ bgcolor: '#f8f9fa', p: 2, borderRadius: 2 }}>
             <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
                 {showHeader && (
                     <Paper 
                         elevation={0}
                         sx={{ 
-                            p: 3, 
+                            p: 2, 
                             mb: 3,
                             bgcolor: 'white',
                             boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
@@ -2411,7 +2405,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 <Paper 
                     elevation={0}
                     sx={{ 
-                        p: 3, 
+                        p: 2, 
                         mb: 3,
                         bgcolor: 'white',
                         boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
@@ -2449,7 +2443,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 <Paper 
                     elevation={0}
                     sx={{ 
-                        p: 3,
+                        p: 2,
                         bgcolor: 'white',
                         boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
                         borderRadius: 2
