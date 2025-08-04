@@ -370,12 +370,19 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
   const toggleShortcutMode = useCallback(() => {
     setIsShortcutMode(prev => {
       const newMode = !prev;
+      console.log('🔄 Toggling shortcut mode:', {
+        from: prev,
+        to: newMode
+      });
+      
       if (!newMode) {
         // Exiting shortcut mode, clear sequence and focus search
+        console.log('🔍 Entering search mode');
         clearShortcutSequence();
         setTimeout(() => searchInputRef.current?.focus(), 50);
       } else {
         // Entering shortcut mode, blur search input
+        console.log('⌨️ Entering shortcut mode');
         searchInputRef.current?.blur();
       }
       return newMode;
@@ -386,37 +393,75 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
   const handleShortcutInput = useCallback((key: string) => {
     const newSequence = shortcutSequence + key.toUpperCase();
     
+    // Debug logging
+    console.log('🔍 Shortcut Debug:', {
+      key,
+      currentSequence: shortcutSequence,
+      newSequence,
+      isShortcutMode,
+      allCommandsCount: allCommands.length
+    });
+    
     // Clear any existing timeout
     if (shortcutTimeout) {
       clearTimeout(shortcutTimeout);
     }
 
     // Check if any command matches the current sequence
-    const matchingCommand = allCommands.find(command => 
-      command.shortcut && command.shortcut.replace(/\s/g, '') === newSequence
-    );
+    const matchingCommand = allCommands.find(command => {
+      const normalizedShortcut = command.shortcut?.replace(/\s/g, '');
+      const matches = normalizedShortcut === newSequence;
+      
+      console.log('🎯 Checking command:', {
+        label: command.label,
+        shortcut: command.shortcut,
+        normalizedShortcut,
+        newSequence,
+        matches
+      });
+      
+      return command.shortcut && matches;
+    });
 
     if (matchingCommand) {
+      console.log('✅ Found matching command:', matchingCommand.label);
       // Execute the command
       if (!matchingCommand.permission || hasPermission(matchingCommand.permission)) {
+        console.log('🚀 Executing command:', matchingCommand.label);
         matchingCommand.action();
         onClose();
+      } else {
+        console.log('❌ Permission denied for:', matchingCommand.label);
       }
       clearShortcutSequence();
       return true; // Shortcut was handled
     }
 
     // Check if any commands start with this sequence (partial match)
-    const hasPartialMatch = allCommands.some(command => 
-      command.shortcut && command.shortcut.replace(/\s/g, '').startsWith(newSequence)
-    );
+    const hasPartialMatch = allCommands.some(command => {
+      const normalizedShortcut = command.shortcut?.replace(/\s/g, '');
+      const isPartial = normalizedShortcut?.startsWith(newSequence);
+      
+      if (isPartial) {
+        console.log('🔄 Partial match:', {
+          label: command.label,
+          shortcut: command.shortcut,
+          normalizedShortcut,
+          newSequence
+        });
+      }
+      
+      return command.shortcut && isPartial;
+    });
 
     if (hasPartialMatch) {
+      console.log('⏳ Building sequence:', newSequence);
       // Continue building the sequence
       setShortcutSequence(newSequence);
       
       // Set timeout to clear sequence if no more input
       const timeout = setTimeout(() => {
+        console.log('⏰ Timeout - clearing sequence');
         setShortcutSequence('');
         setShortcutTimeout(null);
       }, 1500); // 1.5 second timeout
@@ -426,9 +471,10 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
     }
 
     // No match, clear sequence
+    console.log('❌ No match found for:', newSequence);
     clearShortcutSequence();
     return false; // Let normal search handle this
-  }, [shortcutSequence, shortcutTimeout, allCommands, hasPermission, onClose]);
+  }, [shortcutSequence, shortcutTimeout, allCommands, hasPermission, onClose, isShortcutMode]);
 
   // Filter commands based on permissions and search query
   const filteredCommands = allCommands.filter(command => {
@@ -520,6 +566,12 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
           !event.ctrlKey && 
           !event.metaKey && 
           !event.altKey) {
+        
+        console.log('⌨️ Keyboard shortcut detected:', {
+          key: event.key,
+          isShortcutMode,
+          target: event.target
+        });
         
         event.preventDefault();
         handleShortcutInput(event.key);
