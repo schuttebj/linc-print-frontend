@@ -179,6 +179,12 @@ const DashboardLayout: React.FC = () => {
       path: '/dashboard/persons/search',
       permission: 'persons.read',
     },
+    {
+      text: 'Person UI Test (Temp)',
+      icon: <Person />,
+      path: '/dashboard/persons/temp',
+      permission: 'persons.create',
+    },
   ];
 
   // Application navigation items

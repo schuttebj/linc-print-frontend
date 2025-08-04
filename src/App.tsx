@@ -16,6 +16,7 @@ import PersonSearchPage from './pages/persons/PersonSearchPage';
 import PersonDetailPage from './pages/persons/PersonDetailPage';
 import PersonEditPage from './pages/persons/PersonEditPage';
 import PersonFormTest from './pages/persons/PersonFormTest';
+import TempPersonManagementPage from './pages/temp/TempPersonManagementPage';
 
 // Application Pages
 import ApplicationsDashboard from './pages/applications/ApplicationsDashboard';
@@ -131,6 +132,14 @@ function App() {
                 element={
                   <ProtectedRoute requiredPermission="persons.create">
                     <PersonFormTest />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="temp" 
+                element={
+                  <ProtectedRoute requiredPermission="persons.create">
+                    <TempPersonManagementPage />
                   </ProtectedRoute>
                 } 
               />
