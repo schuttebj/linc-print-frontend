@@ -170,9 +170,9 @@ const CompactPersonForm: React.FC<CompactPersonFormProps> = ({
     const isStepValid = (step: number): boolean => {
         switch (step) {
             case 0:
-                return formData.document_type && formData.document_number.length >= 3;
+                return !!(formData.document_type && formData.document_number.length >= 3);
             case 1:
-                return formData.surname && formData.first_name && formData.person_nature;
+                return !!(formData.surname && formData.first_name && formData.person_nature);
             case 2:
                 return true; // Contact is optional
             case 3:
