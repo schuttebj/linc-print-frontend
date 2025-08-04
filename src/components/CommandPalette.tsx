@@ -521,6 +521,16 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
     if (!open) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      console.log('🎹 Key pressed:', {
+        key: event.key,
+        isShortcutMode,
+        currentSequence: shortcutSequence,
+        target: event.target?.tagName,
+        ctrlKey: event.ctrlKey,
+        metaKey: event.metaKey,
+        altKey: event.altKey
+      });
+
       // Handle navigation and special keys first
       if (event.key === 'ArrowDown') {
         event.preventDefault();
@@ -570,17 +580,31 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
         console.log('⌨️ Keyboard shortcut detected:', {
           key: event.key,
           isShortcutMode,
+          currentSequence: shortcutSequence,
           target: event.target
         });
         
         event.preventDefault();
         handleShortcutInput(event.key);
+        return;
+      }
+
+      // Log when keys are not processed
+      if (isShortcutMode && event.key.length === 1 && /^[A-Za-z]$/.test(event.key)) {
+        console.log('❌ Key not processed as shortcut:', {
+          key: event.key,
+          isShortcutMode,
+          ctrlKey: event.ctrlKey,
+          metaKey: event.metaKey,
+          altKey: event.altKey,
+          reason: 'modifier key pressed'
+        });
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [open, filteredCommands, selectedIndex, onClose, handleShortcutInput, isShortcutMode, toggleShortcutMode]);
+  }, [open, filteredCommands, selectedIndex, onClose, handleShortcutInput, isShortcutMode, toggleShortcutMode, shortcutSequence]);
 
   // Reset search and selection when opened
   useEffect(() => {
