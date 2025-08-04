@@ -359,12 +359,15 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
 
   // Clear shortcut sequence after timeout
   const clearShortcutSequence = useCallback(() => {
-    if (shortcutTimeout) {
-      clearTimeout(shortcutTimeout);
-    }
+    console.log('🧹 Clearing shortcut sequence');
+    setShortcutTimeout(prev => {
+      if (prev) {
+        clearTimeout(prev);
+      }
+      return null;
+    });
     setShortcutSequence('');
-    setShortcutTimeout(null);
-  }, [shortcutTimeout]);
+  }, []);
 
   // Toggle shortcut mode
   const toggleShortcutMode = useCallback(() => {
@@ -403,9 +406,12 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
     });
     
     // Clear any existing timeout
-    if (shortcutTimeout) {
-      clearTimeout(shortcutTimeout);
-    }
+    setShortcutTimeout(prev => {
+      if (prev) {
+        clearTimeout(prev);
+      }
+      return null;
+    });
 
     // Check if any command matches the current sequence
     const matchingCommand = allCommands.find(command => {
@@ -474,7 +480,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
     console.log('❌ No match found for:', newSequence);
     clearShortcutSequence();
     return false; // Let normal search handle this
-  }, [shortcutSequence, shortcutTimeout, allCommands, hasPermission, onClose, isShortcutMode]);
+  }, [shortcutSequence, allCommands, hasPermission, onClose, isShortcutMode]);
 
   // Filter commands based on permissions and search query
   const filteredCommands = allCommands.filter(command => {
@@ -608,6 +614,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
 
   // Reset search and selection when opened
   useEffect(() => {
+    console.log('🔄 Reset effect triggered, open:', open);
     if (open) {
       setSearchQuery('');
       setSelectedIndex(0);
@@ -623,7 +630,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
       setIsShortcutMode(false);
       clearShortcutSequence();
     }
-  }, [open, clearShortcutSequence]);
+  }, [open]);
 
   // Update selected index when filtered commands change
   useEffect(() => {
