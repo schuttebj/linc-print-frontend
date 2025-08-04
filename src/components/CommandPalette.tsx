@@ -3,7 +3,7 @@
  * Quick actions search modal similar to modern command palettes
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
