@@ -270,11 +270,14 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     
     // Helper function to set step and notify parent
     const setCurrentStep = (step: number) => {
+        console.log('🎯 PersonFormWrapper: setCurrentStep called with step:', step, 'mode:', mode);
         if (mode === 'application' && onPersonStepChange) {
             // In application mode, let parent control the step
+            console.log('🎯 PersonFormWrapper: Notifying parent of step change:', step);
             onPersonStepChange(step, true);
         } else {
             // In standalone/search mode, control internally
+            console.log('🎯 PersonFormWrapper: Setting internal step:', step);
             setInternalCurrentStep(step);
         }
     };
@@ -606,6 +609,13 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                             markStepValid(3, true); // ID documents step
                             markStepValid(4, true); // Address step
                             setCurrentStep(5); // Jump to review step for confirmation
+                            
+                            // In application mode, immediately trigger completion since person is already complete
+                            console.log('🎯 PersonFormWrapper: Found complete person, triggering onSuccess immediately');
+                            // Use setTimeout to ensure step is set before calling completion
+                            setTimeout(() => {
+                                handleFormComplete(existingPerson);
+                            }, 100);
                         } else {
                             // Person has incomplete information - start at personal info step
                             setCurrentStep(1);

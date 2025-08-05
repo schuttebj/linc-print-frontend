@@ -178,6 +178,7 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
 
   // Person step change handler
   const handlePersonStepChange = (step: number, canAdvance: boolean) => {
+    console.log('🎯 LearnerPermitCaptureFormPage: handlePersonStepChange called with step:', step, 'canAdvance:', canAdvance);
     setPersonStep(step);
   };
 
