@@ -614,17 +614,13 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                         if (isComplete) {
                             // Person has complete information - mark as existing and all steps valid
                             setIsExistingPerson(true);
-                            markStepValid(0, true); // Lookup step
-                            markStepValid(1, true); // Personal info step
-                            markStepValid(2, true); // Contact details step
-                            markStepValid(3, true); // ID documents step
-                            markStepValid(4, true); // Address step
-                            setCurrentStep(5); // Jump to review step for confirmation
                             
-                            // Update all step validation indicators
-                            setTimeout(() => {
-                                updateAllStepValidation();
-                            }, 100);
+                            // Mark all steps as valid immediately
+                            const allValid = new Array(steps.length).fill(true);
+                            console.log('✅ Marking all steps as valid for existing person:', allValid);
+                            setStepValidation(allValid);
+                            
+                            setCurrentStep(5); // Jump to review step for confirmation
                             
                             // In application mode, notify parent immediately for validation
                             // but mark that we need to save when Next is clicked
@@ -1128,8 +1124,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     // Helper function to determine if a tab should be clickable
     const isTabClickable = React.useCallback((index: number) => {
         if (isExistingPerson) {
-            // For existing persons, all completed steps are clickable
-            return stepValidation[index] || index === currentStep;
+            // For existing persons, all steps are clickable (they have complete data)
+            return true;
         } else {
             // For new persons, only allow clicking completed steps or the next logical step
             if (index === 0) return true; // Lookup is always clickable
