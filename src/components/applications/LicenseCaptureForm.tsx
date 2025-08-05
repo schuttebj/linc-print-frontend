@@ -463,22 +463,6 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
         borderRadius: 2
       }}
     >
-      <CardHeader 
-        sx={{ p: 2 }}
-        title={
-          <Box display="flex" alignItems="center" gap={1}>
-            <VerifiedIcon color="primary" />
-            <Typography variant="h6" sx={{ fontSize: '1.1rem' }}>
-              {getFormTitle()}
-            </Typography>
-          </Box>
-        }
-        subheader={
-          <Typography variant="body2" sx={{ fontSize: '0.875rem', mt: 0.5 }}>
-            {getFormDescription()}
-          </Typography>
-        }
-      />
       <CardContent sx={{ p: 2 }}>
         {/* Existing Licenses Section */}
         <Card 
@@ -691,7 +675,6 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                   required
                   InputLabelProps={{ shrink: true }}
                   inputProps={{ min: dateConstraints.min, max: dateConstraints.max }}
-                  helperText="Format: YYYY-MM-DD"
                 />
               </Grid>
 
@@ -726,9 +709,6 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                     <MenuItem value="01">01 - Corrective Lenses Required</MenuItem>
                     <MenuItem value="02">02 - Artificial Limb/Prosthetics</MenuItem>
                   </Select>
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, fontSize: '0.7rem' }}>
-                    Select driver-specific restrictions that apply (if none selected, "No restrictions" will be automatically applied)
-                  </Typography>
                 </FormControl>
               </Grid>
 
@@ -770,10 +750,6 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                       </>
                     )}
                   </Select>
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, fontSize: '0.7rem' }}>
-                    Select vehicle-specific restrictions that apply (if none selected, "No restrictions" will be automatically applied)
-                    {applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE && " (limited options for learner's permits)"}
-                  </Typography>
                 </FormControl>
               </Grid>
 

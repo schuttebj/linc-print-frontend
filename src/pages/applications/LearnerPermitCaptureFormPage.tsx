@@ -300,18 +300,34 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
           <Box>
             {/* Location Selection for Admin Users */}
             {user && !user.primary_location_id && (
-              <Card sx={{ mb: 3 }}>
+              <Card 
+                elevation={0}
+                sx={{ 
+                  mb: 2,
+                  bgcolor: 'white',
+                  boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                  borderRadius: 2
+                }}
+              >
                 <CardHeader 
-                  title="Select Processing Location" 
-                  avatar={<LocationOnIcon />}
+                  sx={{ p: 1.5 }}
+                  title={
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <LocationOnIcon color="primary" />
+                      <Typography variant="subtitle1" sx={{ fontSize: '1rem' }}>
+                        Select Processing Location
+                      </Typography>
+                    </Box>
+                  }
                 />
-                <CardContent>
-                  <FormControl fullWidth required error={!!error && !selectedLocationId}>
+                <CardContent sx={{ p: 1.5, pt: 0 }}>
+                  <FormControl fullWidth required size="small" error={!!error && !selectedLocationId}>
                     <InputLabel>Processing Location</InputLabel>
                     <Select
                       value={selectedLocationId}
                       onChange={handleLocationChange}
                       label="Processing Location"
+                      size="small"
                     >
                       {Array.isArray(availableLocations) && availableLocations.map((location) => (
                         <MenuItem key={location.id} value={location.id}>
@@ -344,13 +360,28 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
             </Typography>
 
             {/* Processing Location Display */}
-            <Card sx={{ mb: 3 }}>
+            <Card 
+              elevation={0}
+              sx={{ 
+                mb: 2,
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2
+              }}
+            >
               <CardHeader 
-                title="Processing Location" 
-                avatar={<LocationOnIcon />}
+                sx={{ p: 1.5 }}
+                title={
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <LocationOnIcon color="primary" />
+                    <Typography variant="subtitle1" sx={{ fontSize: '1rem' }}>
+                      Processing Location
+                    </Typography>
+                  </Box>
+                }
               />
-              <CardContent>
-                <Typography variant="body1">
+              <CardContent sx={{ p: 1.5, pt: 0 }}>
+                <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
                   {user?.primary_location_id ? (
                     `User's assigned location: ${user.primary_location_id}`
                   ) : (
@@ -360,7 +391,7 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
                     <Chip 
                       label={availableLocations.find(loc => loc.id === selectedLocationId)?.code || selectedLocationId} 
                       size="small" 
-                      sx={{ ml: 1 }}
+                      sx={{ ml: 1, fontSize: '0.65rem', height: '20px' }}
                     />
                   )}
                 </Typography>
@@ -368,63 +399,104 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
             </Card>
             
             {/* Person Details */}
-            <Card sx={{ mb: 3 }}>
-              <CardHeader title="Learner's Permit Holder" />
-              <CardContent>
-                <Grid container spacing={2}>
+            <Card 
+              elevation={0}
+              sx={{ 
+                mb: 2,
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2
+              }}
+            >
+              <CardHeader 
+                sx={{ p: 1.5 }}
+                title={
+                  <Typography variant="subtitle1" sx={{ fontSize: '1rem' }}>
+                    Learner's Permit Holder
+                  </Typography>
+                }
+              />
+              <CardContent sx={{ p: 1.5, pt: 0 }}>
+                <Grid container spacing={1.5}>
                   <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Name</Typography>
-                    <Typography variant="body1">
+                    <Typography variant="caption" color="text.secondary">Name</Typography>
+                    <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
                       {selectedPerson?.surname}, {selectedPerson?.first_name} {selectedPerson?.middle_name}
                     </Typography>
                   </Grid>
                   <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Madagascar ID</Typography>
-                    <Typography variant="body1">
+                    <Typography variant="caption" color="text.secondary">Madagascar ID</Typography>
+                    <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
                       {selectedPerson?.aliases?.find(alias => alias.is_primary)?.document_number || 'Not available'}
                     </Typography>
                   </Grid>
                   <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Birth Date</Typography>
-                    <Typography variant="body1">{selectedPerson?.birth_date}</Typography>
+                    <Typography variant="caption" color="text.secondary">Birth Date</Typography>
+                    <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>{selectedPerson?.birth_date}</Typography>
                   </Grid>
                   <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Nationality</Typography>
-                    <Typography variant="body1">{selectedPerson?.nationality_code}</Typography>
+                    <Typography variant="caption" color="text.secondary">Nationality</Typography>
+                    <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>{selectedPerson?.nationality_code}</Typography>
                   </Grid>
                 </Grid>
               </CardContent>
             </Card>
 
             {/* Captured Licenses */}
-            <Card sx={{ mb: 3 }}>
+            <Card 
+              elevation={0}
+              sx={{ 
+                mb: 2,
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2
+              }}
+            >
               <CardHeader 
-                title="Captured Learner's Permits" 
-                subheader={`${licenseCaptureData?.captured_licenses?.length || 0} permit(s) captured`}
+                sx={{ p: 1.5 }}
+                title={
+                  <Typography variant="subtitle1" sx={{ fontSize: '1rem' }}>
+                    Captured Learner's Permits
+                  </Typography>
+                }
+                subheader={
+                  <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>
+                    {`${licenseCaptureData?.captured_licenses?.length || 0} permit(s) captured`}
+                  </Typography>
+                }
               />
-              <CardContent>
+              <CardContent sx={{ p: 1.5, pt: 0 }}>
                 {licenseCaptureData?.captured_licenses?.map((license, index) => (
-                  <Box key={license.id} sx={{ mb: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                    <Grid container spacing={2}>
+                  <Box key={license.id} sx={{ mb: 1.5, p: 1.5, bgcolor: 'grey.50', borderRadius: 2 }}>
+                    <Grid container spacing={1.5}>
                       <Grid item xs={12} md={3}>
-                        <Typography variant="body2" color="text.secondary">License ID</Typography>
-                        <Typography variant="body1" fontWeight="bold">{license.id.substring(0, 8)}</Typography>
+                        <Typography variant="caption" color="text.secondary">License ID</Typography>
+                        <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>
+                          {license.id.substring(0, 8)}
+                        </Typography>
                       </Grid>
                       <Grid item xs={12} md={2}>
-                        <Typography variant="body2" color="text.secondary">Category</Typography>
-                        <Chip label={license.license_category} size="small" color="primary" />
+                        <Typography variant="caption" color="text.secondary">Category</Typography>
+                        <Box sx={{ mt: 0.5 }}>
+                          <Chip 
+                            label={license.license_category} 
+                            size="small" 
+                            color="primary"
+                            sx={{ fontSize: '0.65rem', height: '20px' }}
+                          />
+                        </Box>
                       </Grid>
                       <Grid item xs={12} md={2}>
-                        <Typography variant="body2" color="text.secondary">Issue Date</Typography>
-                        <Typography variant="body1">{license.issue_date}</Typography>
+                        <Typography variant="caption" color="text.secondary">Issue Date</Typography>
+                        <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>{license.issue_date}</Typography>
                       </Grid>
                       <Grid item xs={12} md={3}>
-                        <Typography variant="body2" color="text.secondary">Restrictions</Typography>
+                        <Typography variant="caption" color="text.secondary">Restrictions</Typography>
                         {(license.restrictions?.driver_restrictions?.length > 0 || license.restrictions?.vehicle_restrictions?.length > 0) ? (
-                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                             {license.restrictions?.driver_restrictions?.length > 0 && (
                               <Box>
-                                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>Driver:</Typography>
+                                <Typography variant="caption" sx={{ fontWeight: 'bold', mb: 0.5 }}>Driver:</Typography>
                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                                   {license.restrictions.driver_restrictions.map((restriction, rIndex) => (
                                     <Chip 
@@ -433,6 +505,7 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
                                       size="small" 
                                       variant="outlined"
                                       color="primary"
+                                      sx={{ fontSize: '0.65rem', height: '18px' }}
                                     />
                                   ))}
                                 </Box>
@@ -440,7 +513,7 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
                             )}
                             {license.restrictions?.vehicle_restrictions?.length > 0 && (
                               <Box>
-                                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>Vehicle:</Typography>
+                                <Typography variant="caption" sx={{ fontWeight: 'bold', mb: 0.5 }}>Vehicle:</Typography>
                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                                   {license.restrictions.vehicle_restrictions.map((restriction, rIndex) => (
                                     <Chip 
@@ -449,6 +522,7 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
                                       size="small" 
                                       variant="outlined"
                                       color="secondary"
+                                      sx={{ fontSize: '0.65rem', height: '18px' }}
                                     />
                                   ))}
                                 </Box>
@@ -456,18 +530,18 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
                             )}
                           </Box>
                         ) : (
-                          <Typography variant="body1">None</Typography>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>None</Typography>
                         )}
                       </Grid>
                       {license.verification_notes && (
                         <Grid item xs={12}>
-                          <Typography variant="body2" color="text.secondary">Verification Notes</Typography>
-                          <Typography variant="body1">{license.verification_notes}</Typography>
+                          <Typography variant="caption" color="text.secondary">Verification Notes</Typography>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>{license.verification_notes}</Typography>
                         </Grid>
                       )}
                     </Grid>
                     {index < (licenseCaptureData?.captured_licenses?.length || 0) - 1 && (
-                      <Divider sx={{ mt: 2 }} />
+                      <Divider sx={{ mt: 1.5 }} />
                     )}
                   </Box>
                 ))}
@@ -475,8 +549,8 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
             </Card>
 
             {/* Summary */}
-            <Alert severity="info" sx={{ mb: 2 }}>
-              <Typography variant="body2">
+            <Alert severity="info" sx={{ mb: 2, py: 1 }}>
+              <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
                 <strong>Next Steps:</strong> After submission, captured learner's permit records will be created in the system 
                 and marked as completed. The permit holder will be able to apply for full driver's licenses 
                 based on their captured learner's permit credentials.
