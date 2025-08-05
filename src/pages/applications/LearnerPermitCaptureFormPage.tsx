@@ -186,14 +186,18 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
   const handleNext = async () => {
     if (activeStep === 0) {
       // We're on the Person application step - control person form steps
-      if (personNextRef.current && personStep < 5) {
+      if (personNextRef.current) {
         const canAdvance = await personNextRef.current();
         if (canAdvance) {
-          setPersonStep(personStep + 1);
+          if (personStep < 5) {
+            // Advance to next person step
+            setPersonStep(personStep + 1);
+          } else {
+            // Person form is complete and saved, move to next application step
+            console.log('🎯 Person form completed and saved, advancing to license capture');
+            setActiveStep(activeStep + 1);
+          }
         }
-      } else if (personStep >= 5) {
-        // Person form is complete, move to next application step
-        setActiveStep(activeStep + 1);
       }
     } else if (activeStep < steps.length - 1) {
       // Regular application step navigation
