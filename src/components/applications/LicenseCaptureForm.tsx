@@ -455,26 +455,47 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
   const dateConstraints = getDateConstraints();
 
   return (
-    <Card>
+    <Card 
+      elevation={0}
+      sx={{ 
+        bgcolor: 'white',
+        boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+        borderRadius: 2
+      }}
+    >
       <CardHeader 
+        sx={{ p: 2 }}
         title={
           <Box display="flex" alignItems="center" gap={1}>
             <VerifiedIcon color="primary" />
-            <Typography variant="h6">
+            <Typography variant="h6" sx={{ fontSize: '1.1rem' }}>
               {getFormTitle()}
             </Typography>
           </Box>
         }
-        subheader={getFormDescription()}
+        subheader={
+          <Typography variant="body2" sx={{ fontSize: '0.875rem', mt: 0.5 }}>
+            {getFormDescription()}
+          </Typography>
+        }
       />
-      <CardContent>
+      <CardContent sx={{ p: 2 }}>
         {/* Existing Licenses Section */}
-        <Card sx={{ mb: 3, bgcolor: 'grey.50' }}>
+        <Card 
+          elevation={0}
+          sx={{ 
+            mb: 2, 
+            bgcolor: 'grey.50',
+            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+            borderRadius: 2
+          }}
+        >
           <CardHeader
+            sx={{ p: 1.5 }}
             title={
               <Box display="flex" alignItems="center" gap={1}>
                 <CheckCircleIcon color={existingLicenses.length > 0 ? "success" : "disabled"} />
-                <Typography variant="h6">
+                <Typography variant="subtitle1" sx={{ fontSize: '1rem' }}>
                   Existing Licenses ({existingLicenses.length})
                 </Typography>
                 {existingLicenses.length > 0 && (
@@ -483,6 +504,7 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                     size="small" 
                     color="success" 
                     variant="outlined"
+                    sx={{ fontSize: '0.65rem', height: '20px' }}
                   />
                 )}
                 <IconButton 
@@ -494,15 +516,21 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                 </IconButton>
               </Box>
             }
-            subheader="Current licenses in the system - cannot capture duplicates"
+            subheader={
+              <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>
+                Current licenses in the system - cannot capture duplicates
+              </Typography>
+            }
           />
           <Collapse in={showExisting}>
-            <CardContent>
+            <CardContent sx={{ p: 1.5 }}>
               {loadingExisting ? (
-                <Typography variant="body2">Loading existing licenses...</Typography>
+                <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>Loading existing licenses...</Typography>
               ) : existingLicenses.length === 0 ? (
-                <Alert severity="info">
-                  No existing licenses found. All categories are available for capture.
+                <Alert severity="info" sx={{ py: 1 }}>
+                  <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+                    No existing licenses found. All categories are available for capture.
+                  </Typography>
                 </Alert>
               ) : (
                 <Table size="small">
@@ -519,14 +547,20 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                     {existingLicenses.map((license) => (
                       <TableRow key={license.id}>
                         <TableCell>
-                          <Typography variant="body2" fontWeight="bold">
+                          <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>
                             {license.license_number}
                           </Typography>
                         </TableCell>
                         <TableCell>
                           <Stack direction="row" spacing={0.5}>
                             {license.categories.map((cat: string) => (
-                              <Chip key={cat} label={cat} size="small" color="primary" />
+                              <Chip 
+                                key={cat} 
+                                label={cat} 
+                                size="small" 
+                                color="primary"
+                                sx={{ fontSize: '0.65rem', height: '20px' }}
+                              />
                             ))}
                           </Stack>
                         </TableCell>
@@ -535,11 +569,16 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                             label={license.status}
                             size="small"
                             color={license.is_active ? 'success' : 'default'}
+                            sx={{ fontSize: '0.65rem', height: '20px' }}
                           />
                         </TableCell>
-                        <TableCell>{license.issue_date}</TableCell>
                         <TableCell>
-                          <Typography variant="body2">
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                            {license.issue_date}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                             {license.issuing_location}
                           </Typography>
                         </TableCell>
@@ -553,16 +592,18 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
         </Card>
 
         {captureData.captured_licenses.length === 0 ? (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            No {applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE ? "learner's permits" : "driver's licenses"} added yet. 
-            Click "Add {applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE ? "Learner's Permit" : "Driver's License"}" to start capturing existing licenses.
+          <Alert severity="info" sx={{ mb: 2, py: 1 }}>
+            <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+              No {applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE ? "learner's permits" : "driver's licenses"} added yet. 
+              Click "Add {applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE ? "Learner's Permit" : "Driver's License"}" to start capturing existing licenses.
+            </Typography>
           </Alert>
         ) : (
-          <Alert severity="warning" sx={{ mb: 2 }}>
-            <Typography variant="body2" fontWeight="bold">
+          <Alert severity="warning" sx={{ mb: 2, py: 1 }}>
+            <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.875rem' }}>
               Clerk Verification Required
             </Typography>
-            <Typography variant="body2">
+            <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
               All captured licenses must be physically verified by the clerk before proceeding.
             </Typography>
           </Alert>
@@ -570,9 +611,20 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
 
         {/* License List */}
         {captureData.captured_licenses.map((license, index) => (
-          <Box key={license.id} sx={{ mb: 3, p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-              <Typography variant="h6" color="primary">
+          <Box 
+            key={license.id} 
+            sx={{ 
+              mb: 2, 
+              p: 1.5, 
+              border: 1, 
+              borderColor: 'divider', 
+              borderRadius: 2,
+              bgcolor: '#fafafa',
+              boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
+            }}
+          >
+            <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+              <Typography variant="subtitle1" color="primary" sx={{ fontSize: '1rem', fontWeight: 600 }}>
                 {applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE ? "Learner's Permit" : "Driver's License"} {index + 1}
               </Typography>
               <Tooltip title="Remove this license">
@@ -590,7 +642,7 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
             <Grid container spacing={2}>
               {/* License Category - Single Select */}
               <Grid item xs={12} md={6}>
-                <FormControl fullWidth required>
+                <FormControl fullWidth required size="small">
                   <InputLabel>
                     {applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE ? "Permit Code" : "License Category"}
                   </InputLabel>
@@ -599,6 +651,7 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                     onChange={(e) => updateLicense(index, 'license_category', e.target.value)}
                     disabled={disabled}
                     error={validationErrors[license.id]?.length > 0}
+                    size="small"
                   >
                     {getAvailableCategories(license.id).map((category) => (
                       <MenuItem 
@@ -613,10 +666,10 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                   {validationErrors[license.id]?.length > 0 && (
                     <Box sx={{ mt: 1 }}>
                       {validationErrors[license.id].map((error, errorIndex) => (
-                        <Alert key={errorIndex} severity="error" sx={{ mb: 0.5 }}>
+                        <Alert key={errorIndex} severity="error" sx={{ mb: 0.5, py: 0.5 }}>
                           <Box display="flex" alignItems="center" gap={1}>
                             <ErrorIcon fontSize="small" />
-                            <Typography variant="body2">{error}</Typography>
+                            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>{error}</Typography>
                           </Box>
                         </Alert>
                       ))}
@@ -629,6 +682,7 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
+                  size="small"
                   type="date"
                   label="Issue Date"
                   value={license.issue_date}
@@ -643,10 +697,11 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
 
               {/* Driver Restrictions */}
               <Grid item xs={12} md={6}>
-                <FormControl fullWidth>
+                <FormControl fullWidth size="small">
                   <InputLabel>Driver Restrictions</InputLabel>
                   <Select
                     multiple
+                    size="small"
                     value={license.restrictions?.driver_restrictions || []}
                     label="Driver Restrictions"
                     onChange={(e) => updateLicense(index, 'restrictions', {
@@ -662,6 +717,7 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                             label={getRestrictionDisplayName(value)} 
                             size="small"
                             color="primary"
+                            sx={{ fontSize: '0.65rem', height: '20px' }}
                           />
                         ))}
                       </Box>
@@ -670,7 +726,7 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                     <MenuItem value="01">01 - Corrective Lenses Required</MenuItem>
                     <MenuItem value="02">02 - Artificial Limb/Prosthetics</MenuItem>
                   </Select>
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, fontSize: '0.7rem' }}>
                     Select driver-specific restrictions that apply (if none selected, "No restrictions" will be automatically applied)
                   </Typography>
                 </FormControl>
@@ -678,10 +734,11 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
 
               {/* Vehicle Restrictions */}
               <Grid item xs={12} md={6}>
-                <FormControl fullWidth>
+                <FormControl fullWidth size="small">
                   <InputLabel>Vehicle Restrictions</InputLabel>
                   <Select
                     multiple
+                    size="small"
                     value={license.restrictions?.vehicle_restrictions || []}
                     label="Vehicle Restrictions"
                     onChange={(e) => updateLicense(index, 'restrictions', {
@@ -697,6 +754,7 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                             label={getRestrictionDisplayName(value)} 
                             size="small"
                             color="secondary"
+                            sx={{ fontSize: '0.65rem', height: '20px' }}
                           />
                         ))}
                       </Box>
@@ -712,7 +770,7 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                       </>
                     )}
                   </Select>
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, fontSize: '0.7rem' }}>
                     Select vehicle-specific restrictions that apply (if none selected, "No restrictions" will be automatically applied)
                     {applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE && " (limited options for learner's permits)"}
                   </Typography>
@@ -728,9 +786,14 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                       checked={license.verified}
                       onChange={(e) => updateLicense(index, 'verified', e.target.checked)}
                       disabled={disabled}
+                      size="small"
                     />
                   }
-                  label="I have physically verified this license is authentic and valid"
+                  label={
+                    <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+                      I have physically verified this license is authentic and valid
+                    </Typography>
+                  }
                   sx={{ color: license.verified ? 'success.main' : 'warning.main' }}
                 />
               </Grid>
@@ -739,6 +802,7 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
               <Grid item xs={12}>
                 <TextField
                   fullWidth
+                  size="small"
                   label="Verification Notes"
                   multiline
                   rows={2}
@@ -751,12 +815,13 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
             </Grid>
 
             {/* License Status Indicator */}
-            <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            <Box sx={{ mt: 1.5, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
               <Chip
                 icon={license.verified ? <VerifiedIcon /> : <WarningIcon />}
                 label={license.verified ? 'Verified' : 'Pending Verification'}
                 color={license.verified ? 'success' : 'warning'}
                 size="small"
+                sx={{ fontSize: '0.65rem', height: '20px' }}
               />
             </Box>
           </Box>
@@ -765,6 +830,7 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
         {/* Add License Button */}
         <Button
           variant="outlined"
+          size="small"
           onClick={addLicense}
           startIcon={<AddIcon />}
           disabled={disabled}
@@ -775,18 +841,26 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
 
         {/* Summary */}
         {captureData.captured_licenses.length > 0 && (
-          <Box sx={{ mt: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-            <Typography variant="subtitle2" gutterBottom>
+          <Box 
+            sx={{ 
+              mt: 2, 
+              p: 1.5, 
+              bgcolor: 'grey.50', 
+              borderRadius: 2,
+              boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
+            }}
+          >
+            <Typography variant="subtitle2" gutterBottom sx={{ fontSize: '0.95rem' }}>
               Capture Summary
             </Typography>
-            <Typography variant="body2" sx={{ mb: 1 }}>
+            <Typography variant="body2" sx={{ mb: 1, fontSize: '0.8rem' }}>
               Total licenses: {captureData.captured_licenses.length}
             </Typography>
-            <Typography variant="body2" sx={{ mb: 1 }}>
+            <Typography variant="body2" sx={{ mb: 1, fontSize: '0.8rem' }}>
               Verified: {captureData.captured_licenses.filter(l => l.verified).length} / {captureData.captured_licenses.length}
             </Typography>
             <Box sx={{ mt: 1 }}>
-              <Typography variant="body2" sx={{ mb: 1 }}>
+              <Typography variant="body2" sx={{ mb: 1, fontSize: '0.8rem' }}>
                 {applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE ? "Permit Codes:" : "License Categories:"}
               </Typography>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
@@ -801,6 +875,7 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                     size="small"
                     color="primary"
                     variant="outlined"
+                    sx={{ fontSize: '0.65rem', height: '20px' }}
                   />
                 ))}
               </Box>
