@@ -4,7 +4,7 @@
  * Multi-step registration/editing adapted for Madagascar natural persons
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
     Box,
     Typography,
@@ -370,30 +370,6 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
     // Watch form values
     const watchedPersonNature = personForm.watch('person_nature');
-    const watchedFormValues = personForm.watch();
-
-    // Continuous validation effect - updates step completion indicators
-    useEffect(() => {
-        if (!isExistingPerson) {
-            // For new persons, validate steps based on form data
-            const validateStep = async (stepIndex: number) => {
-                try {
-                    const stepFields = getStepFields(stepIndex);
-                    if (stepFields.length > 0) {
-                        const result = await personForm.trigger(stepFields as any);
-                        markStepValid(stepIndex, result);
-                    }
-                } catch (error) {
-                    console.error('Step validation error:', error);
-                }
-            };
-
-            // Validate all steps (except lookup which is handled separately)
-            for (let i = 1; i < steps.length - 1; i++) { // Skip lookup (0) and review (last)
-                validateStep(i);
-            }
-        }
-    }, [watchedFormValues, isExistingPerson, personForm, steps.length]);
 
     // Context-aware completion handler
     const handleFormComplete = (person: any) => {
@@ -1070,10 +1046,11 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     }, [mode, currentStep, onPersonNext, onPersonBack, validateCurrentStep, lookupForm, populateNameInDocument, performLookup, steps.length, skipFirstStep]);
 
     // Helper function to render tab with completion indicator  
-    const renderTabLabel = (step: any, index: number) => {
+    const renderTabLabel = React.useCallback((step: any, index: number) => {
         const isCompleted = stepValidation[index];
         const isCurrent = currentStep === index;
-        const hasError = index === currentStep && personForm.formState.errors && Object.keys(personForm.formState.errors).length > 0;
+        // Simplified error check - only check if current step has form errors
+        const hasError = isCurrent && !personForm.formState.isValid;
         
         return (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
@@ -1095,10 +1072,10 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 </Typography>
             </Box>
         );
-    };
+    }, [stepValidation, currentStep, personForm.formState.isValid]);
 
     // Helper function to determine if a tab should be clickable
-    const isTabClickable = (index: number) => {
+    const isTabClickable = React.useCallback((index: number) => {
         if (isExistingPerson) {
             // For existing persons, all completed steps are clickable
             return stepValidation[index] || index === currentStep;
@@ -1113,7 +1090,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             }
             return true;
         }
-    };
+    }, [isExistingPerson, stepValidation, currentStep]);
 
     const handleSubmit = async () => {
         setSubmitLoading(true);
