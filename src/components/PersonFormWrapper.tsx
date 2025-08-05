@@ -297,6 +297,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     const [duplicateThreshold] = useState(70.0);
     const [pendingPersonPayload, setPendingPersonPayload] = useState<any>(null);
     const [pendingAddressPayloads, setPendingAddressPayloads] = useState<any[]>([]);
+    const [parentNotified, setParentNotified] = useState(false);
 
     // Lookup data state - loaded from backend enums
     const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([]);
@@ -376,9 +377,12 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         setCreatedPerson(person);
         
         // If onSuccess callback is provided, use it instead of internal logic
-        if (onSuccess) {
+        if (onSuccess && !parentNotified) {
             console.log('🎯 PersonFormWrapper: Calling onSuccess callback with person:', person?.id);
             onSuccess(person, isEditMode);
+            return;
+        } else if (parentNotified) {
+            console.log('🎯 PersonFormWrapper: Parent already notified, skipping onSuccess call');
             return;
         }
         
@@ -610,12 +614,19 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                             markStepValid(4, true); // Address step
                             setCurrentStep(5); // Jump to review step for confirmation
                             
-                            // In application mode, wait for external navigation to trigger save
-                            // This ensures any clerk updates are captured
-                            console.log('🎯 PersonFormWrapper: Found complete person, waiting for external Next button to save');
-                            
-                            // Only auto-complete in standalone mode
-                            if (mode !== 'application') {
+                            // In application mode, notify parent immediately for validation
+                            // but mark that we need to save when Next is clicked
+                            if (mode === 'application') {
+                                console.log('🎯 PersonFormWrapper: Found complete person, notifying parent immediately');
+                                console.log('🎯 PersonFormWrapper: Will save when Next button is clicked to capture clerk updates');
+                                // Set the person in parent state immediately so validation works
+                                if (onSuccess) {
+                                    onSuccess(existingPerson, true);
+                                    setParentNotified(true);
+                                }
+                                // Don't call handleFormComplete - let external navigation trigger save
+                            } else {
+                                // Only auto-complete in standalone mode
                                 console.log('🎯 PersonFormWrapper: Standalone mode - triggering onSuccess immediately');
                                 setTimeout(() => {
                                     handleFormComplete(existingPerson);
