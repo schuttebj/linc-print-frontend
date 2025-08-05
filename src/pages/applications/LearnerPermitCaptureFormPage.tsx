@@ -115,6 +115,13 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
     loadLocations();
   }, [user]);
 
+  // Person step validation 
+  const isPersonStepValid = (): boolean => {
+    // This will be updated by PersonFormWrapper through validation callbacks
+    // For now, assume we can advance if PersonFormWrapper allows it
+    return true;
+  };
+
   // Step validation
   const isStepValid = (step: number): boolean => {
     switch (step) {
@@ -160,36 +167,34 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
   // Navigation handlers
   const handleNext = async () => {
     if (activeStep === 0) {
-      // If we're on the person step, use person form navigation
-      if (personNextRef.current) {
+      // We're on the Person application step - control person form steps
+      if (personNextRef.current && personStep < 5) {
         const canAdvance = await personNextRef.current();
         if (canAdvance) {
-          if (personStep < 5) { // 5 is the last person step (Review)
-            setPersonStep(personStep + 1);
-          } else {
-            // Person form is complete, move to next application step
-            setActiveStep(activeStep + 1);
-          }
+          setPersonStep(personStep + 1);
         }
+      } else if (personStep >= 5) {
+        // Person form is complete, move to next application step
+        setActiveStep(activeStep + 1);
       }
     } else if (activeStep < steps.length - 1) {
+      // Regular application step navigation
       setActiveStep(activeStep + 1);
     }
   };
 
   const handleBack = () => {
     if (activeStep === 0) {
-      // If we're on the person step, use person form navigation
-      if (personBackRef.current) {
-        const canGoBack = personBackRef.current();
-        if (canGoBack && personStep > 0) {
-          setPersonStep(personStep - 1);
-        }
+      // We're on the Person application step - control person form steps
+      if (personStep > 0) {
+        setPersonStep(personStep - 1);
       }
     } else if (activeStep > 0) {
-      if (activeStep === 1 && personStep < 5) {
-        // Going back from license capture to person form
+      // Going back from other application steps
+      if (activeStep === 1) {
+        // Going back to person step - set to last person step
         setActiveStep(0);
+        setPersonStep(5); // Go to person review step
       } else {
         setActiveStep(activeStep - 1);
       }
@@ -636,7 +641,7 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 1, height: 'calc(100vh - 24px)', display: 'flex', flexDirection: 'column' }}>
+    <Container maxWidth="lg" sx={{ py: 1, height: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column' }}>
       <Paper 
         elevation={0}
         sx={{ 
@@ -730,7 +735,7 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
           </Button>
           
           <Button
-            disabled={activeStep === 0 || loading}
+            disabled={(activeStep === 0 && personStep === 0) || loading}
             onClick={handleBack}
             startIcon={<ArrowBackIcon />}
             size="small"
@@ -741,12 +746,16 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
           <Button
             variant="contained"
             onClick={activeStep === steps.length - 1 ? handleSubmit : handleNext}
-            disabled={!isStepValid(activeStep) || loading}
+            disabled={(activeStep === 0 && personStep < 5 && !isPersonStepValid()) || (activeStep > 0 && !isStepValid(activeStep)) || loading}
             startIcon={loading ? <CircularProgress size={20} /> : undefined}
             endIcon={activeStep !== steps.length - 1 ? <ArrowForwardIcon /> : undefined}
             size="small"
           >
-            {loading ? 'Submitting...' : activeStep === steps.length - 1 ? 'Submit Capture' : 'Next'}
+            {loading ? 'Submitting...' : 
+             activeStep === steps.length - 1 ? 'Submit Capture' : 
+             activeStep === 0 && personStep < 5 ? 'Next Step' :
+             activeStep === 0 && personStep >= 5 ? 'Continue to License' :
+             'Next'}
           </Button>
         </Box>
       </Paper>

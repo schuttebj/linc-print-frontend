@@ -346,7 +346,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 locality: '',
                 postal_code: '',
                 town: '',
-                country: 'MADAGASCAR',
+                country: 'MG',
                 province_code: '',
                 is_primary: true,
             }],
@@ -2509,7 +2509,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                         locality: '',
                         postal_code: '',
                         town: '',
-                        country: 'MADAGASCAR',
+                        country: 'MG',
                         province_code: '',
                         is_primary: false,
                     })}
