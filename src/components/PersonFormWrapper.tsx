@@ -2234,20 +2234,14 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     }
                 }}
             >
-                <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+                <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, fontSize: '1rem', mb: 2 }}>
                     Address Information
                 </Typography>
 
                 {addressFields.map((field, index) => (
-                    <Box key={field.id} sx={{ mb: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: 2, backgroundColor: '#fafafa' }}>
-                        <Grid container spacing={2}>
-                            <Grid item xs={12}>
-                                <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, color: 'primary.main' }}>
-                                    {index === 0 ? 'Primary Address' : `Additional Address ${index}`}
-                                </Typography>
-                            </Grid>
-
-                            <Grid item xs={12} md={6}>
+                    <Box key={field.id} sx={{ mb: 2, p: 1.5, border: '1px solid #e0e0e0', borderRadius: 2, backgroundColor: '#fafafa' }}>
+                        <Grid container spacing={1.5}>
+                            <Grid item xs={12} md={4}>
                                 <Controller
                                     name={`addresses.${index}.address_type`}
                                     control={personForm.control}
@@ -2259,28 +2253,63 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                                 <MenuItem value="POSTAL">Postal</MenuItem>
                                             </Select>
                                             <FormHelperText>
-                                                {personForm.formState.errors.addresses?.[index]?.address_type?.message || 'Select address type'}
+                                                {personForm.formState.errors.addresses?.[index]?.address_type?.message}
                                             </FormHelperText>
                                         </FormControl>
                                     )}
                                 />
                             </Grid>
 
-                            <Grid item xs={12} md={6}>
+                            <Grid item xs={12} md={3}>
                                 <Controller
-                                    name={`addresses.${index}.is_primary`}
+                                    name={`addresses.${index}.postal_code`}
                                     control={personForm.control}
                                     render={({ field }) => (
-                                        <FormControlLabel
-                                            control={<Checkbox {...field} checked={field.value} />}
-                                            label="Primary Address"
-                                            sx={{ mt: 1 }}
+                                        <TextField
+                                            {...field}
+                                            fullWidth
+                                            size="small"
+                                            label="Postal Code *"
+                                            placeholder="###"
+                                            error={!!personForm.formState.errors.addresses?.[index]?.postal_code}
+                                            helperText={personForm.formState.errors.addresses?.[index]?.postal_code?.message}
+                                            inputProps={{
+                                                maxLength: 3,
+                                                pattern: '[0-9]*',
+                                                inputMode: 'numeric'
+                                            }}
+                                            onChange={(e) => {
+                                                const value = e.target.value.replace(/\D/g, '');
+                                                field.onChange(value);
+                                            }}
                                         />
                                     )}
                                 />
                             </Grid>
 
-                            <Grid item xs={12} md={6}>
+                            <Grid item xs={12} md={5}>
+                                <Controller
+                                    name={`addresses.${index}.province_code`}
+                                    control={personForm.control}
+                                    render={({ field }) => (
+                                        <FormControl fullWidth size="small" error={!!personForm.formState.errors.addresses?.[index]?.province_code}>
+                                            <InputLabel>Province *</InputLabel>
+                                            <Select {...field} label="Province *">
+                                                {provinces.map((option) => (
+                                                    <MenuItem key={option.code} value={option.code}>
+                                                        {option.name}
+                                                    </MenuItem>
+                                                ))}
+                                            </Select>
+                                            <FormHelperText>
+                                                {personForm.formState.errors.addresses?.[index]?.province_code?.message}
+                                            </FormHelperText>
+                                        </FormControl>
+                                    )}
+                                />
+                            </Grid>
+
+                            <Grid item xs={12} md={8}>
                                 <Controller
                                     name={`addresses.${index}.street_line1`}
                                     control={personForm.control}
@@ -2291,7 +2320,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                             size="small"
                                             label="Address Line 1 *"
                                             error={!!personForm.formState.errors.addresses?.[index]?.street_line1}
-                                            helperText={personForm.formState.errors.addresses?.[index]?.street_line1?.message || 'Street address line 1 (required)'}
+                                            helperText={personForm.formState.errors.addresses?.[index]?.street_line1?.message}
                                             onChange={(e) => {
                                                 const value = e.target.value.toUpperCase();
                                                 field.onChange(value);
@@ -2301,7 +2330,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                 />
                             </Grid>
 
-                            <Grid item xs={12} md={6}>
+                            <Grid item xs={12} md={4}>
                                 <Controller
                                     name={`addresses.${index}.street_line2`}
                                     control={personForm.control}
@@ -2311,7 +2340,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                             fullWidth
                                             size="small"
                                             label="Address Line 2"
-                                            helperText="Street address line 2 (optional)"
+                                            helperText="Optional"
                                             onChange={(e) => {
                                                 const value = e.target.value.toUpperCase();
                                                 field.onChange(value);
@@ -2332,7 +2361,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                             size="small"
                                             label="Locality *"
                                             error={!!personForm.formState.errors.addresses?.[index]?.locality}
-                                            helperText={personForm.formState.errors.addresses?.[index]?.locality?.message || 'Village, quartier, or city'}
+                                            helperText={personForm.formState.errors.addresses?.[index]?.locality?.message}
                                             onChange={(e) => {
                                                 const value = e.target.value.toUpperCase();
                                                 field.onChange(value);
@@ -2342,34 +2371,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                 />
                             </Grid>
 
-                            <Grid item xs={12} md={3}>
-                                <Controller
-                                    name={`addresses.${index}.postal_code`}
-                                    control={personForm.control}
-                                    render={({ field }) => (
-                                        <TextField
-                                            {...field}
-                                            fullWidth
-                                            size="small"
-                                            label="Postal Code *"
-                                            placeholder="### (3 digits)"
-                                            error={!!personForm.formState.errors.addresses?.[index]?.postal_code}
-                                            helperText={personForm.formState.errors.addresses?.[index]?.postal_code?.message || 'Madagascar postal code (3 digits)'}
-                                            inputProps={{
-                                                maxLength: 3,
-                                                pattern: '[0-9]*',
-                                                inputMode: 'numeric'
-                                            }}
-                                            onChange={(e) => {
-                                                const value = e.target.value.replace(/\D/g, '');
-                                                field.onChange(value);
-                                            }}
-                                        />
-                                    )}
-                                />
-                            </Grid>
-
-                            <Grid item xs={12} md={3}>
+                            <Grid item xs={12} md={4}>
                                 <Controller
                                     name={`addresses.${index}.town`}
                                     control={personForm.control}
@@ -2380,7 +2382,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                             size="small"
                                             label="Town *"
                                             error={!!personForm.formState.errors.addresses?.[index]?.town}
-                                            helperText={personForm.formState.errors.addresses?.[index]?.town?.message || 'Town or city'}
+                                            helperText={personForm.formState.errors.addresses?.[index]?.town?.message}
                                             onChange={(e) => {
                                                 const value = e.target.value.toUpperCase();
                                                 field.onChange(value);
@@ -2390,40 +2392,15 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                 />
                             </Grid>
 
-                            <Grid item xs={12} md={6}>
+                            <Grid item xs={12} md={4}>
                                 <Controller
-                                    name={`addresses.${index}.province_code`}
+                                    name={`addresses.${index}.is_primary`}
                                     control={personForm.control}
                                     render={({ field }) => (
-                                        <FormControl fullWidth size="small" error={!!personForm.formState.errors.addresses?.[index]?.province_code}>
-                                            <InputLabel>Province *</InputLabel>
-                                            <Select {...field} label="Province *">
-                                                {provinces.map((option) => (
-                                                    <MenuItem key={option.code} value={option.code}>
-                                                        {option.name}
-                                                    </MenuItem>
-                                                ))}
-                                            </Select>
-                                            <FormHelperText>
-                                                {personForm.formState.errors.addresses?.[index]?.province_code?.message || 'Madagascar province/region (required)'}
-                                            </FormHelperText>
-                                        </FormControl>
-                                    )}
-                                />
-                            </Grid>
-
-                            <Grid item xs={12} md={6}>
-                                <Controller
-                                    name={`addresses.${index}.country`}
-                                    control={personForm.control}
-                                    render={({ field }) => (
-                                        <TextField
-                                            {...field}
-                                            fullWidth
-                                            size="small"
-                                            label="Country"
-                                            disabled
-                                            helperText="Madagascar addresses only"
+                                        <FormControlLabel
+                                            control={<Checkbox {...field} checked={field.value} size="small" />}
+                                            label="Primary"
+                                            sx={{ mt: 1, '& .MuiFormControlLabel-label': { fontSize: '0.875rem' } }}
                                         />
                                     )}
                                 />
@@ -2761,7 +2738,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 {renderStepContent()}
             </Box>
 
-            {/* Navigation */}
+            {/* Navigation - Only show when not in application mode */}
+            {mode !== 'application' && (
                 <Paper 
                     elevation={0}
                     sx={{ 
@@ -2794,53 +2772,23 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                 {currentStep === 0 ? 'Search' : 'Next'}
                             </Button>
                         ) : (
-                            // Special handling for review step in application mode
-                            mode === 'application' && !isNewPerson ? (
-                                <Button
-                                    variant="contained"
-                                    onClick={() => {
-                                        // Trigger completion callback for application mode
-                                        // For existing persons, pass the actual person object with ID
-                                        const personToPass = personFound || {
-                                            id: currentPersonId,
-                                            ...personForm.getValues()
-                                        };
-                                        
-                                        console.log('Passing existing person to onSuccess:', personToPass);
-                                        
-                                        if (onComplete) {
-                                            onComplete(personToPass);
-                                        }
-                                        if (onSuccess) {
-                                            onSuccess(personToPass, true); // true indicates this is an edit/existing person
-                                        }
+                            <Button
+                                variant="contained"
+                                onClick={handleSubmit}
+                                disabled={submitLoading || duplicateCheckLoading}
+                                startIcon={<PersonAddIcon />}
+                                    size="small"
+                                    sx={{
+                                        boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
                                     }}
-                                    startIcon={<ArrowForwardIcon />}
-                                        size="small"
-                                        sx={{
-                                            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
-                                        }}
-                                >
-                                    Confirm and Continue
-                                </Button>
-                            ) : (
-                                <Button
-                                    variant="contained"
-                                    onClick={handleSubmit}
-                                    disabled={submitLoading || duplicateCheckLoading}
-                                    startIcon={<PersonAddIcon />}
-                                        size="small"
-                                        sx={{
-                                            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
-                                        }}
-                                >
-                                    {duplicateCheckLoading ? 'Checking for Duplicates...' : submitLoading ? (isEditMode ? 'Updating...' : 'Submitting...') : (isEditMode ? 'Update Person' : 'Submit')}
-                                </Button>
-                            )
+                            >
+                                {duplicateCheckLoading ? 'Checking for Duplicates...' : submitLoading ? (isEditMode ? 'Updating...' : 'Submitting...') : (isEditMode ? 'Update Person' : 'Submit')}
+                            </Button>
                         )}
                     </Box>
                 </Box>
             </Paper>
+            )}
             </Box>
         </Box>
 

@@ -140,8 +140,8 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
 
   // Tab change handler
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    // Allow navigation to completed steps or current step
-    if (newValue <= activeStep || isStepValid(newValue - 1)) {
+    // Allow navigation to previous/completed steps or the next step if current is valid
+    if (newValue <= activeStep || (newValue === activeStep + 1 && isStepValid(activeStep))) {
       setActiveStep(newValue);
     }
   };
@@ -595,7 +595,7 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 2, height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <Container maxWidth="lg" sx={{ py: 1, height: 'calc(100vh - 24px)', display: 'flex', flexDirection: 'column' }}>
       <Paper 
         elevation={0}
         sx={{ 
@@ -666,7 +666,7 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
               <Tab
                 key={step.label}
                 label={renderTabLabel(step, index)}
-                disabled={index > activeStep && !isStepValid(index)}
+                disabled={index > activeStep + 1 || (index === activeStep + 1 && !isStepValid(activeStep))}
               />
             ))}
           </Tabs>

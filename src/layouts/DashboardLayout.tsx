@@ -551,18 +551,32 @@ const DashboardLayout: React.FC = () => {
           justifyContent: 'space-between',
           mb: 1.5
         }}>
-          <Typography 
-            variant="h6" 
-            sx={{ 
-              fontWeight: 600,
-              color: '#1a1a1a',
-              fontSize: '0.95rem'
-            }}
-          >
-            LINC Print
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {/* Mobile menu toggle */}
+            <IconButton
+              size="small"
+              onClick={handleDrawerToggle}
+              sx={{ 
+                display: { md: 'none' },
+                color: '#666',
+                p: 0.5
+              }}
+            >
+              <MenuIcon fontSize="small" />
+            </IconButton>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                fontWeight: 600,
+                color: '#1a1a1a',
+                fontSize: '0.95rem'
+              }}
+            >
+              LINC Print
+            </Typography>
+          </Box>
           <KeyboardArrowDown sx={{ color: '#666', fontSize: 18 }} />
-                      </Box>
+        </Box>
         
         {/* Quick Actions Search Trigger */}
         <Box
@@ -1115,68 +1129,7 @@ const DashboardLayout: React.FC = () => {
 
   return (
     <Box sx={{ display: 'flex' }}>
-      <AppBar
-        position="fixed"
-        sx={{
-          width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
-          ml: { md: `${DRAWER_WIDTH}px` },
-        }}
-      >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { md: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Madagascar Driver's License System
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            {user && (
-              <>
-                <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
-                  {user.first_name} {user.last_name}
-                </Typography>
-                {getUserLocationText() && (
-                  <Chip
-                    label={getUserLocationText()}
-                    size="small"
-                    variant="outlined"
-                    sx={{
-                      height: '24px',
-                      fontSize: '0.75rem',
-                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                      color: 'white',
-                      borderColor: 'rgba(255, 255, 255, 0.3)',
-                      '& .MuiChip-label': {
-                        paddingLeft: '8px',
-                        paddingRight: '8px',
-                      },
-                      display: { xs: 'none', sm: 'flex' }
-                    }}
-                  />
-                )}
-              </>
-            )}
-            <IconButton
-              size="large"
-              aria-label="account of current user"
-              aria-controls="menu-appbar"
-              aria-haspopup="true"
-              onClick={handleProfileMenuOpen}
-              color="inherit"
-            >
-              <Avatar sx={{ width: 32, height: 32 }}>
-                <AccountCircle />
-              </Avatar>
-            </IconButton>
-          </Box>
-        </Toolbar>
-      </AppBar>
+
 
       <Box
         component="nav"
@@ -1228,7 +1181,6 @@ const DashboardLayout: React.FC = () => {
           backgroundColor: theme.palette.background.default,
         }}
       >
-        <Toolbar />
         <Box sx={{ p: 3 }}>
           <Outlet />
         </Box>
