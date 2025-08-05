@@ -820,6 +820,72 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         return true;
     };
 
+    // Detailed validation function that returns missing field information
+    const validateMandatoryFields = useCallback((person?: ExistingPerson): {
+        isValid: boolean;
+        missingFields: string[];
+        incompleteSteps: number[];
+        stepErrors: { [stepIndex: number]: string[] };
+    } => {
+        const missingFields: string[] = [];
+        const incompleteSteps: number[] = [];
+        const stepErrors: { [stepIndex: number]: string[] } = {};
+
+        // Helper function to add step error
+        const addStepError = (stepIndex: number, field: string) => {
+            if (!stepErrors[stepIndex]) stepErrors[stepIndex] = [];
+            stepErrors[stepIndex].push(field);
+            if (!incompleteSteps.includes(stepIndex)) {
+                incompleteSteps.push(stepIndex);
+            }
+            missingFields.push(field);
+        };
+
+        // Use current form data if no person provided
+        const currentData = person || personForm.getValues();
+
+        // Step 1: Details validation
+        if (!currentData.surname) addStepError(1, 'Surname');
+        if (!currentData.first_name) addStepError(1, 'First Name');
+        if (!currentData.birth_date) addStepError(1, 'Date of Birth');
+
+        // Step 2: Contact validation
+        if (!currentData.email_address && !currentData.cell_phone) {
+            addStepError(2, 'Email or Cell Phone (at least one required)');
+        }
+
+        // Step 3: Documents validation
+        const aliases = currentData.aliases || [];
+        const hasValidDocument = aliases.some(alias => 
+            alias.document_type && alias.document_number && alias.name_in_document
+        );
+        if (!hasValidDocument) {
+            addStepError(3, 'Name on Document');
+        }
+
+        // Step 4: Address validation
+        const addresses = currentData.addresses || [];
+        const hasValidAddress = addresses.some(address => 
+            address.street_line1 && address.locality && address.town && address.postal_code
+        );
+        if (!hasValidAddress) {
+            const addressErrors = [];
+            if (!addresses.some(addr => addr.street_line1)) addressErrors.push('Address Line 1');
+            if (!addresses.some(addr => addr.locality)) addressErrors.push('Locality');
+            if (!addresses.some(addr => addr.town)) addressErrors.push('Town');
+            if (!addresses.some(addr => addr.postal_code)) addressErrors.push('Postal Code');
+            
+            addressErrors.forEach(field => addStepError(4, field));
+        }
+
+        return {
+            isValid: missingFields.length === 0,
+            missingFields,
+            incompleteSteps,
+            stepErrors
+        };
+    }, [personForm]);
+
     const populateFormWithExistingPerson = (existingPerson: ExistingPerson) => {
         console.log('Populating form with existing person:', existingPerson);
 
@@ -934,10 +1000,32 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         console.log('🔄 Updating step validation indicators');
         
         if (isExistingPerson) {
-            // For existing persons, mark all steps as valid
-            console.log('✅ Existing person - marking all steps valid');
-            const allValid = new Array(steps.length).fill(true);
-            setStepValidation(allValid);
+            // For existing persons, validate against mandatory fields
+            const currentData = personForm.getValues();
+            const validation = validateMandatoryFields(currentData as any);
+            
+            if (validation.isValid) {
+                console.log('✅ Existing person - all mandatory fields complete');
+                const allValid = new Array(steps.length).fill(true);
+                setStepValidation(allValid);
+            } else {
+                console.log('⚠️ Existing person - missing mandatory fields:', validation.missingFields);
+                const newValidation = new Array(steps.length).fill(true);
+                
+                // Mark incomplete steps as invalid
+                validation.incompleteSteps.forEach(stepIndex => {
+                    newValidation[stepIndex] = false;
+                });
+                
+                setStepValidation(newValidation);
+                
+                // Navigate to first incomplete step
+                if (validation.incompleteSteps.length > 0) {
+                    const firstIncompleteStep = Math.min(...validation.incompleteSteps);
+                    console.log('🎯 Navigating to first incomplete step:', firstIncompleteStep);
+                    setCurrentStep(firstIncompleteStep);
+                }
+            }
             return;
         }
 
@@ -965,7 +1053,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         } catch (error) {
             console.error('Error updating step validation:', error);
         }
-    }, [isExistingPerson, steps.length, stepValidation, personForm, getStepFields]);
+    }, [isExistingPerson, steps.length, stepValidation, personForm, getStepFields, validateMandatoryFields]);
 
     const validateCurrentStep = async () => {
         try {
@@ -1096,30 +1184,38 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     const renderTabLabel = React.useCallback((step: any, index: number) => {
         const isCompleted = stepValidation[index];
         const isCurrent = currentStep === index;
-        // Simplified error check - only check if current step has form errors
-        const hasError = isCurrent && !personForm.formState.isValid;
+        
+        // For existing persons, check if step has missing mandatory fields
+        let hasWarning = false;
+        if (isExistingPerson) {
+            const validation = validateMandatoryFields();
+            hasWarning = validation.incompleteSteps.includes(index);
+        } else {
+            // For new persons, show warning if current step has form errors
+            hasWarning = isCurrent && !personForm.formState.isValid;
+        }
         
         return (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
                 <Box sx={{ 
                     display: 'flex', 
                     alignItems: 'center', 
-                    color: hasError ? 'warning.main' : isCompleted ? 'success.main' : isCurrent ? 'primary.main' : 'text.secondary' 
+                    color: hasWarning ? 'warning.main' : isCompleted ? 'success.main' : isCurrent ? 'primary.main' : 'text.secondary' 
                 }}>
-                    {hasError ? <WarningIcon fontSize="small" /> : isCompleted ? <CheckCircleIcon fontSize="small" /> : step.icon}
+                    {hasWarning ? <WarningIcon fontSize="small" /> : isCompleted ? <CheckCircleIcon fontSize="small" /> : step.icon}
                 </Box>
                 <Typography 
                     variant="body2" 
                     sx={{ 
                         fontWeight: isCurrent ? 'bold' : 'normal',
-                        color: hasError ? 'warning.main' : isCompleted ? 'success.main' : isCurrent ? 'primary.main' : 'text.secondary'
+                        color: hasWarning ? 'warning.main' : isCompleted ? 'success.main' : isCurrent ? 'primary.main' : 'text.secondary'
                     }}
                 >
                     {step.label}
                 </Typography>
             </Box>
         );
-    }, [stepValidation, currentStep, personForm.formState.isValid]);
+    }, [stepValidation, currentStep, personForm.formState.isValid, isExistingPerson, validateMandatoryFields]);
 
     // Helper function to determine if a tab should be clickable
     const isTabClickable = React.useCallback((index: number) => {
@@ -2980,6 +3076,44 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     })}
                 </Tabs>
             </Paper>
+
+            {/* Missing Fields Alert */}
+            {isExistingPerson && (() => {
+                const validation = validateMandatoryFields();
+                if (!validation.isValid) {
+                    return (
+                        <Alert 
+                            severity="warning" 
+                            sx={{ 
+                                mb: 2,
+                                '& .MuiAlert-message': {
+                                    width: '100%'
+                                }
+                            }}
+                        >
+                            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                                Missing Mandatory Information
+                            </Typography>
+                            <Typography variant="body2" sx={{ mb: 1, fontSize: '0.875rem' }}>
+                                The following required fields are missing and must be completed:
+                            </Typography>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                {validation.missingFields.map((field, index) => (
+                                    <Chip 
+                                        key={index}
+                                        label={field}
+                                        size="small"
+                                        color="warning"
+                                        variant="outlined"
+                                        sx={{ fontSize: '0.75rem' }}
+                                    />
+                                ))}
+                            </Box>
+                        </Alert>
+                    );
+                }
+                return null;
+            })()}
 
             {/* Step Content */}
                 <Box ref={stepContentRef} sx={{ mb: 3 }}>
