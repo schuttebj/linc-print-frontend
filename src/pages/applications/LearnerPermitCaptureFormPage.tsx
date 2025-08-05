@@ -51,7 +51,7 @@ import {
   LicenseCategory,
   Location
 } from '../../types';
-import { CapturedLicense } from '../../components/applications/LicenseCaptureForm';
+import { CapturedLicense, validateCapturedDataForAuthorization } from '../../components/applications/LicenseCaptureForm';
 import { API_ENDPOINTS, getAuthToken } from '../../config/api';
 
 const LearnerPermitCaptureFormPage: React.FC = () => {
@@ -129,12 +129,16 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
         // Person step is valid if we have a person and completed all person sub-steps
         return !!selectedPerson && !!selectedPerson.id && personStep >= 5;
       case 1:
-        // Check license capture data and location for admin users
-        const hasLicenseData = !!licenseCaptureData && licenseCaptureData.captured_licenses.length > 0;
+        // Check license capture data validation and location for admin users
+        const hasValidLicenseData = !!licenseCaptureData && 
+          licenseCaptureData.captured_licenses.length > 0 &&
+          validateCapturedDataForAuthorization(licenseCaptureData).isValid;
         const hasLocation = !!user?.primary_location_id || !!selectedLocationId;
-        return hasLicenseData && hasLocation && !!selectedPerson && !!selectedPerson.id;
+        return hasValidLicenseData && hasLocation && !!selectedPerson && !!selectedPerson.id;
       case 2:
-        return !!selectedPerson && !!selectedPerson.id && !!licenseCaptureData && licenseCaptureData.captured_licenses.length > 0;
+        return !!selectedPerson && !!selectedPerson.id && !!licenseCaptureData && 
+          licenseCaptureData.captured_licenses.length > 0 &&
+          validateCapturedDataForAuthorization(licenseCaptureData).isValid;
       default:
         return false;
     }
@@ -353,23 +357,11 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
     }
   };
 
-  // Render step content
+  // Render step content (excluding Person step which is handled separately)
   const renderStepContent = (step: number) => {
     switch (step) {
-      case 0: // Person step
-        return (
-          <PersonFormWrapper
-            mode="application"
-            onSuccess={handlePersonSelected}
-            onPersonStepChange={handlePersonStepChange}
-            externalPersonStep={personStep}
-            onPersonNext={personNextRef}
-            onPersonBack={personBackRef}
-            title=""
-            subtitle="Select existing person or register new learner's permit holder"
-            showHeader={false}
-          />
-        );
+      case 0: // Person step - handled separately to preserve state
+        return null;
 
       case 1: // License capture step
         return (
@@ -425,6 +417,30 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
               onChange={handleLicenseCaptureChange}
               personBirthDate={selectedPerson?.birth_date}
             />
+
+            {/* Validation feedback */}
+            {licenseCaptureData && licenseCaptureData.captured_licenses.length > 0 && (() => {
+              const validation = validateCapturedDataForAuthorization(licenseCaptureData);
+              if (!validation.isValid) {
+                return (
+                  <Alert severity="warning" sx={{ mt: 2 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                      Please complete the following to continue:
+                    </Typography>
+                    <Box component="ul" sx={{ m: 0, pl: 2 }}>
+                      {validation.errors.map((error, index) => (
+                        <li key={index}>
+                          <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+                            {error}
+                          </Typography>
+                        </li>
+                      ))}
+                    </Box>
+                  </Alert>
+                );
+              }
+              return null;
+            })()}
           </Box>
         );
 
@@ -720,7 +736,24 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
 
         {/* Tab Content */}
         <Box sx={{ flexGrow: 1, overflow: 'auto', p: 2 }}>
-          {renderStepContent(activeStep)}
+          {/* Person Form - Always rendered but conditionally visible to preserve state */}
+          <Box sx={{ display: activeStep === 0 ? 'block' : 'none' }}>
+            <PersonFormWrapper
+              key="person-form-wrapper" // Stable key to preserve component instance
+              mode="application"
+              onSuccess={handlePersonSelected}
+              onPersonStepChange={handlePersonStepChange}
+              externalPersonStep={personStep}
+              onPersonNext={personNextRef}
+              onPersonBack={personBackRef}
+              title=""
+              subtitle="Select existing person or register new learner's permit holder"
+              showHeader={false}
+            />
+          </Box>
+          
+          {/* Other step content - only render when needed */}
+          {activeStep !== 0 && renderStepContent(activeStep)}
         </Box>
 
         {/* Navigation Buttons */}

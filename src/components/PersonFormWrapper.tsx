@@ -2533,19 +2533,19 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     borderRadius: 2
                 }}
             >
-                <Box sx={{ p: 2 }}>
-                    <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                <Box sx={{ p: 1.5 }}>
+                    <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, fontSize: '1rem', mb: 1 }}>
                         Review & Submit
                     </Typography>
 
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
                         {mode === 'application' && !isNewPerson ? (
-                            <Alert severity="success" sx={{ flex: 1, mr: 2 }}>
-                                Person information is complete and ready for license application.
+                            <Alert severity="success" sx={{ flex: 1, mr: 2, py: 0.5 }}>
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>Person information is complete and ready for license application.</Typography>
                             </Alert>
                         ) : (
-                            <Alert severity="info" sx={{ flex: 1, mr: 2 }}>
-                                Please review all information before creating the person record.
+                            <Alert severity="info" sx={{ flex: 1, mr: 2, py: 0.5 }}>
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>Please review all information before creating the person record.</Typography>
                             </Alert>
                         )}
                         {!isNewPerson && mode === 'application' && (
@@ -2561,96 +2561,96 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     </Box>
 
                     {/* Personal Information Summary */}
-                    <Box sx={{ mb: 2, p: 1.5, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
-                        <Typography variant="body1" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.95rem' }}>
+                    <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
+                        <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
                             Personal Information
                         </Typography>
 
-                        <Grid container spacing={1.5}>
-                            <Grid item xs={12} md={6}>
-                                <Typography variant="caption" color="text.secondary">Full Name</Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        <Grid container spacing={1}>
+                            <Grid item xs={12} md={4}>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Full Name</Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                                     {[formData.surname, formData.first_name, formData.middle_name].filter(Boolean).join(' ')}
                                 </Typography>
                             </Grid>
-                            <Grid item xs={6} md={3}>
-                                <Typography variant="caption" color="text.secondary">Gender</Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            <Grid item xs={6} md={2}>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Gender</Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                                     {personNatures.find(n => n.value === formData.person_nature)?.label || 'NOT SPECIFIED'}
                                 </Typography>
                             </Grid>
-                            <Grid item xs={6} md={3}>
-                                <Typography variant="caption" color="text.secondary">Language</Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                    {languages.find(l => l.value === formData.preferred_language)?.label || 'NOT SPECIFIED'}
-                                </Typography>
-                            </Grid>
-                            <Grid item xs={6} md={3}>
-                                <Typography variant="caption" color="text.secondary">Birth Date</Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            <Grid item xs={6} md={2}>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Birth Date</Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                                     {formData.birth_date || 'NOT PROVIDED'}
                                 </Typography>
                             </Grid>
-                            <Grid item xs={6} md={3}>
-                                <Typography variant="caption" color="text.secondary">Nationality</Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            <Grid item xs={6} md={2}>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Nationality</Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                                     {formData.nationality_code === 'MG' ? 'MALAGASY' :
                                         formData.nationality_code === 'FR' ? 'FRENCH' :
                                             formData.nationality_code === 'US' ? 'AMERICAN' :
                                                 formData.nationality_code?.toUpperCase() || 'NOT SPECIFIED'}
                                 </Typography>
                             </Grid>
+                            <Grid item xs={6} md={2}>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Language</Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                                    {languages.find(l => l.value === formData.preferred_language)?.label || 'NOT SPECIFIED'}
+                                </Typography>
+                            </Grid>
                         </Grid>
                     </Box>
 
-                    {/* Contact Information Summary */}
+                                        {/* Contact Information Summary */}
                     {(formData.email_address || formData.cell_phone) && (
-                        <Box sx={{ mb: 2, p: 1.5, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
-                            <Typography variant="body1" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.95rem' }}>
+                        <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
+                            <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
                             Contact Information
                         </Typography>
 
-                            <Grid container spacing={1.5}>
+                            <Grid container spacing={1}>
                             {formData.email_address && (
                                 <Grid item xs={12} md={6}>
-                                        <Typography variant="caption" color="text.secondary">Email</Typography>
-                                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Email</Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                                         {formData.email_address}
                                     </Typography>
                                 </Grid>
                             )}
                             {formData.cell_phone && (
                                 <Grid item xs={12} md={6}>
-                                        <Typography variant="caption" color="text.secondary">Cell Phone</Typography>
-                                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Cell Phone</Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                                         {formData.cell_phone_country_code} {formData.cell_phone}
                                     </Typography>
                                 </Grid>
                             )}
                         </Grid>
-                    </Box>
+                        </Box>
                     )}
 
                     {/* Documents & Addresses in a more compact layout */}
-                    <Grid container spacing={2}>
+                    <Grid container spacing={1.5}>
                     {/* Documents Summary */}
                         <Grid item xs={12} md={6}>
-                            <Typography variant="body1" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.95rem' }}>
+                            <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
                         Documents ({formData.aliases?.length || 0})
                     </Typography>
                     {formData.aliases?.map((alias, index) => (
-                                <Box key={index} sx={{ mb: 1, p: 1.5, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
+                                <Box key={index} sx={{ mb: 0.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <Box>
-                                            <Typography variant="caption" color="text.secondary">
+                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
                                         {documentTypes.find(type => type.value === alias.document_type)?.label || alias.document_type}
                                     </Typography>
-                                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                            <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                                         {alias.document_number}
                                     </Typography>
                                         </Box>
                                         <Box>
-                                            {alias.is_primary && <Chip label="PRIMARY" size="small" color="primary" sx={{ fontSize: '0.65rem', height: '20px' }} />}
+                                            {alias.is_primary && <Chip label="PRIMARY" size="small" color="primary" sx={{ fontSize: '0.6rem', height: '18px' }} />}
                                         </Box>
                                     </Box>
                         </Box>
@@ -2659,36 +2659,29 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
                     {/* Addresses Summary */}
                         <Grid item xs={12} md={6}>
-                            <Typography variant="body1" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.95rem' }}>
+                            <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
                         Addresses ({formData.addresses?.length || 0})
                     </Typography>
                     {formData.addresses?.map((address, index) => (
-                                <Box key={index} sx={{ mb: 1, p: 1.5, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
+                                <Box key={index} sx={{ mb: 0.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                         <Box sx={{ flex: 1 }}>
-                                            <Typography variant="caption" color="text.secondary">
+                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
                                                 {address.address_type === 'RESIDENTIAL' ? 'RESIDENTIAL' : 'POSTAL'}
                                     </Typography>
-                                            <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                                            <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.75rem' }}>
                                         {[address.street_line1, address.street_line2, address.locality, address.town].filter(Boolean).join(', ')}
                                         {address.postal_code && ` - ${address.postal_code}`}
                                     </Typography>
                                         </Box>
-                                        {address.is_primary && <Chip label="PRIMARY" size="small" color="primary" sx={{ fontSize: '0.65rem', height: '20px' }} />}
+                                        {address.is_primary && <Chip label="PRIMARY" size="small" color="primary" sx={{ fontSize: '0.6rem', height: '18px' }} />}
                                     </Box>
                         </Box>
                     ))}
                         </Grid>
                     </Grid>
 
-                    <Alert severity="success" sx={{ mt: 2 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
-                            Ready to Create Person Record
-                        </Typography>
-                        <Typography variant="caption">
-                            {formData.aliases?.length || 0} document(s) • {formData.addresses?.length || 0} address(es) • {[formData.email_address, formData.work_phone, formData.cell_phone].filter(Boolean).length} contact method(s)
-                        </Typography>
-                    </Alert>
+
                 </Box>
             </Paper>
         );

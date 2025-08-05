@@ -117,12 +117,30 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
     if (value) {
       setCaptureData(value);
     } else {
-      setCaptureData({
-        captured_licenses: [],
+      // Always start with at least one license for capture forms
+      const initialLicense: CapturedLicense = {
+        id: `license-${Date.now()}`,
+        license_category: applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE 
+          ? LicenseCategory.LEARNERS_1 
+          : LicenseCategory.B,
+        issue_date: '',
+        restrictions: {
+          driver_restrictions: [],
+          vehicle_restrictions: []
+        },
+        verified: false,
+        verification_notes: ''
+      };
+
+      const initialData = {
+        captured_licenses: [initialLicense],
         application_type: applicationtype
-      });
+      };
+
+      setCaptureData(initialData);
+      onChange(initialData);
     }
-  }, [value, applicationtype]);
+  }, [value, applicationtype, onChange]);
 
   const loadExistingLicenses = async (personId: string) => {
     setLoadingExisting(true);
