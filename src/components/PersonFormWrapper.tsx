@@ -610,12 +610,17 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                             markStepValid(4, true); // Address step
                             setCurrentStep(5); // Jump to review step for confirmation
                             
-                            // In application mode, immediately trigger completion since person is already complete
-                            console.log('🎯 PersonFormWrapper: Found complete person, triggering onSuccess immediately');
-                            // Use setTimeout to ensure step is set before calling completion
-                            setTimeout(() => {
-                                handleFormComplete(existingPerson);
-                            }, 100);
+                            // In application mode, wait for external navigation to trigger save
+                            // This ensures any clerk updates are captured
+                            console.log('🎯 PersonFormWrapper: Found complete person, waiting for external Next button to save');
+                            
+                            // Only auto-complete in standalone mode
+                            if (mode !== 'application') {
+                                console.log('🎯 PersonFormWrapper: Standalone mode - triggering onSuccess immediately');
+                                setTimeout(() => {
+                                    handleFormComplete(existingPerson);
+                                }, 100);
+                            }
                         } else {
                             // Person has incomplete information - start at personal info step
                             setCurrentStep(1);
@@ -997,6 +1002,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     } else if (currentStep === steps.length - 1) {
                         // On final step (Review), submit the person form
                         console.log('🎯 PersonFormWrapper: Submitting person from external navigation');
+                        console.log('🎯 PersonFormWrapper: This will save/update the person to capture any clerk changes');
                         try {
                             await handleSubmit();
                             return true;

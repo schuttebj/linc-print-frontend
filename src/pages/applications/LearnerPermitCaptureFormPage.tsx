@@ -228,15 +228,12 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
     console.log('🎯 Person selected from PersonFormWrapper:', person);
     console.log('🎯 Person ID:', person?.id);
     console.log('🎯 Person full data:', JSON.stringify(person, null, 2));
-    console.log('🎯 Setting selectedPerson state and advancing to license capture');
+    console.log('🎯 Setting selectedPerson state - waiting for manual Next button click');
     setSelectedPerson(person);
     setError('');
     
-    // Auto-advance to next step
-    setTimeout(() => {
-      console.log('🎯 Advancing to license capture step');
-      setActiveStep(1);
-    }, 500);
+    // Don't auto-advance - let user click Next button manually
+    console.log('🎯 Person selected successfully - Next button should now be enabled');
   };
 
   // License capture handler
