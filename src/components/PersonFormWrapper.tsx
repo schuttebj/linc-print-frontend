@@ -370,6 +370,15 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
     // Watch form values
     const watchedPersonNature = personForm.watch('person_nature');
+    
+    // Watch key fields for real-time Next button validation
+    const watchedSurname = personForm.watch('surname');
+    const watchedFirstName = personForm.watch('first_name');
+    const watchedBirthDate = personForm.watch('birth_date');
+    const watchedEmail = personForm.watch('email_address');
+    const watchedCellPhone = personForm.watch('cell_phone');
+    const watchedAliases = personForm.watch('aliases');
+    const watchedAddresses = personForm.watch('addresses');
 
     // Context-aware completion handler
     const handleFormComplete = (person: any) => {
@@ -886,6 +895,66 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         };
     }, [personForm]);
 
+    // Validate mandatory fields for current step only (for Next button disabling)
+    const validateCurrentStepMandatory = useCallback((): boolean => {
+        const currentData = personForm.getValues();
+        
+        switch (currentStep) {
+            case 0: // Lookup step
+                return lookupForm.formState.isValid;
+                
+            case 1: // Details step
+                return !!(currentData.surname && currentData.first_name && currentData.birth_date);
+                
+            case 2: // Contact step  
+                return !!(currentData.email_address || currentData.cell_phone);
+                
+            case 3: // Documents step
+                const aliases = currentData.aliases || [];
+                return aliases.some(alias => 
+                    alias.document_type && alias.document_number && alias.name_in_document
+                );
+                
+            case 4: // Address step
+                const addresses = currentData.addresses || [];
+                return addresses.some(address => 
+                    address.street_line1 && address.locality && address.town && address.postal_code
+                );
+                
+            case 5: // Review step
+                return true; // Review is always valid if we reach it
+                
+            default:
+                return true;
+        }
+    }, [currentStep, personForm, lookupForm]);
+
+    // Real-time validation for Next button (updates as user types)
+    const isNextButtonDisabled = useCallback((): boolean => {
+        // Always allow navigation for existing persons (they can have incomplete data temporarily)
+        if (isExistingPerson) {
+            return false;
+        }
+        
+        // For new persons, check mandatory fields for current step
+        const isValid = validateCurrentStepMandatory();
+        console.log(`🔍 Real-time validation - Step ${currentStep}:`, isValid);
+        return !isValid;
+    }, [
+        isExistingPerson, 
+        validateCurrentStepMandatory, 
+        currentStep,
+        // Watch dependencies to trigger re-evaluation
+        watchedSurname,
+        watchedFirstName, 
+        watchedBirthDate,
+        watchedEmail,
+        watchedCellPhone,
+        watchedAliases,
+        watchedAddresses,
+        lookupForm.formState.isValid
+    ]);
+
     const populateFormWithExistingPerson = (existingPerson: ExistingPerson) => {
         console.log('Populating form with existing person:', existingPerson);
 
@@ -1057,24 +1126,35 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
     const validateCurrentStep = async () => {
         try {
+            // First check mandatory fields for current step
+            const hasMandatoryFields = validateCurrentStepMandatory();
+            console.log(`🔍 Step ${currentStep} mandatory validation:`, hasMandatoryFields);
+            
+            if (!hasMandatoryFields) {
+                console.log(`❌ Step ${currentStep} missing mandatory fields - disabling Next button`);
+                markStepValid(currentStep, false);
+                return false;
+            }
+
             if (currentStep === 0) {
                 await lookupForm.trigger();
                 const isValid = lookupForm.formState.isValid;
                 markStepValid(0, isValid);
                 return isValid;
             } else {
-                // Validate current step fields based on step
+                // Validate current step fields based on step (form validation)
                 const stepFields = getStepFields(currentStep);
 
                 // Only trigger validation for specific fields if we have any to validate
                 if (stepFields.length > 0) {
                     const isValid = await personForm.trigger(stepFields as any);
-                    markStepValid(currentStep, isValid);
-                    return isValid;
+                    const finalValid = isValid && hasMandatoryFields;
+                    markStepValid(currentStep, finalValid);
+                    return finalValid;
                 } else {
-                    // For steps with no specific validation fields, just mark as valid
-                    markStepValid(currentStep, true);
-                    return true;
+                    // For steps with no specific validation fields, just check mandatory
+                    markStepValid(currentStep, hasMandatoryFields);
+                    return hasMandatoryFields;
                 }
             }
         } catch (error) {
@@ -1924,7 +2004,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                 name="document_number"
                                 control={lookupForm.control}
                                 render={({ field }) => (
-                                                                        <TextField
+                                    <TextField
                                         name={field.name}
                                         value={field.value || ''}
                                         fullWidth
@@ -2877,7 +2957,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                         </Grid>
                     </Box>
 
-                                        {/* Contact Information Summary */}
+                    {/* Contact Information Summary */}
                     {(formData.email_address || formData.cell_phone) && (
                         <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
                             <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
@@ -2902,7 +2982,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                 </Grid>
                             )}
                         </Grid>
-                        </Box>
+                    </Box>
                     )}
 
                     {/* Documents & Addresses in a more compact layout */}
@@ -3024,7 +3104,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             {/* Person Form Tabs */}
             <Paper 
                 elevation={0}
-                sx={{ 
+                                    sx={{
                     mb: 2,
                     bgcolor: 'white',
                     boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
@@ -3142,30 +3222,45 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
                         <Box sx={{ display: 'flex', gap: 1 }}>
                         {currentStep < steps.length - 1 ? (
+                            <>
                             <Button
                                 variant="contained"
                                 onClick={handleNext}
-                                disabled={lookupLoading}
-                                    size="small"
-                                    sx={{
-                                        boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
-                                    }}
+                                    disabled={lookupLoading || isNextButtonDisabled()}
+                                        size="small"
+                                        sx={{
+                                            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
+                                        }}
                             >
                                 {currentStep === 0 ? 'Search' : 'Next'}
                             </Button>
-                        ) : (
-                            <Button
-                                variant="contained"
-                                onClick={handleSubmit}
-                                disabled={submitLoading || duplicateCheckLoading}
-                                startIcon={<PersonAddIcon />}
+                                {!isExistingPerson && isNextButtonDisabled() && (
+                                    <Typography 
+                                        variant="caption" 
+                                        color="text.secondary" 
+                                        sx={{ 
+                                            ml: 1, 
+                                            fontSize: '0.7rem',
+                                            fontStyle: 'italic'
+                                        }}
+                                    >
+                                        Complete required fields to continue
+                                    </Typography>
+                                )}
+                            </>
+                            ) : (
+                                <Button
+                                    variant="contained"
+                                    onClick={handleSubmit}
+                                    disabled={submitLoading || duplicateCheckLoading}
+                                    startIcon={<PersonAddIcon />}
                                     size="small"
                                     sx={{
                                         boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
                                     }}
-                            >
-                                {duplicateCheckLoading ? 'Checking for Duplicates...' : submitLoading ? (isEditMode ? 'Updating...' : 'Submitting...') : (isEditMode ? 'Update Person' : 'Submit')}
-                            </Button>
+                                >
+                                    {duplicateCheckLoading ? 'Checking for Duplicates...' : submitLoading ? (isEditMode ? 'Updating...' : 'Submitting...') : (isEditMode ? 'Update Person' : 'Submit')}
+                                </Button>
                         )}
                     </Box>
                 </Box>
