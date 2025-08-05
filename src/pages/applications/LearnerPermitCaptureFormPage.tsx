@@ -421,6 +421,13 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
             {/* Validation feedback */}
             {licenseCaptureData && licenseCaptureData.captured_licenses.length > 0 && (() => {
               const validation = validateCapturedDataForAuthorization(licenseCaptureData);
+              console.log('🔍 License validation debug:', {
+                licenseCaptureData,
+                validation,
+                isValid: validation.isValid,
+                errors: validation.errors
+              });
+              
               if (!validation.isValid) {
                 return (
                   <Alert severity="warning" sx={{ mt: 2 }}>
@@ -438,8 +445,15 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
                     </Box>
                   </Alert>
                 );
+              } else {
+                return (
+                  <Alert severity="success" sx={{ mt: 2 }}>
+                    <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+                      ✅ All license details completed. You can proceed to the next step.
+                    </Typography>
+                  </Alert>
+                );
               }
-              return null;
             })()}
           </Box>
         );

@@ -1651,12 +1651,13 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                 name="document_number"
                                 control={lookupForm.control}
                                 render={({ field }) => (
-                                    <TextField
+                                                                        <TextField
                                         name={field.name}
                                         value={field.value || ''}
                                         fullWidth
-                                    size="small"
+                                        size="small"
                                         label="Document Number *"
+                                        autoFocus={mode === 'application'}
                                         error={!!lookupForm.formState.errors.document_number}
                                         helperText={lookupForm.formState.errors.document_number?.message || 'Enter document number (numbers only)'}
                                         onChange={(e) => {
