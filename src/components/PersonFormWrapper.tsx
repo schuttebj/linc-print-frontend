@@ -368,10 +368,13 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
     // Context-aware completion handler
     const handleFormComplete = (person: any) => {
+        console.log('🎯 PersonFormWrapper: handleFormComplete called with person:', person);
+        console.log('🎯 PersonFormWrapper: mode:', mode, 'onSuccess callback exists:', !!onSuccess);
         setCreatedPerson(person);
         
         // If onSuccess callback is provided, use it instead of internal logic
         if (onSuccess) {
+            console.log('🎯 PersonFormWrapper: Calling onSuccess callback with person:', person?.id);
             onSuccess(person, isEditMode);
             return;
         }
@@ -981,6 +984,16 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                             populateNameInDocument();
                         }
                         return true;
+                    } else if (currentStep === steps.length - 1) {
+                        // On final step (Review), submit the person form
+                        console.log('🎯 PersonFormWrapper: Submitting person from external navigation');
+                        try {
+                            await handleSubmit();
+                            return true;
+                        } catch (error) {
+                            console.error('🚨 PersonFormWrapper: Submit failed:', error);
+                            return false;
+                        }
                     }
                 }
                 return false;

@@ -143,7 +143,8 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
           userPrimaryLocation: user?.primary_location_id,
           selectedLocationId,
           licenseCaptureData,
-          selectedPerson: selectedPerson?.id
+          selectedPerson: selectedPerson?.id,
+          selectedPersonFull: selectedPerson
         });
         
         return hasValidLicenseData && hasLocation && hasPerson;
@@ -223,8 +224,9 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
 
   // Person selection handler
   const handlePersonSelected = (person: Person) => {
-    console.log('Person selected from PersonFormWrapper:', person);
-    console.log('Person ID:', person?.id);
+    console.log('🎯 Person selected from PersonFormWrapper:', person);
+    console.log('🎯 Person ID:', person?.id);
+    console.log('🎯 Person full data:', JSON.stringify(person, null, 2));
     setSelectedPerson(person);
     setError('');
     
