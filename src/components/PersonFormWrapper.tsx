@@ -676,6 +676,22 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             }],
         });
 
+        console.log('🆕 NEW PERSON FORM INITIALIZED with address defaults:', {
+            defaultAddressType,
+            defaultProvinceCode,
+            initialAddress: {
+                address_type: defaultAddressType,
+                street_line1: '',
+                street_line2: '',
+                locality: '',
+                postal_code: '',
+                town: '',
+                country: 'MADAGASCAR',
+                province_code: defaultProvinceCode,
+                is_primary: true,
+            }
+        });
+
         setIsNewPerson(true);
         setIsEditMode(false);
         setCurrentPersonId(null);
@@ -925,6 +941,33 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             const formData = personForm.getValues();
             console.log('📝 Raw form data from PersonFormWrapper:', formData);
             console.log('📍 Raw address data from form:', formData.addresses);
+            
+            // COMPREHENSIVE ADDRESS DEBUGGING
+            console.log('🔍 DETAILED ADDRESS ANALYSIS:');
+            console.log('- Address count:', formData.addresses?.length || 0);
+            formData.addresses?.forEach((addr, idx) => {
+                console.log(`- Address ${idx}:`, {
+                    address_type: `"${addr.address_type}" (length: ${addr.address_type?.length || 0})`,
+                    street_line1: `"${addr.street_line1}" (length: ${addr.street_line1?.length || 0})`,
+                    locality: `"${addr.locality}" (length: ${addr.locality?.length || 0})`,
+                    postal_code: `"${addr.postal_code}" (length: ${addr.postal_code?.length || 0})`,
+                    town: `"${addr.town}" (length: ${addr.town?.length || 0})`,
+                    province_code: `"${addr.province_code}" (length: ${addr.province_code?.length || 0})`,
+                    is_primary: addr.is_primary,
+                    country: addr.country
+                });
+                
+                const missingFields = [];
+                if (!addr.address_type?.trim()) missingFields.push('address_type');
+                if (!addr.street_line1?.trim()) missingFields.push('street_line1');
+                if (!addr.locality?.trim()) missingFields.push('locality');
+                if (!addr.postal_code?.trim()) missingFields.push('postal_code');
+                if (!addr.town?.trim()) missingFields.push('town');
+                if (!addr.province_code?.trim()) missingFields.push('province_code');
+                
+                console.log(`- Address ${idx} missing fields:`, missingFields);
+                console.log(`- Address ${idx} will be included:`, missingFields.length === 0);
+            });
 
             // Transform form data to match backend schema with FULL CAPITALIZATION
             const personPayload = {
@@ -958,7 +1001,14 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 // Transform addresses to match backend schema - ALL CAPITALIZED
                 addresses: formData.addresses
                     .filter(address => {
-                        // Include address if it has the required fields filled
+                        // TEMPORARY: More lenient filtering for debugging
+                        // Include address if it has at least some key fields filled
+                        const hasAnyKeyFields = (address.street_line1 && address.street_line1.trim()) ||
+                                              (address.locality && address.locality.trim()) ||
+                                              (address.postal_code && address.postal_code.trim()) ||
+                                              (address.town && address.town.trim());
+                        
+                        // Original strict validation
                         const hasRequiredFields = address.street_line1 && address.street_line1.trim() &&
                                                 address.locality && address.locality.trim() &&
                                                 address.postal_code && address.postal_code.trim() &&
@@ -968,14 +1018,17 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                         console.log('🔍 Address validation check:', {
                             address,
                             hasRequiredFields,
+                            hasAnyKeyFields,
                             street_line1: !!address.street_line1?.trim(),
                             locality: !!address.locality?.trim(),
                             postal_code: !!address.postal_code?.trim(),
                             town: !!address.town?.trim(),
-                            province_code: !!address.province_code?.trim()
+                            province_code: !!address.province_code?.trim(),
+                            usingLenientFilter: hasAnyKeyFields
                         });
                         
-                        return hasRequiredFields;
+                        // TEMPORARY: Use lenient filtering for debugging
+                        return hasAnyKeyFields;
                     })
                     .map(address => ({
                         address_type: address.address_type?.toUpperCase() || 'RESIDENTIAL',
@@ -993,6 +1046,10 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
             console.log('✅ Transformed person payload for submission:', personPayload);
             console.log('📍 Address data being sent:', personPayload.addresses);
+            console.log('📊 FINAL ADDRESS SUMMARY:');
+            console.log(`- Original address count: ${formData.addresses?.length || 0}`);
+            console.log(`- Filtered address count: ${personPayload.addresses?.length || 0}`);
+            console.log('- Final address payload:', JSON.stringify(personPayload.addresses, null, 2));
 
             if (isEditMode && currentPersonId) {
                 // Update existing person
@@ -1014,6 +1071,10 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
                 const result = await response.json();
                 console.log('Person updated successfully:', result);
+                console.log('🏠 ADDRESS DATA IN API RESPONSE:', {
+                    addressCount: result.addresses?.length || 0,
+                    addresses: result.addresses
+                });
                 setCreatedPerson(result);
                 handleFormComplete(result);
             } else {
@@ -1113,6 +1174,10 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
             const result = await response.json();
             console.log('Person created successfully:', result);
+            console.log('🏠 ADDRESS DATA IN CREATE RESPONSE:', {
+                addressCount: result.addresses?.length || 0,
+                addresses: result.addresses
+            });
             setCreatedPerson(result);
             handleFormComplete(result);
         } catch (error) {
