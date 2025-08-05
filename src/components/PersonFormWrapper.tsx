@@ -298,6 +298,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     const [pendingPersonPayload, setPendingPersonPayload] = useState<any>(null);
     const [pendingAddressPayloads, setPendingAddressPayloads] = useState<any[]>([]);
     const [parentNotified, setParentNotified] = useState(false);
+    const [isExistingPerson, setIsExistingPerson] = useState(false);
 
     // Lookup data state - loaded from backend enums
     const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([]);
@@ -369,6 +370,30 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
     // Watch form values
     const watchedPersonNature = personForm.watch('person_nature');
+    const watchedFormValues = personForm.watch();
+
+    // Continuous validation effect - updates step completion indicators
+    useEffect(() => {
+        if (!isExistingPerson) {
+            // For new persons, validate steps based on form data
+            const validateStep = async (stepIndex: number) => {
+                try {
+                    const stepFields = getStepFields(stepIndex);
+                    if (stepFields.length > 0) {
+                        const result = await personForm.trigger(stepFields as any);
+                        markStepValid(stepIndex, result);
+                    }
+                } catch (error) {
+                    console.error('Step validation error:', error);
+                }
+            };
+
+            // Validate all steps (except lookup which is handled separately)
+            for (let i = 1; i < steps.length - 1; i++) { // Skip lookup (0) and review (last)
+                validateStep(i);
+            }
+        }
+    }, [watchedFormValues, isExistingPerson, personForm, steps.length]);
 
     // Context-aware completion handler
     const handleFormComplete = (person: any) => {
@@ -563,6 +588,10 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     // Step 1: Document Lookup functionality
     const performLookup = async (data: PersonLookupForm) => {
         setLookupLoading(true);
+        
+        // Reset flags for new lookup
+        setIsExistingPerson(false);
+        setParentNotified(false);
 
         try {
             console.log('Looking up person with:', data);
@@ -607,7 +636,9 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                         setPersonDataWasIncomplete(!isComplete);
                         
                         if (isComplete) {
-                            // Person has complete information - jump to review step
+                            // Person has complete information - mark as existing and all steps valid
+                            setIsExistingPerson(true);
+                            markStepValid(0, true); // Lookup step
                             markStepValid(1, true); // Personal info step
                             markStepValid(2, true); // Contact details step
                             markStepValid(3, true); // ID documents step
@@ -1066,6 +1097,24 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         );
     };
 
+    // Helper function to determine if a tab should be clickable
+    const isTabClickable = (index: number) => {
+        if (isExistingPerson) {
+            // For existing persons, all completed steps are clickable
+            return stepValidation[index] || index === currentStep;
+        } else {
+            // For new persons, only allow clicking completed steps or the next logical step
+            if (index === 0) return true; // Lookup is always clickable
+            if (index <= currentStep) return true; // Current and previous steps are clickable
+            
+            // Check if all previous steps are completed
+            for (let i = 0; i < index; i++) {
+                if (!stepValidation[i]) return false;
+            }
+            return true;
+        }
+    };
+
     const handleSubmit = async () => {
         setSubmitLoading(true);
 
@@ -1251,14 +1300,56 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         });
 
         try {
-            // For now, we'll delete all existing addresses and create new ones
-            // TODO: In the future, we could implement smarter update logic
-            
-            // Delete existing addresses
+            // Smart update logic: compare addresses and only make necessary API calls
+            const addressesToDelete: any[] = [];
+            const addressesToUpdate: any[] = [];
+            const addressesToCreate: any[] = [];
+
+            // Helper function to compare address data (excluding IDs and timestamps)
+            const addressesEqual = (addr1: any, addr2: any) => {
+                const compareFields = ['address_type', 'street_line1', 'street_line2', 'locality', 'town', 'postal_code', 'country', 'province_code', 'is_primary'];
+                return compareFields.every(field => addr1[field] === addr2[field]);
+            };
+
+            // Find addresses to update or delete
             for (const existingAddress of existingAddresses) {
-                console.log('🗑️ Deleting existing address:', existingAddress.id);
+                const matchingNew = newAddresses.find(newAddr => 
+                    newAddr.id === existingAddress.id || 
+                    (newAddr.address_type === existingAddress.address_type && newAddr.is_primary === existingAddress.is_primary)
+                );
+                
+                if (matchingNew && !addressesEqual(existingAddress, matchingNew)) {
+                    // Address exists but data changed - update it
+                    addressesToUpdate.push({ ...matchingNew, id: existingAddress.id });
+                } else if (!matchingNew) {
+                    // Address no longer exists in form - delete it
+                    addressesToDelete.push(existingAddress);
+                }
+            }
+
+            // Find addresses to create (new addresses not matching existing ones)
+            for (const newAddress of newAddresses) {
+                const existingMatch = existingAddresses.find(existing => 
+                    newAddress.id === existing.id ||
+                    (newAddress.address_type === existing.address_type && newAddress.is_primary === existing.is_primary)
+                );
+                
+                if (!existingMatch) {
+                    addressesToCreate.push(newAddress);
+                }
+            }
+
+            console.log('🔄 Address update plan:', {
+                toDelete: addressesToDelete.length,
+                toUpdate: addressesToUpdate.length,
+                toCreate: addressesToCreate.length
+            });
+
+            // Delete removed addresses
+            for (const addressToDelete of addressesToDelete) {
+                console.log('🗑️ Deleting removed address:', addressToDelete.id);
                 const deleteResponse = await fetch(
-                    `${API_BASE_URL}/api/v1/persons/${personId}/addresses/${existingAddress.id}`,
+                    `${API_BASE_URL}/api/v1/persons/${personId}/addresses/${addressToDelete.id}`,
                     {
                         method: 'DELETE',
                         headers: {
@@ -1268,14 +1359,36 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 );
                 
                 if (!deleteResponse.ok) {
-                    console.error('❌ Failed to delete address:', existingAddress.id);
+                    console.error('❌ Failed to delete address:', addressToDelete.id);
                 } else {
-                    console.log('✅ Successfully deleted address:', existingAddress.id);
+                    console.log('✅ Successfully deleted address:', addressToDelete.id);
+                }
+            }
+
+            // Update modified addresses
+            for (const addressToUpdate of addressesToUpdate) {
+                console.log('📝 Updating modified address:', addressToUpdate.id);
+                const updateResponse = await fetch(
+                    `${API_BASE_URL}/api/v1/persons/${personId}/addresses/${addressToUpdate.id}`,
+                    {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${accessToken}`,
+                        },
+                        body: JSON.stringify(addressToUpdate),
+                    }
+                );
+                
+                if (!updateResponse.ok) {
+                    console.error('❌ Failed to update address:', addressToUpdate.id);
+                } else {
+                    console.log('✅ Successfully updated address:', addressToUpdate.id);
                 }
             }
 
             // Create new addresses
-            for (const addressPayload of newAddresses) {
+            for (const addressPayload of addressesToCreate) {
                 console.log('➕ Creating new address:', addressPayload);
                 const createResponse = await fetch(
                     `${API_BASE_URL}/api/v1/persons/${personId}/addresses`,
@@ -2831,13 +2944,13 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     }}
                 >
                     {steps.map((step, index) => {
-                        const canNavigate = (index < currentStep || stepValidation[index] || (index === 0 && !isNewPerson)) && !(skipFirstStep && index === 0);
-                        const isDisabled = skipFirstStep && index === 0;
+                        const canClick = isTabClickable(index);
+                        const isDisabled = (skipFirstStep && index === 0) || (!canClick && index !== currentStep);
                         return (
                             <Tab
                                 key={step.label}
                                 label={renderTabLabel(step, index)}
-                                disabled={(!canNavigate || isDisabled) && index !== currentStep}
+                                disabled={isDisabled}
                             />
                         );
                     })}
