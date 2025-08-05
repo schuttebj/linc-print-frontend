@@ -18,9 +18,8 @@ import {
     Button,
     FormHelperText,
     Alert,
-    Stepper,
-    Step,
-    StepLabel,
+    Tabs,
+    Tab,
     Card,
     CardContent,
     FormControlLabel,
@@ -43,6 +42,12 @@ import {
     Warning as WarningIcon,
     ArrowForward as ArrowForwardIcon,
     ArrowBack as ArrowBackIcon,
+    CheckCircle as CheckCircleIcon,
+    Person as PersonIcon,
+    ContactPhone as ContactPhoneIcon,
+    Badge as BadgeIcon,
+    Home as HomeIcon,
+    Preview as PreviewIcon,
 } from '@mui/icons-material';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -210,12 +215,12 @@ const personSchema = yup.object({
 });
 
 const steps = [
-    'Document Lookup',
-    'Personal Information',
-    'Contact Details',
-    'ID Documents',
-    'Address Information',
-    'Review & Submit',
+    { label: 'Lookup', icon: <SearchIcon /> },
+    { label: 'Details', icon: <PersonIcon /> },
+    { label: 'Contact', icon: <ContactPhoneIcon /> },
+    { label: 'Documents', icon: <BadgeIcon /> },
+    { label: 'Address', icon: <HomeIcon /> },
+    { label: 'Review', icon: <PreviewIcon /> },
 ];
 
 // Props interface for PersonFormWrapper
@@ -935,6 +940,39 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         }
     };
 
+    // Tab change handler for tabs
+    const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+        handleStepClick(newValue);
+    };
+
+    // Helper function to render tab with completion indicator  
+    const renderTabLabel = (step: any, index: number) => {
+        const isCompleted = stepValidation[index];
+        const isCurrent = currentStep === index;
+        const hasError = index === currentStep && personForm.formState.errors && Object.keys(personForm.formState.errors).length > 0;
+        
+        return (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+                <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    color: hasError ? 'warning.main' : isCompleted ? 'success.main' : isCurrent ? 'primary.main' : 'text.secondary' 
+                }}>
+                    {hasError ? <WarningIcon fontSize="small" /> : isCompleted ? <CheckCircleIcon fontSize="small" /> : step.icon}
+                </Box>
+                <Typography 
+                    variant="body2" 
+                    sx={{ 
+                        fontWeight: isCurrent ? 'bold' : 'normal',
+                        color: hasError ? 'warning.main' : isCompleted ? 'success.main' : isCurrent ? 'primary.main' : 'text.secondary'
+                    }}
+                >
+                    {step.label}
+                </Typography>
+            </Box>
+        );
+    };
+
     const handleSubmit = async () => {
         setSubmitLoading(true);
 
@@ -1023,17 +1061,17 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     
                     return hasRequiredFields;
                 })
-                .map(address => ({
+                    .map(address => ({
                     address_type: address.address_type?.toUpperCase() || 'RESIDENTIAL',
-                    is_primary: address.is_primary,
+                        is_primary: address.is_primary,
                     street_line1: address.street_line1?.toUpperCase() || '',
-                    street_line2: address.street_line2?.toUpperCase() || undefined,
-                    locality: address.locality?.toUpperCase() || '',
-                    postal_code: address.postal_code || '',
-                    town: address.town?.toUpperCase() || '',
-                    country: address.country?.toUpperCase() || 'MADAGASCAR',
+                        street_line2: address.street_line2?.toUpperCase() || undefined,
+                        locality: address.locality?.toUpperCase() || '',
+                        postal_code: address.postal_code || '',
+                        town: address.town?.toUpperCase() || '',
+                        country: address.country?.toUpperCase() || 'MADAGASCAR',
                     province_code: address.province_code?.toUpperCase() || '',
-                    is_verified: false,
+                        is_verified: false,
                 }));
 
             console.log('✅ Transformed person payload for submission:', personPayload);
@@ -1064,7 +1102,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
                 console.log('📥 API RESPONSE STATUS:', response.status, response.statusText);
                 console.log('📥 API RESPONSE HEADERS:', Object.fromEntries(response.headers.entries()));
-                
+
                 if (!response.ok) {
                     const errorData = await response.json();
                     console.error('❌ API ERROR RESPONSE:', errorData);
@@ -1094,8 +1132,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     setCreatedPerson(updatedPerson);
                     handleFormComplete(updatedPerson);
                 } else {
-                    setCreatedPerson(result);
-                    handleFormComplete(result);
+                setCreatedPerson(result);
+                handleFormComplete(result);
                 }
             } else {
                 // Create new person (with duplicate check)
@@ -1258,7 +1296,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
             console.log('📥 CREATE API RESPONSE STATUS:', response.status, response.statusText);
             console.log('📥 CREATE API RESPONSE HEADERS:', Object.fromEntries(response.headers.entries()));
-            
+
             if (!response.ok) {
                 const errorData = await response.json();
                 console.error('❌ CREATE API ERROR RESPONSE:', errorData);
@@ -1290,8 +1328,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     setCreatedPerson(updatedPerson);
                     handleFormComplete(updatedPerson);
                 } else {
-                    setCreatedPerson(result);
-                    handleFormComplete(result);
+            setCreatedPerson(result);
+            handleFormComplete(result);
                 }
             } else {
                 setCreatedPerson(result);
@@ -1534,59 +1572,59 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 >
                 <Grid container spacing={2}>
                     <Grid item xs={12} md={6}>
-                        <Controller
-                            name="document_type"
-                            control={lookupForm.control}
-                            render={({ field }) => (
+                            <Controller
+                                name="document_type"
+                                control={lookupForm.control}
+                                render={({ field }) => (
                                 <FormControl fullWidth size="small" error={!!lookupForm.formState.errors.document_type}>
-                                    <InputLabel>Document Type *</InputLabel>
-                                    <Select {...field} label="Document Type *">
-                        {documentTypes.map((option) => (
-                            <MenuItem key={option.value} value={option.value}>
-                                {option.label}
-                            </MenuItem>
-                        ))}
-                                    </Select>
-                                    <FormHelperText>
-                                        {lookupForm.formState.errors.document_type?.message || 'Select document type'}
-                                    </FormHelperText>
-                                </FormControl>
-                            )}
-                        />
-                    </Grid>
+                                        <InputLabel>Document Type *</InputLabel>
+                                                                <Select {...field} label="Document Type *">
+                            {documentTypes.map((option) => (
+                                <MenuItem key={option.value} value={option.value}>
+                                    {option.label}
+                                </MenuItem>
+                            ))}
+                                        </Select>
+                                        <FormHelperText>
+                                            {lookupForm.formState.errors.document_type?.message || 'Select document type'}
+                                        </FormHelperText>
+                                    </FormControl>
+                                )}
+                            />
+                        </Grid>
 
-                    <Grid item xs={12} md={6}>
-                        <Controller
-                            name="document_number"
-                            control={lookupForm.control}
-                            render={({ field }) => (
-                                <TextField
-                                    name={field.name}
-                                    value={field.value || ''}
-                                    fullWidth
+                        <Grid item xs={12} md={6}>
+                            <Controller
+                                name="document_number"
+                                control={lookupForm.control}
+                                render={({ field }) => (
+                                    <TextField
+                                        name={field.name}
+                                        value={field.value || ''}
+                                        fullWidth
                                     size="small"
-                                    label="Document Number *"
-                                    error={!!lookupForm.formState.errors.document_number}
-                                    helperText={lookupForm.formState.errors.document_number?.message || 'Enter document number (numbers only)'}
-                                    onChange={(e) => {
-                                        const value = e.target.value.replace(/\D/g, '');
-                                        field.onChange(value);
-                                    }}
-                                    onBlur={field.onBlur}
-                                    InputProps={{
-                                        endAdornment: field.value && (
-                                            <InputAdornment position="end">
-                                                <IconButton onClick={() => lookupForm.setValue('document_number', '')} size="small">
-                                                    <ClearIcon />
-                                                </IconButton>
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                />
-                            )}
-                        />
-                    </Grid>
-                </Grid>
+                                        label="Document Number *"
+                                        error={!!lookupForm.formState.errors.document_number}
+                                        helperText={lookupForm.formState.errors.document_number?.message || 'Enter document number (numbers only)'}
+                                        onChange={(e) => {
+                                            const value = e.target.value.replace(/\D/g, '');
+                                            field.onChange(value);
+                                        }}
+                                        onBlur={field.onBlur}
+                                        InputProps={{
+                                            endAdornment: field.value && (
+                                                <InputAdornment position="end">
+                                                    <IconButton onClick={() => lookupForm.setValue('document_number', '')} size="small">
+                                                        <ClearIcon />
+                                                    </IconButton>
+                                                </InputAdornment>
+                                            ),
+                                        }}
+                                    />
+                                )}
+                            />
+                        </Grid>
+                        </Grid>
                 </Box>
             </Box>
         </Paper>
@@ -2515,77 +2553,77 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     {(formData.email_address || formData.cell_phone) && (
                         <Box sx={{ mb: 2, p: 1.5, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
                             <Typography variant="body1" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.95rem' }}>
-                                Contact Information
-                            </Typography>
+                            Contact Information
+                        </Typography>
 
                             <Grid container spacing={1.5}>
-                                {formData.email_address && (
-                                    <Grid item xs={12} md={6}>
+                            {formData.email_address && (
+                                <Grid item xs={12} md={6}>
                                         <Typography variant="caption" color="text.secondary">Email</Typography>
                                         <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                            {formData.email_address}
-                                        </Typography>
-                                    </Grid>
-                                )}
-                                {formData.cell_phone && (
-                                    <Grid item xs={12} md={6}>
+                                        {formData.email_address}
+                                    </Typography>
+                                </Grid>
+                            )}
+                            {formData.cell_phone && (
+                                <Grid item xs={12} md={6}>
                                         <Typography variant="caption" color="text.secondary">Cell Phone</Typography>
                                         <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                            {formData.cell_phone_country_code} {formData.cell_phone}
-                                        </Typography>
-                                    </Grid>
-                                )}
-                            </Grid>
-                        </Box>
+                                        {formData.cell_phone_country_code} {formData.cell_phone}
+                                    </Typography>
+                                </Grid>
+                            )}
+                        </Grid>
+                    </Box>
                     )}
 
                     {/* Documents & Addresses in a more compact layout */}
                     <Grid container spacing={2}>
-                        {/* Documents Summary */}
+                    {/* Documents Summary */}
                         <Grid item xs={12} md={6}>
                             <Typography variant="body1" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.95rem' }}>
-                                Documents ({formData.aliases?.length || 0})
-                            </Typography>
-                            {formData.aliases?.map((alias, index) => (
+                        Documents ({formData.aliases?.length || 0})
+                    </Typography>
+                    {formData.aliases?.map((alias, index) => (
                                 <Box key={index} sx={{ mb: 1, p: 1.5, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <Box>
                                             <Typography variant="caption" color="text.secondary">
-                                                {documentTypes.find(type => type.value === alias.document_type)?.label || alias.document_type}
-                                            </Typography>
+                                        {documentTypes.find(type => type.value === alias.document_type)?.label || alias.document_type}
+                                    </Typography>
                                             <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                                {alias.document_number}
-                                            </Typography>
+                                        {alias.document_number}
+                                    </Typography>
                                         </Box>
                                         <Box>
                                             {alias.is_primary && <Chip label="PRIMARY" size="small" color="primary" sx={{ fontSize: '0.65rem', height: '20px' }} />}
                                         </Box>
                                     </Box>
-                                </Box>
-                            ))}
+                        </Box>
+                    ))}
                         </Grid>
 
-                        {/* Addresses Summary */}
+                    {/* Addresses Summary */}
                         <Grid item xs={12} md={6}>
                             <Typography variant="body1" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.95rem' }}>
-                                Addresses ({formData.addresses?.length || 0})
-                            </Typography>
-                            {formData.addresses?.map((address, index) => (
+                        Addresses ({formData.addresses?.length || 0})
+                    </Typography>
+                    {formData.addresses?.map((address, index) => (
                                 <Box key={index} sx={{ mb: 1, p: 1.5, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                         <Box sx={{ flex: 1 }}>
                                             <Typography variant="caption" color="text.secondary">
                                                 {address.address_type === 'RESIDENTIAL' ? 'RESIDENTIAL' : 'POSTAL'}
-                                            </Typography>
+                                    </Typography>
                                             <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                                                {[address.street_line1, address.street_line2, address.locality, address.town].filter(Boolean).join(', ')}
-                                                {address.postal_code && ` - ${address.postal_code}`}
-                                            </Typography>
+                                        {[address.street_line1, address.street_line2, address.locality, address.town].filter(Boolean).join(', ')}
+                                        {address.postal_code && ` - ${address.postal_code}`}
+                                    </Typography>
                                         </Box>
                                         {address.is_primary && <Chip label="PRIMARY" size="small" color="primary" sx={{ fontSize: '0.65rem', height: '20px' }} />}
                                     </Box>
-                                </Box>
-                            ))}
+                        </Box>
+                    ))}
                         </Grid>
                     </Grid>
 
@@ -2630,77 +2668,100 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     >
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                             <Typography variant="h5" component="h1" sx={{ fontWeight: 600 }}>
-                                {title}
-                            </Typography>
+                            {title}
+                        </Typography>
 
-                            <Box sx={{ display: 'flex', gap: 1 }}>
-                                {mode === 'standalone' && (
-                                    <Button
-                                        variant="outlined"
-                                        onClick={resetForm}
-                                        startIcon={<ClearIcon />}
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                            {mode === 'standalone' && (
+                                <Button
+                                    variant="outlined"
+                                    onClick={resetForm}
+                                    startIcon={<ClearIcon />}
                                         size="small"
-                                    >
-                                        Start Over
-                                    </Button>
-                                )}
-                                {(mode === 'application' || mode === 'search') && onCancel && (
-                                    <Button
-                                        variant="outlined"
-                                        onClick={handleFormCancel}
+                                >
+                                    Start Over
+                                </Button>
+                            )}
+                            {(mode === 'application' || mode === 'search') && onCancel && (
+                                <Button
+                                    variant="outlined"
+                                    onClick={handleFormCancel}
                                         size="small"
-                                    >
-                                        Cancel
-                                    </Button>
-                                )}
-                            </Box>
+                                >
+                                    Cancel
+                                </Button>
+                            )}
                         </Box>
+                    </Box>
 
                         <Typography variant="body2" color="text.secondary">
-                            {subtitle}
-                        </Typography>
+                        {subtitle}
+                    </Typography>
                     </Paper>
-                )}
+            )}
 
-                {/* Stepper */}
-                <Paper 
-                    elevation={0}
-                    sx={{ 
-                        p: 2, 
-                        mb: 3,
-                        bgcolor: 'white',
-                        boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-                        borderRadius: 2
+            {/* Person Form Tabs */}
+            <Paper 
+                elevation={0}
+                sx={{ 
+                    mb: 2,
+                    bgcolor: 'white',
+                    boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                    borderRadius: 2
+                }}
+            >
+                <Tabs
+                    value={currentStep}
+                    onChange={handleTabChange}
+                    sx={{
+                        px: 2,
+                        '& .MuiTab-root': {
+                            minHeight: 40,
+                            textTransform: 'none',
+                            fontSize: '0.8rem',
+                            color: 'text.secondary',
+                            bgcolor: 'primary.50',
+                            mx: 0.5,
+                            borderRadius: '6px 6px 0 0',
+                            '&.Mui-selected': {
+                                bgcolor: 'primary.100',
+                                color: 'primary.main',
+                            },
+                            '&:hover': {
+                                bgcolor: 'primary.100',
+                                '&.Mui-selected': {
+                                    bgcolor: 'primary.100',
+                                }
+                            },
+                            '&.Mui-disabled': {
+                                opacity: 0.4
+                            }
+                        },
+                        '& .MuiTabs-indicator': {
+                            display: 'none'
+                        }
                     }}
                 >
-                    <Stepper activeStep={currentStep} alternativeLabel>
-                        {steps.map((label, index) => {
-                            const canNavigate = (index < currentStep || stepValidation[index] || (index === 0 && !isNewPerson)) && !(skipFirstStep && index === 0);
-                            const isDisabled = skipFirstStep && index === 0;
-                            return (
-                                <Step key={label} completed={stepValidation[index]} disabled={isDisabled}>
-                                    <StepLabel
-                                        onClick={() => canNavigate && handleStepClick(index)}
-                                        sx={{
-                                            cursor: canNavigate ? 'pointer' : 'default',
-                                            '&:hover': canNavigate ? { opacity: 0.8 } : {},
-                                            opacity: isDisabled ? 0.4 : 1,
-                                        }}
-                                    >
-                                        {label}
-                                    </StepLabel>
-                                </Step>
-                            );
-                        })}
-                    </Stepper>
-                </Paper>
+                    {steps.map((step, index) => {
+                        const canNavigate = (index < currentStep || stepValidation[index] || (index === 0 && !isNewPerson)) && !(skipFirstStep && index === 0);
+                        const isDisabled = skipFirstStep && index === 0;
+                        return (
+                            <Tab
+                                key={step.label}
+                                label={renderTabLabel(step, index)}
+                                disabled={(!canNavigate || isDisabled) && index !== currentStep}
+                            />
+                        );
+                    })}
+                </Tabs>
+            </Paper>
 
-                {/* Step Content */}
+            {/* Step Content */}
                 <Box ref={stepContentRef} sx={{ mb: 3 }}>
-                    {renderStepContent()}
-                </Box>
+                {renderStepContent()}
+            </Box>
 
-                {/* Navigation */}
+            {/* Navigation */}
                 <Paper 
                     elevation={0}
                     sx={{ 
@@ -2710,76 +2771,76 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                         borderRadius: 2
                     }}
                 >
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Button
-                            disabled={currentStep === (skipFirstStep ? 1 : 0)}
-                            onClick={handleBack}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Button
+                        disabled={currentStep === (skipFirstStep ? 1 : 0)}
+                        onClick={handleBack}
                             size="small"
-                        >
-                            Back
-                        </Button>
+                    >
+                        Back
+                    </Button>
 
                         <Box sx={{ display: 'flex', gap: 1 }}>
-                            {currentStep < steps.length - 1 ? (
-                                <Button
-                                    variant="contained"
-                                    onClick={handleNext}
-                                    disabled={lookupLoading}
+                        {currentStep < steps.length - 1 ? (
+                            <Button
+                                variant="contained"
+                                onClick={handleNext}
+                                disabled={lookupLoading}
                                     size="small"
                                     sx={{
                                         boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
                                     }}
+                            >
+                                {currentStep === 0 ? 'Search' : 'Next'}
+                            </Button>
+                        ) : (
+                            // Special handling for review step in application mode
+                            mode === 'application' && !isNewPerson ? (
+                                <Button
+                                    variant="contained"
+                                    onClick={() => {
+                                        // Trigger completion callback for application mode
+                                        // For existing persons, pass the actual person object with ID
+                                        const personToPass = personFound || {
+                                            id: currentPersonId,
+                                            ...personForm.getValues()
+                                        };
+                                        
+                                        console.log('Passing existing person to onSuccess:', personToPass);
+                                        
+                                        if (onComplete) {
+                                            onComplete(personToPass);
+                                        }
+                                        if (onSuccess) {
+                                            onSuccess(personToPass, true); // true indicates this is an edit/existing person
+                                        }
+                                    }}
+                                    startIcon={<ArrowForwardIcon />}
+                                        size="small"
+                                        sx={{
+                                            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
+                                        }}
                                 >
-                                    {currentStep === 0 ? 'Search' : 'Next'}
+                                    Confirm and Continue
                                 </Button>
                             ) : (
-                                // Special handling for review step in application mode
-                                mode === 'application' && !isNewPerson ? (
-                                    <Button
-                                        variant="contained"
-                                        onClick={() => {
-                                            // Trigger completion callback for application mode
-                                            // For existing persons, pass the actual person object with ID
-                                            const personToPass = personFound || {
-                                                id: currentPersonId,
-                                                ...personForm.getValues()
-                                            };
-                                            
-                                            console.log('Passing existing person to onSuccess:', personToPass);
-                                            
-                                            if (onComplete) {
-                                                onComplete(personToPass);
-                                            }
-                                            if (onSuccess) {
-                                                onSuccess(personToPass, true); // true indicates this is an edit/existing person
-                                            }
-                                        }}
-                                        startIcon={<ArrowForwardIcon />}
+                                <Button
+                                    variant="contained"
+                                    onClick={handleSubmit}
+                                    disabled={submitLoading || duplicateCheckLoading}
+                                    startIcon={<PersonAddIcon />}
                                         size="small"
                                         sx={{
                                             boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
                                         }}
-                                    >
-                                        Confirm and Continue
-                                    </Button>
-                                ) : (
-                                    <Button
-                                        variant="contained"
-                                        onClick={handleSubmit}
-                                        disabled={submitLoading || duplicateCheckLoading}
-                                        startIcon={<PersonAddIcon />}
-                                        size="small"
-                                        sx={{
-                                            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
-                                        }}
-                                    >
-                                        {duplicateCheckLoading ? 'Checking for Duplicates...' : submitLoading ? (isEditMode ? 'Updating...' : 'Submitting...') : (isEditMode ? 'Update Person' : 'Submit')}
-                                    </Button>
-                                )
-                            )}
-                        </Box>
+                                >
+                                    {duplicateCheckLoading ? 'Checking for Duplicates...' : submitLoading ? (isEditMode ? 'Updating...' : 'Submitting...') : (isEditMode ? 'Update Person' : 'Submit')}
+                                </Button>
+                            )
+                        )}
                     </Box>
-                </Paper>
+                </Box>
+            </Paper>
             </Box>
         </Box>
 

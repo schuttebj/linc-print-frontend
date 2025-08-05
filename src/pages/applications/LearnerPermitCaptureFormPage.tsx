@@ -11,10 +11,8 @@ import {
   Paper,
   Typography,
   Box,
-  Stepper,
-  Step,
-  StepLabel,
-  StepContent,
+  Tabs,
+  Tab,
   Button,
   Alert,
   CircularProgress,
@@ -73,18 +71,15 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
   // Steps for learner's permit capture
   const steps = [
     {
-      label: 'Select Person',
-      description: 'Choose existing person or register new learner\'s permit holder',
+      label: 'Person',
       icon: <PersonSearchIcon />
     },
     {
-      label: 'Capture Learner\'s Permit Details',
-      description: 'Enter existing learner\'s permit information for verification',
+      label: 'License Capture',
       icon: <DocumentScannerIcon />
     },
     {
-      label: 'Review & Submit',
-      description: 'Review captured information and submit',
+      label: 'Review',
       icon: <PreviewIcon />
     }
   ];
@@ -141,6 +136,14 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
   // Get location ID to use
   const getLocationId = (): string => {
     return user?.primary_location_id || selectedLocationId;
+  };
+
+  // Tab change handler
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    // Allow navigation to completed steps or current step
+    if (newValue <= activeStep || isStepValid(newValue - 1)) {
+      setActiveStep(newValue);
+    }
   };
 
   // Navigation handlers
@@ -200,6 +203,33 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
       });
     }
   }, [selectedPerson, licenseCaptureData]);
+
+  // Helper function to render tab with completion indicator
+  const renderTabLabel = (step: any, index: number) => {
+    const isCompleted = isStepValid(index);
+    const isCurrent = activeStep === index;
+    
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          color: isCompleted ? 'success.main' : isCurrent ? 'primary.main' : 'text.secondary' 
+        }}>
+          {isCompleted ? <CheckCircleIcon fontSize="small" /> : step.icon}
+        </Box>
+        <Typography 
+          variant="body2" 
+          sx={{ 
+            fontWeight: isCurrent ? 'bold' : 'normal',
+            color: isCompleted ? 'success.main' : isCurrent ? 'primary.main' : 'text.secondary'
+          }}
+        >
+          {step.label}
+        </Typography>
+      </Box>
+    );
+  };
 
   // Handle submission
   const handleSubmit = async () => {
@@ -565,94 +595,119 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Paper elevation={3} sx={{ p: 4 }}>
+    <Container maxWidth="lg" sx={{ py: 2, height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <Paper 
+        elevation={0}
+        sx={{ 
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: '#f8f9fa',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          overflow: 'hidden'
+        }}
+      >
         {/* Header */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h4" gutterBottom>
+        <Box sx={{ p: 2, bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Typography variant="h5" gutterBottom sx={{ mb: 1 }}>
             Learner's Permit Capture
           </Typography>
-          <Typography variant="body1" color="text.secondary">
+          <Typography variant="body2" color="text.secondary">
             Capture existing learner's permit details for system registration
           </Typography>
         </Box>
 
         {/* Error/Success Messages */}
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
+          <Alert severity="error" sx={{ mx: 2, mt: 2 }}>
             {error}
           </Alert>
         )}
         
         {success && (
-          <Alert severity="success" sx={{ mb: 3 }} icon={<CheckCircleIcon />}>
+          <Alert severity="success" sx={{ mx: 2, mt: 2 }} icon={<CheckCircleIcon />}>
             {success}
           </Alert>
         )}
 
-        {/* Stepper */}
-        <Stepper activeStep={activeStep} orientation="vertical">
-          {steps.map((step, index) => (
-            <Step key={step.label}>
-              <StepLabel
-                optional={
-                  <Typography variant="caption">{step.description}</Typography>
+        {/* Application Tabs */}
+        <Box sx={{ bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Tabs
+            value={activeStep}
+            onChange={handleTabChange}
+            sx={{
+              px: 2,
+              '& .MuiTab-root': {
+                minHeight: 48,
+                textTransform: 'none',
+                fontSize: '0.875rem',
+                color: 'text.secondary',
+                bgcolor: 'grey.100',
+                mx: 0.5,
+                borderRadius: '8px 8px 0 0',
+                '&.Mui-selected': {
+                  bgcolor: 'white',
+                  color: 'text.primary',
+                },
+                '&:hover': {
+                  bgcolor: 'grey.200',
+                  '&.Mui-selected': {
+                    bgcolor: 'white',
+                  }
                 }
-                StepIconComponent={() => (
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: 40,
-                      height: 40,
-                      borderRadius: '50%',
-                      bgcolor: activeStep >= index ? 'primary.main' : 'grey.300',
-                      color: activeStep >= index ? 'white' : 'grey.600',
-                    }}
-                  >
-                    {step.icon}
-                  </Box>
-                )}
-              >
-                {step.label}
-              </StepLabel>
-              <StepContent>
-                <Box sx={{ mt: 2, mb: 2 }}>
-                  {renderStepContent(index)}
-                </Box>
-                {/* Navigation Buttons */}
-                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                  <Button
-                    onClick={handleCancel}
-                    disabled={loading}
-                    color="secondary"
-                  >
-                    Cancel
-                  </Button>
-                  
-                  <Button
-                    disabled={index === 0 || loading}
-                    onClick={handleBack}
-                    startIcon={<ArrowBackIcon />}
-                  >
-                    Back
-                  </Button>
-                  
-                  <Button
-                    variant="contained"
-                    onClick={index === steps.length - 1 ? handleSubmit : handleNext}
-                    disabled={!isStepValid(index) || loading}
-                    startIcon={loading ? <CircularProgress size={20} /> : undefined}
-                    endIcon={index !== steps.length - 1 ? <ArrowForwardIcon /> : undefined}
-                  >
-                    {loading ? 'Submitting...' : index === steps.length - 1 ? 'Submit Capture' : 'Next'}
-                  </Button>
-                </Box>
-              </StepContent>
-            </Step>
-          ))}
-        </Stepper>
+              },
+              '& .MuiTabs-indicator': {
+                display: 'none'
+              }
+            }}
+          >
+            {steps.map((step, index) => (
+              <Tab
+                key={step.label}
+                label={renderTabLabel(step, index)}
+                disabled={index > activeStep && !isStepValid(index)}
+              />
+            ))}
+          </Tabs>
+        </Box>
+
+        {/* Tab Content */}
+        <Box sx={{ flexGrow: 1, overflow: 'auto', p: 2 }}>
+          {renderStepContent(activeStep)}
+        </Box>
+
+        {/* Navigation Buttons */}
+        <Box sx={{ p: 2, bgcolor: 'white', borderTop: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+          <Button
+            onClick={handleCancel}
+            disabled={loading}
+            color="secondary"
+            size="small"
+          >
+            Cancel
+          </Button>
+          
+          <Button
+            disabled={activeStep === 0 || loading}
+            onClick={handleBack}
+            startIcon={<ArrowBackIcon />}
+            size="small"
+          >
+            Back
+          </Button>
+          
+          <Button
+            variant="contained"
+            onClick={activeStep === steps.length - 1 ? handleSubmit : handleNext}
+            disabled={!isStepValid(activeStep) || loading}
+            startIcon={loading ? <CircularProgress size={20} /> : undefined}
+            endIcon={activeStep !== steps.length - 1 ? <ArrowForwardIcon /> : undefined}
+            size="small"
+          >
+            {loading ? 'Submitting...' : activeStep === steps.length - 1 ? 'Submit Capture' : 'Next'}
+          </Button>
+        </Box>
       </Paper>
     </Container>
   );
