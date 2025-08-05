@@ -134,7 +134,19 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
           licenseCaptureData.captured_licenses.length > 0 &&
           validateCapturedDataForAuthorization(licenseCaptureData).isValid;
         const hasLocation = !!user?.primary_location_id || !!selectedLocationId;
-        return hasValidLicenseData && hasLocation && !!selectedPerson && !!selectedPerson.id;
+        const hasPerson = !!selectedPerson && !!selectedPerson.id;
+        
+        console.log('🔍 Step 1 validation debug:', {
+          hasValidLicenseData,
+          hasLocation,
+          hasPerson,
+          userPrimaryLocation: user?.primary_location_id,
+          selectedLocationId,
+          licenseCaptureData,
+          selectedPerson: selectedPerson?.id
+        });
+        
+        return hasValidLicenseData && hasLocation && hasPerson;
       case 2:
         return !!selectedPerson && !!selectedPerson.id && !!licenseCaptureData && 
           licenseCaptureData.captured_licenses.length > 0 &&
@@ -793,7 +805,23 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
           <Button
             variant="contained"
             onClick={activeStep === steps.length - 1 ? handleSubmit : handleNext}
-            disabled={(activeStep === 0 && personStep < 5 && !isPersonStepValid()) || (activeStep > 0 && !isStepValid(activeStep)) || loading}
+            disabled={(() => {
+              const isPersonStepInvalid = activeStep === 0 && personStep < 5 && !isPersonStepValid();
+              const isCurrentStepInvalid = activeStep > 0 && !isStepValid(activeStep);
+              const isDisabled = isPersonStepInvalid || isCurrentStepInvalid || loading;
+              
+              console.log('🔍 Next button disabled debug:', {
+                activeStep,
+                personStep,
+                isPersonStepInvalid,
+                isCurrentStepInvalid,
+                isStepValid: activeStep > 0 ? isStepValid(activeStep) : 'N/A',
+                loading,
+                isDisabled
+              });
+              
+              return isDisabled;
+            })()}
             startIcon={loading ? <CircularProgress size={20} /> : undefined}
             endIcon={activeStep !== steps.length - 1 ? <ArrowForwardIcon /> : undefined}
             size="small"
