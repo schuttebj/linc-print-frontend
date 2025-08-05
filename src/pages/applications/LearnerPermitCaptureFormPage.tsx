@@ -5,7 +5,7 @@
  * Workflow: Person Selection (A) → License Capture → Review & Submit
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Container,
   Paper,
@@ -60,6 +60,7 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
 
   // Form state
   const [activeStep, setActiveStep] = useState(0);
+  const [personStep, setPersonStep] = useState(0);
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
   const [licenseCaptureData, setLicenseCaptureData] = useState<LicenseCaptureData | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
@@ -67,6 +68,10 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
+
+  // Person form navigation refs
+  const personNextRef = useRef<() => Promise<boolean>>();
+  const personBackRef = useRef<() => boolean>();
 
   // Steps for learner's permit capture
   const steps = [
@@ -114,7 +119,8 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
   const isStepValid = (step: number): boolean => {
     switch (step) {
       case 0:
-        return !!selectedPerson && !!selectedPerson.id;
+        // Person step is valid if we have a person and completed all person sub-steps
+        return !!selectedPerson && !!selectedPerson.id && personStep >= 5;
       case 1:
         // Check license capture data and location for admin users
         const hasLicenseData = !!licenseCaptureData && licenseCaptureData.captured_licenses.length > 0;
@@ -146,16 +152,47 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
     }
   };
 
+  // Person step change handler
+  const handlePersonStepChange = (step: number, canAdvance: boolean) => {
+    setPersonStep(step);
+  };
+
   // Navigation handlers
-  const handleNext = () => {
-    if (activeStep < steps.length - 1) {
+  const handleNext = async () => {
+    if (activeStep === 0) {
+      // If we're on the person step, use person form navigation
+      if (personNextRef.current) {
+        const canAdvance = await personNextRef.current();
+        if (canAdvance) {
+          if (personStep < 5) { // 5 is the last person step (Review)
+            setPersonStep(personStep + 1);
+          } else {
+            // Person form is complete, move to next application step
+            setActiveStep(activeStep + 1);
+          }
+        }
+      }
+    } else if (activeStep < steps.length - 1) {
       setActiveStep(activeStep + 1);
     }
   };
 
   const handleBack = () => {
-    if (activeStep > 0) {
-      setActiveStep(activeStep - 1);
+    if (activeStep === 0) {
+      // If we're on the person step, use person form navigation
+      if (personBackRef.current) {
+        const canGoBack = personBackRef.current();
+        if (canGoBack && personStep > 0) {
+          setPersonStep(personStep - 1);
+        }
+      }
+    } else if (activeStep > 0) {
+      if (activeStep === 1 && personStep < 5) {
+        // Going back from license capture to person form
+        setActiveStep(0);
+      } else {
+        setActiveStep(activeStep - 1);
+      }
     }
   };
 
@@ -319,6 +356,10 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
           <PersonFormWrapper
             mode="application"
             onSuccess={handlePersonSelected}
+            onPersonStepChange={handlePersonStepChange}
+            externalPersonStep={personStep}
+            onPersonNext={personNextRef}
+            onPersonBack={personBackRef}
             title=""
             subtitle="Select existing person or register new learner's permit holder"
             showHeader={false}
