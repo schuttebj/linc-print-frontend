@@ -621,6 +621,11 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                             markStepValid(4, true); // Address step
                             setCurrentStep(5); // Jump to review step for confirmation
                             
+                            // Update all step validation indicators
+                            setTimeout(() => {
+                                updateAllStepValidation();
+                            }, 100);
+                            
                             // In application mode, notify parent immediately for validation
                             // but mark that we need to save when Next is clicked
                             if (mode === 'application') {
@@ -915,6 +920,57 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         setStepValidation(newValidation);
     };
 
+    // Helper function to get step fields for validation
+    const getStepFields = (step: number) => {
+        const stepFieldMap = [
+            [], // Lookup step
+            ['surname', 'first_name', 'person_nature', 'nationality_code', 'preferred_language'], // Only required fields for step 1
+            [], // Contact step - don't validate on transition, let user fill optional fields
+            [], // ID Documents step - complex validation handled separately
+            ['addresses'], // Address step - validate all addresses
+            [], // Review step
+        ];
+        return stepFieldMap[step] || [];
+    };
+
+    // Function to validate and update all step indicators
+    const updateAllStepValidation = useCallback(async () => {
+        console.log('🔄 Updating step validation indicators');
+        
+        if (isExistingPerson) {
+            // For existing persons, mark all steps as valid
+            console.log('✅ Existing person - marking all steps valid');
+            const allValid = new Array(steps.length).fill(true);
+            setStepValidation(allValid);
+            return;
+        }
+
+        // For new persons, validate each step based on current form data
+        try {
+            // Step 0: Lookup - always valid if we got this far
+            markStepValid(0, true);
+
+            // Steps 1-4: Validate based on form data
+            for (let i = 1; i < steps.length - 1; i++) {
+                const stepFields = getStepFields(i);
+                if (stepFields.length > 0) {
+                    const isValid = await personForm.trigger(stepFields as any);
+                    markStepValid(i, isValid);
+                } else {
+                    // Steps with no validation fields are considered valid
+                    markStepValid(i, true);
+                }
+            }
+
+            // Step 5: Review - valid if we have a person or all previous steps valid
+            const allPreviousValid = stepValidation.slice(0, -1).every(valid => valid);
+            markStepValid(steps.length - 1, allPreviousValid);
+
+        } catch (error) {
+            console.error('Error updating step validation:', error);
+        }
+    }, [isExistingPerson, steps.length, stepValidation, personForm, getStepFields]);
+
     const validateCurrentStep = async () => {
         try {
             if (currentStep === 0) {
@@ -942,18 +998,6 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             markStepValid(currentStep, false);
             return false;
         }
-    };
-
-    const getStepFields = (step: number) => {
-        const stepFieldMap = [
-            [], // Lookup step
-            ['surname', 'first_name', 'person_nature', 'nationality_code', 'preferred_language'], // Only required fields for step 1
-            [], // Contact step - don't validate on transition, let user fill optional fields
-            [], // ID Documents step - complex validation handled separately
-            ['addresses'], // Address step - validate all addresses
-            [], // Review step
-        ];
-        return stepFieldMap[step] || [];
     };
 
     const handleNext = async () => {
@@ -997,8 +1041,10 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     };
 
     // Tab change handler for tabs
-    const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    const handleTabChange = async (event: React.SyntheticEvent, newValue: number) => {
         handleStepClick(newValue);
+        // Update validation indicators when tab is clicked
+        await updateAllStepValidation();
     };
 
     // Expose navigation functions for external control
@@ -1007,6 +1053,9 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             onPersonNext.current = async () => {
                 const isValid = await validateCurrentStep();
                 if (isValid) {
+                    // Update all step validation indicators
+                    await updateAllStepValidation();
+                    
                     if (currentStep === 0) {
                         const lookupData = lookupForm.getValues();
                         await performLookup(lookupData);
@@ -1038,12 +1087,14 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             onPersonBack.current = () => {
                 const minStep = skipFirstStep ? 1 : 0;
                 if (currentStep > minStep) {
+                    // Update validation indicators when going back (fire and forget)
+                    updateAllStepValidation();
                     return true;
                 }
                 return false;
             };
         }
-    }, [mode, currentStep, onPersonNext, onPersonBack, validateCurrentStep, lookupForm, populateNameInDocument, performLookup, steps.length, skipFirstStep]);
+    }, [mode, currentStep, onPersonNext, onPersonBack, validateCurrentStep, lookupForm, populateNameInDocument, performLookup, steps.length, skipFirstStep, updateAllStepValidation]);
 
     // Helper function to render tab with completion indicator  
     const renderTabLabel = React.useCallback((step: any, index: number) => {
