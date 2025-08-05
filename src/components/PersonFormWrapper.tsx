@@ -268,6 +268,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     const [potentialDuplicates, setPotentialDuplicates] = useState<any[]>([]);
     const [duplicateThreshold] = useState(70.0);
     const [pendingPersonPayload, setPendingPersonPayload] = useState<any>(null);
+    const [pendingAddressPayloads, setPendingAddressPayloads] = useState<any[]>([]);
 
     // Lookup data state - loaded from backend enums
     const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([]);
@@ -997,63 +998,61 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                         is_current: alias.is_current,
                         expiry_date: alias.expiry_date || undefined,
                     })),
-
-                // Transform addresses to match backend schema - ALL CAPITALIZED
-                addresses: formData.addresses
-                    .filter(address => {
-                        // TEMPORARY: More lenient filtering for debugging
-                        // Include address if it has at least some key fields filled
-                        const hasAnyKeyFields = (address.street_line1 && address.street_line1.trim()) ||
-                                              (address.locality && address.locality.trim()) ||
-                                              (address.postal_code && address.postal_code.trim()) ||
-                                              (address.town && address.town.trim());
-                        
-                        // Original strict validation
-                        const hasRequiredFields = address.street_line1 && address.street_line1.trim() &&
-                                                address.locality && address.locality.trim() &&
-                                                address.postal_code && address.postal_code.trim() &&
-                                                address.town && address.town.trim() &&
-                                                address.province_code && address.province_code.trim();
-                        
-                        console.log('🔍 Address validation check:', {
-                            address,
-                            hasRequiredFields,
-                            hasAnyKeyFields,
-                            street_line1: !!address.street_line1?.trim(),
-                            locality: !!address.locality?.trim(),
-                            postal_code: !!address.postal_code?.trim(),
-                            town: !!address.town?.trim(),
-                            province_code: !!address.province_code?.trim(),
-                            usingLenientFilter: hasAnyKeyFields
-                        });
-                        
-                        // TEMPORARY: Use lenient filtering for debugging
-                        return hasAnyKeyFields;
-                    })
-                    .map(address => ({
-                        address_type: address.address_type?.toUpperCase() || 'RESIDENTIAL',
-                        is_primary: address.is_primary,
-                        street_line1: address.street_line1?.toUpperCase() || '',
-                        street_line2: address.street_line2?.toUpperCase() || undefined,
-                        locality: address.locality?.toUpperCase() || '',
-                        postal_code: address.postal_code || '',
-                        town: address.town?.toUpperCase() || '',
-                        country: address.country?.toUpperCase() || 'MADAGASCAR',
-                        province_code: address.province_code?.toUpperCase() || '',
-                        is_verified: false,
-                    })),
+                // NOTE: Addresses are handled separately via dedicated endpoints
             };
 
+            // Prepare addresses separately for dedicated address endpoints
+            const addressPayloads = formData.addresses
+                .filter(address => {
+                    // Include address if it has the required fields filled
+                    const hasRequiredFields = address.street_line1 && address.street_line1.trim() &&
+                                            address.locality && address.locality.trim() &&
+                                            address.postal_code && address.postal_code.trim() &&
+                                            address.town && address.town.trim() &&
+                                            address.province_code && address.province_code.trim();
+                    
+                    console.log('🔍 Address validation check:', {
+                        address,
+                        hasRequiredFields,
+                        street_line1: !!address.street_line1?.trim(),
+                        locality: !!address.locality?.trim(),
+                        postal_code: !!address.postal_code?.trim(),
+                        town: !!address.town?.trim(),
+                        province_code: !!address.province_code?.trim()
+                    });
+                    
+                    return hasRequiredFields;
+                })
+                .map(address => ({
+                    address_type: address.address_type?.toUpperCase() || 'RESIDENTIAL',
+                    is_primary: address.is_primary,
+                    street_line1: address.street_line1?.toUpperCase() || '',
+                    street_line2: address.street_line2?.toUpperCase() || undefined,
+                    locality: address.locality?.toUpperCase() || '',
+                    postal_code: address.postal_code || '',
+                    town: address.town?.toUpperCase() || '',
+                    country: address.country?.toUpperCase() || 'MADAGASCAR',
+                    province_code: address.province_code?.toUpperCase() || '',
+                    is_verified: false,
+                }));
+
             console.log('✅ Transformed person payload for submission:', personPayload);
-            console.log('📍 Address data being sent:', personPayload.addresses);
+            console.log('📍 Address payloads for separate endpoints:', addressPayloads);
             console.log('📊 FINAL ADDRESS SUMMARY:');
             console.log(`- Original address count: ${formData.addresses?.length || 0}`);
-            console.log(`- Filtered address count: ${personPayload.addresses?.length || 0}`);
-            console.log('- Final address payload:', JSON.stringify(personPayload.addresses, null, 2));
+            console.log(`- Filtered address count: ${addressPayloads?.length || 0}`);
+            console.log('- Final address payloads:', JSON.stringify(addressPayloads, null, 2));
 
             if (isEditMode && currentPersonId) {
                 // Update existing person
                 console.log('Updating existing person:', currentPersonId);
+                console.log('🌐 SENDING PUT REQUEST TO:', `${API_BASE_URL}/api/v1/persons/${currentPersonId}`);
+                console.log('📤 REQUEST BODY:', JSON.stringify(personPayload, null, 2));
+                console.log('📧 REQUEST HEADERS:', {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken ? accessToken.substring(0, 20) + '...' : 'none'}`,
+                });
+                
                 const response = await fetch(`${API_BASE_URL}/api/v1/persons/${currentPersonId}`, {
                     method: 'PUT',
                     headers: {
@@ -1063,9 +1062,12 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     body: JSON.stringify(personPayload),
                 });
 
+                console.log('📥 API RESPONSE STATUS:', response.status, response.statusText);
+                console.log('📥 API RESPONSE HEADERS:', Object.fromEntries(response.headers.entries()));
+                
                 if (!response.ok) {
                     const errorData = await response.json();
-                    console.error('API Error Response:', errorData);
+                    console.error('❌ API ERROR RESPONSE:', errorData);
                     throw new Error(errorData.detail || `HTTP ${response.status}: Failed to update person`);
                 }
 
@@ -1075,11 +1077,29 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     addressCount: result.addresses?.length || 0,
                     addresses: result.addresses
                 });
-                setCreatedPerson(result);
-                handleFormComplete(result);
+                
+                // Now handle addresses separately using dedicated address endpoints
+                await handleAddressUpdates(currentPersonId, addressPayloads, result.addresses || []);
+                
+                // Fetch updated person with addresses
+                const updatedPersonResponse = await fetch(`${API_BASE_URL}/api/v1/persons/${currentPersonId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                    },
+                });
+                
+                if (updatedPersonResponse.ok) {
+                    const updatedPerson = await updatedPersonResponse.json();
+                    console.log('✅ FINAL PERSON WITH ADDRESSES:', updatedPerson);
+                    setCreatedPerson(updatedPerson);
+                    handleFormComplete(updatedPerson);
+                } else {
+                    setCreatedPerson(result);
+                    handleFormComplete(result);
+                }
             } else {
                 // Create new person (with duplicate check)
-                await checkForDuplicates(personPayload);
+                await checkForDuplicates(personPayload, addressPayloads);
             }
 
         } catch (error) {
@@ -1090,12 +1110,78 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         }
     };
 
-    const checkForDuplicates = async (personPayload: any) => {
+    const handleAddressUpdates = async (personId: string, newAddresses: any[], existingAddresses: any[]) => {
+        console.log('🏠 HANDLING ADDRESS UPDATES:', {
+            personId,
+            newAddressCount: newAddresses.length,
+            existingAddressCount: existingAddresses.length,
+            newAddresses,
+            existingAddresses
+        });
+
+        try {
+            // For now, we'll delete all existing addresses and create new ones
+            // TODO: In the future, we could implement smarter update logic
+            
+            // Delete existing addresses
+            for (const existingAddress of existingAddresses) {
+                console.log('🗑️ Deleting existing address:', existingAddress.id);
+                const deleteResponse = await fetch(
+                    `${API_BASE_URL}/api/v1/persons/${personId}/addresses/${existingAddress.id}`,
+                    {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                        },
+                    }
+                );
+                
+                if (!deleteResponse.ok) {
+                    console.error('❌ Failed to delete address:', existingAddress.id);
+                } else {
+                    console.log('✅ Successfully deleted address:', existingAddress.id);
+                }
+            }
+
+            // Create new addresses
+            for (const addressPayload of newAddresses) {
+                console.log('➕ Creating new address:', addressPayload);
+                const createResponse = await fetch(
+                    `${API_BASE_URL}/api/v1/persons/${personId}/addresses`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${accessToken}`,
+                        },
+                        body: JSON.stringify(addressPayload),
+                    }
+                );
+
+                if (!createResponse.ok) {
+                    const errorData = await createResponse.json();
+                    console.error('❌ Failed to create address:', errorData);
+                    throw new Error(`Failed to create address: ${errorData.detail || createResponse.statusText}`);
+                } else {
+                    const createdAddress = await createResponse.json();
+                    console.log('✅ Successfully created address:', createdAddress);
+                }
+            }
+
+            console.log('🎉 All address updates completed successfully');
+        } catch (error) {
+            console.error('❌ Error during address updates:', error);
+            throw error;
+        }
+    };
+
+    const checkForDuplicates = async (personPayload: any, addressPayloads: any[] = []) => {
         setDuplicateCheckLoading(true);
 
         try {
-            // Store the payload for later use
+            // Store both payloads for later use
             setPendingPersonPayload(personPayload);
+            setPendingAddressPayloads(addressPayloads);
 
             // Search for potential duplicates using similar data
             const duplicateQuery = new URLSearchParams({
@@ -1158,6 +1244,9 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
     const createPersonDirectly = async (personPayload: any) => {
         try {
+            console.log('🌐 SENDING POST REQUEST TO:', `${API_BASE_URL}/api/v1/persons/`);
+            console.log('📤 CREATE REQUEST BODY:', JSON.stringify(personPayload, null, 2));
+            
             const response = await fetch(`${API_BASE_URL}/api/v1/persons/`, {
                 method: 'POST',
                 headers: {
@@ -1167,8 +1256,12 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 body: JSON.stringify(personPayload),
             });
 
+            console.log('📥 CREATE API RESPONSE STATUS:', response.status, response.statusText);
+            console.log('📥 CREATE API RESPONSE HEADERS:', Object.fromEntries(response.headers.entries()));
+            
             if (!response.ok) {
                 const errorData = await response.json();
+                console.error('❌ CREATE API ERROR RESPONSE:', errorData);
                 throw new Error(errorData.detail || `HTTP ${response.status}: Failed to create person`);
             }
 
@@ -1178,8 +1271,32 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 addressCount: result.addresses?.length || 0,
                 addresses: result.addresses
             });
-            setCreatedPerson(result);
-            handleFormComplete(result);
+            
+            // Now handle addresses separately using dedicated address endpoints
+            // For create, we use the stored address payloads
+            if (pendingAddressPayloads && pendingAddressPayloads.length > 0) {
+                await handleAddressUpdates(result.id, pendingAddressPayloads, []);
+                
+                // Fetch updated person with addresses
+                const updatedPersonResponse = await fetch(`${API_BASE_URL}/api/v1/persons/${result.id}`, {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                    },
+                });
+                
+                if (updatedPersonResponse.ok) {
+                    const updatedPerson = await updatedPersonResponse.json();
+                    console.log('✅ FINAL CREATED PERSON WITH ADDRESSES:', updatedPerson);
+                    setCreatedPerson(updatedPerson);
+                    handleFormComplete(updatedPerson);
+                } else {
+                    setCreatedPerson(result);
+                    handleFormComplete(result);
+                }
+            } else {
+                setCreatedPerson(result);
+                handleFormComplete(result);
+            }
         } catch (error) {
             console.error('Failed to create person:', error);
             throw error;
