@@ -268,7 +268,7 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
     const allExistingCategories = getExistingCategories(currentLicenseId);
     
     if (applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE) {
-      // Show all learner's permit categories
+      // Show all learner permit categories
       return [
         {
           value: LicenseCategory.LEARNERS_1,
@@ -289,7 +289,7 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
     } else {
       // For DRIVERS_LICENSE_CAPTURE, filter based on existing licenses and prerequisites
       return Object.values(LicenseCategory)
-        .filter(category => !['1', '2', '3'].includes(category)) // Exclude learner's permit codes
+        .filter(category => !['1', '2', '3'].includes(category)) // Exclude learner permit codes
         .map(category => {
           const categoryRule = LICENSE_CATEGORY_RULES[category];
           const alreadyExists = systemCategories.has(category);
@@ -593,11 +593,11 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
         {captureData.captured_licenses.length === 0 ? (
           <Alert severity="info" sx={{ mb: 2, py: 1 }}>
             <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
-              No {applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE ? "learner's permits" : "driver's licenses"} added yet. 
-              Click "Add {applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE ? "Learner's Permit" : "Driver's License"}" to start capturing existing licenses.
+              No {applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE ? "learner permits" : "driver licenses"} added yet. 
+              Click "Add {applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE ? "Learner Permit" : "Driver License"}" to start capturing existing licenses.
             </Typography>
           </Alert>
-        )}
+        ) : null}
 
         {/* License List */}
         {captureData.captured_licenses.map((license, index) => (
