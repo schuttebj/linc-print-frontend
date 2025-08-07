@@ -710,7 +710,11 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
         </Box>
 
         {/* Tab Content */}
-        <Box sx={{ flexGrow: 1, overflow: 'auto', p: 2 }}>
+        <Box sx={{ 
+          flexGrow: 1, 
+          overflow: 'auto', 
+          p: activeStep === 0 ? 0 : 2 // No padding for person step, padding for other steps
+        }}>
           {/* Person Form - Always rendered but conditionally visible to preserve state */}
           <Box sx={{ display: activeStep === 0 ? 'block' : 'none' }}>
             <PersonFormWrapper

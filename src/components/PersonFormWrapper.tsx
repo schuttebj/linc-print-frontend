@@ -3288,8 +3288,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 p: mode === 'application' ? 0 : 2 // No padding in application mode
             }}>
                 <Box sx={{ 
-                    maxWidth: 1200, 
-                    mx: 'auto',
+                    maxWidth: mode === 'application' ? 'none' : 1200, // No max width in application mode
+                    mx: mode === 'application' ? 0 : 'auto', // No horizontal margin in application mode
                     height: '100%',
                     display: 'flex',
                     flexDirection: 'column'
