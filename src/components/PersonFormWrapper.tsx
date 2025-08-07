@@ -1141,8 +1141,10 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 console.log('✅ All existing person data is valid - navigating to review step');
                 setCurrentStep(steps.length - 1); // Navigate to review step
             } else {
-                console.log(`⚠️ Found invalid data - navigating to step ${firstInvalidStep}`);
-                setCurrentStep(firstInvalidStep); // Navigate to first invalid step
+                console.log(`⚠️ Found invalid data - user can navigate manually to fix issues`);
+                // Note: Removed automatic navigation to first invalid step
+                // This allows users to freely navigate between completed steps
+                // They can manually go to invalid steps when they want to fix them
             }
             
         } catch (error) {
@@ -1176,14 +1178,9 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             const reviewStepValid = stepValidation.slice(0, -1).every(valid => valid);
             markStepValid(steps.length - 1, reviewStepValid);
 
-            // For existing persons, navigate to first invalid step if any
-            if (isExistingPerson) {
-                const firstInvalidStep = stepValidation.findIndex(valid => !valid);
-                if (firstInvalidStep !== -1) {
-                    console.log('🎯 Navigating to first invalid step:', firstInvalidStep);
-                    setCurrentStep(firstInvalidStep);
-                }
-            }
+            // Note: Removed automatic navigation to first invalid step
+            // This was interfering with user's manual tab navigation
+            // Users can now freely navigate between completed steps
 
         } catch (error) {
             console.error('Error updating step validation:', error);
