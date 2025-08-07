@@ -115,11 +115,18 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
     loadLocations();
   }, [user]);
 
-  // Person step validation 
+  // Person step validation state
+  const [personFormValid, setPersonFormValid] = useState(false);
+  
+  // Person step validation callback from PersonFormWrapper
+  const handlePersonValidationChange = (step: number, isValid: boolean) => {
+    console.log('🎯 PersonFormWrapper validation callback:', { step, isValid });
+    setPersonFormValid(isValid);
+  };
+  
   const isPersonStepValid = (): boolean => {
-    // This will be updated by PersonFormWrapper through validation callbacks
-    // For now, assume we can advance if PersonFormWrapper allows it
-    return true;
+    // Use the actual validation state from PersonFormWrapper
+    return personFormValid;
   };
 
   // Step validation
@@ -732,6 +739,7 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
               mode="application"
               onSuccess={handlePersonSelected}
               onPersonStepChange={handlePersonStepChange}
+              onPersonValidationChange={handlePersonValidationChange}
               externalPersonStep={personStep}
               onPersonNext={personNextRef}
               onPersonBack={personBackRef}

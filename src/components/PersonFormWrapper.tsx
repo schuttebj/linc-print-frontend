@@ -54,6 +54,9 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useSearchParams } from 'react-router-dom';
 
+import { usePersonFormValidation, stepFieldConfig } from '../hooks/usePersonFormValidation';
+import { useFieldStyling, useSelectStyling } from '../hooks/useFieldStyling';
+
 import { useAuth } from '../contexts/AuthContext';
 import { API_BASE_URL } from '../config/api';
 import lookupService, { 
@@ -230,6 +233,7 @@ interface PersonFormWrapperProps {
     onCancel?: () => void;
     onSuccess?: (person: any, isEdit: boolean) => void;
     onPersonStepChange?: (step: number, canAdvance: boolean) => void;
+    onPersonValidationChange?: (step: number, isValid: boolean) => void;
     externalPersonStep?: number;
     onPersonNext?: React.MutableRefObject<() => Promise<boolean>>;
     onPersonBack?: React.MutableRefObject<() => boolean>;
@@ -246,6 +250,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     onCancel,
     onSuccess,
     onPersonStepChange,
+    onPersonValidationChange,
     externalPersonStep,
     onPersonNext,
     onPersonBack,
@@ -260,6 +265,9 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
     // URL parameters for editing
     const [searchParams] = useSearchParams();
+
+    // Form validation hook
+    const formValidation = usePersonFormValidation();
 
     // Ref for auto-scrolling to active step content
     const stepContentRef = useRef<HTMLDivElement>(null);
@@ -574,6 +582,20 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     const performLookup = async (data: PersonLookupForm) => {
         setLookupLoading(true);
         
+        // Validate the lookup data first
+        const lookupValidation = formValidation.validateStep(0, data);
+        if (!lookupValidation.isValid) {
+            console.log('Lookup validation failed:', lookupValidation.errors);
+            Object.keys(lookupValidation.errors).forEach(field => {
+                lookupForm.setError(field as any, { 
+                    type: 'manual', 
+                    message: lookupValidation.errors[field] 
+                });
+            });
+            setLookupLoading(false);
+            return;
+        }
+
         // Reset flags for new lookup
         setIsExistingPerson(false);
         setParentNotified(false);
@@ -586,7 +608,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 document_type: data.document_type,
                 document_number: data.document_number,
                 include_details: 'true',
-                limit: '1'
+                limit: '50' // Get more results to filter for exact match
             });
 
             const response = await fetch(`${API_BASE_URL}/api/v1/persons/search?${searchQuery}`, {
@@ -601,66 +623,89 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 console.log('Search result structure:', JSON.stringify(searchResult, null, 2));
 
                 if (Array.isArray(searchResult) && searchResult.length > 0) {
-                    // Person found with full details (includes aliases and addresses)
-                    const existingPerson = searchResult[0];
-                    console.log('Person found with full details:', existingPerson);
-                    console.log('Person fields:', Object.keys(existingPerson));
-                    setPersonFound(existingPerson);
-                    setCurrentPersonId(existingPerson.id);
-                    setIsNewPerson(false);
-                    setIsEditMode(true);
+                    // Filter for EXACT document number match
+                    const exactMatch = searchResult.find(person => {
+                        if (person.aliases && Array.isArray(person.aliases)) {
+                            return person.aliases.some(alias => 
+                                alias.document_type === data.document_type &&
+                                alias.document_number === data.document_number
+                            );
+                        }
+                        return false;
+                    });
 
-                    // Populate form with existing person data
-                    populateFormWithExistingPerson(existingPerson);
-                    
-                    // For application mode, check if person data is complete
-                    if (mode === 'application') {
-                        markStepValid(0, true); // Lookup step is always valid
+                    if (exactMatch) {
+                        // Person found with exact document number match
+                        const existingPerson = exactMatch;
+                        console.log('Person found with exact document number match:', existingPerson);
+                        console.log('Person fields:', Object.keys(existingPerson));
+                        setPersonFound(existingPerson);
+                        setCurrentPersonId(existingPerson.id);
+                        setIsNewPerson(false);
+                        setIsEditMode(true);
+
+                        // Populate form with existing person data
+                        populateFormWithExistingPerson(existingPerson);
                         
-                        const isComplete = isPersonDataComplete(existingPerson);
-                        setPersonDataWasIncomplete(!isComplete);
-                        
-                        if (isComplete) {
-                            // Person has complete information - mark as existing and all steps valid
-                            setIsExistingPerson(true);
+                        // For application mode, check if person data is complete
+                        if (mode === 'application') {
+                            markStepValid(0, true); // Lookup step is always valid
                             
-                            // Mark all steps as valid immediately
-                            const allValid = new Array(steps.length).fill(true);
-                            console.log('✅ Marking all steps as valid for existing person:', allValid);
-                            setStepValidation(allValid);
+                            const isComplete = isPersonDataComplete(existingPerson);
+                            setPersonDataWasIncomplete(!isComplete);
                             
-                            setCurrentStep(5); // Jump to review step for confirmation
-                            
-                            // In application mode, notify parent immediately for validation
-                            // but mark that we need to save when Next is clicked
-                            if (mode === 'application') {
-                                console.log('🎯 PersonFormWrapper: Found complete person, notifying parent immediately');
-                                console.log('🎯 PersonFormWrapper: Will save when Next button is clicked to capture clerk updates');
-                                // Set the person in parent state immediately so validation works
-                                if (onSuccess) {
-                                    onSuccess(existingPerson, true);
-                                    setParentNotified(true);
+                            if (isComplete) {
+                                // Person has complete information - mark as existing and all steps valid
+                                setIsExistingPerson(true);
+                                
+                                // Mark all steps as valid immediately
+                                const allValid = new Array(steps.length).fill(true);
+                                console.log('✅ Marking all steps as valid for existing person:', allValid);
+                                setStepValidation(allValid);
+                                
+                                setCurrentStep(5); // Jump to review step for confirmation
+                                
+                                // In application mode, notify parent immediately for validation
+                                // but mark that we need to save when Next is clicked
+                                if (mode === 'application') {
+                                    console.log('🎯 PersonFormWrapper: Found complete person, notifying parent immediately');
+                                    console.log('🎯 PersonFormWrapper: Will save when Next button is clicked to capture clerk updates');
+                                    // Set the person in parent state immediately so validation works
+                                    if (onSuccess) {
+                                        onSuccess(existingPerson, true);
+                                        setParentNotified(true);
+                                    }
+                                    // Don't call handleFormComplete - let external navigation trigger save
+                                } else {
+                                    // Only auto-complete in standalone mode
+                                    console.log('🎯 PersonFormWrapper: Standalone mode - triggering onSuccess immediately');
+                                    setTimeout(() => {
+                                        handleFormComplete(existingPerson);
+                                    }, 100);
                                 }
-                                // Don't call handleFormComplete - let external navigation trigger save
                             } else {
-                                // Only auto-complete in standalone mode
-                                console.log('🎯 PersonFormWrapper: Standalone mode - triggering onSuccess immediately');
-                                setTimeout(() => {
-                                    handleFormComplete(existingPerson);
-                                }, 100);
+                                // Person has incomplete information - start at personal info step
+                                setCurrentStep(1);
                             }
                         } else {
-                            // Person has incomplete information - start at personal info step
+                            // For standalone mode, proceed to personal information step
+                            markStepValid(0, true);
                             setCurrentStep(1);
                         }
                     } else {
-                        // For standalone mode, proceed to personal information step
+                        // No exact match found - setup for new person creation
+                        console.log('No exact document number match found, creating new person');
+                        setPersonFound(null);
+                        setCurrentPersonId(null);
+                        setIsNewPerson(true);
+                        setIsEditMode(false);
+                        setupNewPersonForm(data);
                         markStepValid(0, true);
                         setCurrentStep(1);
                     }
                 } else {
-                    // No person found - setup for new person creation
-                    console.log('No person found, creating new');
+                    // No search results at all - setup for new person creation
+                    console.log('No person found in search, creating new');
                     setPersonFound(null);
                     setCurrentPersonId(null);
                     setIsNewPerson(true);
@@ -1049,6 +1094,11 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         const newValidation = [...stepValidation];
         newValidation[stepIndex] = isValid;
         setStepValidation(newValidation);
+        
+        // Notify parent about validation state changes (for application mode)
+        if (mode === 'application' && onPersonValidationChange) {
+            onPersonValidationChange(stepIndex, isValid);
+        }
     };
 
     // Helper function to get step fields for validation
@@ -1125,40 +1175,51 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     }, [isExistingPerson, steps.length, stepValidation, personForm, getStepFields, validateMandatoryFields]);
 
     const validateCurrentStep = async () => {
+        console.log(`🔄 Validating step ${currentStep}`);
+        
         try {
-            // First check mandatory fields for current step
-            const hasMandatoryFields = validateCurrentStepMandatory();
-            console.log(`🔍 Step ${currentStep} mandatory validation:`, hasMandatoryFields);
-            
-            if (!hasMandatoryFields) {
-                console.log(`❌ Step ${currentStep} missing mandatory fields - disabling Next button`);
-                markStepValid(currentStep, false);
-                return false;
-            }
-
             if (currentStep === 0) {
-                await lookupForm.trigger();
-                const isValid = lookupForm.formState.isValid;
-                markStepValid(0, isValid);
-                return isValid;
-            } else {
-                // Validate current step fields based on step (form validation)
-                const stepFields = getStepFields(currentStep);
-
-                // Only trigger validation for specific fields if we have any to validate
-                if (stepFields.length > 0) {
-                    const isValid = await personForm.trigger(stepFields as any);
-                    const finalValid = isValid && hasMandatoryFields;
-                    markStepValid(currentStep, finalValid);
-                    return finalValid;
-                } else {
-                    // For steps with no specific validation fields, just check mandatory
-                    markStepValid(currentStep, hasMandatoryFields);
-                    return hasMandatoryFields;
+                // Lookup step validation using our validation hook
+                const lookupData = lookupForm.getValues();
+                const validation = formValidation.validateStep(0, lookupData);
+                console.log(`Step ${currentStep} lookup validation result:`, validation);
+                markStepValid(currentStep, validation.isValid);
+                
+                // Set form errors if validation failed
+                if (!validation.isValid) {
+                    Object.keys(validation.errors).forEach(field => {
+                        lookupForm.setError(field as any, { 
+                            type: 'manual', 
+                            message: validation.errors[field] 
+                        });
+                    });
                 }
+                
+                return validation.isValid;
+            } else if (currentStep > 0) {
+                // Form steps validation using our validation hook
+                const formData = personForm.getValues();
+                const validation = formValidation.validateStep(currentStep, formData);
+                console.log(`Step ${currentStep} validation result:`, validation);
+                markStepValid(currentStep, validation.isValid);
+                
+                // Set form errors if validation failed
+                if (!validation.isValid) {
+                    Object.keys(validation.errors).forEach(field => {
+                        personForm.setError(field as any, { 
+                            type: 'manual', 
+                            message: validation.errors[field] 
+                        });
+                    });
+                }
+                
+                return validation.isValid;
             }
+            
+            markStepValid(currentStep, true);
+            return true;
         } catch (error) {
-            console.error('Validation error:', error);
+            console.error(`Error validating step ${currentStep}:`, error);
             markStepValid(currentStep, false);
             return false;
         }
@@ -2003,32 +2064,49 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                             <Controller
                                 name="document_number"
                                 control={lookupForm.control}
-                                render={({ field }) => (
-                                    <TextField
-                                        name={field.name}
-                                        value={field.value || ''}
-                                        fullWidth
-                                        size="small"
-                                        label="Document Number *"
-                                        autoFocus={mode === 'application'}
-                                        error={!!lookupForm.formState.errors.document_number}
-                                        helperText={lookupForm.formState.errors.document_number?.message || 'Enter document number (numbers only)'}
-                                        onChange={(e) => {
-                                            const value = e.target.value.replace(/\D/g, '');
-                                            field.onChange(value);
-                                        }}
-                                        onBlur={field.onBlur}
-                                        InputProps={{
-                                            endAdornment: field.value && (
-                                                <InputAdornment position="end">
-                                                    <IconButton onClick={() => lookupForm.setValue('document_number', '')} size="small">
-                                                        <ClearIcon />
-                                                    </IconButton>
-                                                </InputAdornment>
-                                            ),
-                                        }}
-                                    />
-                                )}
+                                render={({ field }) => {
+                                    const fieldState = formValidation.getFieldState('document_number', field.value, 0);
+                                    const styling = useFieldStyling(
+                                        fieldState, 
+                                        lookupForm.formState.errors.document_number?.message,
+                                        true
+                                    );
+                                    
+                                    return (
+                                        <TextField
+                                            name={field.name}
+                                            value={field.value || ''}
+                                            fullWidth
+                                            size="small"
+                                            label="Document Number *"
+                                            autoFocus={mode === 'application'}
+                                            error={styling.error}
+                                            helperText={styling.helperText || 'Enter document number (numbers only)'}
+                                            sx={styling.sx}
+                                            onChange={(e) => {
+                                                const value = e.target.value.replace(/\D/g, '');
+                                                field.onChange(value);
+                                                // Trigger validation on change
+                                                setTimeout(() => {
+                                                    lookupForm.trigger('document_number');
+                                                }, 100);
+                                            }}
+                                            onBlur={field.onBlur}
+                                            InputProps={{
+                                                endAdornment: field.value && (
+                                                    <InputAdornment position="end">
+                                                        <IconButton onClick={() => {
+                                                            lookupForm.setValue('document_number', '');
+                                                            lookupForm.trigger('document_number');
+                                                        }} size="small">
+                                                            <ClearIcon />
+                                                        </IconButton>
+                                                    </InputAdornment>
+                                                ),
+                                            }}
+                                        />
+                                    );
+                                }}
                             />
                         </Grid>
                         </Grid>
