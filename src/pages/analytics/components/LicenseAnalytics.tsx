@@ -30,6 +30,15 @@ const LicenseAnalytics: React.FC<LicenseAnalyticsProps> = ({
   dateRange,
   location
 }) => {
+  // Subtle blue palette for consistent, modern visuals
+  const BLUE = {
+    dark: '#1e3a8a', // indigo-800
+    main: '#1d4ed8', // blue-700
+    mid: '#3b82f6',  // blue-500
+    light: '#93c5fd', // blue-300
+    xlight: '#dbeafe' // blue-100
+  };
+
   // Sample data for license categories (monotone blues)
   const licenseCategoriesData = [
     { category: 'Category A', count: 8542, color: BLUE.main },
