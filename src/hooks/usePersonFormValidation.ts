@@ -291,6 +291,8 @@ export const usePersonFormValidation = (): PersonFormValidationHook => {
       return { isValid: true, state: 'default' as const };
     }
 
+
+
     // Validate individual field using schema
     try {
       const fieldSchema = getFieldSchema(fieldName, stepIndex);

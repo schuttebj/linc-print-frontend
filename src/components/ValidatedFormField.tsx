@@ -28,6 +28,7 @@ interface ValidatedTextFieldProps extends BaseValidatedFieldProps {
   fullWidth?: boolean;
   size?: 'small' | 'medium';
   inputProps?: any;
+  InputLabelProps?: any;
   transform?: (value: string) => string;
   type?: string;
   multiline?: boolean;
@@ -59,6 +60,7 @@ export const ValidatedTextField: React.FC<ValidatedTextFieldProps> = ({
   fullWidth = true,
   size = 'small',
   inputProps,
+  InputLabelProps,
   transform,
   type = 'text',
   multiline = false,
@@ -90,6 +92,7 @@ export const ValidatedTextField: React.FC<ValidatedTextFieldProps> = ({
             helperText={styling.helperText || helperText}
             sx={styling.sx}
             inputProps={inputProps}
+            InputLabelProps={InputLabelProps}
             onChange={(e) => {
               const value = transform ? transform(e.target.value) : e.target.value;
               field.onChange(value);

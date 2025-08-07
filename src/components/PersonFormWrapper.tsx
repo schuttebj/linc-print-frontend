@@ -57,6 +57,7 @@ import { useSearchParams } from 'react-router-dom';
 import { usePersonFormValidation, stepFieldConfig } from '../hooks/usePersonFormValidation';
 import { useFieldStyling, useSelectStyling } from '../hooks/useFieldStyling';
 import { useDebounceValidation } from '../hooks/useDebounceValidation';
+import { useStepNavigation } from '../hooks/useStepNavigation';
 import { ValidatedTextField, ValidatedSelect } from './ValidatedFormField';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -271,6 +272,9 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     // Form validation hook
     const formValidation = usePersonFormValidation();
     
+    // Step navigation and completion tracking
+    const stepNavigation = useStepNavigation(steps.length);
+    
     // Debounced validation to prevent memory leaks and excessive calls
     const { debouncedValidation, getImmediateValidation, clearValidationCache } = useDebounceValidation(
         formValidation.validateField,
@@ -323,6 +327,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     const [personDataWasIncomplete, setPersonDataWasIncomplete] = useState(false);
     const [lookupLoading, setLookupLoading] = useState(false);
     const [submitLoading, setSubmitLoading] = useState(false);
+    // Legacy: Keep for compatibility with external components that expect stepValidation array
     const [stepValidation, setStepValidation] = useState<boolean[]>(new Array(steps.length).fill(false));
     const [showSuccessDialog, setShowSuccessDialog] = useState(false);
     const [createdPerson, setCreatedPerson] = useState<any>(null);
@@ -364,8 +369,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             middle_name: '',
             person_nature: '',
             birth_date: '',
-            nationality_code: 'MG',
-            preferred_language: 'MG',
+            nationality_code: '',
+            preferred_language: '',
             email_address: '',
             work_phone: '',
             cell_phone_country_code: '+261',
@@ -406,14 +411,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     // Watch form values
     const watchedPersonNature = personForm.watch('person_nature');
     
-    // Watch key fields for real-time Next button validation
-    const watchedSurname = personForm.watch('surname');
-    const watchedFirstName = personForm.watch('first_name');
-    const watchedBirthDate = personForm.watch('birth_date');
-    const watchedEmail = personForm.watch('email_address');
-    const watchedCellPhone = personForm.watch('cell_phone');
-    const watchedAliases = personForm.watch('aliases');
-    const watchedAddresses = personForm.watch('addresses');
+
 
     // Function to trigger step validation (for button state updates)
     const triggerStepValidation = useCallback(async (stepIndex: number) => {
@@ -431,6 +429,24 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             markStepValid(stepIndex, validation.isValid);
         }
     }, [formValidation, lookupForm, personForm]);
+
+    // Trigger validation when current step changes (for new person scenario)
+    useEffect(() => {
+        if (isNewPerson && currentStep > 0) {
+            console.log(`🎯 New person: triggering validation for step ${currentStep}`);
+            setTimeout(() => {
+                triggerStepValidation(currentStep);
+            }, 100); // Small delay to ensure form is rendered
+        }
+    }, [currentStep, isNewPerson, triggerStepValidation]);
+
+    // Initialize step navigation when person type changes
+    useEffect(() => {
+        if (isNewPerson) {
+            console.log('🆕 New person mode: resetting step navigation');
+            stepNavigation.resetAllSteps();
+        }
+    }, [isNewPerson, stepNavigation]);
 
     // Context-aware completion handler
     const handleFormComplete = (person: any) => {
@@ -639,7 +655,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             setLookupLoading(false);
             return;
         }
-
+        
         // Reset flags for new lookup
         setIsExistingPerson(false);
         setParentNotified(false);
@@ -682,61 +698,61 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                         // Person found with exact document number match
                         const existingPerson = exactMatch;
                         console.log('Person found with exact document number match:', existingPerson);
-                        console.log('Person fields:', Object.keys(existingPerson));
-                        setPersonFound(existingPerson);
-                        setCurrentPersonId(existingPerson.id);
-                        setIsNewPerson(false);
-                        setIsEditMode(true);
+                    console.log('Person fields:', Object.keys(existingPerson));
+                    setPersonFound(existingPerson);
+                    setCurrentPersonId(existingPerson.id);
+                    setIsNewPerson(false);
+                    setIsEditMode(true);
 
-                        // Populate form with existing person data
-                        populateFormWithExistingPerson(existingPerson);
+                    // Populate form with existing person data
+                    populateFormWithExistingPerson(existingPerson);
+                    
+                    // For application mode, check if person data is complete
+                    if (mode === 'application') {
+                        markStepValid(0, true); // Lookup step is always valid
                         
-                        // For application mode, check if person data is complete
-                        if (mode === 'application') {
-                            markStepValid(0, true); // Lookup step is always valid
+                        const isComplete = isPersonDataComplete(existingPerson);
+                        setPersonDataWasIncomplete(!isComplete);
+                        
+                        if (isComplete) {
+                            // Person has complete information - mark as existing and all steps valid
+                            setIsExistingPerson(true);
                             
-                            const isComplete = isPersonDataComplete(existingPerson);
-                            setPersonDataWasIncomplete(!isComplete);
+                            // Mark all steps as valid immediately
+                            const allValid = new Array(steps.length).fill(true);
+                            console.log('✅ Marking all steps as valid for existing person:', allValid);
+                            setStepValidation(allValid);
                             
-                            if (isComplete) {
-                                // Person has complete information - mark as existing and all steps valid
-                                setIsExistingPerson(true);
-                                
-                                // Mark all steps as valid immediately
-                                const allValid = new Array(steps.length).fill(true);
-                                console.log('✅ Marking all steps as valid for existing person:', allValid);
-                                setStepValidation(allValid);
-                                
-                                setCurrentStep(5); // Jump to review step for confirmation
-                                
-                                // In application mode, notify parent immediately for validation
-                                // but mark that we need to save when Next is clicked
-                                if (mode === 'application') {
-                                    console.log('🎯 PersonFormWrapper: Found complete person, notifying parent immediately');
-                                    console.log('🎯 PersonFormWrapper: Will save when Next button is clicked to capture clerk updates');
-                                    // Set the person in parent state immediately so validation works
-                                    if (onSuccess) {
-                                        onSuccess(existingPerson, true);
-                                        setParentNotified(true);
-                                    }
-                                    // Don't call handleFormComplete - let external navigation trigger save
-                                } else {
-                                    // Only auto-complete in standalone mode
-                                    console.log('🎯 PersonFormWrapper: Standalone mode - triggering onSuccess immediately');
-                                    setTimeout(() => {
-                                        handleFormComplete(existingPerson);
-                                    }, 100);
+                            setCurrentStep(5); // Jump to review step for confirmation
+                            
+                            // In application mode, notify parent immediately for validation
+                            // but mark that we need to save when Next is clicked
+                            if (mode === 'application') {
+                                console.log('🎯 PersonFormWrapper: Found complete person, notifying parent immediately');
+                                console.log('🎯 PersonFormWrapper: Will save when Next button is clicked to capture clerk updates');
+                                // Set the person in parent state immediately so validation works
+                                if (onSuccess) {
+                                    onSuccess(existingPerson, true);
+                                    setParentNotified(true);
                                 }
+                                // Don't call handleFormComplete - let external navigation trigger save
                             } else {
-                                // Person has incomplete information - start at personal info step
-                                setCurrentStep(1);
+                                // Only auto-complete in standalone mode
+                                console.log('🎯 PersonFormWrapper: Standalone mode - triggering onSuccess immediately');
+                                setTimeout(() => {
+                                    handleFormComplete(existingPerson);
+                                }, 100);
                             }
                         } else {
-                            // For standalone mode, proceed to personal information step
-                            markStepValid(0, true);
+                            // Person has incomplete information - start at personal info step
                             setCurrentStep(1);
                         }
                     } else {
+                        // For standalone mode, proceed to personal information step
+                        markStepValid(0, true);
+                        setCurrentStep(1);
+                    }
+                } else {
                         // No exact match found - setup for new person creation
                         console.log('No exact document number match found, creating new person');
                         setPersonFound(null);
@@ -918,105 +934,9 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         return true;
     };
 
-    // Detailed validation function that returns missing field information
-    const validateMandatoryFields = useCallback((person?: ExistingPerson): {
-        isValid: boolean;
-        missingFields: string[];
-        incompleteSteps: number[];
-        stepErrors: { [stepIndex: number]: string[] };
-    } => {
-        const missingFields: string[] = [];
-        const incompleteSteps: number[] = [];
-        const stepErrors: { [stepIndex: number]: string[] } = {};
 
-        // Helper function to add step error
-        const addStepError = (stepIndex: number, field: string) => {
-            if (!stepErrors[stepIndex]) stepErrors[stepIndex] = [];
-            stepErrors[stepIndex].push(field);
-            if (!incompleteSteps.includes(stepIndex)) {
-                incompleteSteps.push(stepIndex);
-            }
-            missingFields.push(field);
-        };
 
-        // Use current form data if no person provided
-        const currentData = person || personForm.getValues();
 
-        // Step 1: Details validation
-        if (!currentData.surname) addStepError(1, 'Surname');
-        if (!currentData.first_name) addStepError(1, 'First Name');
-        if (!currentData.birth_date) addStepError(1, 'Date of Birth');
-
-        // Step 2: Contact validation
-        if (!currentData.email_address && !currentData.cell_phone) {
-            addStepError(2, 'Email or Cell Phone (at least one required)');
-        }
-
-        // Step 3: Documents validation
-        const aliases = currentData.aliases || [];
-        const hasValidDocument = aliases.some(alias => 
-            alias.document_type && alias.document_number && alias.name_in_document
-        );
-        if (!hasValidDocument) {
-            addStepError(3, 'Name on Document');
-        }
-
-        // Step 4: Address validation
-        const addresses = currentData.addresses || [];
-        const hasValidAddress = addresses.some(address => 
-            address.street_line1 && address.locality && address.town && address.postal_code
-        );
-        if (!hasValidAddress) {
-            const addressErrors = [];
-            if (!addresses.some(addr => addr.street_line1)) addressErrors.push('Address Line 1');
-            if (!addresses.some(addr => addr.locality)) addressErrors.push('Locality');
-            if (!addresses.some(addr => addr.town)) addressErrors.push('Town');
-            if (!addresses.some(addr => addr.postal_code)) addressErrors.push('Postal Code');
-            
-            addressErrors.forEach(field => addStepError(4, field));
-        }
-
-        return {
-            isValid: missingFields.length === 0,
-            missingFields,
-            incompleteSteps,
-            stepErrors
-        };
-    }, [personForm]);
-
-    // Validate mandatory fields for current step only (for Next button disabling)
-    const validateCurrentStepMandatory = useCallback((): boolean => {
-        const currentData = personForm.getValues();
-        
-        switch (currentStep) {
-            case 0: // Lookup step
-                return lookupForm.formState.isValid;
-                
-            case 1: // Details step
-                return !!(currentData.surname && currentData.first_name && currentData.birth_date);
-                
-            case 2: // Contact step  
-                return !!(currentData.email_address || currentData.cell_phone);
-                
-            case 3: // Documents step
-                const aliases = currentData.aliases || [];
-                return aliases.some(alias => 
-                    alias.document_type && alias.document_number && alias.name_in_document
-                );
-                
-            case 4: // Address step
-                const addresses = currentData.addresses || [];
-                return addresses.some(address => 
-                    address.street_line1 && address.locality && address.town && address.postal_code
-                );
-                
-            case 5: // Review step
-                return true; // Review is always valid if we reach it
-                
-            default:
-                return true;
-        }
-    }, [currentStep, personForm, lookupForm]);
 
     // Real-time validation for Next button (updates as user types)
     const isNextButtonDisabled = useCallback((): boolean => {
@@ -1025,23 +945,14 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             return false;
         }
         
-        // For new persons, check mandatory fields for current step
-        const isValid = validateCurrentStepMandatory();
-        console.log(`🔍 Real-time validation - Step ${currentStep}:`, isValid);
-        return !isValid;
+        // For new persons, use our stepValidation state which is updated by our validation hook
+        const currentStepValid = stepValidation[currentStep];
+        console.log(`🔍 Real-time validation - Step ${currentStep}:`, currentStepValid);
+        return !currentStepValid;
     }, [
         isExistingPerson, 
-        validateCurrentStepMandatory, 
         currentStep,
-        // Watch dependencies to trigger re-evaluation
-        watchedSurname,
-        watchedFirstName, 
-        watchedBirthDate,
-        watchedEmail,
-        watchedCellPhone,
-        watchedAliases,
-        watchedAddresses,
-        lookupForm.formState.isValid
+        stepValidation
     ]);
 
     const populateFormWithExistingPerson = (existingPerson: ExistingPerson) => {
@@ -1131,13 +1042,23 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         } else {
             console.log('⚠️ No addresses found for existing person or addresses array is empty');
         }
+        
+        // Initialize step navigation for existing person (mark all steps as completed)
+        stepNavigation.initializeForExistingPerson(steps.length);
     };
 
     // Step validation
     const markStepValid = (stepIndex: number, isValid: boolean) => {
+        // Update both legacy array and new step navigation system
         const newValidation = [...stepValidation];
         newValidation[stepIndex] = isValid;
         setStepValidation(newValidation);
+        
+        // Update new step navigation system
+        stepNavigation.markStepValid(stepIndex, isValid);
+        
+        // Mark step as visited when validation is triggered
+        stepNavigation.markStepVisited(stepIndex);
         
         // Notify parent about validation state changes (for application mode)
         if (mode === 'application' && onPersonValidationChange) {
@@ -1145,78 +1066,43 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         }
     };
 
-    // Helper function to get step fields for validation
-    const getStepFields = (step: number) => {
-        const stepFieldMap = [
-            [], // Lookup step
-            ['surname', 'first_name', 'person_nature', 'nationality_code', 'preferred_language'], // Only required fields for step 1
-            [], // Contact step - don't validate on transition, let user fill optional fields
-            [], // ID Documents step - complex validation handled separately
-            ['addresses'], // Address step - validate all addresses
-            [], // Review step
-        ];
-        return stepFieldMap[step] || [];
-    };
+
 
     // Function to validate and update all step indicators
-    const updateAllStepValidation = useCallback(async () => {
+        const updateAllStepValidation = useCallback(async () => {
         console.log('🔄 Updating step validation indicators');
         
-        if (isExistingPerson) {
-            // For existing persons, validate against mandatory fields
-            const currentData = personForm.getValues();
-            const validation = validateMandatoryFields(currentData as any);
-            
-            if (validation.isValid) {
-                console.log('✅ Existing person - all mandatory fields complete');
-                const allValid = new Array(steps.length).fill(true);
-                setStepValidation(allValid);
-            } else {
-                console.log('⚠️ Existing person - missing mandatory fields:', validation.missingFields);
-                const newValidation = new Array(steps.length).fill(true);
-                
-                // Mark incomplete steps as invalid
-                validation.incompleteSteps.forEach(stepIndex => {
-                    newValidation[stepIndex] = false;
-                });
-                
-                setStepValidation(newValidation);
-                
-                // Navigate to first incomplete step
-                if (validation.incompleteSteps.length > 0) {
-                    const firstIncompleteStep = Math.min(...validation.incompleteSteps);
-                    console.log('🎯 Navigating to first incomplete step:', firstIncompleteStep);
-                    setCurrentStep(firstIncompleteStep);
-                }
-            }
-            return;
-        }
-
-        // For new persons, validate each step based on current form data
         try {
-            // Step 0: Lookup - always valid if we got this far
-            markStepValid(0, true);
-
-            // Steps 1-4: Validate based on form data
-            for (let i = 1; i < steps.length - 1; i++) {
-                const stepFields = getStepFields(i);
-                if (stepFields.length > 0) {
-                    const isValid = await personForm.trigger(stepFields as any);
-                    markStepValid(i, isValid);
-                } else {
-                    // Steps with no validation fields are considered valid
-                    markStepValid(i, true);
+            const formData = personForm.getValues();
+            const lookupData = lookupForm.getValues();
+            
+            // Validate each step using our validation hook and update step navigation
+            for (let i = 0; i < steps.length - 1; i++) { // Skip review step
+                const validation = formValidation.validateStep(i, i === 0 ? lookupData : formData);
+                markStepValid(i, validation.isValid);
+                
+                if (!validation.isValid) {
+                    console.log(`Step ${i} validation failed:`, validation.errors);
                 }
             }
 
-            // Step 5: Review - valid if we have a person or all previous steps valid
-            const allPreviousValid = stepValidation.slice(0, -1).every(valid => valid);
-            markStepValid(steps.length - 1, allPreviousValid);
+            // Review step is valid if all previous steps are valid
+            const reviewStepValid = stepValidation.slice(0, -1).every(valid => valid);
+            markStepValid(steps.length - 1, reviewStepValid);
+
+            // For existing persons, navigate to first invalid step if any
+            if (isExistingPerson) {
+                const firstInvalidStep = stepValidation.findIndex(valid => !valid);
+                if (firstInvalidStep !== -1) {
+                    console.log('🎯 Navigating to first invalid step:', firstInvalidStep);
+                    setCurrentStep(firstInvalidStep);
+                }
+            }
 
         } catch (error) {
             console.error('Error updating step validation:', error);
         }
-    }, [isExistingPerson, steps.length, stepValidation, personForm, getStepFields, validateMandatoryFields]);
+    }, [isExistingPerson, steps.length, stepValidation, personForm, lookupForm, formValidation, markStepValid]);
 
     const validateCurrentStep = async () => {
         console.log(`🔄 Validating step ${currentStep}`);
@@ -1273,6 +1159,9 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         const isValid = await validateCurrentStep();
 
         if (isValid) {
+            // Mark current step as completed when successfully moving to next step
+            stepNavigation.markStepCompleted(currentStep);
+            
             if (currentStep === 0) {
                 const lookupData = lookupForm.getValues();
                 await performLookup(lookupData);
@@ -1282,6 +1171,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     populateNameInDocument();
                 }
                 setCurrentStep(currentStep + 1);
+                // Mark next step as visited
+                stepNavigation.markStepVisited(currentStep + 1);
             }
         }
     };
@@ -1299,13 +1190,13 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             return;
         }
         
-        // Allow navigation to previous steps or completed steps
-        if (stepIndex < currentStep || stepValidation[stepIndex]) {
+        // Check if step is clickable using our new navigation system
+        const canClick = stepNavigation.isStepClickable(stepIndex, currentStep, isExistingPerson);
+        
+        if (canClick) {
             setCurrentStep(stepIndex);
-        }
-        // For step 0 (lookup), always allow navigation if we're not in new person mode
-        if (stepIndex === 0 && !isNewPerson) {
-            setCurrentStep(stepIndex);
+            // Mark step as visited when clicked
+            stepNavigation.markStepVisited(stepIndex);
         }
     };
 
@@ -1367,17 +1258,30 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
     // Helper function to render tab with completion indicator  
     const renderTabLabel = React.useCallback((step: any, index: number) => {
-        const isCompleted = stepValidation[index];
+        const stepState = stepNavigation.stepStates[index];
         const isCurrent = currentStep === index;
+        const iconType = stepNavigation.getStepIcon(index, currentStep);
         
-        // For existing persons, check if step has missing mandatory fields
-        let hasWarning = false;
-        if (isExistingPerson) {
-            const validation = validateMandatoryFields();
-            hasWarning = validation.incompleteSteps.includes(index);
-        } else {
-            // For new persons, show warning if current step has form errors
-            hasWarning = isCurrent && !personForm.formState.isValid;
+        // Determine colors and icons based on step state
+        let color = 'text.secondary';
+        let icon = step.icon;
+        
+        switch (iconType) {
+            case 'completed':
+                color = 'success.main';
+                icon = <CheckCircleIcon fontSize="small" />;
+                break;
+            case 'current':
+                color = 'primary.main';
+                icon = step.icon;
+                break;
+            case 'warning':
+                color = 'warning.main';
+                icon = <WarningIcon fontSize="small" />;
+                break;
+            default:
+                color = 'text.secondary';
+                icon = step.icon;
         }
         
         return (
@@ -1385,40 +1289,27 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 <Box sx={{ 
                     display: 'flex', 
                     alignItems: 'center', 
-                    color: hasWarning ? 'warning.main' : isCompleted ? 'success.main' : isCurrent ? 'primary.main' : 'text.secondary' 
+                    color 
                 }}>
-                    {hasWarning ? <WarningIcon fontSize="small" /> : isCompleted ? <CheckCircleIcon fontSize="small" /> : step.icon}
+                    {icon}
                 </Box>
                 <Typography 
                     variant="body2" 
                     sx={{ 
                         fontWeight: isCurrent ? 'bold' : 'normal',
-                        color: hasWarning ? 'warning.main' : isCompleted ? 'success.main' : isCurrent ? 'primary.main' : 'text.secondary'
+                        color
                     }}
                 >
                     {step.label}
                 </Typography>
             </Box>
         );
-    }, [stepValidation, currentStep, personForm.formState.isValid, isExistingPerson, validateMandatoryFields]);
+    }, [stepNavigation.stepStates, stepNavigation.getStepIcon, currentStep]);
 
-    // Helper function to determine if a tab should be clickable
+    // Helper function to determine if a tab should be clickable (using new step navigation system)
     const isTabClickable = React.useCallback((index: number) => {
-        if (isExistingPerson) {
-            // For existing persons, all steps are clickable (they have complete data)
-            return true;
-        } else {
-            // For new persons, only allow clicking completed steps or the next logical step
-            if (index === 0) return true; // Lookup is always clickable
-            if (index <= currentStep) return true; // Current and previous steps are clickable
-            
-            // Check if all previous steps are completed
-            for (let i = 0; i < index; i++) {
-                if (!stepValidation[i]) return false;
-            }
-            return true;
-        }
-    }, [isExistingPerson, stepValidation, currentStep]);
+        return stepNavigation.isStepClickable(index, currentStep, isExistingPerson);
+    }, [stepNavigation, currentStep, isExistingPerson]);
 
     const handleSubmit = async () => {
         setSubmitLoading(true);
@@ -2117,19 +2008,19 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                     );
                                     
                                     return (
-                                        <TextField
-                                            name={field.name}
-                                            value={field.value || ''}
-                                            fullWidth
-                                            size="small"
-                                            label="Document Number *"
-                                            autoFocus={mode === 'application'}
+                                    <TextField
+                                        name={field.name}
+                                        value={field.value || ''}
+                                        fullWidth
+                                        size="small"
+                                        label="Document Number *"
+                                        autoFocus={mode === 'application'}
                                             error={styling.error}
                                             helperText={styling.helperText || 'Enter document number (numbers only)'}
                                             sx={styling.sx}
-                                            onChange={(e) => {
-                                                const value = e.target.value.replace(/\D/g, '');
-                                                field.onChange(value);
+                                        onChange={(e) => {
+                                            const value = e.target.value.replace(/\D/g, '');
+                                            field.onChange(value);
                                                 // Use debounced validation on change
                                                 debouncedValidation('document_number', value, 0);
                                                 // Trigger step validation to update button state
@@ -2152,20 +2043,20 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                                 // Trigger immediate step validation on blur
                                                 triggerStepValidation(0);
                                             }}
-                                            InputProps={{
-                                                endAdornment: field.value && (
-                                                    <InputAdornment position="end">
+                                        InputProps={{
+                                            endAdornment: field.value && (
+                                                <InputAdornment position="end">
                                                         <IconButton onClick={() => {
                                                             lookupForm.setValue('document_number', '');
                                                             clearValidationCache('document_number', 0);
                                                             clearLookupErrors('document_number');
                                                         }} size="small">
-                                                            <ClearIcon />
-                                                        </IconButton>
-                                                    </InputAdornment>
-                                                ),
-                                            }}
-                                        />
+                                                        <ClearIcon />
+                                                    </IconButton>
+                                                </InputAdornment>
+                                            ),
+                                        }}
+                                    />
                                     );
                                 }}
                             />
@@ -2222,35 +2113,30 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                             clearErrors={clearPersonErrors}
                             errors={personForm.formState.errors}
                             triggerStepValidation={triggerStepValidation}
-                            label="Surname *"
+                                    label="Surname *"
                             helperText="Family name"
-                            inputProps={{ maxLength: 50 }}
+                                    inputProps={{ maxLength: 50 }}
                             transform={(value) => value.toUpperCase()}
                         />
                     </Grid>
 
                     <Grid item xs={12} md={6}>
-                        <Controller
+                        <ValidatedTextField
                             name="first_name"
                             control={personForm.control}
-                            render={({ field }) => (
-                                <TextField
-                                    id="person-first-name"
-                                    name={field.name}
-                                    value={field.value || ''}
-                                    fullWidth
-                                    size="small"
+                            stepIndex={1}
+                            isRequired={true}
+                            getFieldState={formValidation.getFieldState}
+                            debouncedValidation={debouncedValidation}
+                            getImmediateValidation={getImmediateValidation}
+                            setError={setPersonError}
+                            clearErrors={clearPersonErrors}
+                            errors={personForm.formState.errors}
+                            triggerStepValidation={triggerStepValidation}
                                     label="First Name *"
-                                    error={!!personForm.formState.errors.first_name}
-                                    helperText={personForm.formState.errors.first_name?.message || 'Given name'}
+                            helperText="Given name"
                                     inputProps={{ maxLength: 50 }}
-                                    onChange={(e) => {
-                                        const value = e.target.value.toUpperCase();
-                                        field.onChange(value);
-                                    }}
-                                    onBlur={field.onBlur}
-                                />
-                            )}
+                            transform={(value) => value.toUpperCase()}
                         />
                     </Grid>
 
@@ -2279,120 +2165,100 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     </Grid>
 
                     <Grid item xs={12} md={6}>
-                        <Controller
+                        <ValidatedSelect
                             name="person_nature"
                             control={personForm.control}
-                            render={({ field }) => (
-                                <FormControl fullWidth size="small" error={!!personForm.formState.errors.person_nature}>
-                                    <InputLabel>Gender *</InputLabel>
-                                    <Select
-                                        id="person-nature-select"
-                                        name={field.name}
-                                        value={field.value || ''}
-                                        onChange={field.onChange}
-                                        onBlur={field.onBlur}
+                            stepIndex={1}
+                            isRequired={true}
+                            getFieldState={formValidation.getFieldState}
+                            debouncedValidation={debouncedValidation}
+                            getImmediateValidation={getImmediateValidation}
+                            setError={setPersonError}
+                            clearErrors={clearPersonErrors}
+                            errors={personForm.formState.errors}
+                            triggerStepValidation={triggerStepValidation}
                                         label="Gender *"
-                                        MenuProps={{
-                                            id: "person-nature-menu"
-                                        }}
+                            helperText="Select gender"
                                     >
+                            <MenuItem value="" disabled>Select gender...</MenuItem>
                                         {personNatures.map((option) => (
                                             <MenuItem key={option.value} value={option.value}>
                                                 {option.label}
                                             </MenuItem>
                                         ))}
-                                    </Select>
-                                    <FormHelperText>
-                                        {personForm.formState.errors.person_nature?.message || 'Select gender'}
-                                    </FormHelperText>
-                                </FormControl>
-                            )}
-                        />
+                        </ValidatedSelect>
                     </Grid>
 
                     <Grid item xs={12} md={4}>
-                        <Controller
+                        <ValidatedTextField
                             name="birth_date"
                             control={personForm.control}
-                            render={({ field }) => (
-                                <TextField
-                                    id="person-birth-date"
-                                    name={field.name}
-                                    value={field.value || ''}
-                                    fullWidth
-                                    size="small"
+                            stepIndex={1}
+                            isRequired={true}
+                            getFieldState={formValidation.getFieldState}
+                            debouncedValidation={debouncedValidation}
+                            getImmediateValidation={getImmediateValidation}
+                            setError={setPersonError}
+                            clearErrors={clearPersonErrors}
+                            errors={personForm.formState.errors}
+                            triggerStepValidation={triggerStepValidation}
+                            label="Date of Birth *"
+                            helperText="Date of birth"
                                     type="date"
-                                    label="Date of Birth"
                                     InputLabelProps={{ shrink: true }}
-                                    helperText="Date of birth"
                                     inputProps={{
                                         min: "1900-01-01",
                                         max: new Date().toISOString().split('T')[0]
                                     }}
-                                    onChange={field.onChange}
-                                    onBlur={field.onBlur}
-                                />
-                            )}
                         />
                     </Grid>
 
                     <Grid item xs={12} md={4}>
-                        <Controller
+                        <ValidatedSelect
                             name="nationality_code"
                             control={personForm.control}
-                            render={({ field }) => (
-                                <FormControl fullWidth size="small">
-                                    <InputLabel>Nationality *</InputLabel>
-                                    <Select
-                                        id="nationality-code-select"
-                                        name={field.name}
-                                        value={field.value || 'MG'}
-                                        onChange={field.onChange}
-                                        onBlur={field.onBlur}
+                            stepIndex={1}
+                            isRequired={true}
+                            getFieldState={formValidation.getFieldState}
+                            debouncedValidation={debouncedValidation}
+                            getImmediateValidation={getImmediateValidation}
+                            setError={setPersonError}
+                            clearErrors={clearPersonErrors}
+                            errors={personForm.formState.errors}
+                            triggerStepValidation={triggerStepValidation}
                                         label="Nationality *"
-                                        MenuProps={{
-                                            id: "nationality-menu"
-                                        }}
+                            helperText="Select nationality"
                                     >
+                            <MenuItem value="" disabled>Select nationality...</MenuItem>
                                         <MenuItem value="MG">MALAGASY</MenuItem>
                                         <MenuItem value="FR">FRENCH</MenuItem>
                                         <MenuItem value="US">AMERICAN</MenuItem>
-                                    </Select>
-                                </FormControl>
-                            )}
-                        />
+                        </ValidatedSelect>
                     </Grid>
 
                     <Grid item xs={12} md={4}>
-                        <Controller
+                        <ValidatedSelect
                             name="preferred_language"
                             control={personForm.control}
-                            render={({ field }) => (
-                                <FormControl fullWidth size="small" error={!!personForm.formState.errors.preferred_language}>
-                                    <InputLabel>Preferred Language *</InputLabel>
-                                    <Select
-                                        id="preferred-language-select"
-                                        name={field.name}
-                                        value={field.value || (languages.length > 0 ? languages[0].value : 'MG')}
-                                        onChange={field.onChange}
-                                        onBlur={field.onBlur}
+                            stepIndex={1}
+                            isRequired={true}
+                            getFieldState={formValidation.getFieldState}
+                            debouncedValidation={debouncedValidation}
+                            getImmediateValidation={getImmediateValidation}
+                            setError={setPersonError}
+                            clearErrors={clearPersonErrors}
+                            errors={personForm.formState.errors}
+                            triggerStepValidation={triggerStepValidation}
                                         label="Preferred Language *"
-                                        MenuProps={{
-                                            id: "preferred-language-menu"
-                                        }}
+                            helperText="Select preferred language"
                                     >
+                            <MenuItem value="" disabled>Select language...</MenuItem>
                                         {languages.map((option) => (
                                             <MenuItem key={option.value} value={option.value}>
                                                 {option.label}
                                             </MenuItem>
                                         ))}
-                                    </Select>
-                                    <FormHelperText>
-                                        {personForm.formState.errors.preferred_language?.message || 'Select preferred language'}
-                                    </FormHelperText>
-                                </FormControl>
-                            )}
-                        />
+                        </ValidatedSelect>
                     </Grid>
                 </Grid>
             </Box>
@@ -3291,43 +3157,25 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 </Tabs>
             </Paper>
 
-            {/* Missing Fields Alert */}
-            {isExistingPerson && (() => {
-                const validation = validateMandatoryFields();
-                if (!validation.isValid) {
-                    return (
-                        <Alert 
-                            severity="warning" 
-                            sx={{ 
-                                mb: 2,
-                                '& .MuiAlert-message': {
-                                    width: '100%'
-                                }
-                            }}
-                        >
-                            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                                Missing Mandatory Information
-                            </Typography>
-                            <Typography variant="body2" sx={{ mb: 1, fontSize: '0.875rem' }}>
-                                The following required fields are missing and must be completed:
-                            </Typography>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                {validation.missingFields.map((field, index) => (
-                                    <Chip 
-                                        key={index}
-                                        label={field}
-                                        size="small"
-                                        color="warning"
-                                        variant="outlined"
-                                        sx={{ fontSize: '0.75rem' }}
-                                    />
-                                ))}
-                            </Box>
-                        </Alert>
-                    );
-                }
-                return null;
-            })()}
+            {/* Missing Fields Alert - Show if any step is invalid */}
+            {isExistingPerson && stepValidation.some(valid => !valid) && (
+                <Alert 
+                    severity="warning" 
+                    sx={{ 
+                        mb: 2,
+                        '& .MuiAlert-message': {
+                            width: '100%'
+                        }
+                    }}
+                >
+                    <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                        Missing Mandatory Information
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1, fontSize: '0.875rem' }}>
+                        Some required fields are missing. Please complete all steps marked with warning icons.
+                    </Typography>
+                </Alert>
+            )}
 
             {/* Step Content */}
                 <Box ref={stepContentRef} sx={{ mb: 3 }}>
