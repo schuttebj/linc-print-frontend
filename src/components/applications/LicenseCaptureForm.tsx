@@ -59,7 +59,7 @@ import {
 } from '../../types';
 import { LicenseValidationService } from '../../services/licenseValidationService';
 import { applicationService } from '../../services/applicationService';
-import { useFieldStyling, useSelectStyling, FieldState } from '../../hooks/useFieldStyling';
+import { FieldState } from '../../hooks/useFieldStyling';
 import { useDebounceValidation } from '../../hooks/useDebounceValidation';
 
 export interface CapturedLicense {
@@ -332,18 +332,127 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
     return debouncedValidationHook.debouncedValidation(`${fieldName}|${licenseId}`, value, 0);
   };
 
-  // Helper to get field styling
+  // Helper to get field styling (returns object for spreading)
   const getFieldStyling = (licenseId: string, fieldName: string, isRequired: boolean = true) => {
     const fieldKey = `${licenseId}-${fieldName}`;
     const fieldState = fieldStates[fieldKey] || 'default';
-    return useFieldStyling(fieldState, undefined, isRequired);
+    
+    // Return styling object directly without calling hooks
+    const baseSx = {
+      '& .MuiOutlinedInput-root': {
+        '& fieldset': {
+          borderWidth: '2px',
+          transition: 'border-color 0.2s ease-in-out',
+        },
+        '&:hover fieldset': {
+          borderWidth: '2px',
+        },
+        '&.Mui-focused fieldset': {
+          borderWidth: '2px',
+        },
+      },
+    };
+
+    switch (fieldState) {
+      case 'required':
+        return {
+          sx: {
+            ...baseSx,
+            '& .MuiOutlinedInput-root': {
+              ...baseSx['& .MuiOutlinedInput-root'],
+              '& fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['& fieldset'],
+                borderColor: '#ff9800', // Orange for required fields
+              },
+              '&:hover fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['&:hover fieldset'],
+                borderColor: '#f57c00', // Darker orange on hover
+              },
+              '&.Mui-focused fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['&.Mui-focused fieldset'],
+                borderColor: '#ff9800', // Orange when focused
+              },
+            },
+          },
+          error: false,
+          helperText: isRequired ? 'This field is required' : undefined,
+          color: 'warning' as const,
+        };
+
+      case 'invalid':
+        return {
+          sx: {
+            ...baseSx,
+            '& .MuiOutlinedInput-root': {
+              ...baseSx['& .MuiOutlinedInput-root'],
+              '& fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['& fieldset'],
+                borderColor: '#f44336', // Red for invalid fields
+              },
+              '&:hover fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['&:hover fieldset'],
+                borderColor: '#d32f2f', // Darker red on hover
+              },
+              '&.Mui-focused fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['&.Mui-focused fieldset'],
+                borderColor: '#f44336', // Red when focused
+              },
+            },
+          },
+          error: true,
+          color: 'error' as const,
+        };
+
+      case 'valid':
+        return {
+          sx: {
+            ...baseSx,
+            '& .MuiOutlinedInput-root': {
+              ...baseSx['& .MuiOutlinedInput-root'],
+              '& fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['& fieldset'],
+                borderColor: '#4caf50', // Green for valid fields
+              },
+              '&:hover fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['&:hover fieldset'],
+                borderColor: '#388e3c', // Darker green on hover
+              },
+              '&.Mui-focused fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['&.Mui-focused fieldset'],
+                borderColor: '#4caf50', // Green when focused
+              },
+            },
+          },
+          error: false,
+          color: 'success' as const,
+        };
+
+      case 'default':
+      default:
+        return {
+          sx: baseSx,
+          error: false,
+          color: 'primary' as const,
+        };
+    }
   };
 
-  // Helper to get select styling
+  // Helper to get select styling (returns object for spreading)
   const getSelectStyling = (licenseId: string, fieldName: string, isRequired: boolean = true) => {
-    const fieldKey = `${licenseId}-${fieldName}`;
-    const fieldState = fieldStates[fieldKey] || 'default';
-    return useSelectStyling(fieldState, undefined, isRequired);
+    const styling = getFieldStyling(licenseId, fieldName, isRequired);
+    
+    return {
+      ...styling,
+      sx: {
+        ...styling.sx,
+        '& .MuiSelect-outlined': {
+          '& fieldset': {
+            borderWidth: '2px',
+            transition: 'border-color 0.2s ease-in-out',
+          },
+        },
+      },
+    };
   };
 
   // Initialize field states for validation styling
