@@ -430,227 +430,103 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
 
       case 2: // Review step
         return (
-          <Box>
-            <Typography variant="h6" gutterBottom>
-              Review Learner's Permit Capture
-            </Typography>
-
-            {/* Processing Location Display */}
-            <Box sx={{ mb: 3, p: 2, bgcolor: '#f8f9fa', borderRadius: 1, border: '1px solid #e0e0e0' }}>
-              <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, color: 'primary.main', mb: 2 }}>
-                Processing Location
+          <Paper 
+            elevation={0}
+            sx={{ 
+              bgcolor: 'white',
+              boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+              borderRadius: 2
+            }}
+          >
+            <Box sx={{ p: 1.5 }}>
+              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, fontSize: '1rem', mb: 1 }}>
+                Review & Submit
               </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', mb: 0.5 }}>
-                    Location
-                  </Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {user?.primary_location_id ? (
-                      `User's assigned location: ${user.primary_location_id}`
-                    ) : (
-                      availableLocations.find(loc => loc.id === selectedLocationId)?.name || 'No location selected'
-                    )}
-                  </Typography>
-                </Grid>
-                {selectedLocationId && (
+
+              <Alert severity="info" sx={{ mb: 1.5, py: 0.5 }}>
+                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                  Please review the learner's permit capture details before submission.
+                </Typography>
+              </Alert>
+
+              {/* Person Summary - Compact */}
+              <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
+                <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+                  Permit Holder
+                </Typography>
+                <Grid container spacing={1}>
                   <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', mb: 0.5 }}>
-                      Location Code
-                    </Typography>
-                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      {availableLocations.find(loc => loc.id === selectedLocationId)?.code || selectedLocationId}
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Full Name</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {selectedPerson?.surname}, {selectedPerson?.first_name} {selectedPerson?.middle_name}
                     </Typography>
                   </Grid>
-                )}
-              </Grid>
-            </Box>
-            
-            {/* Personal Information */}
-            <Box sx={{ mb: 3, p: 2, bgcolor: '#f8f9fa', borderRadius: 1, border: '1px solid #e0e0e0' }}>
-              <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, color: 'primary.main', mb: 2 }}>
-                Personal Information
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', mb: 0.5 }}>
-                    Full Name
-                  </Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {selectedPerson?.surname}, {selectedPerson?.first_name} {selectedPerson?.middle_name}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', mb: 0.5 }}>
-                    Gender
-                  </Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {(selectedPerson as any)?.person_nature === '01' ? 'MALE (LEHILAHY)' : 
-                     (selectedPerson as any)?.person_nature === '02' ? 'FEMALE (VEHIVAVY)' : 
-                     'NOT SPECIFIED'}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', mb: 0.5 }}>
-                    Birth Date
-                  </Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {selectedPerson?.birth_date || 'Not provided'}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', mb: 0.5 }}>
-                    Nationality
-                  </Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {selectedPerson?.nationality_code === 'MG' ? 'MALAGASY' :
-                      selectedPerson?.nationality_code === 'FR' ? 'FRENCH' :
-                        selectedPerson?.nationality_code === 'US' ? 'AMERICAN' :
-                          selectedPerson?.nationality_code?.toUpperCase() || 'NOT SPECIFIED'}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', mb: 0.5 }}>
-                    Language
-                  </Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {selectedPerson?.preferred_language === 'MG' ? 'MALAGASY' :
-                     selectedPerson?.preferred_language === 'FR' ? 'FRENCH' :
-                     selectedPerson?.preferred_language === 'EN' ? 'ENGLISH' :
-                     selectedPerson?.preferred_language?.toUpperCase() || 'NOT SPECIFIED'}
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Box>
-
-            {/* Contact Information */}
-            <Box sx={{ mb: 3, p: 2, bgcolor: '#f8f9fa', borderRadius: 1, border: '1px solid #e0e0e0' }}>
-              <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, color: 'primary.main', mb: 2 }}>
-                Contact Information
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', mb: 0.5 }}>
-                    Email
-                  </Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {(selectedPerson as any)?.email_address || 'Not provided'}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', mb: 0.5 }}>
-                    Cell Phone
-                  </Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {(selectedPerson as any)?.cell_phone_country_code || '+261'} {(selectedPerson as any)?.cell_phone || 'Not provided'}
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Box>
-
-            {/* Documents */}
-            <Box sx={{ mb: 3, p: 2, bgcolor: '#f8f9fa', borderRadius: 1, border: '1px solid #e0e0e0' }}>
-              <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, color: 'primary.main', mb: 2 }}>
-                Documents ({selectedPerson?.aliases?.length || 0})
-              </Typography>
-              {selectedPerson?.aliases?.map((alias, index) => (
-                <Box key={index} sx={{ mb: index < (selectedPerson?.aliases?.length || 0) - 1 ? 2 : 0 }}>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} md={4}>
-                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', mb: 0.5 }}>
-                        {alias.document_type?.replace(/_/g, ' ').toUpperCase()} {alias.is_primary && (
-                          <Chip 
-                            label="PRIMARY" 
-                            size="small" 
-                            color="primary" 
-                            sx={{ ml: 1, fontSize: '0.6rem', height: '18px' }}
-                          />
-                        )}
-                      </Typography>
-                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                        {alias.document_number}
-                      </Typography>
-                    </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Madagascar ID</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {selectedPerson?.aliases?.find(alias => alias.is_primary)?.document_number || 'Not available'}
+                    </Typography>
                   </Grid>
-                  {index < (selectedPerson?.aliases?.length || 0) - 1 && <Divider sx={{ mt: 2 }} />}
-                </Box>
-              ))}
-            </Box>
+                </Grid>
+              </Box>
 
-            {/* Addresses */}
-            <Box sx={{ mb: 3, p: 2, bgcolor: '#f8f9fa', borderRadius: 1, border: '1px solid #e0e0e0' }}>
-              <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, color: 'primary.main', mb: 2 }}>
-                Addresses ({(selectedPerson as any)?.addresses?.length || 0})
-              </Typography>
-              {(selectedPerson as any)?.addresses?.map((address: any, index: number) => (
-                <Box key={index} sx={{ mb: index < ((selectedPerson as any)?.addresses?.length || 0) - 1 ? 2 : 0 }}>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12}>
-                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', mb: 0.5 }}>
-                        {address.address_type?.replace(/_/g, ' ').toUpperCase()} {address.is_primary && (
-                          <Chip 
-                            label="PRIMARY" 
-                            size="small" 
-                            color="primary" 
-                            sx={{ ml: 1, fontSize: '0.6rem', height: '18px' }}
-                          />
-                        )}
-                      </Typography>
-                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                        {[
-                          address.street_line1,
-                          address.street_line2,
-                          address.locality,
-                          address.town,
-                          address.province_code,
-                          address.postal_code
-                        ].filter(Boolean).join(', ')}
-                      </Typography>
-                    </Grid>
+              {/* Processing Location - Compact */}
+              <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
+                <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+                  Processing Location
+                </Typography>
+                <Grid container spacing={1}>
+                  <Grid item xs={12}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Location</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {user?.primary_location_id ? (
+                        `User's assigned location: ${user.primary_location_id}`
+                      ) : (
+                        availableLocations.find(loc => loc.id === selectedLocationId)?.name || 'No location selected'
+                      )}
+                      {selectedLocationId && (
+                        <Chip 
+                          label={availableLocations.find(loc => loc.id === selectedLocationId)?.code || selectedLocationId} 
+                          size="small" 
+                          sx={{ ml: 1, fontSize: '0.6rem', height: '18px' }}
+                        />
+                      )}
+                    </Typography>
                   </Grid>
-                  {index < ((selectedPerson as any)?.addresses?.length || 0) - 1 && <Divider sx={{ mt: 2 }} />}
-                </Box>
-              ))}
-            </Box>
+                </Grid>
+              </Box>
 
-            {/* Captured Licenses */}
-            <Box sx={{ mb: 3, p: 2, bgcolor: '#f8f9fa', borderRadius: 1, border: '1px solid #e0e0e0' }}>
-              <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, color: 'primary.main', mb: 2 }}>
+              {/* Captured Licenses - Detailed */}
+              <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
                 Captured Learner's Permits ({licenseCaptureData?.captured_licenses?.length || 0})
               </Typography>
               {licenseCaptureData?.captured_licenses?.map((license, index) => (
-                <Box key={license.id} sx={{ mb: index < (licenseCaptureData?.captured_licenses?.length || 0) - 1 ? 2 : 0 }}>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} md={4}>
-                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', mb: 0.5 }}>
-                        Category
-                      </Typography>
+                <Box key={license.id} sx={{ mb: 0.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
+                  <Grid container spacing={1}>
+                    <Grid item xs={12} md={3}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Category</Typography>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                           Code {license.license_category}
                         </Typography>
                         <Chip
                           label={license.verified ? 'Verified' : 'Pending'}
                           size="small"
                           color={license.verified ? 'success' : 'warning'}
-                          sx={{ fontSize: '0.65rem', height: '20px' }}
+                          sx={{ fontSize: '0.6rem', height: '18px' }}
                         />
                       </Box>
                     </Grid>
-                    <Grid item xs={12} md={4}>
-                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', mb: 0.5 }}>
-                        Issue Date
-                      </Typography>
-                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                    <Grid item xs={12} md={3}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Issue Date</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                         {license.issue_date || 'Not provided'}
                       </Typography>
                     </Grid>
-                    <Grid item xs={12} md={4}>
-                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', mb: 0.5 }}>
-                        Restrictions
-                      </Typography>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Restrictions</Typography>
                       {(license.restrictions?.driver_restrictions?.length > 0 || license.restrictions?.vehicle_restrictions?.length > 0) ? (
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
                           {license.restrictions?.driver_restrictions?.map((restriction, rIndex) => (
                             <Chip 
                               key={rIndex} 
@@ -658,7 +534,7 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
                               size="small" 
                               variant="outlined"
                               color="primary"
-                              sx={{ fontSize: '0.65rem', height: '20px' }}
+                              sx={{ fontSize: '0.6rem', height: '18px' }}
                             />
                           ))}
                           {license.restrictions?.vehicle_restrictions?.map((restriction, rIndex) => (
@@ -668,39 +544,36 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
                               size="small" 
                               variant="outlined"
                               color="secondary"
-                              sx={{ fontSize: '0.65rem', height: '20px' }}
+                              sx={{ fontSize: '0.6rem', height: '18px' }}
                             />
                           ))}
                         </Box>
                       ) : (
-                        <Typography variant="body1" sx={{ fontWeight: 500 }}>None</Typography>
+                        <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>None</Typography>
                       )}
                     </Grid>
                     {license.verification_notes && (
                       <Grid item xs={12}>
-                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', mb: 0.5 }}>
-                          Verification Notes
-                        </Typography>
-                        <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Verification Notes</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                           {license.verification_notes}
                         </Typography>
                       </Grid>
                     )}
                   </Grid>
-                  {index < (licenseCaptureData?.captured_licenses?.length || 0) - 1 && <Divider sx={{ mt: 2 }} />}
                 </Box>
               ))}
-            </Box>
 
-            {/* Summary */}
-            <Alert severity="info" sx={{ mb: 2, py: 1 }}>
-              <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
-                <strong>Next Steps:</strong> After submission, captured learner's permit records will be created in the system 
-                and marked as completed. The permit holder will be able to apply for full driver's licenses 
-                based on their captured learner's permit credentials.
-              </Typography>
-            </Alert>
-          </Box>
+              {/* Summary */}
+              <Alert severity="info" sx={{ mt: 1.5, py: 0.5 }}>
+                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                  <strong>Next Steps:</strong> After submission, captured learner's permit records will be created in the system 
+                  and marked as completed. The permit holder will be able to apply for full driver's licenses 
+                  based on their captured learner's permit credentials.
+                </Typography>
+              </Alert>
+            </Box>
+          </Paper>
         );
 
       default:
