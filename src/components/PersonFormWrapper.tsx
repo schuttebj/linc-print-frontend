@@ -625,6 +625,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             personForm.setValue('aliases.0.country_of_issue', defaultCountry);
             personForm.setValue('addresses.0.address_type', defaultAddressType);
             personForm.setValue('addresses.0.province_code', defaultProvinceCode);
+            personForm.setValue('addresses.0.country', 'MADAGASCAR');
 
             // Also update lookup form default
             lookupForm.setValue('document_type', defaultDocumentType);
@@ -3089,12 +3090,13 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                             <FormControl fullWidth size="small" error={styling.error}>
                                                 <InputLabel>Country *</InputLabel>
                                                 <Select 
-                                                    {...field} 
+                                                    name={field.name}
                                                     label="Country *"
                                                     value={field.value || 'MADAGASCAR'} // Ensure default value
                                                     onChange={(e) => {
-                                                        field.onChange(e.target.value);
-                                                        debouncedValidation(`addresses.${index}.country`, e.target.value, 4);
+                                                        const value = e.target.value || 'MADAGASCAR';
+                                                        field.onChange(value);
+                                                        debouncedValidation(`addresses.${index}.country`, value, 4);
                                                         
                                                         // Trigger debounced step validation to update button states
                                                         setTimeout(() => {

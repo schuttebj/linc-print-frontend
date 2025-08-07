@@ -689,6 +689,7 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
               onPersonValidationChange={handlePersonValidationChange}
               onPersonStepChange={handlePersonStepChange}
               onContinueToApplication={handleContinueToLicense}
+              onComplete={handleContinueToLicense} // For new persons to advance to next step
               onCancel={handleCancel}
               title=""
               subtitle="Select existing person or register new learner's permit holder"
