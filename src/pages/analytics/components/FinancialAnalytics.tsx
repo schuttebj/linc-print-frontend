@@ -34,6 +34,15 @@ const FinancialAnalytics: React.FC<FinancialAnalyticsProps> = ({
   dateRange,
   location
 }) => {
+  // Subtle blue palette
+  const BLUE = {
+    dark: '#1e3a8a',
+    main: '#1d4ed8',
+    mid: '#3b82f6',
+    light: '#93c5fd',
+    xlight: '#dbeafe'
+  };
+
   // Revenue trends data
   const revenueTrendsData = [
     { month: 'Jan', applicationFees: 15420, licenseFees: 23150, cardFees: 8950, lateFees: 1200 },
@@ -55,10 +64,10 @@ const FinancialAnalytics: React.FC<FinancialAnalyticsProps> = ({
 
   // Payment methods distribution
   const paymentMethodsData = [
-    { method: 'Cash', value: 45, amount: 123450, color: '#1976d2' },
-    { method: 'Card', value: 32, amount: 87830, color: '#2e7d32' },
-    { method: 'Mobile Money', value: 18, amount: 49380, color: '#ed6c02' },
-    { method: 'Bank Transfer', value: 5, amount: 13720, color: '#d32f2f' }
+    { method: 'Cash', value: 45, amount: 123450, color: BLUE.main },
+    { method: 'Card', value: 32, amount: 87830, color: BLUE.mid },
+    { method: 'Mobile Money', value: 18, amount: 49380, color: BLUE.light },
+    { method: 'Bank Transfer', value: 5, amount: 13720, color: BLUE.dark }
   ];
 
   // Revenue targets and performance
@@ -80,7 +89,7 @@ const FinancialAnalytics: React.FC<FinancialAnalyticsProps> = ({
     { day: 'Sun', revenue: 4560, transactions: 45 }
   ];
 
-  const COLORS = ['#1976d2', '#2e7d32', '#ed6c02', '#d32f2f'];
+  const COLORS = [BLUE.xlight, BLUE.light, BLUE.mid, BLUE.main];
 
   // Calculate total revenue
   const totalRevenue = revenueTrendsData.reduce((acc, month) => 
@@ -101,7 +110,7 @@ const FinancialAnalytics: React.FC<FinancialAnalyticsProps> = ({
           <Grid container spacing={2} sx={{ height: '100%', alignItems: 'center' }}>
             <Grid item xs={12} md={3}>
               <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h5" sx={{ fontWeight: 700, color: '#1976d2' }}>
+                <Typography variant="h5" sx={{ fontWeight: 700, color: BLUE.main }}>
                   {formatCurrency(125430)}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">Application Fees</Typography>
@@ -109,7 +118,7 @@ const FinancialAnalytics: React.FC<FinancialAnalyticsProps> = ({
             </Grid>
             <Grid item xs={12} md={3}>
               <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h5" sx={{ fontWeight: 700, color: '#2e7d32' }}>
+                <Typography variant="h5" sx={{ fontWeight: 700, color: BLUE.mid }}>
                   {formatCurrency(170530)}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">License Fees</Typography>
@@ -117,7 +126,7 @@ const FinancialAnalytics: React.FC<FinancialAnalyticsProps> = ({
             </Grid>
             <Grid item xs={12} md={3}>
               <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h5" sx={{ fontWeight: 700, color: '#ed6c02' }}>
+                <Typography variant="h5" sx={{ fontWeight: 700, color: BLUE.light }}>
                   {formatCurrency(65940)}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">Card Fees</Typography>
@@ -125,7 +134,7 @@ const FinancialAnalytics: React.FC<FinancialAnalyticsProps> = ({
             </Grid>
             <Grid item xs={12} md={3}>
               <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h5" sx={{ fontWeight: 700, color: '#d32f2f' }}>
+                <Typography variant="h5" sx={{ fontWeight: 700, color: BLUE.dark }}>
                   {formatCurrency(8520)}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">Other Fees</Typography>
@@ -149,38 +158,28 @@ const FinancialAnalytics: React.FC<FinancialAnalyticsProps> = ({
               <YAxis tickFormatter={(value) => `₨${(value/1000).toFixed(0)}K`} />
               <Tooltip formatter={(value) => [formatCurrency(value as number), '']} />
               <Legend />
-               <Area 
-                type="monotone" 
-                dataKey="applicationFees" 
-                stackId="1" 
-                 stroke="#1976d2" 
-                 fill="#1976d2"
-                name="Application Fees"
-              />
-               <Area 
-                type="monotone" 
-                dataKey="licenseFees" 
-                stackId="1" 
-                 stroke="#2e7d32" 
-                 fill="#2e7d32"
-                name="License Fees"
-              />
-               <Area 
-                type="monotone" 
-                dataKey="cardFees" 
-                stackId="1" 
-                 stroke="#ed6c02" 
-                 fill="#ed6c02"
-                name="Card Fees"
-              />
-               <Area 
-                type="monotone" 
-                dataKey="lateFees" 
-                stackId="1" 
-                 stroke="#d32f2f" 
-                 fill="#d32f2f"
-                name="Late Fees"
-              />
+              <defs>
+                <linearGradient id="rev1" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={BLUE.xlight} stopOpacity={0.6}/>
+                  <stop offset="95%" stopColor={BLUE.xlight} stopOpacity={0.05}/>
+                </linearGradient>
+                <linearGradient id="rev2" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={BLUE.light} stopOpacity={0.6}/>
+                  <stop offset="95%" stopColor={BLUE.light} stopOpacity={0.05}/>
+                </linearGradient>
+                <linearGradient id="rev3" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={BLUE.mid} stopOpacity={0.6}/>
+                  <stop offset="95%" stopColor={BLUE.mid} stopOpacity={0.05}/>
+                </linearGradient>
+                <linearGradient id="rev4" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={BLUE.main} stopOpacity={0.6}/>
+                  <stop offset="95%" stopColor={BLUE.main} stopOpacity={0.05}/>
+                </linearGradient>
+              </defs>
+              <Area type="monotone" dataKey="applicationFees" stackId="1" stroke={BLUE.main} fill="url(#rev4)" name="Application Fees" />
+              <Area type="monotone" dataKey="licenseFees" stackId="1" stroke={BLUE.mid} fill="url(#rev3)" name="License Fees" />
+              <Area type="monotone" dataKey="cardFees" stackId="1" stroke={BLUE.light} fill="url(#rev2)" name="Card Fees" />
+              <Area type="monotone" dataKey="lateFees" stackId="1" stroke={BLUE.xlight} fill="url(#rev1)" name="Late Fees" />
             </AreaChart>
           </ResponsiveContainer>
         </ChartWidget>
@@ -222,7 +221,7 @@ const FinancialAnalytics: React.FC<FinancialAnalyticsProps> = ({
           height={300}
         >
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={feeCollectionData}>
+              <BarChart data={feeCollectionData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="service" />
               <YAxis yAxisId="left" tickFormatter={(value) => `₨${(value/1000).toFixed(0)}K`} />
@@ -236,12 +235,18 @@ const FinancialAnalytics: React.FC<FinancialAnalyticsProps> = ({
                 }}
               />
               <Legend />
-               <Bar yAxisId="left" dataKey="revenue" fill="#1976d2" name="Revenue" />
+                <defs>
+                  <linearGradient id="revBar" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor={BLUE.light} stopOpacity={0.6} />
+                    <stop offset="100%" stopColor={BLUE.main} stopOpacity={0.9} />
+                  </linearGradient>
+                </defs>
+                <Bar yAxisId="left" dataKey="revenue" fill="url(#revBar)" name="Revenue" />
               <Line 
                 yAxisId="right" 
                 type="monotone" 
                 dataKey="avgFee" 
-                 stroke="#d32f2f" 
+                  stroke={BLUE.dark} 
                 strokeWidth={3}
                 name="Avg Fee"
               />
@@ -258,7 +263,7 @@ const FinancialAnalytics: React.FC<FinancialAnalyticsProps> = ({
           height={250}
         >
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={dailyRevenueData}>
+              <BarChart data={dailyRevenueData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="day" />
               <YAxis yAxisId="left" tickFormatter={(value) => `₨${(value/1000).toFixed(0)}K`} />
@@ -270,12 +275,18 @@ const FinancialAnalytics: React.FC<FinancialAnalyticsProps> = ({
                 }}
               />
               <Legend />
-               <Bar yAxisId="left" dataKey="revenue" fill="#2e7d32" name="Daily Revenue" />
+                <defs>
+                  <linearGradient id="dayRev" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={BLUE.light} stopOpacity={0.6} />
+                    <stop offset="100%" stopColor={BLUE.main} stopOpacity={0.9} />
+                  </linearGradient>
+                </defs>
+                <Bar yAxisId="left" dataKey="revenue" fill="url(#dayRev)" name="Daily Revenue" />
               <Line 
                 yAxisId="right" 
                 type="monotone" 
                 dataKey="transactions" 
-                 stroke="#1976d2" 
+                  stroke={BLUE.dark} 
                 strokeWidth={2}
                 name="Transactions"
               />

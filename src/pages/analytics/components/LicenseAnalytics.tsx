@@ -30,13 +30,13 @@ const LicenseAnalytics: React.FC<LicenseAnalyticsProps> = ({
   dateRange,
   location
 }) => {
-  // Sample data for license categories
+  // Sample data for license categories (monotone blues)
   const licenseCategoriesData = [
-    { category: 'Category A', count: 8542, color: '#1976d2' },
-    { category: 'Category B', count: 15632, color: '#2e7d32' },
-    { category: 'Category C', count: 12845, color: '#ed6c02' },
-    { category: "Learner's", count: 5234, color: '#9c27b0' },
-    { category: 'Professional', count: 3125, color: '#0288d1' }
+    { category: 'Category A', count: 8542, color: BLUE.main },
+    { category: 'Category B', count: 15632, color: BLUE.mid },
+    { category: 'Category C', count: 12845, color: BLUE.light },
+    { category: "Learner's", count: 5234, color: BLUE.dark },
+    { category: 'Professional', count: 3125, color: BLUE.xlight }
   ];
 
   // Sample data for license lifecycle
@@ -60,10 +60,10 @@ const LicenseAnalytics: React.FC<LicenseAnalyticsProps> = ({
 
   // License status summary data
   const licenseStatusData = [
-    { status: 'Active', count: 45632, color: '#2e7d32' },
-    { status: 'Expiring Soon', count: 3456, color: '#ed6c02' },
-    { status: 'Expired', count: 1234, color: '#d32f2f' },
-    { status: 'Suspended', count: 234, color: '#9c27b0' }
+    { status: 'Active', count: 45632, color: BLUE.main },
+    { status: 'Expiring Soon', count: 3456, color: BLUE.mid },
+    { status: 'Expired', count: 1234, color: BLUE.light },
+    { status: 'Suspended', count: 234, color: BLUE.dark }
   ];
 
   return (
@@ -109,7 +109,13 @@ const LicenseAnalytics: React.FC<LicenseAnalyticsProps> = ({
               <XAxis type="number" />
               <YAxis dataKey="category" type="category" width={80} />
               <Tooltip formatter={(value) => [value.toLocaleString(), 'Licenses']} />
-              <Bar dataKey="count" fill="#8884d8">
+              <defs>
+                <linearGradient id="barBlueH" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor={BLUE.light} stopOpacity={0.6} />
+                  <stop offset="100%" stopColor={BLUE.main} stopOpacity={0.9} />
+                </linearGradient>
+              </defs>
+              <Bar dataKey="count" fill="url(#barBlueH)">
                 {licenseCategoriesData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
@@ -133,38 +139,28 @@ const LicenseAnalytics: React.FC<LicenseAnalyticsProps> = ({
               <YAxis />
               <Tooltip />
               <Legend />
-              <Area 
-                type="monotone" 
-                dataKey="newIssues" 
-                stackId="1" 
-                stroke="#8884d8" 
-                fill="#8884d8"
-                name="New Issues"
-              />
-              <Area 
-                type="monotone" 
-                dataKey="renewals" 
-                stackId="1" 
-                stroke="#82ca9d" 
-                fill="#82ca9d"
-                name="Renewals"
-              />
-              <Area 
-                type="monotone" 
-                dataKey="expiring" 
-                stackId="1" 
-                stroke="#ffc658" 
-                fill="#ffc658"
-                name="Expiring Soon"
-              />
-              <Area 
-                type="monotone" 
-                dataKey="expired" 
-                stackId="1" 
-                stroke="#ff7300" 
-                fill="#ff7300"
-                name="Expired"
-              />
+              <defs>
+                <linearGradient id="areaBL1" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={BLUE.xlight} stopOpacity={0.6}/>
+                  <stop offset="95%" stopColor={BLUE.xlight} stopOpacity={0.05}/>
+                </linearGradient>
+                <linearGradient id="areaBL2" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={BLUE.light} stopOpacity={0.6}/>
+                  <stop offset="95%" stopColor={BLUE.light} stopOpacity={0.05}/>
+                </linearGradient>
+                <linearGradient id="areaBL3" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={BLUE.mid} stopOpacity={0.6}/>
+                  <stop offset="95%" stopColor={BLUE.mid} stopOpacity={0.05}/>
+                </linearGradient>
+                <linearGradient id="areaBL4" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={BLUE.main} stopOpacity={0.6}/>
+                  <stop offset="95%" stopColor={BLUE.main} stopOpacity={0.05}/>
+                </linearGradient>
+              </defs>
+              <Area type="monotone" dataKey="newIssues" stackId="1" stroke={BLUE.main} fill="url(#areaBL4)" name="New Issues" />
+              <Area type="monotone" dataKey="renewals" stackId="1" stroke={BLUE.mid} fill="url(#areaBL3)" name="Renewals" />
+              <Area type="monotone" dataKey="expiring" stackId="1" stroke={BLUE.light} fill="url(#areaBL2)" name="Expiring Soon" />
+              <Area type="monotone" dataKey="expired" stackId="1" stroke={BLUE.xlight} fill="url(#areaBL1)" name="Expired" />
             </AreaChart>
           </ResponsiveContainer>
         </ChartWidget>
@@ -190,7 +186,13 @@ const LicenseAnalytics: React.FC<LicenseAnalyticsProps> = ({
                   return [value + '%', 'Percentage'];
                 }}
               />
-              <Bar dataKey="licenses" fill="#1976d2" name="licenses" />
+              <defs>
+                <linearGradient id="barBlueV" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={BLUE.light} stopOpacity={0.6} />
+                  <stop offset="100%" stopColor={BLUE.main} stopOpacity={0.9} />
+                </linearGradient>
+              </defs>
+              <Bar dataKey="licenses" fill="url(#barBlueV)" name="licenses" />
             </BarChart>
           </ResponsiveContainer>
         </ChartWidget>

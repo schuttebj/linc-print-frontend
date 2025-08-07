@@ -33,6 +33,15 @@ const PrintingAnalytics: React.FC<PrintingAnalyticsProps> = ({
   dateRange,
   location
 }) => {
+  // Subtle blue palette
+  const BLUE = {
+    dark: '#1e3a8a',
+    main: '#1d4ed8',
+    mid: '#3b82f6',
+    light: '#93c5fd',
+    xlight: '#dbeafe'
+  };
+
   // Sample data for print queue performance
   const printQueueData = [
     { date: '2024-01-01', queued: 125, completed: 118, failed: 7, avgWaitHours: 2.3 },
@@ -46,9 +55,9 @@ const PrintingAnalytics: React.FC<PrintingAnalyticsProps> = ({
 
   // Print quality metrics data
   const qualityMetrics = [
-    { name: 'Pass Rate', value: 94.7, maxValue: 100, color: '#2e7d32' },
-    { name: 'Retry Rate', value: 4.2, maxValue: 10, color: '#ed6c02' },
-    { name: 'Defect Rate', value: 1.1, maxValue: 5, color: '#d32f2f' }
+    { name: 'Pass Rate', value: 94.7, maxValue: 100, color: BLUE.main },
+    { name: 'Retry Rate', value: 4.2, maxValue: 10, color: BLUE.mid },
+    { name: 'Defect Rate', value: 1.1, maxValue: 5, color: BLUE.light }
   ];
 
   // Production efficiency by location
@@ -61,10 +70,10 @@ const PrintingAnalytics: React.FC<PrintingAnalyticsProps> = ({
 
   // Print job status distribution
   const printJobStatusData = [
-    { status: 'Completed', count: 1046, color: '#2e7d32' },
-    { status: 'In Progress', count: 58, color: '#ed6c02' },
-    { status: 'Failed', count: 14, color: '#d32f2f' },
-    { status: 'Pending QA', count: 29, color: '#1976d2' }
+    { status: 'Completed', count: 1046, color: BLUE.main },
+    { status: 'In Progress', count: 58, color: BLUE.mid },
+    { status: 'Failed', count: 14, color: BLUE.light },
+    { status: 'Pending QA', count: 29, color: BLUE.dark }
   ];
 
   // Sample data for equipment utilization
@@ -122,7 +131,7 @@ const PrintingAnalytics: React.FC<PrintingAnalyticsProps> = ({
           height={350}
         >
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={printQueueData}>
+              <ComposedChart data={printQueueData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis 
                 dataKey="date" 
@@ -140,17 +149,23 @@ const PrintingAnalytics: React.FC<PrintingAnalyticsProps> = ({
                 }}
               />
               <Legend />
-              <Bar yAxisId="left" dataKey="queued" fill="#1976d2" name="Jobs Queued" />
-              <Bar yAxisId="left" dataKey="completed" fill="#2e7d32" name="Jobs Completed" />
-              <Bar yAxisId="left" dataKey="failed" fill="#d32f2f" name="Jobs Failed" />
+                <defs>
+                  <linearGradient id="barQueued" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={BLUE.light} stopOpacity={0.6} />
+                    <stop offset="100%" stopColor={BLUE.main} stopOpacity={0.9} />
+                  </linearGradient>
+                </defs>
+                <Bar yAxisId="left" dataKey="queued" fill="url(#barQueued)" name="Jobs Queued" />
+                <Bar yAxisId="left" dataKey="completed" fill={BLUE.mid} name="Jobs Completed" />
+                <Bar yAxisId="left" dataKey="failed" fill={BLUE.xlight} name="Jobs Failed" />
               <Line 
                 yAxisId="right" 
                 type="monotone" 
                 dataKey="avgWaitHours" 
-                 stroke="#ed6c02" 
+                  stroke={BLUE.dark} 
                 strokeWidth={3}
                 name="Avg Wait Time (hours)"
-                 dot={{ fill: '#ed6c02', strokeWidth: 2, r: 4 }}
+                  dot={{ fill: BLUE.dark, strokeWidth: 2, r: 4 }}
               />
             </ComposedChart>
           </ResponsiveContainer>
@@ -165,16 +180,22 @@ const PrintingAnalytics: React.FC<PrintingAnalyticsProps> = ({
           height={300}
         >
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={productionEfficiencyData}>
+              <BarChart data={productionEfficiencyData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="location" />
               <YAxis />
               <Tooltip />
               <Legend />
-              <Bar dataKey="completed" stackId="a" fill="#2e7d32" name="Completed" />
-              <Bar dataKey="inProgress" stackId="a" fill="#ed6c02" name="In Progress" />
-              <Bar dataKey="failed" stackId="a" fill="#d32f2f" name="Failed" />
-              <Bar dataKey="pendingQA" stackId="a" fill="#1976d2" name="Pending QA" />
+                <defs>
+                  <linearGradient id="stackBlue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={BLUE.light} stopOpacity={0.6} />
+                    <stop offset="100%" stopColor={BLUE.main} stopOpacity={0.9} />
+                  </linearGradient>
+                </defs>
+                <Bar dataKey="completed" stackId="a" fill="url(#stackBlue)" name="Completed" />
+                <Bar dataKey="inProgress" stackId="a" fill={BLUE.mid} name="In Progress" />
+                <Bar dataKey="failed" stackId="a" fill={BLUE.xlight} name="Failed" />
+                <Bar dataKey="pendingQA" stackId="a" fill={BLUE.dark} name="Pending QA" />
             </BarChart>
           </ResponsiveContainer>
         </ChartWidget>
