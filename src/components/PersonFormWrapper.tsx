@@ -3281,18 +3281,21 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             height: mode === 'application' ? 'calc(100vh - 200px)' : 'auto',
             minHeight: mode === 'application' ? '600px' : 'auto'
         }}>
-            {/* Scrollable Content Container - Tabs and Form Content with padding */}
+            {/* Content Container - Tabs and Form Content with padding */}
             <Box sx={{ 
                 flex: 1,
-                overflow: 'auto', // Allow scroll on content area
-                p: 2 // Padding for content area
+                overflow: 'hidden', // No scroll on outer container
+                p: 2, // Padding for content area
+                display: 'flex',
+                flexDirection: 'column'
             }}>
                 <Box sx={{ 
                     maxWidth: mode === 'application' ? 'none' : 1200, // No max width in application mode
                     mx: mode === 'application' ? 0 : 'auto', // No horizontal margin in application mode
                     display: 'flex',
                     flexDirection: 'column',
-                    minHeight: 'fit-content' // Allow content to determine height
+                    flex: 1,
+                    overflow: 'hidden' // Prevent this container from scrolling
                 }}>
                 {showHeader && (
                     <Paper 
@@ -3397,7 +3400,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 </Tabs>
             </Paper>
 
-            {/* Main Form Container - Content only, with scroll for form content */}
+            {/* Main Form Container - Scrollable form content */}
             <Paper 
                 elevation={0}
                 sx={{ 
@@ -3406,7 +3409,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     borderRadius: 2,
                     mb: 2, // Add margin bottom for spacing from navigation
                     flex: 1,
-                    overflow: 'hidden',
+                    overflow: 'auto', // Allow scroll on form content
                     display: 'flex',
                     flexDirection: 'column'
                 }}
