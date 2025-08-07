@@ -59,6 +59,8 @@ import {
 } from '../../types';
 import { LicenseValidationService } from '../../services/licenseValidationService';
 import { applicationService } from '../../services/applicationService';
+import { useFieldStyling, useSelectStyling, FieldState } from '../../hooks/useFieldStyling';
+import { useDebounceValidation } from '../../hooks/useDebounceValidation';
 
 export interface CapturedLicense {
   id: string; // temp ID for form management
@@ -105,6 +107,9 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
   const [showExisting, setShowExisting] = useState(false);
   const validationService = new LicenseValidationService();
 
+  // Field validation states for real-time styling
+  const [fieldStates, setFieldStates] = useState<Record<string, FieldState>>({});
+
   // Load existing licenses when person changes
   useEffect(() => {
     if (personId) {
@@ -141,6 +146,8 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
       onChange(initialData);
     }
   }, [value, applicationtype, onChange]);
+
+
 
   const loadExistingLicenses = async (personId: string) => {
     setLoadingExisting(true);
@@ -256,6 +263,113 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
     validateLicenseData(newData.captured_licenses);
     onChange(newData);
   };
+
+  // Field validation function for real-time styling
+  const validateField = useCallback((licenseId: string, fieldName: string, value: any): { isValid: boolean; state: FieldState; errorMessage?: string } => {
+    const fieldKey = `${licenseId}-${fieldName}`;
+    
+    switch (fieldName) {
+      case 'license_category':
+        if (!value || value === '') {
+          return { isValid: false, state: 'required', errorMessage: 'License category is required' };
+        }
+        return { isValid: true, state: 'valid' };
+        
+      case 'issue_date':
+        if (!value || value === '') {
+          return { isValid: false, state: 'required', errorMessage: 'Issue date is required' };
+        }
+        
+        // Validate date format and constraints
+        const dateObj = new Date(value);
+        const currentDate = new Date();
+        
+        if (isNaN(dateObj.getTime())) {
+          return { isValid: false, state: 'invalid', errorMessage: 'Invalid date format' };
+        }
+        
+        // For learner's permits, check 6-month rule
+        if (applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE) {
+          const sixMonthsAgo = new Date();
+          sixMonthsAgo.setMonth(currentDate.getMonth() - 6);
+          
+          if (dateObj < sixMonthsAgo) {
+            return { isValid: false, state: 'invalid', errorMessage: 'Learner\'s permit issue date must be within 6 months of current date' };
+          }
+          
+          if (dateObj > currentDate) {
+            return { isValid: false, state: 'invalid', errorMessage: 'Issue date cannot be in the future' };
+          }
+        }
+        
+        return { isValid: true, state: 'valid' };
+        
+      default:
+        return { isValid: true, state: 'default' };
+    }
+  }, [applicationtype]);
+
+  // Debounced validation
+  const debouncedValidationHook = useDebounceValidation(
+    (fieldName: string, value: any, stepIndex: number) => {
+      // For license forms, stepIndex is not used, we pass licenseId via fieldName
+      const [actualFieldName, licenseId] = fieldName.includes('|') ? fieldName.split('|') : [fieldName, stepIndex.toString()];
+      const result = validateField(licenseId, actualFieldName, value);
+      const fieldKey = `${licenseId}-${actualFieldName}`;
+      
+      setFieldStates(prev => ({
+        ...prev,
+        [fieldKey]: result.state
+      }));
+      
+      return result;
+    },
+    300
+  );
+
+  // Helper function to call debounced validation with license ID
+  const debouncedValidation = (fieldName: string, value: any, licenseId: string) => {
+    return debouncedValidationHook.debouncedValidation(`${fieldName}|${licenseId}`, value, 0);
+  };
+
+  // Helper to get field styling
+  const getFieldStyling = (licenseId: string, fieldName: string, isRequired: boolean = true) => {
+    const fieldKey = `${licenseId}-${fieldName}`;
+    const fieldState = fieldStates[fieldKey] || 'default';
+    return useFieldStyling(fieldState, undefined, isRequired);
+  };
+
+  // Helper to get select styling
+  const getSelectStyling = (licenseId: string, fieldName: string, isRequired: boolean = true) => {
+    const fieldKey = `${licenseId}-${fieldName}`;
+    const fieldState = fieldStates[fieldKey] || 'default';
+    return useSelectStyling(fieldState, undefined, isRequired);
+  };
+
+  // Initialize field states for validation styling
+  useEffect(() => {
+    const newFieldStates: Record<string, FieldState> = {};
+    
+    captureData.captured_licenses.forEach(license => {
+      // Initialize license category field state
+      if (!license.license_category) {
+        newFieldStates[`${license.id}-license_category`] = 'required';
+      } else {
+        newFieldStates[`${license.id}-license_category`] = 'valid';
+      }
+      
+      // Initialize issue date field state
+      if (!license.issue_date || license.issue_date === '') {
+        newFieldStates[`${license.id}-issue_date`] = 'required';
+      } else {
+        // Validate the existing date
+        const validation = validateField(license.id, 'issue_date', license.issue_date);
+        newFieldStates[`${license.id}-issue_date`] = validation.state;
+      }
+    });
+    
+    setFieldStates(newFieldStates);
+  }, [captureData.captured_licenses, validateField]);
 
   const getAvailableCategories = (currentLicenseId?: string) => {
     // Get system categories (not including current capture session)
@@ -395,6 +509,10 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
       ...captureData,
       captured_licenses: updatedLicenses
     });
+
+    // Trigger real-time validation for the updated field
+    const licenseId = updatedLicenses[index].id;
+    debouncedValidation(field, value, licenseId);
   };
 
   const removeLicense = (index: number) => {
@@ -679,7 +797,7 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
             <Grid container spacing={2}>
               {/* License Category - Single Select */}
               <Grid item xs={12} md={6}>
-                <FormControl fullWidth required size="small">
+                <FormControl fullWidth required size="small" {...getSelectStyling(license.id, 'license_category')}>
                   <InputLabel>
                     {applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE ? "Permit Code" : "License Category"}
                   </InputLabel>
@@ -687,7 +805,6 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                     value={license.license_category}
                     onChange={(e) => updateLicense(index, 'license_category', e.target.value)}
                     disabled={disabled}
-                    error={validationErrors[license.id]?.length > 0}
                     size="small"
                   >
                     {getAvailableCategories(license.id).map((category) => (
@@ -733,6 +850,7 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                       ? "Learner's permits are only valid for 6 months from issue date"
                       : undefined
                   }
+                  {...getFieldStyling(license.id, 'issue_date')}
                 />
               </Grid>
 
