@@ -56,6 +56,8 @@ import { useSearchParams } from 'react-router-dom';
 
 import { usePersonFormValidation, stepFieldConfig } from '../hooks/usePersonFormValidation';
 import { useFieldStyling, useSelectStyling } from '../hooks/useFieldStyling';
+import { useDebounceValidation } from '../hooks/useDebounceValidation';
+import { ValidatedTextField, ValidatedSelect } from './ValidatedFormField';
 
 import { useAuth } from '../contexts/AuthContext';
 import { API_BASE_URL } from '../config/api';
@@ -268,6 +270,29 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
     // Form validation hook
     const formValidation = usePersonFormValidation();
+    
+    // Debounced validation to prevent memory leaks and excessive calls
+    const { debouncedValidation, getImmediateValidation, clearValidationCache } = useDebounceValidation(
+        formValidation.validateField,
+        300 // 300ms debounce delay
+    );
+
+    // Wrapper functions for form error handling with proper types
+    const setPersonError = (name: string, error: any) => {
+        personForm.setError(name as any, error);
+    };
+    
+    const clearPersonErrors = (name: string) => {
+        personForm.clearErrors(name as any);
+    };
+
+    const setLookupError = (name: string, error: any) => {
+        lookupForm.setError(name as any, error);
+    };
+    
+    const clearLookupErrors = (name: string) => {
+        lookupForm.clearErrors(name as any);
+    };
 
     // Ref for auto-scrolling to active step content
     const stepContentRef = useRef<HTMLDivElement>(null);
@@ -2086,18 +2111,29 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                             onChange={(e) => {
                                                 const value = e.target.value.replace(/\D/g, '');
                                                 field.onChange(value);
-                                                // Trigger validation on change
-                                                setTimeout(() => {
-                                                    lookupForm.trigger('document_number');
-                                                }, 100);
+                                                // Use debounced validation on change
+                                                debouncedValidation('document_number', value, 0);
                                             }}
-                                            onBlur={field.onBlur}
+                                            onBlur={(e) => {
+                                                field.onBlur();
+                                                // Use immediate validation on blur for better UX
+                                                const result = getImmediateValidation('document_number', e.target.value, 0);
+                                                if (!result.isValid && result.error) {
+                                                    setLookupError('document_number', {
+                                                        type: 'manual',
+                                                        message: result.error
+                                                    });
+                                                } else {
+                                                    clearLookupErrors('document_number');
+                                                }
+                                            }}
                                             InputProps={{
                                                 endAdornment: field.value && (
                                                     <InputAdornment position="end">
                                                         <IconButton onClick={() => {
                                                             lookupForm.setValue('document_number', '');
-                                                            lookupForm.trigger('document_number');
+                                                            clearValidationCache('document_number', 0);
+                                                            clearLookupErrors('document_number');
                                                         }} size="small">
                                                             <ClearIcon />
                                                         </IconButton>
@@ -2149,27 +2185,21 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
                 <Grid container spacing={2}>
                     <Grid item xs={12} md={6}>
-                        <Controller
+                        <ValidatedTextField
                             name="surname"
                             control={personForm.control}
-                            render={({ field }) => (
-                                <TextField
-                                    id="person-surname"
-                                    name={field.name}
-                                    value={field.value || ''}
-                                    fullWidth
-                                    size="small"
-                                    label="Surname *"
-                                    error={!!personForm.formState.errors.surname}
-                                    helperText={personForm.formState.errors.surname?.message || 'Family name'}
-                                    inputProps={{ maxLength: 50 }}
-                                    onChange={(e) => {
-                                        const value = e.target.value.toUpperCase();
-                                        field.onChange(value);
-                                    }}
-                                    onBlur={field.onBlur}
-                                />
-                            )}
+                            stepIndex={1}
+                            isRequired={true}
+                            getFieldState={formValidation.getFieldState}
+                            debouncedValidation={debouncedValidation}
+                            getImmediateValidation={getImmediateValidation}
+                            setError={setPersonError}
+                            clearErrors={clearPersonErrors}
+                            errors={personForm.formState.errors}
+                            label="Surname *"
+                            helperText="Family name"
+                            inputProps={{ maxLength: 50 }}
+                            transform={(value) => value.toUpperCase()}
                         />
                     </Grid>
 

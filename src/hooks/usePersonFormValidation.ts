@@ -133,8 +133,15 @@ const stepSchemas = {
   }),
 };
 
+// Field configuration types
+interface StepFieldConfig {
+  required: string[];
+  schema: any;
+  nested?: Record<string, string[]>;
+}
+
 // Field configuration for each step
-export const stepFieldConfig = {
+export const stepFieldConfig: Record<number, StepFieldConfig> = {
   0: { // Lookup
     required: ['document_number'],
     schema: stepSchemas.lookup,
@@ -184,7 +191,7 @@ export interface PersonFormValidationHook {
 export const usePersonFormValidation = (): PersonFormValidationHook => {
   
   const validateStep = useCallback((stepIndex: number, data: any): ValidationResult => {
-    const config = stepFieldConfig[stepIndex as keyof typeof stepFieldConfig];
+    const config = stepFieldConfig[stepIndex];
     if (!config) {
       return { isValid: true, errors: {}, fieldStates: {} };
     }
@@ -212,17 +219,19 @@ export const usePersonFormValidation = (): PersonFormValidationHook => {
         Object.entries(config.nested).forEach(([arrayField, nestedFields]) => {
           const arrayData = data[arrayField];
           if (Array.isArray(arrayData) && arrayData.length > 0) {
-            arrayData.forEach((item, index) => {
-              nestedFields.forEach(nestedField => {
-                const fieldKey = `${arrayField}[${index}].${nestedField}`;
-                const value = item[nestedField];
-                if (value !== undefined && value !== '' && value !== null) {
-                  fieldStates[fieldKey] = 'valid';
-                } else {
-                  fieldStates[fieldKey] = 'required';
-                  errors[fieldKey] = `${nestedField.replace(/_/g, ' ')} is required`;
-                }
-              });
+            arrayData.forEach((item: any, index: number) => {
+              if (Array.isArray(nestedFields)) {
+                nestedFields.forEach(nestedField => {
+                  const fieldKey = `${arrayField}[${index}].${nestedField}`;
+                  const value = item[nestedField];
+                  if (value !== undefined && value !== '' && value !== null) {
+                    fieldStates[fieldKey] = 'valid';
+                  } else {
+                    fieldStates[fieldKey] = 'required';
+                    errors[fieldKey] = `${nestedField.replace(/_/g, ' ')} is required`;
+                  }
+                });
+              }
             });
           } else {
             fieldStates[arrayField] = 'required';
@@ -261,7 +270,7 @@ export const usePersonFormValidation = (): PersonFormValidationHook => {
   }, []);
 
   const validateField = useCallback((fieldName: string, value: any, stepIndex: number) => {
-    const config = stepFieldConfig[stepIndex as keyof typeof stepFieldConfig];
+    const config = stepFieldConfig[stepIndex];
     if (!config) {
       return { isValid: true, state: 'default' as const };
     }
