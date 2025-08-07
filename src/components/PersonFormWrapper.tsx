@@ -1713,8 +1713,20 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
         try {
             // Store both payloads for later use
+            console.log('🔄 SETTING PENDING PAYLOADS:', {
+                personPayload: personPayload,
+                addressPayloads: addressPayloads,
+                addressCount: addressPayloads?.length || 0
+            });
             setPendingPersonPayload(personPayload);
             setPendingAddressPayloads(addressPayloads);
+            
+            // Immediate verification of state setting
+            console.log('🔄 PENDING PAYLOADS SET - Current state check:', {
+                pendingPersonPayload: !!personPayload,
+                pendingAddressPayloads: !!addressPayloads,
+                addressPayloadsLength: addressPayloads?.length || 0
+            });
 
             // Search for potential duplicates using similar data
             const duplicateQuery = new URLSearchParams({
@@ -1736,7 +1748,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
             if (!duplicateResponse.ok) {
                 console.warn('Duplicate search failed, proceeding with person creation');
-                await createPersonDirectly(personPayload);
+                await createPersonDirectly(personPayload, addressPayloads);
                 return;
             }
 
@@ -1760,22 +1772,22 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     setShowDuplicateDialog(true);
                 } else {
                     // No high-confidence duplicates found - create person
-                    await createPersonDirectly(personPayload);
+                    await createPersonDirectly(personPayload, addressPayloads);
                 }
             } else {
                 // No matches found - create person
-                await createPersonDirectly(personPayload);
+                await createPersonDirectly(personPayload, addressPayloads);
             }
         } catch (error) {
             console.error('Duplicate check failed:', error);
             // If duplicate check fails, try to create person normally
-            await createPersonDirectly(personPayload);
+            await createPersonDirectly(personPayload, addressPayloads);
         } finally {
             setDuplicateCheckLoading(false);
         }
     };
 
-    const createPersonDirectly = async (personPayload: any) => {
+    const createPersonDirectly = async (personPayload: any, addressPayloadsOverride?: any[]) => {
         try {
             console.log('🌐 SENDING POST REQUEST TO:', `${API_BASE_URL}/api/v1/persons/`);
             console.log('📤 CREATE REQUEST BODY:', JSON.stringify(personPayload, null, 2));
@@ -1806,16 +1818,20 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             });
             
             // Now handle addresses separately using dedicated address endpoints
-            // For create, we use the stored address payloads
-            console.log('🔍 CHECKING PENDING ADDRESS PAYLOADS:', {
+            // Use either the override parameter or the stored address payloads
+            const addressesToCreate = addressPayloadsOverride || pendingAddressPayloads;
+            console.log('🔍 CHECKING ADDRESS PAYLOADS:', {
+                hasAddressPayloadsOverride: !!addressPayloadsOverride,
+                addressPayloadsOverrideLength: addressPayloadsOverride?.length || 0,
                 hasPendingAddressPayloads: !!pendingAddressPayloads,
                 pendingAddressPayloadsLength: pendingAddressPayloads?.length || 0,
-                pendingAddressPayloads: pendingAddressPayloads
+                finalAddressesToCreate: addressesToCreate,
+                finalAddressesToCreateLength: addressesToCreate?.length || 0
             });
             
-            if (pendingAddressPayloads && pendingAddressPayloads.length > 0) {
+            if (addressesToCreate && addressesToCreate.length > 0) {
                 console.log('🏠 PROCEEDING WITH ADDRESS CREATION for person:', result.id);
-                await handleAddressUpdates(result.id, pendingAddressPayloads, []);
+                await handleAddressUpdates(result.id, addressesToCreate, []);
                 
                 // Fetch updated person with addresses
                 const updatedPersonResponse = await fetch(`${API_BASE_URL}/api/v1/persons/${result.id}`, {
@@ -1835,11 +1851,14 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     handleFormComplete(result);
                 }
             } else {
-                console.log('⚠️ NO PENDING ADDRESS PAYLOADS - Person created without addresses');
+                console.log('⚠️ NO ADDRESS PAYLOADS TO CREATE - Person created without addresses');
                 console.log('🔍 DEBUG INFO:', {
-                    formDataAddresses: personForm.getValues().addresses,
+                    addressPayloadsOverride: addressPayloadsOverride,
+                    addressPayloadsOverrideLength: addressPayloadsOverride?.length,
                     pendingAddressPayloads: pendingAddressPayloads,
-                    pendingAddressPayloadsLength: pendingAddressPayloads?.length
+                    pendingAddressPayloadsLength: pendingAddressPayloads?.length,
+                    finalAddressesToCreate: addressesToCreate,
+                    finalAddressesToCreateLength: addressesToCreate?.length
                 });
                 setCreatedPerson(result);
                 handleFormComplete(result);
@@ -1942,7 +1961,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     pendingAddressCount: pendingAddressPayloads?.length || 0,
                     pendingAddressPayloads: pendingAddressPayloads
                 });
-                await createPersonDirectly(pendingPersonPayload);
+                await createPersonDirectly(pendingPersonPayload, pendingAddressPayloads);
             } catch (error) {
                 console.error('Failed to create person:', error);
                 alert(`Failed to create person: ${error instanceof Error ? error.message : 'Unknown error'}`);
