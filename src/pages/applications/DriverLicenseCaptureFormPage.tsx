@@ -11,10 +11,8 @@ import {
   Paper,
   Typography,
   Box,
-  Stepper,
-  Step,
-  StepLabel,
-  StepContent,
+  Tabs,
+  Tab,
   Button,
   Alert,
   CircularProgress,
@@ -53,7 +51,7 @@ import {
   LicenseCategory,
   Location
 } from '../../types';
-import { CapturedLicense } from '../../components/applications/LicenseCaptureForm';
+import { CapturedLicense, validateCapturedDataForAuthorization } from '../../components/applications/LicenseCaptureForm';
 import { API_ENDPOINTS, getAuthToken } from '../../config/api';
 
 const DriverLicenseCaptureFormPage: React.FC = () => {
@@ -62,6 +60,7 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
 
   // Form state
   const [activeStep, setActiveStep] = useState(0);
+  const [personStep, setPersonStep] = useState(0);
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
   const [licenseCaptureData, setLicenseCaptureData] = useState<LicenseCaptureData | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
@@ -70,21 +69,21 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
 
+  // Person form validation state
+  const [personFormValid, setPersonFormValid] = useState(false);
+
   // Steps for driver's license capture
   const steps = [
     {
-      label: 'Select Person',
-      description: 'Choose existing person or register new license holder',
+      label: 'Person',
       icon: <PersonSearchIcon />
     },
     {
-      label: 'Capture License Details',
-      description: 'Enter existing license information for verification',
+      label: 'License Capture',
       icon: <DocumentScannerIcon />
     },
     {
-      label: 'Review & Submit',
-      description: 'Review captured information and submit',
+      label: 'Review',
       icon: <PreviewIcon />
     }
   ];
@@ -119,14 +118,32 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
   const isStepValid = (step: number): boolean => {
     switch (step) {
       case 0:
+        // Person step is valid if we have a person (PersonFormWrapper handles its own validation)
         return !!selectedPerson && !!selectedPerson.id;
       case 1:
-        // Check license capture data and location for admin users
-        const hasLicenseData = !!licenseCaptureData && licenseCaptureData.captured_licenses.length > 0;
+        // Check license capture data validation and location for admin users
+        const hasValidLicenseData = !!licenseCaptureData && 
+          licenseCaptureData.captured_licenses.length > 0 &&
+          validateCapturedDataForAuthorization(licenseCaptureData).isValid;
         const hasLocation = !!user?.primary_location_id || !!selectedLocationId;
-        return hasLicenseData && hasLocation && !!selectedPerson && !!selectedPerson.id;
+        const hasPerson = !!selectedPerson && !!selectedPerson.id;
+        
+        console.log('🔍 Step 1 validation debug:', {
+          hasValidLicenseData,
+          hasLocation,
+          hasPerson,
+          userPrimaryLocation: user?.primary_location_id,
+          selectedLocationId,
+          licenseCaptureData,
+          selectedPerson: selectedPerson?.id,
+          selectedPersonFull: selectedPerson
+        });
+        
+        return hasValidLicenseData && hasLocation && hasPerson;
       case 2:
-        return !!selectedPerson && !!selectedPerson.id && !!licenseCaptureData && licenseCaptureData.captured_licenses.length > 0;
+        return !!selectedPerson && !!selectedPerson.id && !!licenseCaptureData && 
+          licenseCaptureData.captured_licenses.length > 0 &&
+          validateCapturedDataForAuthorization(licenseCaptureData).isValid;
       default:
         return false;
     }
@@ -143,8 +160,34 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
     return user?.primary_location_id || selectedLocationId;
   };
 
+  // Person step validation state
+  const handlePersonValidationChange = (step: number, isValid: boolean) => {
+    console.log('🎯 PersonFormWrapper validation callback:', { step, isValid });
+    setPersonFormValid(isValid);
+  };
+  
+  const isPersonStepValid = (): boolean => {
+    // Use the actual validation state from PersonFormWrapper
+    return personFormValid;
+  };
+
+  // Tab change handler
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    // Allow navigation to previous/completed steps or the next step if current is valid
+    if (newValue <= activeStep || (newValue === activeStep + 1 && isStepValid(activeStep))) {
+      setActiveStep(newValue);
+    }
+  };
+
+  // Person step change handler
+  const handlePersonStepChange = (step: number, canAdvance: boolean) => {
+    console.log('🎯 DriverLicenseCaptureFormPage: handlePersonStepChange called with step:', step, 'canAdvance:', canAdvance);
+    setPersonStep(step);
+  };
+
   // Navigation handlers
   const handleNext = () => {
+    // Person form handles its own navigation, we only handle non-person steps
     if (activeStep < steps.length - 1) {
       setActiveStep(activeStep + 1);
     }
@@ -160,17 +203,23 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
     navigate('/dashboard');
   };
 
-  // Person selection handler
+  // Person selection handler - do NOT auto-advance, let user confirm on review step
   const handlePersonSelected = (person: Person) => {
-    console.log('Person selected from PersonFormWrapper:', person);
-    console.log('Person ID:', person?.id);
+    console.log('🎯 Person selected from PersonFormWrapper:', person);
+    console.log('🎯 Person ID:', person?.id);
+    console.log('🎯 Person full data:', JSON.stringify(person, null, 2));
     setSelectedPerson(person);
     setError('');
     
-    // Auto-advance to next step
-    setTimeout(() => {
-      setActiveStep(1);
-    }, 500);
+    // Do NOT auto-advance - let PersonFormWrapper handle navigation to review step
+    // User will manually click "Continue to License" from review step
+    console.log('🎯 Person form completed - staying on person step, user will advance manually from review');
+  };
+
+  // Handler for when user confirms to continue to license from person review
+  const handleContinueToLicense = () => {
+    console.log('🎯 User confirmed to continue to license capture');
+    setActiveStep(1);
   };
 
   // License capture handler
@@ -200,6 +249,35 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
       });
     }
   }, [selectedPerson, licenseCaptureData]);
+
+  // Helper function to render tab with completion indicator
+  const renderTabLabel = (step: any, index: number) => {
+    // Only show completed checkmark for steps that are behind the current step AND valid
+    // Don't show completed for future steps or the current step
+    const isCompleted = index < activeStep && isStepValid(index);
+    const isCurrent = activeStep === index;
+    
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          color: isCompleted ? 'success.main' : isCurrent ? 'primary.main' : 'text.secondary' 
+        }}>
+          {isCompleted ? <CheckCircleIcon fontSize="small" /> : step.icon}
+        </Box>
+        <Typography 
+          variant="body2" 
+          sx={{ 
+            fontWeight: isCurrent ? 'bold' : 'normal',
+            color: isCompleted ? 'success.main' : isCurrent ? 'primary.main' : 'text.secondary'
+          }}
+        >
+          {step.label}
+        </Typography>
+      </Box>
+    );
+  };
 
   // Submit handler
   const handleSubmit = async () => {
@@ -286,37 +364,45 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
     }
   };
 
-  // Render step content
+  // Render step content (excluding Person step which is handled separately)
   const renderStepContent = (step: number) => {
     switch (step) {
-      case 0: // Person step
-        return (
-          <PersonFormWrapper
-            mode="application"
-            onSuccess={handlePersonSelected}
-            title=""
-            subtitle="Select existing person or register new license holder"
-            showHeader={false}
-          />
-        );
+      case 0: // Person step - handled separately to preserve state
+        return null;
 
       case 1: // License capture step
         return (
           <Box>
             {/* Location Selection for Admin Users */}
             {user && !user.primary_location_id && (
-              <Card sx={{ mb: 3 }}>
+              <Card 
+                elevation={0}
+                sx={{ 
+                  mb: 2,
+                  bgcolor: 'white',
+                  boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                  borderRadius: 2
+                }}
+              >
                 <CardHeader 
-                  title="Select Processing Location" 
-                  avatar={<LocationOnIcon />}
+                  sx={{ p: 1.5 }}
+                  title={
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <LocationOnIcon color="primary" />
+                      <Typography variant="subtitle1" sx={{ fontSize: '1rem' }}>
+                        Select Processing Location
+                      </Typography>
+                    </Box>
+                  }
                 />
-                <CardContent>
-                  <FormControl fullWidth required error={!!error && !selectedLocationId}>
+                <CardContent sx={{ p: 1.5, pt: 0 }}>
+                  <FormControl fullWidth required size="small" error={!!error && !selectedLocationId}>
                     <InputLabel>Processing Location</InputLabel>
                     <Select
                       value={selectedLocationId}
                       onChange={handleLocationChange}
                       label="Processing Location"
+                      size="small"
                     >
                       {Array.isArray(availableLocations) && availableLocations.map((location) => (
                         <MenuItem key={location.id} value={location.id}>
@@ -493,107 +579,145 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Paper elevation={3} sx={{ p: 4 }}>
+    <Container maxWidth="lg" sx={{ py: 1, height: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column' }}>
+      <Paper 
+        elevation={0}
+        sx={{ 
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: '#f8f9fa',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          overflow: 'hidden'
+        }}
+      >
         {/* Header */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h4" gutterBottom>
+        <Box sx={{ p: 2, bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Typography variant="h5" gutterBottom sx={{ mb: 1 }}>
             Driver's License Capture
           </Typography>
-          <Typography variant="body1" color="text.secondary">
+          <Typography variant="body2" color="text.secondary">
             Capture existing driver's license details for system registration
           </Typography>
         </Box>
 
         {/* Error/Success Messages */}
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
+          <Alert severity="error" sx={{ mx: 2, mt: 2 }}>
             {error}
           </Alert>
         )}
         
         {success && (
-          <Alert severity="success" sx={{ mb: 3 }} icon={<CheckCircleIcon />}>
+          <Alert severity="success" sx={{ mx: 2, mt: 2 }} icon={<CheckCircleIcon />}>
             {success}
           </Alert>
         )}
 
-        {/* Stepper */}
-        <Stepper activeStep={activeStep} orientation="vertical">
-          {steps.map((step, index) => (
-            <Step key={step.label}>
-              <StepLabel
-                optional={
-                  <Typography variant="caption">{step.description}</Typography>
+        {/* Application Tabs */}
+        <Box sx={{ bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Tabs
+            value={activeStep}
+            onChange={handleTabChange}
+            sx={{
+              px: 2,
+              '& .MuiTab-root': {
+                minHeight: 48,
+                textTransform: 'none',
+                fontSize: '0.875rem',
+                color: 'text.secondary',
+                bgcolor: 'grey.100',
+                mx: 0.5,
+                borderRadius: '8px 8px 0 0',
+                '&.Mui-selected': {
+                  bgcolor: 'white',
+                  color: 'text.primary',
+                },
+                '&:hover': {
+                  bgcolor: 'grey.200',
+                  '&.Mui-selected': {
+                    bgcolor: 'white',
+                  }
                 }
-                StepIconComponent={() => (
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: 40,
-                      height: 40,
-                      borderRadius: '50%',
-                      bgcolor: activeStep >= index ? 'primary.main' : 'grey.300',
-                      color: activeStep >= index ? 'white' : 'grey.600',
-                    }}
-                  >
-                    {step.icon}
-                  </Box>
-                )}
-              >
-                {step.label}
-              </StepLabel>
-              <StepContent>
-                <Box sx={{ mt: 2, mb: 2 }}>
-                  {renderStepContent(index)}
-                </Box>
-                
-                {/* Navigation Buttons */}
-                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                  <Button
-                    onClick={handleCancel}
-                    disabled={loading}
-                    color="secondary"
-                  >
-                    Cancel
-                  </Button>
-                  
-                  <Button
-                    disabled={index === 0 || loading}
-                    onClick={handleBack}
-                    startIcon={<ArrowBackIcon />}
-                  >
-                    Back
-                  </Button>
-                  
-                  <Button
-                    variant="contained"
-                    onClick={index === steps.length - 1 ? handleSubmit : handleNext}
-                    disabled={!isStepValid(index) || loading}
-                    startIcon={loading ? <CircularProgress size={20} /> : undefined}
-                    endIcon={index !== steps.length - 1 ? <ArrowForwardIcon /> : undefined}
-                  >
-                    {loading ? 'Submitting...' : index === steps.length - 1 ? 'Submit Capture' : 'Next'}
-                  </Button>
-                </Box>
-              </StepContent>
-            </Step>
-          ))}
-        </Stepper>
+              },
+              '& .MuiTabs-indicator': {
+                display: 'none'
+              }
+            }}
+          >
+            {steps.map((step, index) => (
+              <Tab
+                key={step.label}
+                label={renderTabLabel(step, index)}
+                disabled={index > activeStep + 1 || (index === activeStep + 1 && !isStepValid(activeStep))}
+              />
+            ))}
+          </Tabs>
+        </Box>
 
-        {/* Completion Message */}
-        {activeStep === steps.length && (
-          <Paper square elevation={0} sx={{ p: 3 }}>
-            <Typography>All steps completed - license capture submitted successfully!</Typography>
-            <Button 
-              onClick={() => navigate('/dashboard/applications/dashboard')} 
-              sx={{ mt: 1, mr: 1 }}
+        {/* Tab Content */}
+        <Box sx={{ 
+          flexGrow: 1, 
+          overflow: activeStep === 0 ? 'hidden' : 'auto', // No scroll for person step, scroll for other steps
+          p: activeStep === 0 ? 0 : 2 // No padding for person step, padding for other steps
+        }}>
+          {/* Person Form - Always rendered but conditionally visible to preserve state */}
+          <Box sx={{ display: activeStep === 0 ? 'block' : 'none' }}>
+            <PersonFormWrapper
+              key="person-form-wrapper" // Stable key to preserve component instance
+              mode="application"
+              externalPersonStep={personStep}
+              onSuccess={handlePersonSelected}
+              onPersonValidationChange={handlePersonValidationChange}
+              onPersonStepChange={handlePersonStepChange}
+              onContinueToApplication={handleContinueToLicense}
+              onComplete={handleContinueToLicense} // For new persons to advance to next step
+              onCancel={handleCancel}
+              title=""
+              subtitle="Select existing person or register new driver's license holder"
+              showHeader={false}
+            />
+          </Box>
+          
+          {/* Other step content - only render when needed */}
+          {activeStep !== 0 && renderStepContent(activeStep)}
+        </Box>
+
+        {/* Navigation Buttons - Only show when NOT on person step (activeStep !== 0) */}
+        {activeStep !== 0 && (
+          <Box sx={{ p: 2, bgcolor: 'white', borderTop: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+            <Button
+              onClick={handleCancel}
+              disabled={loading}
+              color="secondary"
+              size="small"
             >
-              Back to Applications
+              Cancel
             </Button>
-          </Paper>
+            
+            <Button
+              disabled={loading}
+              onClick={handleBack}
+              startIcon={<ArrowBackIcon />}
+              size="small"
+            >
+              Back
+            </Button>
+            
+            <Button
+              variant="contained"
+              onClick={activeStep === steps.length - 1 ? handleSubmit : handleNext}
+              disabled={!isStepValid(activeStep) || loading}
+              startIcon={loading ? <CircularProgress size={20} /> : undefined}
+              endIcon={activeStep !== steps.length - 1 ? <ArrowForwardIcon /> : undefined}
+              size="small"
+            >
+              {loading ? 'Submitting...' : 
+               activeStep === steps.length - 1 ? 'Submit Capture' : 
+               'Next'}
+            </Button>
+          </Box>
         )}
       </Paper>
     </Container>

@@ -409,7 +409,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 locality: '',
                 postal_code: '',
                 town: '',
-                country: 'MADAGASCAR',
+                country: 'MG',
                 province_code: '',
                 is_primary: true,
             }],
@@ -625,7 +625,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             personForm.setValue('aliases.0.country_of_issue', defaultCountry);
             personForm.setValue('addresses.0.address_type', defaultAddressType);
             personForm.setValue('addresses.0.province_code', defaultProvinceCode);
-            personForm.setValue('addresses.0.country', 'MADAGASCAR');
+            personForm.setValue('addresses.0.country', defaultCountry);
 
             // Also update lookup form default
             lookupForm.setValue('document_type', defaultDocumentType);
@@ -921,7 +921,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 locality: '',
                 postal_code: '',
                 town: '',
-                country: 'MADAGASCAR',
+                country: defaultCountry,
                 province_code: defaultProvinceCode,
                 is_primary: true,
             }],
@@ -930,6 +930,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         console.log('🆕 NEW PERSON FORM INITIALIZED with address defaults:', {
             defaultAddressType,
             defaultProvinceCode,
+            defaultCountry,
             initialAddress: {
                 address_type: defaultAddressType,
                 street_line1: '',
@@ -937,7 +938,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 locality: '',
                 postal_code: '',
                 town: '',
-                country: 'MADAGASCAR',
+                country: defaultCountry,
                 province_code: defaultProvinceCode,
                 is_primary: true,
             }
@@ -1087,7 +1088,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 locality: address.locality?.toUpperCase() || '',
                 postal_code: address.postal_code || '',
                 town: address.town?.toUpperCase() || '',
-                country: address.country?.toUpperCase() || 'MADAGASCAR',
+                country: address.country?.toUpperCase() || 'MG',
                 province_code: address.province_code?.toUpperCase() || '',
                 is_primary: address.is_primary || false,
             }));
@@ -1496,7 +1497,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                         locality: address.locality?.toUpperCase() || '',
                         postal_code: address.postal_code || '',
                         town: address.town?.toUpperCase() || '',
-                        country: address.country?.toUpperCase() || 'MADAGASCAR',
+                        country: address.country?.toUpperCase() || 'MG',
                     province_code: address.province_code?.toUpperCase() || '',
                         is_verified: false,
                 }));
@@ -1560,9 +1561,10 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     markStepValid(1, true); // Mark details step complete when person is updated
                     handleFormComplete(updatedPerson);
                 } else {
-                setCreatedPerson(result);
-                markStepValid(1, true); // Mark details step complete when person is updated
-                handleFormComplete(result);
+                    console.warn('⚠️ Failed to fetch updated person with addresses, using original result');
+                    setCreatedPerson(result);
+                    markStepValid(1, true); // Mark details step complete when person is updated
+                    handleFormComplete(result);
                 }
             } else {
                 // Create new person (with duplicate check)
@@ -1805,7 +1807,14 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             
             // Now handle addresses separately using dedicated address endpoints
             // For create, we use the stored address payloads
+            console.log('🔍 CHECKING PENDING ADDRESS PAYLOADS:', {
+                hasPendingAddressPayloads: !!pendingAddressPayloads,
+                pendingAddressPayloadsLength: pendingAddressPayloads?.length || 0,
+                pendingAddressPayloads: pendingAddressPayloads
+            });
+            
             if (pendingAddressPayloads && pendingAddressPayloads.length > 0) {
+                console.log('🏠 PROCEEDING WITH ADDRESS CREATION for person:', result.id);
                 await handleAddressUpdates(result.id, pendingAddressPayloads, []);
                 
                 // Fetch updated person with addresses
@@ -1821,10 +1830,17 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     setCreatedPerson(updatedPerson);
                     handleFormComplete(updatedPerson);
                 } else {
-            setCreatedPerson(result);
-            handleFormComplete(result);
+                    console.warn('⚠️ Failed to fetch updated person with addresses, using original result');
+                    setCreatedPerson(result);
+                    handleFormComplete(result);
                 }
             } else {
+                console.log('⚠️ NO PENDING ADDRESS PAYLOADS - Person created without addresses');
+                console.log('🔍 DEBUG INFO:', {
+                    formDataAddresses: personForm.getValues().addresses,
+                    pendingAddressPayloads: pendingAddressPayloads,
+                    pendingAddressPayloadsLength: pendingAddressPayloads?.length
+                });
                 setCreatedPerson(result);
                 handleFormComplete(result);
             }
@@ -1920,6 +1936,12 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         if (pendingPersonPayload) {
             try {
                 setDuplicateCheckLoading(true);
+                console.log('🎯 HANDLE KEEP NEW PERSON - Pending data check:', {
+                    hasPendingPersonPayload: !!pendingPersonPayload,
+                    hasPendingAddressPayloads: !!pendingAddressPayloads,
+                    pendingAddressCount: pendingAddressPayloads?.length || 0,
+                    pendingAddressPayloads: pendingAddressPayloads
+                });
                 await createPersonDirectly(pendingPersonPayload);
             } catch (error) {
                 console.error('Failed to create person:', error);
@@ -3092,9 +3114,9 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                                 <Select 
                                                     name={field.name}
                                                     label="Country *"
-                                                    value={field.value || 'MADAGASCAR'} // Ensure default value
+                                                    value={field.value || (countries.length > 0 ? countries[0].value : 'MG')} // Ensure default value
                                                     onChange={(e) => {
-                                                        const value = e.target.value || 'MADAGASCAR';
+                                                        const value = e.target.value || (countries.length > 0 ? countries[0].value : 'MG');
                                                         field.onChange(value);
                                                         debouncedValidation(`addresses.${index}.country`, value, 4);
                                                         
