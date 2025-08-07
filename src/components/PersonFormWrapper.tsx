@@ -238,6 +238,7 @@ interface PersonFormWrapperProps {
     onSuccess?: (person: any, isEdit: boolean) => void;
     onPersonStepChange?: (step: number, canAdvance: boolean) => void;
     onPersonValidationChange?: (step: number, isValid: boolean) => void;
+    onContinueToApplication?: () => void; // New: handler for "Continue to License" button
     externalPersonStep?: number;
     onPersonNext?: React.MutableRefObject<() => Promise<boolean>>;
     onPersonBack?: React.MutableRefObject<() => boolean>;
@@ -255,6 +256,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     onSuccess,
     onPersonStepChange,
     onPersonValidationChange,
+    onContinueToApplication,
     externalPersonStep,
     onPersonNext,
     onPersonBack,
@@ -3184,7 +3186,18 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 justifyContent: 'flex-end', 
                 gap: 1 
             }}>
-                {/* Cancel/Back Button */}
+                {/* Cancel Button - Show in application mode */}
+                {mode === 'application' && onCancel && (
+                    <Button
+                        onClick={onCancel}
+                        color="secondary"
+                        size="small"
+                    >
+                        Cancel
+                    </Button>
+                )}
+
+                {/* Back Button */}
                 <Button
                     disabled={currentStep === (skipFirstStep ? 1 : 0)}
                     onClick={handleBack}
@@ -3209,14 +3222,24 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 ) : (
                     <Button
                         variant="contained"
-                        onClick={handleSubmit}
+                        onClick={() => {
+                            // In application mode on review step with existing person, continue to license
+                            if (mode === 'application' && currentStep === steps.length - 1 && isExistingPerson && onContinueToApplication) {
+                                onContinueToApplication();
+                            } else {
+                                // Otherwise submit/save the person
+                                handleSubmit();
+                            }
+                        }}
                         disabled={submitLoading || duplicateCheckLoading}
-                        startIcon={submitLoading || duplicateCheckLoading ? <CircularProgress size={20} /> : <PersonAddIcon />}
+                        startIcon={submitLoading || duplicateCheckLoading ? <CircularProgress size={20} /> : 
+                                   (mode === 'application' && currentStep === steps.length - 1 && isExistingPerson ? <ArrowForwardIcon /> : <PersonAddIcon />)}
                         size="small"
                     >
                         {duplicateCheckLoading ? 'Checking...' : 
                          submitLoading ? (isEditMode ? 'Updating...' : 'Submitting...') : 
-                         (mode === 'application' ? 'Continue to License' : (isEditMode ? 'Update Person' : 'Submit'))}
+                         (mode === 'application' && currentStep === steps.length - 1 && isExistingPerson ? 'Continue to License' : 
+                          (isEditMode ? 'Update Person' : 'Submit'))}
                     </Button>
                 )}
             </Box>

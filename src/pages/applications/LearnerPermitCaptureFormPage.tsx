@@ -207,7 +207,7 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
     navigate('/dashboard');
   };
 
-  // Person selection handler - automatically advance to license capture when person form is completed
+  // Person selection handler - do NOT auto-advance, let user confirm on review step
   const handlePersonSelected = (person: Person) => {
     console.log('🎯 Person selected from PersonFormWrapper:', person);
     console.log('🎯 Person ID:', person?.id);
@@ -215,8 +215,14 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
     setSelectedPerson(person);
     setError('');
     
-    // Auto-advance to license capture step since person form is complete
-    console.log('🎯 Person form completed - advancing to license capture step');
+    // Do NOT auto-advance - let PersonFormWrapper handle navigation to review step
+    // User will manually click "Continue to License" from review step
+    console.log('🎯 Person form completed - staying on person step, user will advance manually from review');
+  };
+
+  // Handler for when user confirms to continue to license from person review
+  const handleContinueToLicense = () => {
+    console.log('🎯 User confirmed to continue to license capture');
     setActiveStep(1);
   };
 
@@ -712,6 +718,8 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
               mode="application"
               onSuccess={handlePersonSelected}
               onPersonValidationChange={handlePersonValidationChange}
+              onContinueToApplication={handleContinueToLicense}
+              onCancel={handleCancel}
               title=""
               subtitle="Select existing person or register new learner's permit holder"
               showHeader={false}
@@ -722,44 +730,41 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
           {activeStep !== 0 && renderStepContent(activeStep)}
         </Box>
 
-        {/* Navigation Buttons - Show only Cancel when on person step since PersonFormWrapper has its own navigation */}
-        <Box sx={{ p: 2, bgcolor: 'white', borderTop: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-          <Button
-            onClick={handleCancel}
-            disabled={loading}
-            color="secondary"
-            size="small"
-          >
-            Cancel
-          </Button>
-          
-          {/* Show Back/Next buttons only when NOT on person step */}
-          {activeStep !== 0 && (
-            <>
-              <Button
-                disabled={loading}
-                onClick={handleBack}
-                startIcon={<ArrowBackIcon />}
-                size="small"
-              >
-                Back
-              </Button>
-              
-              <Button
-                variant="contained"
-                onClick={activeStep === steps.length - 1 ? handleSubmit : handleNext}
-                disabled={!isStepValid(activeStep) || loading}
-                startIcon={loading ? <CircularProgress size={20} /> : undefined}
-                endIcon={activeStep !== steps.length - 1 ? <ArrowForwardIcon /> : undefined}
-                size="small"
-              >
-                {loading ? 'Submitting...' : 
-                 activeStep === steps.length - 1 ? 'Submit Capture' : 
-                 'Next'}
-              </Button>
-            </>
-          )}
-        </Box>
+        {/* Navigation Buttons - Only show when NOT on person step (activeStep !== 0) */}
+        {activeStep !== 0 && (
+          <Box sx={{ p: 2, bgcolor: 'white', borderTop: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+            <Button
+              onClick={handleCancel}
+              disabled={loading}
+              color="secondary"
+              size="small"
+            >
+              Cancel
+            </Button>
+            
+            <Button
+              disabled={loading}
+              onClick={handleBack}
+              startIcon={<ArrowBackIcon />}
+              size="small"
+            >
+              Back
+            </Button>
+            
+            <Button
+              variant="contained"
+              onClick={activeStep === steps.length - 1 ? handleSubmit : handleNext}
+              disabled={!isStepValid(activeStep) || loading}
+              startIcon={loading ? <CircularProgress size={20} /> : undefined}
+              endIcon={activeStep !== steps.length - 1 ? <ArrowForwardIcon /> : undefined}
+              size="small"
+            >
+              {loading ? 'Submitting...' : 
+               activeStep === steps.length - 1 ? 'Submit Capture' : 
+               'Next'}
+            </Button>
+          </Box>
+        )}
       </Paper>
     </Container>
   );
