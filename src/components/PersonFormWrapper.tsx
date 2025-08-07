@@ -430,23 +430,13 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         }
     }, [formValidation, lookupForm, personForm]);
 
-    // Trigger validation when current step changes (for new person scenario)
-    useEffect(() => {
-        if (isNewPerson && currentStep > 0) {
-            console.log(`🎯 New person: triggering validation for step ${currentStep}`);
-            setTimeout(() => {
-                triggerStepValidation(currentStep);
-            }, 100); // Small delay to ensure form is rendered
-        }
-    }, [currentStep, isNewPerson, triggerStepValidation]);
-
-    // Initialize step navigation when person type changes
+    // Initialize step navigation when person type changes (only once)
     useEffect(() => {
         if (isNewPerson) {
             console.log('🆕 New person mode: resetting step navigation');
             stepNavigation.resetAllSteps();
         }
-    }, [isNewPerson, stepNavigation]);
+    }, [isNewPerson]); // Remove stepNavigation from deps to prevent loop
 
     // Context-aware completion handler
     const handleFormComplete = (person: any) => {
@@ -1043,8 +1033,59 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             console.log('⚠️ No addresses found for existing person or addresses array is empty');
         }
         
-        // Initialize step navigation for existing person (mark all steps as completed)
+        // Initialize step navigation for existing person and validate all data
         stepNavigation.initializeForExistingPerson(steps.length);
+        
+        // Validate all steps after form is populated
+        setTimeout(() => {
+            validateAllExistingPersonData();
+        }, 100);
+    };
+
+    // Function to validate all existing person data and navigate appropriately
+    const validateAllExistingPersonData = async () => {
+        console.log('🔍 Validating all existing person data');
+        
+        try {
+            const formData = personForm.getValues();
+            const lookupData = lookupForm.getValues();
+            let allValid = true;
+            let firstInvalidStep = -1;
+            
+            // Validate each step
+            for (let i = 0; i < steps.length - 1; i++) { // Skip review step
+                const validation = formValidation.validateStep(i, i === 0 ? lookupData : formData);
+                markStepValid(i, validation.isValid);
+                
+                if (validation.isValid) {
+                    // Mark valid steps as completed for existing persons
+                    stepNavigation.markStepCompleted(i);
+                } else {
+                    console.log(`⚠️ Step ${i} validation failed:`, validation.errors);
+                    allValid = false;
+                    if (firstInvalidStep === -1) {
+                        firstInvalidStep = i;
+                    }
+                }
+            }
+            
+            // Mark review step valid and completed if all other steps are valid
+            markStepValid(steps.length - 1, allValid);
+            if (allValid) {
+                stepNavigation.markStepCompleted(steps.length - 1);
+            }
+            
+            if (allValid) {
+                console.log('✅ All existing person data is valid - navigating to review step');
+                setCurrentStep(steps.length - 1); // Navigate to review step
+            } else {
+                console.log(`⚠️ Found invalid data - navigating to step ${firstInvalidStep}`);
+                setCurrentStep(firstInvalidStep); // Navigate to first invalid step
+            }
+            
+        } catch (error) {
+            console.error('Error validating existing person data:', error);
+        }
     };
 
     // Step validation

@@ -99,7 +99,8 @@ export const useStepNavigation = (totalSteps: number): StepNavigationHook => {
     
     if (state?.isCompleted) return 'completed';
     if (stepIndex === currentStep) return 'current';
-    if (state?.isVisited && !state?.isValid) return 'warning';
+    // Only show warning if step was visited AND the user has moved away from it AND it's invalid
+    if (state?.isVisited && !state?.isValid && stepIndex !== currentStep && stepIndex < currentStep) return 'warning';
     return 'default';
   }, [stepStates]);
 
@@ -126,9 +127,9 @@ export const useStepNavigation = (totalSteps: number): StepNavigationHook => {
     const existingPersonStates: Record<number, StepState> = {};
     for (let i = 0; i < totalSteps; i++) {
       existingPersonStates[i] = {
-        isValid: true, // Assume existing person data is valid
-        isCompleted: true, // Mark all as completed for existing persons
-        isVisited: true
+        isValid: false, // Will be validated after data is loaded
+        isCompleted: false, // Will be marked as completed if valid
+        isVisited: true // Mark all as visited for existing persons
       };
     }
     setStepStates(existingPersonStates);

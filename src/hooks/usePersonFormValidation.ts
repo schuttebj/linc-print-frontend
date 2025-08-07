@@ -32,7 +32,7 @@ const stepSchemas = {
     person_nature: yup
       .string()
       .required('Gender is required')
-      .oneOf(['MALE', 'FEMALE'], 'Please select a valid gender'),
+      .min(1, 'Please select a gender'),
     birth_date: yup
       .string()
       .required('Date of birth is required')
