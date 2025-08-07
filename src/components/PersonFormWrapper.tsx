@@ -3281,18 +3281,18 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             height: mode === 'application' ? 'calc(100vh - 200px)' : 'auto',
             minHeight: mode === 'application' ? '600px' : 'auto'
         }}>
-            {/* Content Container - Conditional padding (no padding for application mode) */}
+            {/* Scrollable Content Container - Tabs and Form Content with padding */}
             <Box sx={{ 
                 flex: 1,
-                overflow: 'hidden', // Remove scroll from outer container
-                p: mode === 'application' ? 0 : 2 // No padding in application mode
+                overflow: 'auto', // Allow scroll on content area
+                p: 2 // Padding for content area
             }}>
                 <Box sx={{ 
                     maxWidth: mode === 'application' ? 'none' : 1200, // No max width in application mode
                     mx: mode === 'application' ? 0 : 'auto', // No horizontal margin in application mode
-                    height: '100%',
                     display: 'flex',
-                    flexDirection: 'column'
+                    flexDirection: 'column',
+                    minHeight: 'fit-content' // Allow content to determine height
                 }}>
                 {showHeader && (
                     <Paper 
@@ -3433,13 +3433,12 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                         </Alert>
                 )}
 
-                {/* Step Content - Scrollable form content area */}
+                {/* Step Content - Form content area */}
                 <Box 
                     ref={stepContentRef} 
                     sx={{ 
-                        p: 2, // Always add padding for form content
                         flex: 1,
-                        overflow: 'auto' // Scroll only the form content
+                        overflow: 'visible' // No scroll here since parent handles it
                     }}
                 >
                     {renderStepContent()}
