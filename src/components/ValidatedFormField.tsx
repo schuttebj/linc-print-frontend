@@ -19,6 +19,7 @@ interface BaseValidatedFieldProps {
   setError: (name: any, error: any) => void;
   clearErrors: (name?: any) => void;
   errors: FieldErrors<any>;
+  triggerStepValidation?: (stepIndex: number) => Promise<void>;
 }
 
 interface ValidatedTextFieldProps extends BaseValidatedFieldProps {
@@ -52,6 +53,7 @@ export const ValidatedTextField: React.FC<ValidatedTextFieldProps> = ({
   setError,
   clearErrors,
   errors,
+  triggerStepValidation,
   label,
   helperText,
   fullWidth = true,
@@ -92,6 +94,13 @@ export const ValidatedTextField: React.FC<ValidatedTextFieldProps> = ({
               const value = transform ? transform(e.target.value) : e.target.value;
               field.onChange(value);
               debouncedValidation(name, value, stepIndex);
+              
+              // Trigger debounced step validation to update button states
+              if (triggerStepValidation) {
+                setTimeout(() => {
+                  triggerStepValidation(stepIndex);
+                }, 350); // Slightly longer than field validation debounce
+              }
             }}
             onBlur={(e) => {
               field.onBlur();
@@ -103,6 +112,11 @@ export const ValidatedTextField: React.FC<ValidatedTextFieldProps> = ({
                 });
               } else {
                 clearErrors(name);
+              }
+              
+              // Trigger step validation to update button states
+              if (triggerStepValidation) {
+                triggerStepValidation(stepIndex);
               }
             }}
           />
@@ -123,6 +137,7 @@ export const ValidatedSelect: React.FC<ValidatedSelectProps> = ({
   setError,
   clearErrors,
   errors,
+  triggerStepValidation,
   label,
   helperText,
   fullWidth = true,
@@ -153,6 +168,13 @@ export const ValidatedSelect: React.FC<ValidatedSelectProps> = ({
                 const value = e.target.value;
                 field.onChange(value);
                 debouncedValidation(name, value, stepIndex);
+                
+                // Trigger debounced step validation to update button states
+                if (triggerStepValidation) {
+                  setTimeout(() => {
+                    triggerStepValidation(stepIndex);
+                  }, 350); // Slightly longer than field validation debounce
+                }
               }}
               onBlur={(e) => {
                 field.onBlur();
@@ -164,6 +186,11 @@ export const ValidatedSelect: React.FC<ValidatedSelectProps> = ({
                   });
                 } else {
                   clearErrors(name);
+                }
+                
+                // Trigger step validation to update button states
+                if (triggerStepValidation) {
+                  triggerStepValidation(stepIndex);
                 }
               }}
             >

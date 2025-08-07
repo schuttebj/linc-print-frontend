@@ -294,6 +294,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         lookupForm.clearErrors(name as any);
     };
 
+
+
     // Ref for auto-scrolling to active step content
     const stepContentRef = useRef<HTMLDivElement>(null);
 
@@ -412,6 +414,23 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     const watchedCellPhone = personForm.watch('cell_phone');
     const watchedAliases = personForm.watch('aliases');
     const watchedAddresses = personForm.watch('addresses');
+
+    // Function to trigger step validation (for button state updates)
+    const triggerStepValidation = useCallback(async (stepIndex: number) => {
+        console.log(`🔄 Triggering step validation for step ${stepIndex}`);
+        
+        if (stepIndex === 0) {
+            const lookupData = lookupForm.getValues();
+            const validation = formValidation.validateStep(0, lookupData);
+            console.log(`Step ${stepIndex} validation result:`, validation);
+            markStepValid(stepIndex, validation.isValid);
+        } else {
+            const formData = personForm.getValues();
+            const validation = formValidation.validateStep(stepIndex, formData);
+            console.log(`Step ${stepIndex} validation result:`, validation);
+            markStepValid(stepIndex, validation.isValid);
+        }
+    }, [formValidation, lookupForm, personForm]);
 
     // Context-aware completion handler
     const handleFormComplete = (person: any) => {
@@ -2113,6 +2132,10 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                                 field.onChange(value);
                                                 // Use debounced validation on change
                                                 debouncedValidation('document_number', value, 0);
+                                                // Trigger step validation to update button state
+                                                setTimeout(() => {
+                                                    triggerStepValidation(0);
+                                                }, 350);
                                             }}
                                             onBlur={(e) => {
                                                 field.onBlur();
@@ -2126,6 +2149,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                                 } else {
                                                     clearLookupErrors('document_number');
                                                 }
+                                                // Trigger immediate step validation on blur
+                                                triggerStepValidation(0);
                                             }}
                                             InputProps={{
                                                 endAdornment: field.value && (
@@ -2196,6 +2221,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                             setError={setPersonError}
                             clearErrors={clearPersonErrors}
                             errors={personForm.formState.errors}
+                            triggerStepValidation={triggerStepValidation}
                             label="Surname *"
                             helperText="Family name"
                             inputProps={{ maxLength: 50 }}
