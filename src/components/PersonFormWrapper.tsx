@@ -3262,8 +3262,22 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
     return (
         <>
-        <Box sx={{ bgcolor: '#f8f9fa', p: 2, borderRadius: 2 }}>
-            <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
+        {/* Main Container - Restructured for full-width navigation */}
+        <Box sx={{ 
+            bgcolor: '#f8f9fa', 
+            borderRadius: 2,
+            display: 'flex',
+            flexDirection: 'column',
+            height: mode === 'application' ? 'calc(100vh - 200px)' : 'auto',
+            minHeight: mode === 'application' ? '600px' : 'auto'
+        }}>
+            {/* Content Container - With padding for form sections */}
+            <Box sx={{ 
+                flex: 1,
+                overflow: 'auto',
+                p: 2 
+            }}>
+                <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
                 {showHeader && (
                     <Paper 
                         elevation={0}
@@ -3365,17 +3379,14 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 </Tabs>
             </Paper>
 
-            {/* Main Form Container - Flexbox layout to fill available height */}
+            {/* Main Form Container - Content only, no navigation */}
             <Paper 
                 elevation={0}
                 sx={{ 
                     bgcolor: 'white',
                     boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
                     borderRadius: 2,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    height: mode === 'application' ? 'calc(100vh - 300px)' : 'auto', // Fill available height in application mode
-                    minHeight: mode === 'application' ? '500px' : 'auto'
+                    mb: 2 // Add margin bottom for spacing from navigation
                 }}
             >
                 {/* Missing Fields Alert - Show if any step is invalid */}
@@ -3399,21 +3410,27 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                         </Alert>
                 )}
 
-                {/* Step Content - Flex grow to fill available space */}
-                <Box ref={stepContentRef} sx={{ flex: 1, overflow: 'auto', p: 2 }}>
-                {renderStepContent()}
+                {/* Step Content */}
+                <Box ref={stepContentRef} sx={{ p: 2 }}>
+                    {renderStepContent()}
+                </Box>
+            </Paper>
+                </Box>
             </Box>
 
-                {/* Navigation - Always at bottom */}
+            {/* Navigation - Full width at bottom */}
             <Box sx={{ 
-                        p: 2,
-                        bgcolor: 'white',
+                bgcolor: 'white',
                 borderTop: '1px solid', 
                 borderColor: 'divider', 
                 display: 'flex', 
                 justifyContent: 'flex-end', 
                 gap: 1,
-                flexShrink: 0 // Prevent navigation from shrinking
+                p: 2,
+                flexShrink: 0,
+                // Full width navigation styling
+                width: '100%',
+                borderRadius: '0 0 8px 8px' // Only round bottom corners
             }}>
                 {/* Cancel Button - Show in application mode */}
                 {mode === 'application' && onCancel && (
@@ -3427,52 +3444,50 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 )}
 
                 {/* Back Button */}
-                    <Button
-                        disabled={currentStep === (skipFirstStep ? 1 : 0)}
-                        onClick={handleBack}
+                <Button
+                    disabled={currentStep === (skipFirstStep ? 1 : 0)}
+                    onClick={handleBack}
                     startIcon={<ArrowBackIcon />}
-                            size="small"
-                    >
-                        Back
-                    </Button>
+                    size="small"
+                >
+                    Back
+                </Button>
 
                 {/* Next/Submit Button */}
-                        {currentStep < steps.length - 1 ? (
-                            <Button
-                                variant="contained"
-                                onClick={handleNext}
-                                    disabled={lookupLoading || isNextButtonDisabled()}
+                {currentStep < steps.length - 1 ? (
+                    <Button
+                        variant="contained"
+                        onClick={handleNext}
+                        disabled={lookupLoading || isNextButtonDisabled()}
                         startIcon={lookupLoading ? <CircularProgress size={20} /> : undefined}
                         endIcon={<ArrowForwardIcon />}
-                                        size="small"
-                            >
+                        size="small"
+                    >
                         {currentStep === 0 ? 'Search' : 'Next Step'}
-                            </Button>
-                            ) : (
-                                <Button
-                                    variant="contained"
-                        onClick={() => {
-                            // In application mode on review step with existing person, continue to license
-                            if (mode === 'application' && currentStep === steps.length - 1 && isExistingPerson && onContinueToApplication) {
-                                onContinueToApplication();
-                            } else {
-                                // Otherwise submit/save the person
-                                handleSubmit();
-                            }
-                        }}
-                                    disabled={submitLoading || duplicateCheckLoading}
-                        startIcon={submitLoading || duplicateCheckLoading ? <CircularProgress size={20} /> : 
-                                   (mode === 'application' && currentStep === steps.length - 1 && isExistingPerson ? <ArrowForwardIcon /> : <PersonAddIcon />)}
-                                    size="small"
-                                >
-                        {duplicateCheckLoading ? 'Checking...' : 
-                         submitLoading ? (isEditMode ? 'Updating...' : 'Submitting...') : 
-                         (mode === 'application' && currentStep === steps.length - 1 && isExistingPerson ? 'Continue to License' : 
-                          (isEditMode ? 'Update Person' : 'Submit'))}
-                                </Button>
-                        )}
-                </Box>
-            </Paper>
+                    </Button>
+                    ) : (
+                        <Button
+                            variant="contained"
+                            onClick={() => {
+                                // In application mode on review step with existing person, continue to license
+                                if (mode === 'application' && currentStep === steps.length - 1 && isExistingPerson && onContinueToApplication) {
+                                    onContinueToApplication();
+                                } else {
+                                    // Otherwise submit/save the person
+                                    handleSubmit();
+                                }
+                            }}
+                            disabled={submitLoading || duplicateCheckLoading}
+                            startIcon={submitLoading || duplicateCheckLoading ? <CircularProgress size={20} /> : 
+                                       (mode === 'application' && currentStep === steps.length - 1 && isExistingPerson ? <ArrowForwardIcon /> : <PersonAddIcon />)}
+                            size="small"
+                        >
+                            {duplicateCheckLoading ? 'Checking...' : 
+                             submitLoading ? (isEditMode ? 'Updating...' : 'Submitting...') : 
+                             (mode === 'application' && currentStep === steps.length - 1 && isExistingPerson ? 'Continue to License' : 
+                              (isEditMode ? 'Update Person' : 'Submit'))}
+                        </Button>
+                )}
             </Box>
         </Box>
 
