@@ -407,7 +407,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 locality: '',
                 postal_code: '',
                 town: '',
-                country: 'MG',
+                country: 'MADAGASCAR',
                 province_code: '',
                 is_primary: true,
             }],
@@ -459,6 +459,16 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             setStepValidation(new Array(steps.length).fill(false));
         }
     }, [isNewPerson, steps.length]);
+
+    // Trigger validation when stepping into a new step (for auto-populated fields)
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            console.log(`🔄 Step ${currentStep}: Triggering validation for auto-populated fields`);
+            triggerStepValidation(currentStep);
+        }, 100); // Small delay to ensure form values are set
+
+        return () => clearTimeout(timer);
+    }, [currentStep, triggerStepValidation]);
 
     // Context-aware completion handler
     const handleFormComplete = (person: any) => {
@@ -3271,13 +3281,19 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             height: mode === 'application' ? 'calc(100vh - 200px)' : 'auto',
             minHeight: mode === 'application' ? '600px' : 'auto'
         }}>
-            {/* Content Container - With padding for form sections */}
+            {/* Content Container - Conditional padding (no padding for application mode) */}
             <Box sx={{ 
                 flex: 1,
-                overflow: 'auto',
-                p: 2 
+                overflow: 'hidden', // Remove scroll from outer container
+                p: mode === 'application' ? 0 : 2 // No padding in application mode
             }}>
-                <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
+                <Box sx={{ 
+                    maxWidth: 1200, 
+                    mx: 'auto',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column'
+                }}>
                 {showHeader && (
                     <Paper 
                         elevation={0}
@@ -3286,7 +3302,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                             mb: 3,
                             bgcolor: 'white',
                             boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-                            borderRadius: 2
+                            borderRadius: 2,
+                            flexShrink: 0 // Prevent header from shrinking
                         }}
                     >
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -3326,11 +3343,12 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             {/* Person Form Tabs */}
             <Paper 
                 elevation={0}
-                                    sx={{
+                sx={{
                     mb: 2,
                     bgcolor: 'white',
                     boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-                    borderRadius: 2
+                    borderRadius: 2,
+                    flexShrink: 0 // Prevent tabs from shrinking
                 }}
             >
                 <Tabs
@@ -3379,14 +3397,18 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 </Tabs>
             </Paper>
 
-            {/* Main Form Container - Content only, no navigation */}
+            {/* Main Form Container - Content only, with scroll for form content */}
             <Paper 
                 elevation={0}
                 sx={{ 
                     bgcolor: 'white',
                     boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
                     borderRadius: 2,
-                    mb: 2 // Add margin bottom for spacing from navigation
+                    mb: 2, // Add margin bottom for spacing from navigation
+                    flex: 1,
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column'
                 }}
             >
                 {/* Missing Fields Alert - Show if any step is invalid */}
@@ -3398,7 +3420,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                             mb: 1,
                                 '& .MuiAlert-message': {
                                     width: '100%'
-                                }
+                                },
+                                flexShrink: 0 // Prevent alert from shrinking
                             }}
                         >
                             <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
@@ -3410,8 +3433,15 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                         </Alert>
                 )}
 
-                {/* Step Content */}
-                <Box ref={stepContentRef} sx={{ p: 2 }}>
+                {/* Step Content - Scrollable form content area */}
+                <Box 
+                    ref={stepContentRef} 
+                    sx={{ 
+                        p: 2, // Always add padding for form content
+                        flex: 1,
+                        overflow: 'auto' // Scroll only the form content
+                    }}
+                >
                     {renderStepContent()}
                 </Box>
             </Paper>
