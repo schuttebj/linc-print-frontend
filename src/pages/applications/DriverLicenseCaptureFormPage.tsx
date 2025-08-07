@@ -436,13 +436,28 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
             </Typography>
 
             {/* Processing Location Display */}
-            <Card sx={{ mb: 3 }}>
+            <Card 
+              elevation={0}
+              sx={{ 
+                mb: 2,
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2
+              }}
+            >
               <CardHeader 
-                title="Processing Location" 
-                avatar={<LocationOnIcon />}
+                sx={{ p: 1.5 }}
+                title={
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <LocationOnIcon color="primary" />
+                    <Typography variant="subtitle1" sx={{ fontSize: '1rem' }}>
+                      Processing Location
+                    </Typography>
+                  </Box>
+                }
               />
-              <CardContent>
-                <Typography variant="body1">
+              <CardContent sx={{ p: 1.5, pt: 0 }}>
+                <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
                   {user?.primary_location_id ? (
                     `User's assigned location: ${user.primary_location_id}`
                   ) : (
@@ -452,7 +467,7 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
                     <Chip 
                       label={availableLocations.find(loc => loc.id === selectedLocationId)?.code || selectedLocationId} 
                       size="small" 
-                      sx={{ ml: 1 }}
+                      sx={{ ml: 1, fontSize: '0.65rem', height: '20px' }}
                     />
                   )}
                 </Typography>
@@ -460,112 +475,120 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
             </Card>
             
             {/* Person Details */}
-            <Card sx={{ mb: 3 }}>
-              <CardHeader title="License Holder" />
-              <CardContent>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Name</Typography>
-                    <Typography variant="body1">
-                      {selectedPerson?.surname}, {selectedPerson?.first_name} {selectedPerson?.middle_name}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Madagascar ID</Typography>
-                    <Typography variant="body1">
-                      {selectedPerson?.aliases?.find(alias => alias.is_primary)?.document_number || 'Not available'}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Birth Date</Typography>
-                    <Typography variant="body1">{selectedPerson?.birth_date}</Typography>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Nationality</Typography>
-                    <Typography variant="body1">{selectedPerson?.nationality_code}</Typography>
-                  </Grid>
+            <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
+              <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+                Driver's License Holder
+              </Typography>
+              <Grid container spacing={1}>
+                <Grid item xs={12} md={4}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Full Name</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                    {selectedPerson?.surname}, {selectedPerson?.first_name} {selectedPerson?.middle_name}
+                  </Typography>
                 </Grid>
-              </CardContent>
-            </Card>
+                <Grid item xs={6} md={2}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Madagascar ID</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                    {selectedPerson?.aliases?.find(alias => alias.is_primary)?.document_number || 'Not available'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6} md={2}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Birth Date</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                    {selectedPerson?.birth_date || 'Not provided'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6} md={2}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Nationality</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                    {selectedPerson?.nationality_code === 'MG' ? 'MALAGASY' :
+                      selectedPerson?.nationality_code === 'FR' ? 'FRENCH' :
+                        selectedPerson?.nationality_code === 'US' ? 'AMERICAN' :
+                          selectedPerson?.nationality_code?.toUpperCase() || 'NOT SPECIFIED'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6} md={2}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Language</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                    {selectedPerson?.preferred_language || 'NOT SPECIFIED'}
+                  </Typography>
+                </Grid>
+              </Grid>
+            </Box>
 
             {/* Captured Licenses */}
-            <Card sx={{ mb: 3 }}>
-              <CardHeader 
-                title="Captured Driver's Licenses" 
-                subheader={`${licenseCaptureData?.captured_licenses?.length || 0} license(s) captured`}
-              />
-              <CardContent>
-                {licenseCaptureData?.captured_licenses?.map((license, index) => (
-                  <Box key={license.id} sx={{ mb: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                    <Grid container spacing={2}>
-                      <Grid item xs={12} md={3}>
-                        <Typography variant="body2" color="text.secondary">Category</Typography>
-                        <Chip label={license.license_category} size="small" color="primary" />
-                      </Grid>
-                      <Grid item xs={12} md={3}>
-                        <Typography variant="body2" color="text.secondary">Issue Date</Typography>
-                        <Typography variant="body1">{license.issue_date}</Typography>
-                      </Grid>
-                      <Grid item xs={12} md={6}>
-                        <Typography variant="body2" color="text.secondary">Restrictions</Typography>
-                        {(license.restrictions?.driver_restrictions?.length > 0 || license.restrictions?.vehicle_restrictions?.length > 0) ? (
-                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                            {license.restrictions?.driver_restrictions?.length > 0 && (
-                              <Box>
-                                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>Driver:</Typography>
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                  {license.restrictions.driver_restrictions.map((restriction, rIndex) => (
-                                    <Chip 
-                                      key={rIndex} 
-                                      label={restriction} 
-                                      size="small" 
-                                      variant="outlined"
-                                      color="primary"
-                                    />
-                                  ))}
-                                </Box>
-                              </Box>
-                            )}
-                            {license.restrictions?.vehicle_restrictions?.length > 0 && (
-                              <Box>
-                                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>Vehicle:</Typography>
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                  {license.restrictions.vehicle_restrictions.map((restriction, rIndex) => (
-                                    <Chip 
-                                      key={rIndex} 
-                                      label={restriction} 
-                                      size="small" 
-                                      variant="outlined"
-                                      color="secondary"
-                                    />
-                                  ))}
-                                </Box>
-                              </Box>
-                            )}
-                          </Box>
-                        ) : (
-                          <Typography variant="body1">None</Typography>
-                        )}
-                      </Grid>
-                      {license.verification_notes && (
-                        <Grid item xs={12}>
-                          <Typography variant="body2" color="text.secondary">Verification Notes</Typography>
-                          <Typography variant="body1">{license.verification_notes}</Typography>
-                        </Grid>
+            <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
+              <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+                Captured Driver's Licenses ({licenseCaptureData?.captured_licenses?.length || 0})
+              </Typography>
+              {licenseCaptureData?.captured_licenses?.map((license, index) => (
+                <Box key={license.id} sx={{ mb: 0.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
+                  <Grid container spacing={1}>
+                    <Grid item xs={12} md={3}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Category</Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Chip 
+                          label={`Code ${license.license_category}`}
+                          size="small" 
+                          color="primary"
+                          sx={{ fontSize: '0.6rem', height: '18px' }}
+                        />
+                        <Chip
+                          label={license.verified ? 'Verified' : 'Pending'}
+                          size="small"
+                          color={license.verified ? 'success' : 'warning'}
+                          sx={{ fontSize: '0.6rem', height: '18px' }}
+                        />
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Issue Date</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>{license.issue_date}</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Restrictions</Typography>
+                      {(license.restrictions?.driver_restrictions?.length > 0 || license.restrictions?.vehicle_restrictions?.length > 0) ? (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                          {license.restrictions?.driver_restrictions?.map((restriction, rIndex) => (
+                            <Chip 
+                              key={rIndex} 
+                              label={restriction} 
+                              size="small" 
+                              variant="outlined"
+                              color="primary"
+                              sx={{ fontSize: '0.6rem', height: '18px' }}
+                            />
+                          ))}
+                          {license.restrictions?.vehicle_restrictions?.map((restriction, rIndex) => (
+                            <Chip 
+                              key={rIndex} 
+                              label={restriction} 
+                              size="small" 
+                              variant="outlined"
+                              color="secondary"
+                              sx={{ fontSize: '0.6rem', height: '18px' }}
+                            />
+                          ))}
+                        </Box>
+                      ) : (
+                        <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>None</Typography>
                       )}
                     </Grid>
-                    {index < (licenseCaptureData?.captured_licenses?.length || 0) - 1 && (
-                      <Divider sx={{ mt: 2 }} />
+                    {license.verification_notes && (
+                      <Grid item xs={12}>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Verification Notes</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>{license.verification_notes}</Typography>
+                      </Grid>
                     )}
-                  </Box>
-                ))}
-              </CardContent>
-            </Card>
+                  </Grid>
+                </Box>
+              ))}
+            </Box>
 
             {/* Summary */}
-            <Alert severity="info" sx={{ mb: 2 }}>
-              <Typography variant="body2">
-                <strong>Next Steps:</strong> After submission, captured license records will be created in the system 
+            <Alert severity="info" sx={{ mb: 2, py: 1 }}>
+              <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+                <strong>Next Steps:</strong> After submission, captured driver's license records will be created in the system 
                 and marked as completed. The license holder will be able to apply for new Madagascar licenses 
                 based on their captured credentials.
               </Typography>
