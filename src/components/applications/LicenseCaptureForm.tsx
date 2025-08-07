@@ -438,17 +438,52 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
     const datePattern = /^\d{4}-\d{2}-\d{2}$/;
     if (!datePattern.test(dateValue)) return '';
     
-    const year = parseInt(dateValue.substring(0, 4));
-    const currentYear = new Date().getFullYear();
+    const inputDate = new Date(dateValue);
+    const currentDate = new Date();
+    const year = inputDate.getFullYear();
+    const currentYear = currentDate.getFullYear();
     
-    // Year must be between 1900 and current year + 50
+    // Basic year validation: between 1900 and current year + 50
     if (year < 1900 || year > currentYear + 50) return '';
+    
+    // For learner's permits, issue date must be within 6 months of current date
+    if (applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE) {
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(currentDate.getMonth() - 6);
+      
+      if (inputDate < sixMonthsAgo) {
+        // Date is older than 6 months - return empty to indicate invalid
+        return '';
+      }
+      
+      if (inputDate > currentDate) {
+        // Future date - return empty to indicate invalid
+        return '';
+      }
+    }
     
     return dateValue;
   };
 
   const getDateConstraints = () => {
-    const currentYear = new Date().getFullYear();
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    
+    // For learner's permits, constrain to 6 months ago to today
+    if (applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE) {
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(currentDate.getMonth() - 6);
+      
+      const minDate = sixMonthsAgo.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+      const maxDate = currentDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+      
+      return {
+        min: minDate,
+        max: maxDate
+      };
+    }
+    
+    // For other license types, use original constraints
     return {
       min: '1900-01-01',
       max: `${currentYear + 50}-12-31`
@@ -693,6 +728,11 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                   required
                   InputLabelProps={{ shrink: true }}
                   inputProps={{ min: dateConstraints.min, max: dateConstraints.max }}
+                  helperText={
+                    applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE
+                      ? "Learner's permits are only valid for 6 months from issue date"
+                      : undefined
+                  }
                 />
               </Grid>
 
@@ -873,6 +913,22 @@ export const validateCapturedDataForAuthorization = (captureData: LicenseCapture
 
     if (!license.issue_date) {
       errors.push(`License #${index + 1}: Issue date is required`);
+    } else {
+      // For learner's permits, validate 6-month rule
+      if (captureData.application_type === ApplicationType.LEARNERS_PERMIT_CAPTURE) {
+        const issueDate = new Date(license.issue_date);
+        const currentDate = new Date();
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(currentDate.getMonth() - 6);
+        
+        if (issueDate < sixMonthsAgo) {
+          errors.push(`License #${index + 1}: Learner's permit issue date must be within 6 months of current date`);
+        }
+        
+        if (issueDate > currentDate) {
+          errors.push(`License #${index + 1}: Issue date cannot be in the future`);
+        }
+      }
     }
     
     if (!license.verified) {

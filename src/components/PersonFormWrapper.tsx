@@ -354,6 +354,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     const [pendingAddressPayloads, setPendingAddressPayloads] = useState<any[]>([]);
     const [parentNotified, setParentNotified] = useState(false);
     const [isExistingPerson, setIsExistingPerson] = useState(false);
+    // Track which steps have been completed to allow navigation back to them
+    const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 
     // Lookup data state - loaded from backend enums
     const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([]);
@@ -433,6 +435,11 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         const newValidation = [...stepValidation];
         newValidation[stepIndex] = isValid;
         setStepValidation(newValidation);
+        
+        // If step becomes valid, mark it as completed
+        if (isValid) {
+            setCompletedSteps(prev => new Set([...prev, stepIndex]));
+        }
         
         // Notify parent about validation state changes (for application mode)
         if (mode === 'application' && onPersonValidationChange) {
@@ -776,10 +783,11 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                             // Person has complete information - mark as existing and all steps valid
                             setIsExistingPerson(true);
                             
-                            // Mark all steps as valid immediately
-                            const allValid = new Array(steps.length).fill(true);
-                            console.log('✅ Marking all steps as valid for existing person:', allValid);
-                            setStepValidation(allValid);
+                            // Mark all steps as valid and completed immediately
+                            console.log('✅ Marking all steps as valid and completed for existing person');
+                            const allStepIndices = Array.from({ length: steps.length }, (_, i) => i);
+                            allStepIndices.forEach(stepIndex => markStepValid(stepIndex, true));
+                            setCompletedSteps(new Set(allStepIndices));
                             
                             setCurrentStep(5); // Jump to review step for confirmation
                             
@@ -1241,6 +1249,9 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 const lookupData = lookupForm.getValues();
                 await performLookup(lookupData);
             } else if (currentStep < steps.length - 1) {
+                // Mark current step as completed since validation passed
+                setCompletedSteps(prev => new Set([...prev, currentStep]));
+                
                 // Auto-populate name_in_document when moving from step 1 (personal info) to step 2 (contact details)
                 if (currentStep === 1) {
                     populateNameInDocument();
@@ -1270,8 +1281,12 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             return;
         }
         
-        // Simple tab navigation - allow clicking on previous/current steps or next step if current is valid
-        if (stepIndex <= currentStep || (stepIndex === currentStep + 1 && stepValidation[currentStep])) {
+        // Enhanced tab navigation: allow clicking on completed steps, current step, or next step if current is valid
+        const isCompletedStep = completedSteps.has(stepIndex);
+        const isCurrentStep = stepIndex === currentStep;
+        const isNextStepAvailable = stepIndex === currentStep + 1 && stepValidation[currentStep];
+        
+        if (isCompletedStep || isCurrentStep || isNextStepAvailable) {
             setCurrentStep(stepIndex);
             
             // Focus first field and trigger validation for the clicked step
@@ -1340,7 +1355,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
     // Helper function to render tab with completion indicator  
     const renderTabLabel = React.useCallback((step: any, index: number) => {
-        const isCompleted = index < currentStep && stepValidation[index];
+        const isCompleted = completedSteps.has(index) && index !== currentStep;
         const isCurrent = currentStep === index;
         
         // Determine colors and icons
@@ -1375,13 +1390,17 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 </Typography>
             </Box>
         );
-    }, [stepValidation, currentStep]);
+    }, [stepValidation, currentStep, completedSteps]);
 
     // Helper function to determine if a tab should be clickable
     const isTabClickable = React.useCallback((index: number) => {
-        // Allow clicking on previous/current steps or next step if current is valid
-        return index <= currentStep || (index === currentStep + 1 && stepValidation[currentStep]);
-    }, [currentStep, stepValidation]);
+        // Allow clicking on completed steps, current step, or next step if current is valid
+        const isCompletedStep = completedSteps.has(index);
+        const isCurrentStep = index === currentStep;
+        const isNextStepAvailable = index === currentStep + 1 && stepValidation[currentStep];
+        
+        return isCompletedStep || isCurrentStep || isNextStepAvailable;
+    }, [currentStep, stepValidation, completedSteps]);
 
     const handleSubmit = async () => {
         setSubmitLoading(true);
