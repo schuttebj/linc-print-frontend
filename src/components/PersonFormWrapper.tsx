@@ -32,6 +32,7 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
+    CircularProgress,
 } from '@mui/material';
 import {
     Search as SearchIcon,
@@ -272,9 +273,6 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     // Form validation hook
     const formValidation = usePersonFormValidation();
     
-    // Global validation state management
-    const { state: validationState, actions: validationActions } = useGlobalValidationState(steps.length, 'person');
-    
     // Debounced validation to prevent memory leaks and excessive calls
     const { debouncedValidation, getImmediateValidation, clearValidationCache } = useDebounceValidation(
         formValidation.validateField,
@@ -320,14 +318,10 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             setInternalCurrentStep(step);
         }
         
-        // Sync with global validation state
-        validationActions.setActiveStep(step);
+
     };
     
-    // Sync current step with global validation state when it changes externally
-    useEffect(() => {
-        validationActions.setActiveStep(currentStep);
-    }, [currentStep, validationActions]);
+
     const [personFound, setPersonFound] = useState<ExistingPerson | null>(null);
     const [currentPersonId, setCurrentPersonId] = useState<string | null>(null);
     const [isNewPerson, setIsNewPerson] = useState(false);
@@ -419,9 +413,20 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     // Watch form values
     const watchedPersonNature = personForm.watch('person_nature');
     
+    // Step validation - simple approach for dual navigation
+    const markStepValid = (stepIndex: number, isValid: boolean) => {
+        // Update validation array
+        const newValidation = [...stepValidation];
+        newValidation[stepIndex] = isValid;
+        setStepValidation(newValidation);
+        
+        // Notify parent about validation state changes (for application mode)
+        if (mode === 'application' && onPersonValidationChange) {
+            onPersonValidationChange(stepIndex, isValid);
+        }
+    };
 
-
-    // Function to trigger step validation using global validation system
+    // Function to trigger step validation
     const triggerStepValidation = useCallback(async (stepIndex: number) => {
         console.log(`🔄 Triggering step validation for step ${stepIndex}`);
         
@@ -429,16 +434,17 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         const lookupData = lookupForm.getValues();
         const stepData = stepIndex === 0 ? lookupData : formData;
         
-        await validationActions.updateStepValidation(stepIndex, stepData);
-    }, [validationActions, lookupForm, personForm]);
+        const validation = formValidation.validateStep(stepIndex, stepData);
+        markStepValid(stepIndex, validation.isValid);
+    }, [formValidation, lookupForm, personForm, markStepValid]);
 
-    // Initialize global validation state when person type changes
+    // Reset validation when new person mode starts
     useEffect(() => {
         if (isNewPerson) {
             console.log('🆕 New person mode: resetting validation state');
-            validationActions.resetValidation();
+            setStepValidation(new Array(steps.length).fill(false));
         }
-    }, [isNewPerson, validationActions]);
+    }, [isNewPerson, steps.length]);
 
     // Context-aware completion handler
     const handleFormComplete = (person: any) => {
@@ -930,10 +936,10 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
 
 
-    // Next button state using global validation system
+    // Next button state - simple validation check
     const isNextButtonDisabled = useCallback((): boolean => {
-        return validationState.isDisabled;
-    }, [validationState.isDisabled]);
+        return !stepValidation[currentStep];
+    }, [stepValidation, currentStep]);
 
     const populateFormWithExistingPerson = (existingPerson: ExistingPerson) => {
         console.log('Populating form with existing person:', existingPerson);
@@ -1023,9 +1029,6 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             console.log('⚠️ No addresses found for existing person or addresses array is empty');
         }
         
-        // Initialize global validation state for existing person
-        validationActions.initializeForExistingPerson();
-        
         // Validate all steps after form is populated
         setTimeout(() => {
             validateAllExistingPersonData();
@@ -1047,10 +1050,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 const validation = formValidation.validateStep(i, i === 0 ? lookupData : formData);
                 markStepValid(i, validation.isValid);
                 
-                if (validation.isValid) {
-                    // Mark valid steps as completed for existing persons
-                    validationActions.markStepCompleted(i);
-                } else {
+                if (!validation.isValid) {
                     console.log(`⚠️ Step ${i} validation failed:`, validation.errors);
                     allValid = false;
                     if (firstInvalidStep === -1) {
@@ -1059,11 +1059,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 }
             }
             
-            // Mark review step valid and completed if all other steps are valid
+            // Mark review step valid if all other steps are valid
             markStepValid(steps.length - 1, allValid);
-            if (allValid) {
-                validationActions.markStepCompleted(steps.length - 1);
-            }
             
             if (allValid) {
                 console.log('✅ All existing person data is valid - navigating to review step');
@@ -1078,26 +1075,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         }
     };
 
-    // Step validation - now integrated with global validation state
-    const markStepValid = (stepIndex: number, isValid: boolean) => {
-        // Update legacy array for compatibility
-        const newValidation = [...stepValidation];
-        newValidation[stepIndex] = isValid;
-        setStepValidation(newValidation);
-        
-        // Mark step as visited in global state
-        validationActions.markStepVisited(stepIndex);
-        
-        // If valid, mark as completed
-        if (isValid) {
-            validationActions.markStepCompleted(stepIndex);
-        }
-        
-        // Notify parent about validation state changes (for application mode)
-        if (mode === 'application' && onPersonValidationChange) {
-            onPersonValidationChange(stepIndex, isValid);
-        }
-    };
+
 
 
 
@@ -1189,18 +1167,11 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     };
 
     const handleNext = async () => {
-        // Validate current step using global validation system
-        const formData = personForm.getValues();
-        const lookupData = lookupForm.getValues();
-        const stepData = currentStep === 0 ? lookupData : formData;
-        
-        const isValid = await validationActions.validateStep(currentStep, stepData, true);
+        const isValid = await validateCurrentStep();
 
         if (isValid) {
-            // Mark current step as completed
-            validationActions.markStepCompleted(currentStep);
-            
             if (currentStep === 0) {
+                const lookupData = lookupForm.getValues();
                 await performLookup(lookupData);
             } else if (currentStep < steps.length - 1) {
                 // Auto-populate name_in_document when moving from step 1 (personal info) to step 2 (contact details)
@@ -1208,48 +1179,26 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     populateNameInDocument();
                 }
                 setCurrentStep(currentStep + 1);
-                // Mark next step as visited
-                validationActions.markStepVisited(currentStep + 1);
             }
         }
     };
 
-    const handleBack = async () => {
+    const handleBack = () => {
         const minStep = skipFirstStep ? 1 : 0;
         if (currentStep > minStep) {
             setCurrentStep(currentStep - 1);
-            
-            // Validate the step we're moving to
-            const formData = personForm.getValues();
-            const lookupData = lookupForm.getValues();
-            const targetStep = currentStep - 1;
-            const stepData = targetStep === 0 ? lookupData : formData;
-            
-            await validationActions.validateStep(targetStep, stepData);
         }
     };
 
-    const handleStepClick = async (stepIndex: number) => {
+    const handleStepClick = (stepIndex: number) => {
         // Prevent navigation to step 0 if skipFirstStep is true
         if (skipFirstStep && stepIndex === 0) {
             return;
         }
         
-        // Check if step is clickable using global validation system
-        const canClick = validationActions.isStepClickable(stepIndex);
-        
-        if (canClick) {
+        // Simple tab navigation - allow clicking on previous/current steps or next step if current is valid
+        if (stepIndex <= currentStep || (stepIndex === currentStep + 1 && stepValidation[currentStep])) {
             setCurrentStep(stepIndex);
-            
-            // Mark step as visited and validate
-            validationActions.markStepVisited(stepIndex);
-            
-            // Validate the step we're navigating to
-            const formData = personForm.getValues();
-            const lookupData = lookupForm.getValues();
-            const stepData = stepIndex === 0 ? lookupData : formData;
-            
-            await validationActions.validateStep(stepIndex, stepData);
         }
     };
 
@@ -1309,35 +1258,21 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         }
     }, [mode, currentStep, onPersonNext, onPersonBack, validateCurrentStep, lookupForm, populateNameInDocument, performLookup, steps.length, skipFirstStep, updateAllStepValidation]);
 
-    // Helper function to render tab with completion indicator using global validation
+    // Helper function to render tab with completion indicator
     const renderTabLabel = React.useCallback((step: any, index: number) => {
+        const isCompleted = index < currentStep && stepValidation[index];
         const isCurrent = currentStep === index;
-        const iconType = validationActions.getStepIcon(index);
         
-        // Determine colors and icons based on step state
+        // Determine colors and icons
         let color = 'text.secondary';
         let icon = step.icon;
         
-        switch (iconType) {
-            case 'completed':
-                color = 'success.main';
-                icon = <CheckCircleIcon fontSize="small" />;
-                break;
-            case 'current':
-                color = 'primary.main';
-                icon = step.icon;
-                break;
-            case 'warning':
-                color = 'warning.main';
-                icon = <WarningIcon fontSize="small" />;
-                break;
-            case 'next-available':
-                color = 'info.main';
-                icon = step.icon;
-                break;
-            default:
-                color = 'text.secondary';
-                icon = step.icon;
+        if (isCompleted) {
+            color = 'success.main';
+            icon = <CheckCircleIcon fontSize="small" />;
+        } else if (isCurrent) {
+            color = 'primary.main';
+            icon = step.icon;
         }
         
         return (
@@ -1360,12 +1295,13 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 </Typography>
             </Box>
         );
-    }, [validationActions, currentStep]);
+    }, [stepValidation, currentStep]);
 
-    // Helper function to determine if a tab should be clickable (using global validation system)
+    // Helper function to determine if a tab should be clickable
     const isTabClickable = React.useCallback((index: number) => {
-        return validationActions.isStepClickable(index);
-    }, [validationActions]);
+        // Allow clicking on previous/current steps or next step if current is valid
+        return index <= currentStep || (index === currentStep + 1 && stepValidation[currentStep]);
+    }, [currentStep, stepValidation]);
 
     const handleSubmit = async () => {
         setSubmitLoading(true);
@@ -3238,72 +3174,52 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 {renderStepContent()}
             </Box>
 
-            {/* Navigation - Only show when not in application mode */}
-            {mode !== 'application' && (
-                <Paper 
-                    elevation={0}
-                    sx={{ 
-                        p: 2,
-                        bgcolor: 'white',
-                        boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-                        borderRadius: 2
-                    }}
+                        {/* Navigation - Styled to match application navigation exactly */}
+            <Box sx={{ 
+                p: 2, 
+                bgcolor: 'white', 
+                borderTop: '1px solid', 
+                borderColor: 'divider', 
+                display: 'flex', 
+                justifyContent: 'flex-end', 
+                gap: 1 
+            }}>
+                {/* Cancel/Back Button */}
+                <Button
+                    disabled={currentStep === (skipFirstStep ? 1 : 0)}
+                    onClick={handleBack}
+                    startIcon={<ArrowBackIcon />}
+                    size="small"
                 >
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Button
-                        disabled={currentStep === (skipFirstStep ? 1 : 0)}
-                        onClick={handleBack}
-                            size="small"
-                    >
-                        Back
-                    </Button>
+                    Back
+                </Button>
 
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                        {currentStep < steps.length - 1 ? (
-                            <>
-                            <Button
-                                variant="contained"
-                                onClick={handleNext}
-                                    disabled={lookupLoading || isNextButtonDisabled()}
-                                        size="small"
-                                        sx={{
-                                            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
-                                        }}
-                            >
-                                {currentStep === 0 ? 'Search' : 'Next'}
-                            </Button>
-                                {!isExistingPerson && isNextButtonDisabled() && (
-                                    <Typography 
-                                        variant="caption" 
-                                        color="text.secondary" 
-                                        sx={{ 
-                                            ml: 1, 
-                                            fontSize: '0.7rem',
-                                            fontStyle: 'italic'
-                                        }}
-                                    >
-                                        Complete required fields to continue
-                                    </Typography>
-                                )}
-                            </>
-                            ) : (
-                                <Button
-                                    variant="contained"
-                                    onClick={handleSubmit}
-                                    disabled={submitLoading || duplicateCheckLoading}
-                                    startIcon={<PersonAddIcon />}
-                                    size="small"
-                                    sx={{
-                                        boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
-                                    }}
-                                >
-                                    {duplicateCheckLoading ? 'Checking for Duplicates...' : submitLoading ? (isEditMode ? 'Updating...' : 'Submitting...') : (isEditMode ? 'Update Person' : 'Submit')}
-                                </Button>
-                        )}
-                    </Box>
-                </Box>
-            </Paper>
-            )}
+                {/* Next/Submit Button */}
+                {currentStep < steps.length - 1 ? (
+                    <Button
+                        variant="contained"
+                        onClick={handleNext}
+                        disabled={lookupLoading || isNextButtonDisabled()}
+                        startIcon={lookupLoading ? <CircularProgress size={20} /> : undefined}
+                        endIcon={<ArrowForwardIcon />}
+                        size="small"
+                    >
+                        {currentStep === 0 ? 'Search' : 'Next Step'}
+                    </Button>
+                ) : (
+                    <Button
+                        variant="contained"
+                        onClick={handleSubmit}
+                        disabled={submitLoading || duplicateCheckLoading}
+                        startIcon={submitLoading || duplicateCheckLoading ? <CircularProgress size={20} /> : <PersonAddIcon />}
+                        size="small"
+                    >
+                        {duplicateCheckLoading ? 'Checking...' : 
+                         submitLoading ? (isEditMode ? 'Updating...' : 'Submitting...') : 
+                         (mode === 'application' ? 'Continue to License' : (isEditMode ? 'Update Person' : 'Submit'))}
+                    </Button>
+                )}
+            </Box>
             </Box>
         </Box>
 

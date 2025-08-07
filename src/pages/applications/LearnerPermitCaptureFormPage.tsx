@@ -69,9 +69,9 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
 
-  // Person form navigation refs
-  const personNextRef = useRef<() => Promise<boolean>>();
-  const personBackRef = useRef<() => boolean>();
+  // Person form navigation refs - no longer needed with dual navigation
+  // const personNextRef = useRef<() => Promise<boolean>>();
+  // const personBackRef = useRef<() => boolean>();
 
   // Steps for learner's permit capture
   const steps = [
@@ -133,8 +133,8 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
   const isStepValid = (step: number): boolean => {
     switch (step) {
       case 0:
-        // Person step is valid if we have a person and completed all person sub-steps
-        return !!selectedPerson && !!selectedPerson.id && personStep >= 5;
+        // Person step is valid if we have a person (PersonFormWrapper handles its own validation)
+        return !!selectedPerson && !!selectedPerson.id;
       case 1:
         // Check license capture data validation and location for admin users
         const hasValidLicenseData = !!licenseCaptureData && 
@@ -190,43 +190,16 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
   };
 
   // Navigation handlers
-  const handleNext = async () => {
-    if (activeStep === 0) {
-      // We're on the Person application step - control person form steps
-      if (personNextRef.current) {
-        const canAdvance = await personNextRef.current();
-        if (canAdvance) {
-          if (personStep < 5) {
-            // Advance to next person step
-            setPersonStep(personStep + 1);
-          } else {
-            // Person form is complete and saved, move to next application step
-            console.log('🎯 Person form completed and saved, advancing to license capture');
-            setActiveStep(activeStep + 1);
-          }
-        }
-      }
-    } else if (activeStep < steps.length - 1) {
-      // Regular application step navigation
+  const handleNext = () => {
+    // Person form handles its own navigation, we only handle non-person steps
+    if (activeStep < steps.length - 1) {
       setActiveStep(activeStep + 1);
     }
   };
 
   const handleBack = () => {
-    if (activeStep === 0) {
-      // We're on the Person application step - control person form steps
-      if (personStep > 0) {
-        setPersonStep(personStep - 1);
-      }
-    } else if (activeStep > 0) {
-      // Going back from other application steps
-      if (activeStep === 1) {
-        // Going back to person step - set to last person step
-        setActiveStep(0);
-        setPersonStep(5); // Go to person review step
-      } else {
-        setActiveStep(activeStep - 1);
-      }
+    if (activeStep > 0) {
+      setActiveStep(activeStep - 1);
     }
   };
 
@@ -234,17 +207,17 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
     navigate('/dashboard');
   };
 
-  // Person selection handler
+  // Person selection handler - automatically advance to license capture when person form is completed
   const handlePersonSelected = (person: Person) => {
     console.log('🎯 Person selected from PersonFormWrapper:', person);
     console.log('🎯 Person ID:', person?.id);
     console.log('🎯 Person full data:', JSON.stringify(person, null, 2));
-    console.log('🎯 Setting selectedPerson state - waiting for manual Next button click');
     setSelectedPerson(person);
     setError('');
     
-    // Don't auto-advance - let user click Next button manually
-    console.log('🎯 Person selected successfully - Next button should now be enabled');
+    // Auto-advance to license capture step since person form is complete
+    console.log('🎯 Person form completed - advancing to license capture step');
+    setActiveStep(1);
   };
 
   // License capture handler
@@ -738,11 +711,7 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
               key="person-form-wrapper" // Stable key to preserve component instance
               mode="application"
               onSuccess={handlePersonSelected}
-              onPersonStepChange={handlePersonStepChange}
               onPersonValidationChange={handlePersonValidationChange}
-              externalPersonStep={personStep}
-              onPersonNext={personNextRef}
-              onPersonBack={personBackRef}
               title=""
               subtitle="Select existing person or register new learner's permit holder"
               showHeader={false}
@@ -753,7 +722,7 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
           {activeStep !== 0 && renderStepContent(activeStep)}
         </Box>
 
-        {/* Navigation Buttons */}
+        {/* Navigation Buttons - Show only Cancel when on person step since PersonFormWrapper has its own navigation */}
         <Box sx={{ p: 2, bgcolor: 'white', borderTop: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
           <Button
             onClick={handleCancel}
@@ -764,45 +733,32 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
             Cancel
           </Button>
           
-          <Button
-            disabled={(activeStep === 0 && personStep === 0) || loading}
-            onClick={handleBack}
-            startIcon={<ArrowBackIcon />}
-            size="small"
-          >
-            Back
-          </Button>
-          
-          <Button
-            variant="contained"
-            onClick={activeStep === steps.length - 1 ? handleSubmit : handleNext}
-            disabled={(() => {
-              const isPersonStepInvalid = activeStep === 0 && personStep < 5 && !isPersonStepValid();
-              const isCurrentStepInvalid = activeStep > 0 && !isStepValid(activeStep);
-              const isDisabled = isPersonStepInvalid || isCurrentStepInvalid || loading;
+          {/* Show Back/Next buttons only when NOT on person step */}
+          {activeStep !== 0 && (
+            <>
+              <Button
+                disabled={loading}
+                onClick={handleBack}
+                startIcon={<ArrowBackIcon />}
+                size="small"
+              >
+                Back
+              </Button>
               
-              console.log('🔍 Next button disabled debug:', {
-                activeStep,
-                personStep,
-                isPersonStepInvalid,
-                isCurrentStepInvalid,
-                isStepValid: activeStep > 0 ? isStepValid(activeStep) : 'N/A',
-                loading,
-                isDisabled
-              });
-              
-              return isDisabled;
-            })()}
-            startIcon={loading ? <CircularProgress size={20} /> : undefined}
-            endIcon={activeStep !== steps.length - 1 ? <ArrowForwardIcon /> : undefined}
-            size="small"
-          >
-            {loading ? 'Submitting...' : 
-             activeStep === steps.length - 1 ? 'Submit Capture' : 
-             activeStep === 0 && personStep < 5 ? 'Next Step' :
-             activeStep === 0 && personStep >= 5 ? 'Continue to License' :
-             'Next'}
-          </Button>
+              <Button
+                variant="contained"
+                onClick={activeStep === steps.length - 1 ? handleSubmit : handleNext}
+                disabled={!isStepValid(activeStep) || loading}
+                startIcon={loading ? <CircularProgress size={20} /> : undefined}
+                endIcon={activeStep !== steps.length - 1 ? <ArrowForwardIcon /> : undefined}
+                size="small"
+              >
+                {loading ? 'Submitting...' : 
+                 activeStep === steps.length - 1 ? 'Submit Capture' : 
+                 'Next'}
+              </Button>
+            </>
+          )}
         </Box>
       </Paper>
     </Container>
