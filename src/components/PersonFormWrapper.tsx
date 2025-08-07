@@ -460,15 +460,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         }
     }, [isNewPerson, steps.length]);
 
-    // Trigger validation when stepping into a new step (for auto-populated fields)
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            console.log(`🔄 Step ${currentStep}: Triggering validation for auto-populated fields`);
-            triggerStepValidation(currentStep);
-        }, 100); // Small delay to ensure form values are set
-
-        return () => clearTimeout(timer);
-    }, [currentStep, triggerStepValidation]);
+    // Note: Removed auto-validation useEffect to prevent infinite loops
+    // Validation now happens only on field changes and manual navigation
 
     // Context-aware completion handler
     const handleFormComplete = (person: any) => {
@@ -1202,7 +1195,13 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 if (currentStep === 1) {
                     populateNameInDocument();
                 }
-                setCurrentStep(currentStep + 1);
+                const nextStep = currentStep + 1;
+                setCurrentStep(nextStep);
+                
+                // Trigger validation for the new step after a short delay (for auto-populated fields)
+                setTimeout(() => {
+                    triggerStepValidation(nextStep);
+                }, 100);
             }
         }
     };
@@ -1223,6 +1222,11 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         // Simple tab navigation - allow clicking on previous/current steps or next step if current is valid
         if (stepIndex <= currentStep || (stepIndex === currentStep + 1 && stepValidation[currentStep])) {
             setCurrentStep(stepIndex);
+            
+            // Trigger validation for the clicked step after a short delay (for auto-populated fields)
+            setTimeout(() => {
+                triggerStepValidation(stepIndex);
+            }, 100);
         }
     };
 
