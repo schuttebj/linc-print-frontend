@@ -452,6 +452,41 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         markStepValid(stepIndex, validation.isValid);
     }, [formValidation, lookupForm, personForm, markStepValid]);
 
+    // Function to focus the first field in the current step
+    const focusFirstField = useCallback((stepIndex: number) => {
+        setTimeout(() => {
+            let selector = '';
+            switch (stepIndex) {
+                case 0: // Lookup step
+                    selector = 'input[name="document_number"]';
+                    break;
+                case 1: // Details step
+                    selector = 'input[name="surname"]';
+                    break;
+                case 2: // Contact step
+                    selector = 'input[name="email_address"]';
+                    break;
+                case 3: // Documents step
+                    selector = 'input[name="aliases.0.name_in_document"]';
+                    break;
+                case 4: // Address step
+                    selector = 'input[name="addresses.0.street_line1"]';
+                    break;
+                default:
+                    return;
+            }
+            
+            const firstField = document.querySelector(selector) as HTMLInputElement;
+            if (firstField) {
+                firstField.focus();
+                // Also select the text if it's not empty
+                if (firstField.value) {
+                    firstField.select();
+                }
+            }
+        }, 100); // Small delay to ensure the step content is rendered
+    }, []);
+
     // Reset validation when new person mode starts
     useEffect(() => {
         if (isNewPerson) {
@@ -725,6 +760,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     // For application mode, check if person data is complete
                     if (mode === 'application') {
                         markStepValid(0, true); // Lookup step is always valid
+                        markStepValid(1, true); // Person details step is valid since person was found
                         
                         const isComplete = isPersonDataComplete(existingPerson);
                         setPersonDataWasIncomplete(!isComplete);
@@ -765,6 +801,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     } else {
                         // For standalone mode, proceed to personal information step
                         markStepValid(0, true);
+                        markStepValid(1, true); // Person details step is valid since person was found
                         setCurrentStep(1);
                     }
                 } else {
@@ -1198,7 +1235,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 const nextStep = currentStep + 1;
                 setCurrentStep(nextStep);
                 
-                // Trigger validation for the new step after a short delay (for auto-populated fields)
+                // Focus first field and trigger validation for the new step
+                focusFirstField(nextStep);
                 setTimeout(() => {
                     triggerStepValidation(nextStep);
                 }, 100);
@@ -1223,7 +1261,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         if (stepIndex <= currentStep || (stepIndex === currentStep + 1 && stepValidation[currentStep])) {
             setCurrentStep(stepIndex);
             
-            // Trigger validation for the clicked step after a short delay (for auto-populated fields)
+            // Focus first field and trigger validation for the clicked step
+            focusFirstField(stepIndex);
             setTimeout(() => {
                 triggerStepValidation(stepIndex);
             }, 100);
@@ -1488,9 +1527,11 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     const updatedPerson = await updatedPersonResponse.json();
                     console.log('✅ FINAL PERSON WITH ADDRESSES:', updatedPerson);
                     setCreatedPerson(updatedPerson);
+                    markStepValid(1, true); // Mark details step complete when person is updated
                     handleFormComplete(updatedPerson);
                 } else {
                 setCreatedPerson(result);
+                markStepValid(1, true); // Mark details step complete when person is updated
                 handleFormComplete(result);
                 }
             } else {
@@ -2770,7 +2811,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
                                         return (
                                             <FormControl fullWidth size="small" error={styling.error}>
-                                                <InputLabel>Address Type *</InputLabel>
+                                            <InputLabel>Address Type *</InputLabel>
                                                 <Select 
                                                     name={field.name}
                                                     value={field.value || ''}
@@ -2792,11 +2833,11 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                                     sx={styling.sx}
                                                 >
                                                     <MenuItem value="" disabled>Select address type</MenuItem>
-                                                    <MenuItem value="RESIDENTIAL">Residential</MenuItem>
-                                                    <MenuItem value="POSTAL">Postal</MenuItem>
-                                                </Select>
+                                                <MenuItem value="RESIDENTIAL">Residential</MenuItem>
+                                                <MenuItem value="POSTAL">Postal</MenuItem>
+                                            </Select>
                                                 <FormHelperText>{styling.helperText}</FormHelperText>
-                                            </FormControl>
+                                        </FormControl>
                                         );
                                     }}
                                 />
@@ -2842,8 +2883,13 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                             onChange={(e) => {
                                                 const value = e.target.value.toUpperCase();
                                                 field.onChange(value);
-                                                    debouncedValidation(`addresses.${index}.street_line1`, value, 4);
-                                                }}
+                                                debouncedValidation(`addresses.${index}.street_line1`, value, 4);
+                                                
+                                                // Trigger debounced step validation to update button states
+                                                setTimeout(() => {
+                                                    triggerStepValidation(4);
+                                                }, 350); // Slightly longer than field validation debounce
+                                            }}
                                                 onBlur={(e) => {
                                                     field.onBlur();
                                                     const validation = getImmediateValidation(`addresses.${index}.street_line1`, e.target.value.toUpperCase(), 4);
@@ -2904,8 +2950,13 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                             onChange={(e) => {
                                                 const value = e.target.value.toUpperCase();
                                                 field.onChange(value);
-                                                    debouncedValidation(`addresses.${index}.locality`, value, 4);
-                                                }}
+                                                debouncedValidation(`addresses.${index}.locality`, value, 4);
+                                                
+                                                // Trigger debounced step validation to update button states
+                                                setTimeout(() => {
+                                                    triggerStepValidation(4);
+                                                }, 350); // Slightly longer than field validation debounce
+                                            }}
                                                 onBlur={(e) => {
                                                     field.onBlur();
                                                     const validation = getImmediateValidation(`addresses.${index}.locality`, e.target.value.toUpperCase(), 4);
@@ -2948,8 +2999,13 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                             onChange={(e) => {
                                                 const value = e.target.value.toUpperCase();
                                                 field.onChange(value);
-                                                    debouncedValidation(`addresses.${index}.town`, value, 4);
-                                                }}
+                                                debouncedValidation(`addresses.${index}.town`, value, 4);
+                                                
+                                                // Trigger debounced step validation to update button states
+                                                setTimeout(() => {
+                                                    triggerStepValidation(4);
+                                                }, 350); // Slightly longer than field validation debounce
+                                            }}
                                                 onBlur={(e) => {
                                                     field.onBlur();
                                                     const validation = getImmediateValidation(`addresses.${index}.town`, e.target.value.toUpperCase(), 4);
@@ -3041,8 +3097,13 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                             onChange={(e) => {
                                                 const value = e.target.value.replace(/\D/g, '');
                                                 field.onChange(value);
-                                                    debouncedValidation(`addresses.${index}.postal_code`, value, 4);
-                                                }}
+                                                debouncedValidation(`addresses.${index}.postal_code`, value, 4);
+                                                
+                                                // Trigger debounced step validation to update button states
+                                                setTimeout(() => {
+                                                    triggerStepValidation(4);
+                                                }, 350); // Slightly longer than field validation debounce
+                                            }}
                                                 onBlur={(e) => {
                                                     field.onBlur();
                                                     const validation = getImmediateValidation(`addresses.${index}.postal_code`, e.target.value.replace(/\D/g, ''), 4);
@@ -3350,7 +3411,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             {/* Person Form Tabs */}
             <Paper 
                 elevation={0}
-                sx={{
+                                    sx={{
                     mb: 2,
                     bgcolor: 'white',
                     boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
@@ -3407,6 +3468,17 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             {/* Main Form Container - Scrollable form content */}
             <Paper 
                 elevation={0}
+                onKeyDown={(e) => {
+                    // Enter key shortcut to proceed to next step
+                    if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey) {
+                        // Only trigger if no field is focused (avoid interfering with field input)
+                        const activeElement = document.activeElement;
+                        if (!activeElement || activeElement.tagName === 'BODY') {
+                            e.preventDefault();
+                            handleNext();
+                        }
+                    }
+                }}
                 sx={{ 
                     bgcolor: 'white',
                     boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
@@ -3448,7 +3520,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                         overflow: 'visible' // No scroll here since parent handles it
                     }}
                 >
-                    {renderStepContent()}
+                {renderStepContent()}
                 </Box>
             </Paper>
                 </Box>
@@ -3456,7 +3528,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
             {/* Navigation - Full width at bottom */}
             <Box sx={{ 
-                bgcolor: 'white',
+                        bgcolor: 'white',
                 borderTop: '1px solid', 
                 borderColor: 'divider', 
                 display: 'flex', 
@@ -3480,30 +3552,30 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 )}
 
                 {/* Back Button */}
-                <Button
-                    disabled={currentStep === (skipFirstStep ? 1 : 0)}
-                    onClick={handleBack}
+                    <Button
+                        disabled={currentStep === (skipFirstStep ? 1 : 0)}
+                        onClick={handleBack}
                     startIcon={<ArrowBackIcon />}
-                    size="small"
-                >
-                    Back
-                </Button>
+                            size="small"
+                    >
+                        Back
+                    </Button>
 
                 {/* Next/Submit Button */}
-                {currentStep < steps.length - 1 ? (
-                    <Button
-                        variant="contained"
-                        onClick={handleNext}
-                        disabled={lookupLoading || isNextButtonDisabled()}
+                        {currentStep < steps.length - 1 ? (
+                            <Button
+                                variant="contained"
+                                onClick={handleNext}
+                                    disabled={lookupLoading || isNextButtonDisabled()}
                         startIcon={lookupLoading ? <CircularProgress size={20} /> : undefined}
                         endIcon={<ArrowForwardIcon />}
-                        size="small"
-                    >
+                                        size="small"
+                            >
                         {currentStep === 0 ? 'Search' : 'Next Step'}
-                    </Button>
-                    ) : (
-                        <Button
-                            variant="contained"
+                            </Button>
+                            ) : (
+                                <Button
+                                    variant="contained"
                             onClick={() => {
                                 // In application mode on review step with existing person, continue to license
                                 if (mode === 'application' && currentStep === steps.length - 1 && isExistingPerson && onContinueToApplication) {
@@ -3513,17 +3585,17 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                     handleSubmit();
                                 }
                             }}
-                            disabled={submitLoading || duplicateCheckLoading}
+                                    disabled={submitLoading || duplicateCheckLoading}
                             startIcon={submitLoading || duplicateCheckLoading ? <CircularProgress size={20} /> : 
                                        (mode === 'application' && currentStep === steps.length - 1 && isExistingPerson ? <ArrowForwardIcon /> : <PersonAddIcon />)}
-                            size="small"
-                        >
+                                    size="small"
+                                >
                             {duplicateCheckLoading ? 'Checking...' : 
                              submitLoading ? (isEditMode ? 'Updating...' : 'Submitting...') : 
                              (mode === 'application' && currentStep === steps.length - 1 && isExistingPerson ? 'Continue to License' : 
                               (isEditMode ? 'Update Person' : 'Submit'))}
-                        </Button>
-                )}
+                                </Button>
+            )}
             </Box>
         </Box>
 
