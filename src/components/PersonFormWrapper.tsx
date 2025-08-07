@@ -504,10 +504,17 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
         console.log('🎯 PersonFormWrapper: mode:', mode, 'onSuccess callback exists:', !!onSuccess);
         setCreatedPerson(person);
         
-        // If onSuccess callback is provided, use it instead of internal logic
+        // If onSuccess callback is provided, use it
         if (onSuccess && !parentNotified) {
             console.log('🎯 PersonFormWrapper: Calling onSuccess callback with person:', person?.id);
             onSuccess(person, isEditMode);
+            
+            // For new persons in application mode, also proceed to next step
+            if (mode === 'application' && !isEditMode && onComplete) {
+                console.log('🎯 PersonFormWrapper: New person created, proceeding to next step');
+                onComplete(person);
+                return;
+            }
             return;
         } else if (parentNotified) {
             console.log('🎯 PersonFormWrapper: Parent already notified, skipping onSuccess call');
@@ -797,12 +804,14 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                         } else {
                             // Person has incomplete information - start at personal info step
                             setCurrentStep(1);
+                            focusFirstField(1);
                         }
                     } else {
                         // For standalone mode, proceed to personal information step
                         markStepValid(0, true);
                         markStepValid(1, true); // Person details step is valid since person was found
                         setCurrentStep(1);
+                        focusFirstField(1);
                     }
                 } else {
                         // No exact match found - setup for new person creation
@@ -814,6 +823,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                         setupNewPersonForm(data);
                         markStepValid(0, true);
                         setCurrentStep(1);
+                        focusFirstField(1);
                     }
                 } else {
                     // No search results at all - setup for new person creation
@@ -825,6 +835,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     setupNewPersonForm(data);
                     markStepValid(0, true);
                     setCurrentStep(1);
+                    focusFirstField(1);
                 }
             } else {
                 console.error('Search failed with status:', response.status);
@@ -836,6 +847,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 setupNewPersonForm(data);
                 markStepValid(0, true);
                 setCurrentStep(1);
+                focusFirstField(1);
             }
 
         } catch (error) {
@@ -846,6 +858,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             setupNewPersonForm(data);
             markStepValid(0, true);
             setCurrentStep(1);
+            focusFirstField(1);
         } finally {
             setLookupLoading(false);
         }
@@ -3048,21 +3061,54 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                 <Controller
                                     name={`addresses.${index}.country`}
                                     control={personForm.control}
-                                    render={({ field }) => (
-                                        <FormControl fullWidth size="small" error={!!personForm.formState.errors.addresses?.[index]?.country}>
-                                            <InputLabel>Country *</InputLabel>
-                                            <Select {...field} label="Country *">
-                                                {countries.map((option) => (
-                                                    <MenuItem key={option.value} value={option.value}>
-                                                        {option.label}
-                                                    </MenuItem>
-                                                ))}
-                                            </Select>
-                                            <FormHelperText>
-                                                {personForm.formState.errors.addresses?.[index]?.country?.message}
-                                            </FormHelperText>
-                                        </FormControl>
-                                    )}
+                                    render={({ field }) => {
+                                        const fieldState = formValidation.getFieldState(`addresses.${index}.country`, field.value, 4);
+                                        const styling = useSelectStyling(
+                                            fieldState,
+                                            personForm.formState.errors.addresses?.[index]?.country?.message as string,
+                                            true
+                                        );
+
+                                        return (
+                                            <FormControl fullWidth size="small" error={styling.error}>
+                                                <InputLabel>Country *</InputLabel>
+                                                <Select 
+                                                    {...field} 
+                                                    label="Country *"
+                                                    value={field.value || 'MADAGASCAR'} // Ensure default value
+                                                    onChange={(e) => {
+                                                        field.onChange(e.target.value);
+                                                        debouncedValidation(`addresses.${index}.country`, e.target.value, 4);
+                                                        
+                                                        // Trigger debounced step validation to update button states
+                                                        setTimeout(() => {
+                                                            triggerStepValidation(4);
+                                                        }, 350);
+                                                    }}
+                                                    onBlur={(e) => {
+                                                        field.onBlur();
+                                                        const validation = getImmediateValidation(`addresses.${index}.country`, (e.target as any).value, 4);
+                                                        if (validation?.errors) {
+                                                            setPersonError(`addresses.${index}.country`, { message: Object.values(validation.errors)[0] });
+                                                        } else {
+                                                            clearPersonErrors(`addresses.${index}.country`);
+                                                        }
+                                                        triggerStepValidation(4);
+                                                    }}
+                                                    sx={styling.sx}
+                                                >
+                                                    {countries.map((option) => (
+                                                        <MenuItem key={option.value} value={option.value}>
+                                                            {option.label}
+                                                        </MenuItem>
+                                                    ))}
+                                                </Select>
+                                                <FormHelperText>
+                                                    {styling.helperText}
+                                                </FormHelperText>
+                                            </FormControl>
+                                        );
+                                    }}
                                 />
                             </Grid>
 
@@ -3490,8 +3536,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     flexDirection: 'column'
                 }}
             >
-                {/* Missing Fields Alert - Show if any step is invalid */}
-                {isExistingPerson && stepValidation.some(valid => !valid) && (
+                {/* Missing Fields Alert - Show if existing person has incomplete data */}
+                {isExistingPerson && stepValidation.some(valid => !valid) && personDataWasIncomplete && (
                         <Alert 
                             severity="warning" 
                             sx={{ 
