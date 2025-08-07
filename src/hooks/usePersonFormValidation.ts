@@ -64,10 +64,9 @@ const stepSchemas = {
     work_phone: yup
       .string()
       .optional()
-      .when('work_phone', {
-        is: (value: string) => value && value.length > 0,
-        then: () => yup.string().matches(/^0\d{9}$/, 'Madagascar work phone must be exactly 10 digits starting with 0 (e.g., 0815598453)'),
-        otherwise: () => yup.string(),
+      .test('work_phone_format', 'Madagascar work phone must be exactly 10 digits starting with 0 (e.g., 0815598453)', function(value) {
+        if (!value || value.length === 0) return true; // Optional field
+        return /^0\d{9}$/.test(value);
       }),
     work_phone_country_code: yup
       .string()
