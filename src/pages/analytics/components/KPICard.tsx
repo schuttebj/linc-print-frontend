@@ -77,17 +77,21 @@ const KPICard: React.FC<KPICardProps> = ({
   };
 
   return (
-    <Card 
-      sx={{ 
+    <Card
+      elevation={0}
+      sx={{
         height: '100%',
+        bgcolor: 'white',
+        borderRadius: 2,
+        boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
         transition: 'transform 0.2s, box-shadow 0.2s',
         '&:hover': {
           transform: 'translateY(-2px)',
-          boxShadow: 4,
+          boxShadow: 3
         }
       }}
     >
-      <CardContent>
+      <CardContent sx={{ p: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
           <Box
             sx={{
@@ -122,11 +126,11 @@ const KPICard: React.FC<KPICardProps> = ({
           {value}
         </Typography>
 
-        <Typography variant="h6" component="div" sx={{ fontWeight: 600, mb: 0.5 }}>
+        <Typography variant="subtitle1" component="div" sx={{ fontWeight: 600, mb: 0.5 }}>
           {title}
         </Typography>
 
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="caption" color="text.secondary">
           {period}
         </Typography>
       </CardContent>

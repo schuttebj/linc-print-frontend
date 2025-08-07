@@ -35,7 +35,7 @@ const SystemHealthCards: React.FC = () => {
       status: 'good',
       threshold: 'Target: <300ms',
       icon: <SpeedIcon />,
-      color: '#00ff00'
+      color: '#2e7d32'
     },
     {
       id: 2,
@@ -45,7 +45,7 @@ const SystemHealthCards: React.FC = () => {
       status: 'excellent',
       threshold: 'Target: <2s',
       icon: <MemoryIcon />,
-      color: '#00ff00'
+      color: '#2e7d32'
     },
     {
       id: 3,
@@ -55,7 +55,7 @@ const SystemHealthCards: React.FC = () => {
       status: 'warning',
       threshold: 'Limit: 80%',
       icon: <StorageIcon />,
-      color: '#ffc658'
+      color: '#ed6c02'
     },
     {
       id: 4,
@@ -65,7 +65,7 @@ const SystemHealthCards: React.FC = () => {
       status: 'excellent',
       threshold: 'Target: <1%',
       icon: <ErrorIcon />,
-      color: '#00ff00'
+      color: '#2e7d32'
     }
   ];
 
@@ -107,13 +107,13 @@ const SystemHealthCards: React.FC = () => {
     switch (status) {
       case 'excellent':
       case 'good':
-        return <CheckCircleIcon sx={{ color: '#00ff00', fontSize: 16 }} />;
+        return <CheckCircleIcon sx={{ color: '#2e7d32', fontSize: 16 }} />;
       case 'warning':
-        return <WarningIcon sx={{ color: '#ffc658', fontSize: 16 }} />;
+        return <WarningIcon sx={{ color: '#ed6c02', fontSize: 16 }} />;
       case 'error':
-        return <ErrorIcon sx={{ color: '#ff7300', fontSize: 16 }} />;
+        return <ErrorIcon sx={{ color: '#d32f2f', fontSize: 16 }} />;
       default:
-        return <CheckCircleIcon sx={{ color: '#00ff00', fontSize: 16 }} />;
+        return <CheckCircleIcon sx={{ color: '#2e7d32', fontSize: 16 }} />;
     }
   };
 
@@ -131,9 +131,9 @@ const SystemHealthCards: React.FC = () => {
   };
 
   const getProgressColor = (percentage: number) => {
-    if (percentage >= 90) return '#00ff00';
-    if (percentage >= 70) return '#ffc658';
-    return '#ff7300';
+    if (percentage >= 90) return '#2e7d32';
+    if (percentage >= 70) return '#ed6c02';
+    return '#d32f2f';
   };
 
   return (
@@ -147,7 +147,7 @@ const SystemHealthCards: React.FC = () => {
         <Grid container spacing={2}>
           {systemHealthMetrics.map((metric) => (
             <Grid item xs={12} key={metric.id}>
-              <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
+              <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1, bgcolor: 'background.paper' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Box sx={{ color: metric.color }}>

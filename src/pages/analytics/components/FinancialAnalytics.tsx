@@ -55,10 +55,10 @@ const FinancialAnalytics: React.FC<FinancialAnalyticsProps> = ({
 
   // Payment methods distribution
   const paymentMethodsData = [
-    { method: 'Cash', value: 45, amount: 123450, color: '#8884d8' },
-    { method: 'Card', value: 32, amount: 87830, color: '#82ca9d' },
-    { method: 'Mobile Money', value: 18, amount: 49380, color: '#ffc658' },
-    { method: 'Bank Transfer', value: 5, amount: 13720, color: '#ff7300' }
+    { method: 'Cash', value: 45, amount: 123450, color: '#1976d2' },
+    { method: 'Card', value: 32, amount: 87830, color: '#2e7d32' },
+    { method: 'Mobile Money', value: 18, amount: 49380, color: '#ed6c02' },
+    { method: 'Bank Transfer', value: 5, amount: 13720, color: '#d32f2f' }
   ];
 
   // Revenue targets and performance
@@ -80,7 +80,7 @@ const FinancialAnalytics: React.FC<FinancialAnalyticsProps> = ({
     { day: 'Sun', revenue: 4560, transactions: 45 }
   ];
 
-  const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300'];
+  const COLORS = ['#1976d2', '#2e7d32', '#ed6c02', '#d32f2f'];
 
   // Calculate total revenue
   const totalRevenue = revenueTrendsData.reduce((acc, month) => 
@@ -101,7 +101,7 @@ const FinancialAnalytics: React.FC<FinancialAnalyticsProps> = ({
           <Grid container spacing={2} sx={{ height: '100%', alignItems: 'center' }}>
             <Grid item xs={12} md={3}>
               <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h5" sx={{ fontWeight: 700, color: '#8884d8' }}>
+                <Typography variant="h5" sx={{ fontWeight: 700, color: '#1976d2' }}>
                   {formatCurrency(125430)}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">Application Fees</Typography>
@@ -109,7 +109,7 @@ const FinancialAnalytics: React.FC<FinancialAnalyticsProps> = ({
             </Grid>
             <Grid item xs={12} md={3}>
               <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h5" sx={{ fontWeight: 700, color: '#82ca9d' }}>
+                <Typography variant="h5" sx={{ fontWeight: 700, color: '#2e7d32' }}>
                   {formatCurrency(170530)}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">License Fees</Typography>
@@ -117,7 +117,7 @@ const FinancialAnalytics: React.FC<FinancialAnalyticsProps> = ({
             </Grid>
             <Grid item xs={12} md={3}>
               <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h5" sx={{ fontWeight: 700, color: '#ffc658' }}>
+                <Typography variant="h5" sx={{ fontWeight: 700, color: '#ed6c02' }}>
                   {formatCurrency(65940)}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">Card Fees</Typography>
@@ -125,7 +125,7 @@ const FinancialAnalytics: React.FC<FinancialAnalyticsProps> = ({
             </Grid>
             <Grid item xs={12} md={3}>
               <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h5" sx={{ fontWeight: 700, color: '#ff7300' }}>
+                <Typography variant="h5" sx={{ fontWeight: 700, color: '#d32f2f' }}>
                   {formatCurrency(8520)}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">Other Fees</Typography>
@@ -149,36 +149,36 @@ const FinancialAnalytics: React.FC<FinancialAnalyticsProps> = ({
               <YAxis tickFormatter={(value) => `₨${(value/1000).toFixed(0)}K`} />
               <Tooltip formatter={(value) => [formatCurrency(value as number), '']} />
               <Legend />
-              <Area 
+               <Area 
                 type="monotone" 
                 dataKey="applicationFees" 
                 stackId="1" 
-                stroke="#8884d8" 
-                fill="#8884d8"
+                 stroke="#1976d2" 
+                 fill="#1976d2"
                 name="Application Fees"
               />
-              <Area 
+               <Area 
                 type="monotone" 
                 dataKey="licenseFees" 
                 stackId="1" 
-                stroke="#82ca9d" 
-                fill="#82ca9d"
+                 stroke="#2e7d32" 
+                 fill="#2e7d32"
                 name="License Fees"
               />
-              <Area 
+               <Area 
                 type="monotone" 
                 dataKey="cardFees" 
                 stackId="1" 
-                stroke="#ffc658" 
-                fill="#ffc658"
+                 stroke="#ed6c02" 
+                 fill="#ed6c02"
                 name="Card Fees"
               />
-              <Area 
+               <Area 
                 type="monotone" 
                 dataKey="lateFees" 
                 stackId="1" 
-                stroke="#ff7300" 
-                fill="#ff7300"
+                 stroke="#d32f2f" 
+                 fill="#d32f2f"
                 name="Late Fees"
               />
             </AreaChart>
@@ -236,12 +236,12 @@ const FinancialAnalytics: React.FC<FinancialAnalyticsProps> = ({
                 }}
               />
               <Legend />
-              <Bar yAxisId="left" dataKey="revenue" fill="#8884d8" name="Revenue" />
+               <Bar yAxisId="left" dataKey="revenue" fill="#1976d2" name="Revenue" />
               <Line 
                 yAxisId="right" 
                 type="monotone" 
                 dataKey="avgFee" 
-                stroke="#ff7300" 
+                 stroke="#d32f2f" 
                 strokeWidth={3}
                 name="Avg Fee"
               />
@@ -270,12 +270,12 @@ const FinancialAnalytics: React.FC<FinancialAnalyticsProps> = ({
                 }}
               />
               <Legend />
-              <Bar yAxisId="left" dataKey="revenue" fill="#82ca9d" name="Daily Revenue" />
+               <Bar yAxisId="left" dataKey="revenue" fill="#2e7d32" name="Daily Revenue" />
               <Line 
                 yAxisId="right" 
                 type="monotone" 
                 dataKey="transactions" 
-                stroke="#8884d8" 
+                 stroke="#1976d2" 
                 strokeWidth={2}
                 name="Transactions"
               />

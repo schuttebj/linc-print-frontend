@@ -46,9 +46,9 @@ const PrintingAnalytics: React.FC<PrintingAnalyticsProps> = ({
 
   // Print quality metrics data
   const qualityMetrics = [
-    { name: 'Pass Rate', value: 94.7, maxValue: 100, color: '#00ff00' },
-    { name: 'Retry Rate', value: 4.2, maxValue: 10, color: '#ffc658' },
-    { name: 'Defect Rate', value: 1.1, maxValue: 5, color: '#ff7300' }
+    { name: 'Pass Rate', value: 94.7, maxValue: 100, color: '#2e7d32' },
+    { name: 'Retry Rate', value: 4.2, maxValue: 10, color: '#ed6c02' },
+    { name: 'Defect Rate', value: 1.1, maxValue: 5, color: '#d32f2f' }
   ];
 
   // Production efficiency by location
@@ -61,10 +61,10 @@ const PrintingAnalytics: React.FC<PrintingAnalyticsProps> = ({
 
   // Print job status distribution
   const printJobStatusData = [
-    { status: 'Completed', count: 1046, color: '#00ff00' },
-    { status: 'In Progress', count: 58, color: '#ffc658' },
-    { status: 'Failed', count: 14, color: '#ff7300' },
-    { status: 'Pending QA', count: 29, color: '#8884d8' }
+    { status: 'Completed', count: 1046, color: '#2e7d32' },
+    { status: 'In Progress', count: 58, color: '#ed6c02' },
+    { status: 'Failed', count: 14, color: '#d32f2f' },
+    { status: 'Pending QA', count: 29, color: '#1976d2' }
   ];
 
   // Sample data for equipment utilization
@@ -140,17 +140,17 @@ const PrintingAnalytics: React.FC<PrintingAnalyticsProps> = ({
                 }}
               />
               <Legend />
-              <Bar yAxisId="left" dataKey="queued" fill="#8884d8" name="Jobs Queued" />
-              <Bar yAxisId="left" dataKey="completed" fill="#82ca9d" name="Jobs Completed" />
-              <Bar yAxisId="left" dataKey="failed" fill="#ff7300" name="Jobs Failed" />
+              <Bar yAxisId="left" dataKey="queued" fill="#1976d2" name="Jobs Queued" />
+              <Bar yAxisId="left" dataKey="completed" fill="#2e7d32" name="Jobs Completed" />
+              <Bar yAxisId="left" dataKey="failed" fill="#d32f2f" name="Jobs Failed" />
               <Line 
                 yAxisId="right" 
                 type="monotone" 
                 dataKey="avgWaitHours" 
-                stroke="#ffc658" 
+                 stroke="#ed6c02" 
                 strokeWidth={3}
                 name="Avg Wait Time (hours)"
-                dot={{ fill: '#ffc658', strokeWidth: 2, r: 4 }}
+                 dot={{ fill: '#ed6c02', strokeWidth: 2, r: 4 }}
               />
             </ComposedChart>
           </ResponsiveContainer>
@@ -171,10 +171,10 @@ const PrintingAnalytics: React.FC<PrintingAnalyticsProps> = ({
               <YAxis />
               <Tooltip />
               <Legend />
-              <Bar dataKey="completed" stackId="a" fill="#00ff00" name="Completed" />
-              <Bar dataKey="inProgress" stackId="a" fill="#ffc658" name="In Progress" />
-              <Bar dataKey="failed" stackId="a" fill="#ff7300" name="Failed" />
-              <Bar dataKey="pendingQA" stackId="a" fill="#8884d8" name="Pending QA" />
+              <Bar dataKey="completed" stackId="a" fill="#2e7d32" name="Completed" />
+              <Bar dataKey="inProgress" stackId="a" fill="#ed6c02" name="In Progress" />
+              <Bar dataKey="failed" stackId="a" fill="#d32f2f" name="Failed" />
+              <Bar dataKey="pendingQA" stackId="a" fill="#1976d2" name="Pending QA" />
             </BarChart>
           </ResponsiveContainer>
         </ChartWidget>
@@ -204,7 +204,7 @@ const PrintingAnalytics: React.FC<PrintingAnalyticsProps> = ({
                   <Typography 
                     variant="body2" 
                     sx={{ 
-                      color: equipment.status === 'Active' ? 'success.main' : 'warning.main',
+                    color: equipment.status === 'Active' ? 'success.main' : 'warning.main',
                       fontWeight: 600
                     }}
                   >
@@ -218,8 +218,8 @@ const PrintingAnalytics: React.FC<PrintingAnalyticsProps> = ({
                       height: 6, 
                       borderRadius: 3,
                       bgcolor: 'grey.200',
-                      '& .MuiLinearProgress-bar': {
-                        bgcolor: equipment.status === 'Active' ? '#00ff00' : '#ff7300',
+                       '& .MuiLinearProgress-bar': {
+                        bgcolor: equipment.status === 'Active' ? '#2e7d32' : '#d32f2f',
                         borderRadius: 3
                       }
                     }}

@@ -50,32 +50,32 @@ const ApplicationAnalytics: React.FC<ApplicationAnalyticsProps> = ({
 
   // Sample data for application types
   const applicationTypesData = [
-    { name: "Learner's License", value: 35, color: '#8884d8' },
-    { name: 'Driving License', value: 28, color: '#82ca9d' },
-    { name: 'Professional License', value: 15, color: '#ffc658' },
-    { name: 'Renewals', value: 12, color: '#ff7300' },
-    { name: 'Duplicates', value: 6, color: '#00ff00' },
-    { name: 'Captures', value: 4, color: '#ff00ff' }
+    { name: "Learner's License", value: 35, color: '#1976d2' },
+    { name: 'Driving License', value: 28, color: '#2e7d32' },
+    { name: 'Professional License', value: 15, color: '#ed6c02' },
+    { name: 'Renewals', value: 12, color: '#9c27b0' },
+    { name: 'Duplicates', value: 6, color: '#0288d1' },
+    { name: 'Captures', value: 4, color: '#d32f2f' }
   ];
 
   // Sample data for processing pipeline (funnel)
   const processingPipelineData = [
-    { name: 'Submitted', value: 2847, fill: '#8884d8' },
-    { name: 'Under Review', value: 2156, fill: '#82ca9d' },
-    { name: 'Approved', value: 1823, fill: '#ffc658' },
-    { name: 'Completed', value: 1654, fill: '#00ff00' }
+    { name: 'Submitted', value: 2847, fill: '#1976d2' },
+    { name: 'Under Review', value: 2156, fill: '#2e7d32' },
+    { name: 'Approved', value: 1823, fill: '#ed6c02' },
+    { name: 'Completed', value: 1654, fill: '#388e3c' }
   ];
 
   // Sample data for processing times
   const processingTimesData = [
-    { type: "Learner's", avgDays: 2.3, color: '#8884d8' },
-    { type: 'Driving', avgDays: 5.7, color: '#82ca9d' },
-    { type: 'Professional', avgDays: 8.2, color: '#ffc658' },
-    { type: 'Renewal', avgDays: 1.8, color: '#ff7300' },
-    { type: 'Duplicate', avgDays: 1.2, color: '#00ff00' }
+    { type: "Learner's", avgDays: 2.3, color: '#1976d2' },
+    { type: 'Driving', avgDays: 5.7, color: '#2e7d32' },
+    { type: 'Professional', avgDays: 8.2, color: '#ed6c02' },
+    { type: 'Renewal', avgDays: 1.8, color: '#9c27b0' },
+    { type: 'Duplicate', avgDays: 1.2, color: '#0288d1' }
   ];
 
-  const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#00ff00', '#ff00ff'];
+  const COLORS = ['#1976d2', '#2e7d32', '#ed6c02', '#9c27b0', '#0288d1', '#d32f2f'];
 
   return (
     <Grid container spacing={3}>
@@ -101,34 +101,34 @@ const ApplicationAnalytics: React.FC<ApplicationAnalyticsProps> = ({
               <Line 
                 type="monotone" 
                 dataKey="newApps" 
-                stroke="#8884d8" 
+                stroke="#1976d2" 
                 strokeWidth={2}
                 name="New Applications"
-                dot={{ fill: '#8884d8', strokeWidth: 2, r: 4 }}
+                dot={{ fill: '#1976d2', strokeWidth: 2, r: 4 }}
               />
               <Line 
                 type="monotone" 
                 dataKey="completed" 
-                stroke="#82ca9d" 
+                stroke="#2e7d32" 
                 strokeWidth={2}
                 name="Completed"
-                dot={{ fill: '#82ca9d', strokeWidth: 2, r: 4 }}
+                dot={{ fill: '#2e7d32', strokeWidth: 2, r: 4 }}
               />
               <Line 
                 type="monotone" 
                 dataKey="pending" 
-                stroke="#ffc658" 
+                stroke="#ed6c02" 
                 strokeWidth={2}
                 name="Pending"
-                dot={{ fill: '#ffc658', strokeWidth: 2, r: 4 }}
+                dot={{ fill: '#ed6c02', strokeWidth: 2, r: 4 }}
               />
               <Line 
                 type="monotone" 
                 dataKey="rejected" 
-                stroke="#ff7300" 
+                stroke="#d32f2f" 
                 strokeWidth={2}
                 name="Rejected"
-                dot={{ fill: '#ff7300', strokeWidth: 2, r: 4 }}
+                dot={{ fill: '#d32f2f', strokeWidth: 2, r: 4 }}
               />
             </LineChart>
           </ResponsiveContainer>

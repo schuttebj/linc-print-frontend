@@ -102,133 +102,153 @@ const AnalyticsDashboard: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="xl" sx={{ py: 3 }}>
-      {/* Header */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 600 }}>
-          Analytics Dashboard
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Comprehensive insights into Madagascar Driver's License System performance
-        </Typography>
-      </Box>
-
-      {/* Filters and Controls */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
-          <FormControl size="small" sx={{ minWidth: 140 }}>
-            <InputLabel>Date Range</InputLabel>
-            <Select
-              value={dateRange}
-              onChange={handleDateRangeChange}
-              label="Date Range"
-              startAdornment={<DateRangeIcon sx={{ mr: 1, color: 'action.active' }} />}
-            >
-              <MenuItem value="7days">Last 7 days</MenuItem>
-              <MenuItem value="30days">Last 30 days</MenuItem>
-              <MenuItem value="90days">Last 90 days</MenuItem>
-              <MenuItem value="6months">Last 6 months</MenuItem>
-              <MenuItem value="1year">Last year</MenuItem>
-            </Select>
-          </FormControl>
-
-          <FormControl size="small" sx={{ minWidth: 140 }}>
-            <InputLabel>Location</InputLabel>
-            <Select
-              value={selectedLocation}
-              onChange={handleLocationChange}
-              label="Location"
-            >
-              <MenuItem value="all">All Locations</MenuItem>
-              <MenuItem value="antananarivo">Antananarivo</MenuItem>
-              <MenuItem value="toamasina">Toamasina</MenuItem>
-              <MenuItem value="antsirabe">Antsirabe</MenuItem>
-              <MenuItem value="mahajanga">Mahajanga</MenuItem>
-            </Select>
-          </FormControl>
-
-          <Box sx={{ flexGrow: 1 }} />
-
-          <Stack direction="row" spacing={1}>
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<RefreshIcon />}
-              onClick={refreshData}
-              disabled={loading}
-            >
-              Refresh
-            </Button>
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<DownloadIcon />}
-              onClick={handleExport}
-            >
-              Export
-            </Button>
-          </Stack>
-        </Stack>
-      </Paper>
-
-      {/* KPI Overview Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        {kpiMetrics.map((metric, index) => (
-          <Grid item xs={12} sm={6} lg={3} key={index}>
-            <KPICard {...metric} />
-          </Grid>
-        ))}
-      </Grid>
-
-      {/* Main Analytics Grid */}
-      <Grid container spacing={3}>
-        {/* Row 1: Application Trends & Distribution */}
-        <Grid item xs={12} lg={8}>
-          <ApplicationAnalytics dateRange={dateRange} location={selectedLocation} />
-        </Grid>
-        <Grid item xs={12} lg={4}>
-          <SystemHealthCards />
-        </Grid>
-
-        {/* Row 2: License Analytics & Printing */}
-        <Grid item xs={12} lg={6}>
-          <LicenseAnalytics dateRange={dateRange} location={selectedLocation} />
-        </Grid>
-        <Grid item xs={12} lg={6}>
-          <PrintingAnalytics dateRange={dateRange} location={selectedLocation} />
-        </Grid>
-
-        {/* Row 3: Financial Analytics & Activity */}
-        <Grid item xs={12} lg={8}>
-          <FinancialAnalytics dateRange={dateRange} location={selectedLocation} />
-        </Grid>
-        <Grid item xs={12} lg={4}>
-          <ActivityFeed />
-        </Grid>
-      </Grid>
-
-      {/* Auto-refresh indicator */}
-      {autoRefresh && (
-        <Box
-          sx={{
-            position: 'fixed',
-            bottom: 16,
-            right: 16,
-            bgcolor: 'success.main',
-            color: 'white',
-            px: 2,
-            py: 1,
-            borderRadius: 1,
-            fontSize: '0.75rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1
-          }}
-        >
-          <RefreshIcon sx={{ fontSize: 16 }} />
-          Auto-refresh: ON
+    <Container
+      maxWidth="lg"
+      sx={{ py: 1, height: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column' }}
+    >
+      <Paper
+        elevation={0}
+        sx={{
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: '#f8f9fa',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          overflow: 'hidden'
+        }}
+      >
+        {/* Header */}
+        <Box sx={{ p: 2, bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Typography variant="h5" component="h1" gutterBottom sx={{ mb: 0.5 }}>
+            Analytics Dashboard
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Monitor applications, licenses, printing, and financial performance
+          </Typography>
         </Box>
-      )}
+
+        {/* Content */}
+        <Box sx={{ p: 2, flexGrow: 1, overflow: 'auto' }}>
+          {/* Filters and Controls */}
+          <Paper
+            elevation={0}
+            sx={{
+              p: 2,
+              mb: 2,
+              bgcolor: 'white',
+              boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+              borderRadius: 2
+            }}
+          >
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
+              <FormControl size="small" sx={{ minWidth: 160 }}>
+                <InputLabel>Date Range</InputLabel>
+                <Select
+                  value={dateRange}
+                  onChange={handleDateRangeChange}
+                  label="Date Range"
+                  startAdornment={<DateRangeIcon sx={{ mr: 1, color: 'action.active' }} />}
+                >
+                  <MenuItem value="7days">Last 7 days</MenuItem>
+                  <MenuItem value="30days">Last 30 days</MenuItem>
+                  <MenuItem value="90days">Last 90 days</MenuItem>
+                  <MenuItem value="6months">Last 6 months</MenuItem>
+                  <MenuItem value="1year">Last year</MenuItem>
+                </Select>
+              </FormControl>
+
+              <FormControl size="small" sx={{ minWidth: 160 }}>
+                <InputLabel>Location</InputLabel>
+                <Select value={selectedLocation} onChange={handleLocationChange} label="Location">
+                  <MenuItem value="all">All Locations</MenuItem>
+                  <MenuItem value="antananarivo">Antananarivo</MenuItem>
+                  <MenuItem value="toamasina">Toamasina</MenuItem>
+                  <MenuItem value="antsirabe">Antsirabe</MenuItem>
+                  <MenuItem value="mahajanga">Mahajanga</MenuItem>
+                </Select>
+              </FormControl>
+
+              <Box sx={{ flexGrow: 1 }} />
+
+              <Stack direction="row" spacing={1}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<RefreshIcon />}
+                  onClick={refreshData}
+                  disabled={loading}
+                >
+                  Refresh
+                </Button>
+                <Button variant="contained" color="primary" size="small" startIcon={<DownloadIcon />} onClick={handleExport}>
+                  Export
+                </Button>
+              </Stack>
+            </Stack>
+          </Paper>
+
+          {/* KPI Overview Cards */}
+          <Grid container spacing={2} sx={{ mb: 2 }}>
+            {kpiMetrics.map((metric, index) => (
+              <Grid item xs={12} sm={6} lg={3} key={index}>
+                <Paper
+                  elevation={0}
+                  sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 'rgba(0,0,0,0.05) 0px 1px 2px 0px', p: 2, height: '100%' }}
+                >
+                  <KPICard {...metric} />
+                </Paper>
+              </Grid>
+            ))}
+          </Grid>
+
+          {/* Main Analytics Grid */}
+          <Grid container spacing={2}>
+            {/* Row 1: Application Trends & Distribution */}
+            <Grid item xs={12} lg={8}>
+              <Paper elevation={0} sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 'rgba(0,0,0,0.05) 0px 1px 2px 0px', p: 2, height: '100%' }}>
+                <ApplicationAnalytics dateRange={dateRange} location={selectedLocation} />
+              </Paper>
+            </Grid>
+            <Grid item xs={12} lg={4}>
+              <Paper elevation={0} sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 'rgba(0,0,0,0.05) 0px 1px 2px 0px', p: 2, height: '100%' }}>
+                <SystemHealthCards />
+              </Paper>
+            </Grid>
+
+            {/* Row 2: License Analytics & Printing */}
+            <Grid item xs={12} lg={6}>
+              <Paper elevation={0} sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 'rgba(0,0,0,0.05) 0px 1px 2px 0px', p: 2, height: '100%' }}>
+                <LicenseAnalytics dateRange={dateRange} location={selectedLocation} />
+              </Paper>
+            </Grid>
+            <Grid item xs={12} lg={6}>
+              <Paper elevation={0} sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 'rgba(0,0,0,0.05) 0px 1px 2px 0px', p: 2, height: '100%' }}>
+                <PrintingAnalytics dateRange={dateRange} location={selectedLocation} />
+              </Paper>
+            </Grid>
+
+            {/* Row 3: Financial Analytics & Activity */}
+            <Grid item xs={12} lg={8}>
+              <Paper elevation={0} sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 'rgba(0,0,0,0.05) 0px 1px 2px 0px', p: 2, height: '100%' }}>
+                <FinancialAnalytics dateRange={dateRange} location={selectedLocation} />
+              </Paper>
+            </Grid>
+            <Grid item xs={12} lg={4}>
+              <Paper elevation={0} sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 'rgba(0,0,0,0.05) 0px 1px 2px 0px', p: 2, height: '100%' }}>
+                <ActivityFeed />
+              </Paper>
+            </Grid>
+          </Grid>
+
+          {/* Auto-refresh indicator - inline, subtle */}
+          {autoRefresh && (
+            <Box sx={{ mt: 2, display: 'inline-flex', alignItems: 'center', gap: 1, px: 1, py: 0.5, bgcolor: 'success.light', color: 'success.contrastText', borderRadius: 1, fontSize: '0.75rem' }}>
+              <RefreshIcon sx={{ fontSize: 16 }} /> Auto-refresh enabled
+            </Box>
+          )}
+        </Box>
+      </Paper>
     </Container>
   );
 };

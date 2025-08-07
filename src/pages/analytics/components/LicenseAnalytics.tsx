@@ -32,11 +32,11 @@ const LicenseAnalytics: React.FC<LicenseAnalyticsProps> = ({
 }) => {
   // Sample data for license categories
   const licenseCategoriesData = [
-    { category: 'Category A', count: 8542, color: '#8884d8' },
-    { category: 'Category B', count: 15632, color: '#82ca9d' },
-    { category: 'Category C', count: 12845, color: '#ffc658' },
-    { category: "Learner's", count: 5234, color: '#ff7300' },
-    { category: 'Professional', count: 3125, color: '#00ff00' }
+    { category: 'Category A', count: 8542, color: '#1976d2' },
+    { category: 'Category B', count: 15632, color: '#2e7d32' },
+    { category: 'Category C', count: 12845, color: '#ed6c02' },
+    { category: "Learner's", count: 5234, color: '#9c27b0' },
+    { category: 'Professional', count: 3125, color: '#0288d1' }
   ];
 
   // Sample data for license lifecycle
@@ -60,10 +60,10 @@ const LicenseAnalytics: React.FC<LicenseAnalyticsProps> = ({
 
   // License status summary data
   const licenseStatusData = [
-    { status: 'Active', count: 45632, color: '#00ff00' },
-    { status: 'Expiring Soon', count: 3456, color: '#ffc658' },
-    { status: 'Expired', count: 1234, color: '#ff7300' },
-    { status: 'Suspended', count: 234, color: '#ff0000' }
+    { status: 'Active', count: 45632, color: '#2e7d32' },
+    { status: 'Expiring Soon', count: 3456, color: '#ed6c02' },
+    { status: 'Expired', count: 1234, color: '#d32f2f' },
+    { status: 'Suspended', count: 234, color: '#9c27b0' }
   ];
 
   return (
@@ -190,7 +190,7 @@ const LicenseAnalytics: React.FC<LicenseAnalyticsProps> = ({
                   return [value + '%', 'Percentage'];
                 }}
               />
-              <Bar dataKey="licenses" fill="#8884d8" name="licenses" />
+              <Bar dataKey="licenses" fill="#1976d2" name="licenses" />
             </BarChart>
           </ResponsiveContainer>
         </ChartWidget>

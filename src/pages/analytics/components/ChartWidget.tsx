@@ -71,15 +71,24 @@ const ChartWidget: React.FC<ChartWidgetProps> = ({
   };
 
   return (
-    <Paper sx={{ p: 3, height: '100%' }}>
+    <Paper
+      elevation={0}
+      sx={{
+        p: 2,
+        height: '100%',
+        bgcolor: 'white',
+        borderRadius: 2,
+        boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
+      }}
+    >
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
         <Box>
-          <Typography variant="h6" component="h3" sx={{ fontWeight: 600 }}>
+          <Typography variant="subtitle1" component="h3" sx={{ fontWeight: 600 }}>
             {title}
           </Typography>
           {subtitle && (
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="caption" color="text.secondary">
               {subtitle}
             </Typography>
           )}

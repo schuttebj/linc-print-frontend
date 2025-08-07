@@ -40,7 +40,7 @@ const ActivityFeed: React.FC = () => {
       timestamp: '2 minutes ago',
       status: 'success',
       icon: <AssignmentIcon />,
-      color: '#00ff00'
+      color: '#2e7d32'
     },
     {
       id: 2,
@@ -50,7 +50,7 @@ const ActivityFeed: React.FC = () => {
       timestamp: '5 minutes ago',
       status: 'success',
       icon: <PrintIcon />,
-      color: '#00ff00'
+      color: '#2e7d32'
     },
     {
       id: 3,
@@ -60,7 +60,7 @@ const ActivityFeed: React.FC = () => {
       timestamp: '8 minutes ago',
       status: 'info',
       icon: <PersonIcon />,
-      color: '#8884d8'
+      color: '#1976d2'
     },
     {
       id: 4,
@@ -70,7 +70,7 @@ const ActivityFeed: React.FC = () => {
       timestamp: '12 minutes ago',
       status: 'success',
       icon: <CheckCircleIcon />,
-      color: '#00ff00'
+      color: '#2e7d32'
     },
     {
       id: 5,
@@ -80,7 +80,7 @@ const ActivityFeed: React.FC = () => {
       timestamp: '15 minutes ago',
       status: 'error',
       icon: <ErrorIcon />,
-      color: '#ff7300'
+      color: '#d32f2f'
     },
     {
       id: 6,
@@ -90,7 +90,7 @@ const ActivityFeed: React.FC = () => {
       timestamp: '1 hour ago',
       status: 'info',
       icon: <RefreshIcon />,
-      color: '#8884d8'
+      color: '#1976d2'
     },
     {
       id: 7,
@@ -100,7 +100,7 @@ const ActivityFeed: React.FC = () => {
       timestamp: '1 hour ago',
       status: 'warning',
       icon: <WarningIcon />,
-      color: '#ffc658'
+      color: '#ed6c02'
     },
     {
       id: 8,
@@ -110,7 +110,7 @@ const ActivityFeed: React.FC = () => {
       timestamp: '2 hours ago',
       status: 'info',
       icon: <ViewIcon />,
-      color: '#8884d8'
+      color: '#1976d2'
     }
   ];
 
