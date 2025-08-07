@@ -61,6 +61,17 @@ const stepSchemas = {
     cell_phone_country_code: yup
       .string()
       .required('Country code is required'),
+    work_phone: yup
+      .string()
+      .optional()
+      .when('work_phone', {
+        is: (value: string) => value && value.length > 0,
+        then: () => yup.string().matches(/^0\d{9}$/, 'Madagascar work phone must be exactly 10 digits starting with 0 (e.g., 0815598453)'),
+        otherwise: () => yup.string(),
+      }),
+    work_phone_country_code: yup
+      .string()
+      .optional(),
   }),
 
   // Step 3: ID Documents
@@ -275,23 +286,31 @@ export const usePersonFormValidation = (): PersonFormValidationHook => {
       return { isValid: true, state: 'default' as const };
     }
 
-    // Check if field is required
-    const isRequired = config.required.includes(fieldName) || 
-                      (config.nested && Object.values(config.nested).flat().includes(fieldName));
+    // Check if field is required (handle nested fields)
+    let isRequired = config.required.includes(fieldName);
+    
+    // For nested fields like aliases.0.document_type, check if the base field is required
+    if (fieldName.includes('.')) {
+      const parts = fieldName.split('.');
+      const baseField = parts[0]; // e.g., 'aliases'
+      const nestedField = parts[2]; // e.g., 'document_type'
+      
+      if (config.nested && config.nested[baseField]) {
+        isRequired = config.nested[baseField].includes(nestedField);
+      }
+    }
 
     // Empty value handling
     if (value === undefined || value === '' || value === null) {
       if (isRequired) {
         return { 
           isValid: false, 
-          error: `${fieldName.replace(/_/g, ' ')} is required`,
+          error: `${fieldName.replace(/_/g, ' ').replace(/\.\d+\./g, ' ')} is required`,
           state: 'required' as const 
         };
       }
       return { isValid: true, state: 'default' as const };
     }
-
-
 
     // Validate individual field using schema
     try {
@@ -347,6 +366,27 @@ function getFieldSchema(fieldName: string, stepIndex: number) {
   if (!config) return null;
 
   try {
+    // Handle nested field paths (e.g., aliases.0.document_type)
+    if (fieldName.includes('.')) {
+      const parts = fieldName.split('.');
+      
+      // For aliases fields, get the schema from the array item
+      if (parts[0] === 'aliases' && parts.length >= 3) {
+        const aliasSchema = config.schema.fields.aliases;
+        if (aliasSchema && aliasSchema.innerType && aliasSchema.innerType.fields) {
+          return aliasSchema.innerType.fields[parts[2]];
+        }
+      }
+      
+      // For addresses fields, get the schema from the array item
+      if (parts[0] === 'addresses' && parts.length >= 3) {
+        const addressSchema = config.schema.fields.addresses;
+        if (addressSchema && addressSchema.innerType && addressSchema.innerType.fields) {
+          return addressSchema.innerType.fields[parts[2]];
+        }
+      }
+    }
+    
     // Try to extract the field schema from the step schema
     return config.schema.fields[fieldName];
   } catch {

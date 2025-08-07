@@ -93,6 +93,7 @@ interface PersonManagementForm {
     // Contact Information  
     email_address?: string;
     work_phone?: string;
+    work_phone_country_code?: string;
     cell_phone_country_code: string;
     cell_phone?: string;
 
@@ -239,9 +240,19 @@ interface PersonFormWrapperProps {
     onPersonStepChange?: (step: number, canAdvance: boolean) => void;
     onPersonValidationChange?: (step: number, isValid: boolean) => void;
     onContinueToApplication?: () => void; // New: handler for "Continue to License" button
-    externalPersonStep?: number;
+    // New props for external navigation control
+    onNavigationStateChange?: (state: {
+        currentStep: number;
+        isNextDisabled: boolean;
+        isBackDisabled: boolean;
+        nextButtonText: string;
+        isLoading: boolean;
+        isExistingPerson: boolean;
+        totalSteps: number;
+    }) => void;
     onPersonNext?: React.MutableRefObject<() => Promise<boolean>>;
     onPersonBack?: React.MutableRefObject<() => boolean>;
+    externalPersonStep?: number;
     initialPersonId?: string;
     title?: string;
     subtitle?: string;
@@ -377,6 +388,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             preferred_language: '',
             email_address: '',
             work_phone: '',
+            work_phone_country_code: '+261',
             cell_phone_country_code: '+261',
             cell_phone: '',
             aliases: [{
@@ -2284,57 +2296,55 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
                 <Grid container spacing={2}>
                     <Grid item xs={12} md={6}>
-                        <Controller
+                        <ValidatedTextField
                             name="email_address"
                             control={personForm.control}
-                            render={({ field }) => (
-                                <TextField
-                                    id="contact-email-address"
-                                    name={field.name}
-                                    value={field.value || ''}
-                                    fullWidth
-                                    size="small"
-                                    type="email"
-                                    label="Email Address"
-                                    error={!!personForm.formState.errors.email_address}
-                                    helperText={personForm.formState.errors.email_address?.message || 'Email address (optional)'}
-                                    inputProps={{ maxLength: 100 }}
-                                    onChange={(e) => {
-                                        const value = e.target.value.toUpperCase();
-                                        field.onChange(value);
-                                    }}
-                                    onBlur={field.onBlur}
-                                />
-                            )}
+                            stepIndex={2}
+                            isRequired={true}
+                            getFieldState={formValidation.getFieldState}
+                            debouncedValidation={debouncedValidation}
+                            getImmediateValidation={getImmediateValidation}
+                            setError={setPersonError}
+                            clearErrors={clearPersonErrors}
+                            errors={personForm.formState.errors}
+                            triggerStepValidation={triggerStepValidation}
+                            label="Email Address *"
+                            type="email"
+                            inputProps={{ maxLength: 100 }}
+                            transform={(value) => value?.toUpperCase() || ''}
                         />
                     </Grid>
 
                     <Grid item xs={12} md={6}>
-                        <Controller
+                        <ValidatedTextField
                             name="work_phone"
                             control={personForm.control}
-                            render={({ field }) => (
-                                <TextField
-                                    id="contact-work-phone"
-                                    name={field.name}
-                                    value={field.value || ''}
-                                    fullWidth
-                                    size="small"
-                                    label="Work Phone"
-                                    error={!!personForm.formState.errors.work_phone}
-                                    helperText={personForm.formState.errors.work_phone?.message || 'Work phone number (optional)'}
-                                    inputProps={{
-                                        maxLength: 20,
-                                        pattern: '[0-9]*',
-                                        inputMode: 'numeric'
-                                    }}
-                                    onChange={(e) => {
-                                        const value = e.target.value.replace(/\D/g, '');
-                                        field.onChange(value);
-                                    }}
-                                    onBlur={field.onBlur}
-                                />
-                            )}
+                            stepIndex={2}
+                            isRequired={false}
+                            getFieldState={formValidation.getFieldState}
+                            debouncedValidation={debouncedValidation}
+                            getImmediateValidation={getImmediateValidation}
+                            setError={setPersonError}
+                            clearErrors={clearPersonErrors}
+                            errors={personForm.formState.errors}
+                            triggerStepValidation={triggerStepValidation}
+                            label="Work Phone"
+                            inputProps={{
+                                maxLength: 10,
+                                pattern: '[0-9]*',
+                                inputMode: 'numeric',
+                            }}
+                            transform={(value) => {
+                                // Ensure Madagascar format: must start with 0 and be exactly 10 digits
+                                let cleanValue = value?.replace(/\D/g, '') || '';
+                                if (cleanValue.length > 0 && !cleanValue.startsWith('0')) {
+                                    cleanValue = '0' + cleanValue;
+                                }
+                                if (cleanValue.length > 10) {
+                                    cleanValue = cleanValue.substring(0, 10);
+                                }
+                                return cleanValue;
+                            }}
                         />
                     </Grid>
 
@@ -2348,70 +2358,81 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                         <Controller
                             name="cell_phone_country_code"
                             control={personForm.control}
-                            render={({ field }) => (
-                                <FormControl fullWidth size="small">
-                                    <InputLabel>Country Code *</InputLabel>
-                                    <Select
-                                        id="cell-phone-country-code-select"
-                                        name={field.name}
-                                        value={field.value || '+261'}
-                                        onChange={field.onChange}
-                                        onBlur={field.onBlur}
-                                        label="Country Code *"
-                                        MenuProps={{
-                                            id: "country-code-menu"
-                                        }}
-                                    >
-                                        <MenuItem value="+261">+261 (MADAGASCAR)</MenuItem>
-                                        <MenuItem value="+27">+27 (SOUTH AFRICA)</MenuItem>
-                                        <MenuItem value="+33">+33 (FRANCE)</MenuItem>
-                                        <MenuItem value="+1">+1 (USA)</MenuItem>
-                                        <MenuItem value="+44">+44 (UK)</MenuItem>
-                                    </Select>
-                                    <FormHelperText>Select country code</FormHelperText>
-                                </FormControl>
-                            )}
+                            render={({ field }) => {
+                                const fieldState = formValidation.getFieldState('cell_phone_country_code', field.value, 2);
+                                const styling = useSelectStyling(
+                                    fieldState,
+                                    personForm.formState.errors.cell_phone_country_code?.message as string,
+                                    true
+                                );
+
+                                return (
+                                    <FormControl fullWidth size="small" error={styling.error}>
+                                        <InputLabel>Country Code *</InputLabel>
+                                        <Select
+                                            name={field.name}
+                                            value={field.value || ''}
+                                            onChange={(e) => {
+                                                field.onChange(e.target.value);
+                                                debouncedValidation('cell_phone_country_code', e.target.value, 2);
+                                            }}
+                                            onBlur={(e) => {
+                                                field.onBlur();
+                                                const validation = getImmediateValidation('cell_phone_country_code', e.target.value, 2);
+                                                if (validation?.errors) {
+                                                    setPersonError('cell_phone_country_code', { message: Object.values(validation.errors)[0] });
+                                                } else {
+                                                    clearPersonErrors('cell_phone_country_code');
+                                                }
+                                                triggerStepValidation(2);
+                                            }}
+                                            label="Country Code *"
+                                            sx={styling.sx}
+                                        >
+                                            <MenuItem value="" disabled>Select country code</MenuItem>
+                                            <MenuItem value="+261">+261 (MADAGASCAR)</MenuItem>
+                                            <MenuItem value="+27">+27 (SOUTH AFRICA)</MenuItem>
+                                            <MenuItem value="+33">+33 (FRANCE)</MenuItem>
+                                            <MenuItem value="+1">+1 (USA)</MenuItem>
+                                            <MenuItem value="+44">+44 (UK)</MenuItem>
+                                        </Select>
+                                        <FormHelperText>{styling.helperText}</FormHelperText>
+                                    </FormControl>
+                                );
+                            }}
                         />
                     </Grid>
 
                     <Grid item xs={12} md={9}>
-                        <Controller
+                        <ValidatedTextField
                             name="cell_phone"
                             control={personForm.control}
-                            render={({ field }) => (
-                                <TextField
-                                    id="contact-cell-phone"
-                                    name={field.name}
-                                    value={field.value || ''}
-                                    fullWidth
-                                    size="small"
-                                    label="Cell Phone Number"
-                                    placeholder="Example: 0815598453"
-                                    error={!!personForm.formState.errors.cell_phone}
-                                    helperText={personForm.formState.errors.cell_phone?.message || 'Madagascar cell phone (10 digits, will auto-add 0 if missing)'}
-                                    inputProps={{
-                                        maxLength: 10,
-                                        pattern: '[0-9]*',
-                                        inputMode: 'numeric',
-                                    }}
-                                    onChange={(e) => {
-                                        let value = e.target.value.replace(/\D/g, '');
-
-                                        // Ensure Madagascar format: must start with 0 and be exactly 10 digits
-                                        if (value.length > 0 && !value.startsWith('0')) {
-                                            value = '0' + value;
-                                        }
-
-                                        // Limit to 10 digits max
-                                        if (value.length > 10) {
-                                            value = value.substring(0, 10);
-                                        }
-
-                                        field.onChange(value);
-                                    }}
-                                    onBlur={field.onBlur}
-                                />
-                            )}
+                            stepIndex={2}
+                            isRequired={true}
+                            getFieldState={formValidation.getFieldState}
+                            debouncedValidation={debouncedValidation}
+                            getImmediateValidation={getImmediateValidation}
+                            setError={setPersonError}
+                            clearErrors={clearPersonErrors}
+                            errors={personForm.formState.errors}
+                            triggerStepValidation={triggerStepValidation}
+                            label="Cell Phone Number *"
+                            inputProps={{
+                                maxLength: 10,
+                                pattern: '[0-9]*',
+                                inputMode: 'numeric',
+                            }}
+                            transform={(value) => {
+                                // Ensure Madagascar format: must start with 0 and be exactly 10 digits
+                                let cleanValue = value?.replace(/\D/g, '') || '';
+                                if (cleanValue.length > 0 && !cleanValue.startsWith('0')) {
+                                    cleanValue = '0' + cleanValue;
+                                }
+                                if (cleanValue.length > 10) {
+                                    cleanValue = cleanValue.substring(0, 10);
+                                }
+                                return cleanValue;
+                            }}
                         />
                     </Grid>
                 </Grid>
@@ -2452,21 +2473,53 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                 <Controller
                                     name={`aliases.${index}.document_type`}
                                     control={personForm.control}
-                                    render={({ field }) => (
-                                        <FormControl fullWidth size="small">
-                                            <InputLabel>Document Type</InputLabel>
-                                            <Select {...field} label="Document Type" disabled={index === 0}>
-                                                {documentTypes.map((option) => (
-                                                    <MenuItem key={option.value} value={option.value}>
-                                                        {option.label}
-                                                    </MenuItem>
-                                                ))}
-                                            </Select>
-                                            {index === 0 && (
-                                                <FormHelperText>Primary document from lookup</FormHelperText>
-                                            )}
-                                        </FormControl>
-                                    )}
+                                    render={({ field }) => {
+                                        const fieldState = formValidation.getFieldState(`aliases.${index}.document_type`, field.value, 3);
+                                        const styling = useSelectStyling(
+                                            index === 0 ? (field.value ? 'valid' : 'required') : fieldState, // Primary doc shows valid if populated
+                                            personForm.formState.errors.aliases?.[index]?.document_type?.message as string,
+                                            true
+                                        );
+
+                                        return (
+                                            <FormControl fullWidth size="small" error={styling.error}>
+                                                <InputLabel>Document Type *</InputLabel>
+                                                <Select 
+                                                    {...field} 
+                                                    label="Document Type *" 
+                                                    disabled={index === 0}
+                                                    sx={styling.sx}
+                                                    onChange={(e) => {
+                                                        field.onChange(e.target.value);
+                                                        if (index !== 0) {
+                                                            debouncedValidation(`aliases.${index}.document_type`, e.target.value, 3);
+                                                        }
+                                                    }}
+                                                    onBlur={(e) => {
+                                                        field.onBlur();
+                                                        if (index !== 0) {
+                                                            const validation = getImmediateValidation(`aliases.${index}.document_type`, e.target.value, 3);
+                                                            if (validation?.errors) {
+                                                                setPersonError(`aliases.${index}.document_type`, { message: Object.values(validation.errors)[0] });
+                                                            } else {
+                                                                clearPersonErrors(`aliases.${index}.document_type`);
+                                                            }
+                                                            triggerStepValidation(3);
+                                                        }
+                                                    }}
+                                                >
+                                                    {documentTypes.map((option) => (
+                                                        <MenuItem key={option.value} value={option.value}>
+                                                            {option.label}
+                                                        </MenuItem>
+                                                    ))}
+                                                </Select>
+                                                <FormHelperText>
+                                                    {styling.helperText || (index === 0 ? 'Primary document from lookup' : 'Select document type')}
+                                                </FormHelperText>
+                                            </FormControl>
+                                        );
+                                    }}
                                 />
                             </Grid>
 
@@ -2474,23 +2527,48 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                 <Controller
                                     name={`aliases.${index}.document_number`}
                                     control={personForm.control}
-                                    render={({ field }) => (
-                                        <TextField
-                                            name={field.name}
-                                            value={field.value || ''}
-                                            fullWidth
-                                            size="small"
-                                            label="Document Number"
-                                            disabled={index === 0}
-                                            helperText={index === 0 ? 'From lookup step' : 'Additional document number (numbers only)'}
-                                            onChange={(e) => {
-                                                // Allow only numbers for document numbers
-                                                const value = e.target.value.replace(/\D/g, '');
-                                                field.onChange(value);
-                                            }}
-                                            onBlur={field.onBlur}
-                                        />
-                                    )}
+                                    render={({ field }) => {
+                                        const fieldState = formValidation.getFieldState(`aliases.${index}.document_number`, field.value, 3);
+                                        const styling = useFieldStyling(
+                                            index === 0 ? (field.value ? 'valid' : 'required') : fieldState, // Primary doc shows valid if populated
+                                            personForm.formState.errors.aliases?.[index]?.document_number?.message as string,
+                                            true
+                                        );
+
+                                        return (
+                                            <TextField
+                                                name={field.name}
+                                                value={field.value || ''}
+                                                fullWidth
+                                                size="small"
+                                                label="Document Number *"
+                                                disabled={index === 0}
+                                                error={styling.error}
+                                                helperText={styling.helperText || (index === 0 ? 'From lookup step' : 'Additional document number (numbers only)')}
+                                                sx={styling.sx}
+                                                onChange={(e) => {
+                                                    // Allow only numbers for document numbers
+                                                    const value = e.target.value.replace(/\D/g, '');
+                                                    field.onChange(value);
+                                                    if (index !== 0) {
+                                                        debouncedValidation(`aliases.${index}.document_number`, value, 3);
+                                                    }
+                                                }}
+                                                onBlur={(e) => {
+                                                    field.onBlur();
+                                                    if (index !== 0) {
+                                                        const validation = getImmediateValidation(`aliases.${index}.document_number`, e.target.value.replace(/\D/g, ''), 3);
+                                                        if (validation?.errors) {
+                                                            setPersonError(`aliases.${index}.document_number`, { message: Object.values(validation.errors)[0] });
+                                                        } else {
+                                                            clearPersonErrors(`aliases.${index}.document_number`);
+                                                        }
+                                                        triggerStepValidation(3);
+                                                    }
+                                                }}
+                                            />
+                                        );
+                                    }}
                                 />
                             </Grid>
 
@@ -2513,21 +2591,42 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                 <Controller
                                     name={`aliases.${index}.name_in_document`}
                                     control={personForm.control}
-                                    render={({ field }) => (
-                                        <TextField
-                                            name={field.name}
-                                            value={field.value || ''}
-                                            fullWidth
-                                            size="small"
-                                            label="Name in Document"
-                                            helperText="Name as it appears in the document (will be capitalized)"
-                                            onChange={(e) => {
-                                                const value = e.target.value.toUpperCase();
-                                                field.onChange(value);
-                                            }}
-                                            onBlur={field.onBlur}
-                                        />
-                                    )}
+                                    render={({ field }) => {
+                                        const fieldState = formValidation.getFieldState(`aliases.${index}.name_in_document`, field.value, 3);
+                                        const styling = useFieldStyling(
+                                            fieldState,
+                                            personForm.formState.errors.aliases?.[index]?.name_in_document?.message as string,
+                                            true
+                                        );
+
+                                        return (
+                                            <TextField
+                                                name={field.name}
+                                                value={field.value || ''}
+                                                fullWidth
+                                                size="small"
+                                                label="Name in Document *"
+                                                error={styling.error}
+                                                helperText={styling.helperText || "Name as it appears in the document (will be capitalized)"}
+                                                sx={styling.sx}
+                                                onChange={(e) => {
+                                                    const value = e.target.value.toUpperCase();
+                                                    field.onChange(value);
+                                                    debouncedValidation(`aliases.${index}.name_in_document`, value, 3);
+                                                }}
+                                                onBlur={(e) => {
+                                                    field.onBlur();
+                                                    const validation = getImmediateValidation(`aliases.${index}.name_in_document`, e.target.value.toUpperCase(), 3);
+                                                    if (validation?.errors) {
+                                                        setPersonError(`aliases.${index}.name_in_document`, { message: Object.values(validation.errors)[0] });
+                                                    } else {
+                                                        clearPersonErrors(`aliases.${index}.name_in_document`);
+                                                    }
+                                                    triggerStepValidation(3);
+                                                }}
+                                            />
+                                        );
+                                    }}
                                 />
                             </Grid>
 
@@ -3151,32 +3250,46 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 </Tabs>
             </Paper>
 
-            {/* Missing Fields Alert - Show if any step is invalid */}
-            {isExistingPerson && stepValidation.some(valid => !valid) && (
-                <Alert 
-                    severity="warning" 
-                    sx={{ 
-                        mb: 2,
-                        '& .MuiAlert-message': {
-                            width: '100%'
-                        }
-                    }}
-                >
-                    <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                        Missing Mandatory Information
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1, fontSize: '0.875rem' }}>
-                        Some required fields are missing. Please complete all steps marked with warning icons.
-                    </Typography>
-                </Alert>
-            )}
+            {/* Main Form Container - Flexbox layout to fill available height */}
+            <Paper 
+                elevation={0}
+                sx={{ 
+                    bgcolor: 'white',
+                    boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                    borderRadius: 2,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: mode === 'application' ? 'calc(100vh - 300px)' : 'auto', // Fill available height in application mode
+                    minHeight: mode === 'application' ? '500px' : 'auto'
+                }}
+            >
+                {/* Missing Fields Alert - Show if any step is invalid */}
+                {isExistingPerson && stepValidation.some(valid => !valid) && (
+                    <Alert 
+                        severity="warning" 
+                        sx={{ 
+                            m: 2,
+                            mb: 1,
+                            '& .MuiAlert-message': {
+                                width: '100%'
+                            }
+                        }}
+                    >
+                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                            Missing Mandatory Information
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 1, fontSize: '0.875rem' }}>
+                            Some required fields are missing. Please complete all steps marked with warning icons.
+                        </Typography>
+                    </Alert>
+                )}
 
-            {/* Step Content */}
-                <Box ref={stepContentRef} sx={{ mb: 3 }}>
-                {renderStepContent()}
-            </Box>
+                {/* Step Content - Flex grow to fill available space */}
+                <Box ref={stepContentRef} sx={{ flex: 1, overflow: 'auto', p: 2 }}>
+                    {renderStepContent()}
+                </Box>
 
-                        {/* Navigation - Styled to match application navigation exactly */}
+                {/* Navigation - Always at bottom */}
             <Box sx={{ 
                 p: 2, 
                 bgcolor: 'white', 
@@ -3184,7 +3297,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 borderColor: 'divider', 
                 display: 'flex', 
                 justifyContent: 'flex-end', 
-                gap: 1 
+                gap: 1,
+                flexShrink: 0 // Prevent navigation from shrinking
             }}>
                 {/* Cancel Button - Show in application mode */}
                 {mode === 'application' && onCancel && (
@@ -3243,6 +3357,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     </Button>
                 )}
             </Box>
+            </Paper>
             </Box>
         </Box>
 
