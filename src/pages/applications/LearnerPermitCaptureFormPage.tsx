@@ -720,8 +720,10 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
             <PersonFormWrapper
               key="person-form-wrapper" // Stable key to preserve component instance
               mode="application"
+              externalPersonStep={personStep}
               onSuccess={handlePersonSelected}
               onPersonValidationChange={handlePersonValidationChange}
+              onPersonStepChange={handlePersonStepChange}
               onContinueToApplication={handleContinueToLicense}
               onCancel={handleCancel}
               title=""
