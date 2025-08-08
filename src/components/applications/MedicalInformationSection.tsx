@@ -378,7 +378,7 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
   // Vision Test Content
   function renderVisionTestContent() {
     return (
-      <Box sx={{ p: 2 }}>
+      <Box sx={{ p: 0 }}>
         {/* Vision Test Section */}
         <Box sx={{ 
           backgroundColor: 'rgb(255, 255, 255)',
@@ -389,7 +389,7 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
           transition: 'box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1)',
           overflow: 'hidden',
           borderRadius: '12px',
-          p: 0
+          p: 2
         }}>
           <Box sx={{ mb: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
@@ -556,7 +556,7 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
   // Medical Declaration Content
   function renderMedicalDeclarationContent() {
     return (
-      <Box sx={{ p: 2 }}>
+      <Box sx={{ p: 0 }}>
         {/* Self-Declaration of Medical Fitness */}
         <Box sx={{ 
           backgroundColor: 'rgb(255, 255, 255)',
@@ -567,7 +567,7 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
           transition: 'box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1)',
           overflow: 'hidden',
           borderRadius: '12px',
-          p: 0
+          p: 2
         }}>
           <Box sx={{ mb: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
