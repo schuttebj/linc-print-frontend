@@ -1013,8 +1013,8 @@ const LearnersLicenseApplicationPage: React.FC = () => {
         {/* Tab Content */}
         <Box sx={{ 
           flexGrow: 1, 
-          overflow: (activeStep === 0 || activeStep === 2) ? 'hidden' : 'auto',
-          p: (activeStep === 0 || activeStep === 2) ? 0 : 2
+          overflow: (activeStep === 0 || activeStep === 2 || activeStep === 3) ? 'hidden' : 'auto',
+          p: (activeStep === 0 || activeStep === 2 || activeStep === 3) ? 0 : 2
         }}>
           {/* Person Form - Always rendered but conditionally visible */}
           <Box sx={{ display: activeStep === 0 ? 'block' : 'none' }}>
