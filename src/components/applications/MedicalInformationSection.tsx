@@ -380,7 +380,17 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
     return (
       <Box sx={{ p: 2 }}>
         {/* Vision Test Section */}
-        <Box sx={{ mb: 3 }}>
+        <Box sx={{ 
+          backgroundColor: 'rgb(255, 255, 255)',
+          color: 'rgb(33, 33, 33)',
+          backgroundImage: 'none',
+          mb: 2,
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          transition: 'box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+          overflow: 'hidden',
+          borderRadius: '12px',
+          p: 2
+        }}>
           <Box sx={{ mb: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
               <VisionIcon fontSize="small" />
@@ -548,18 +558,26 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
     return (
       <Box sx={{ p: 2 }}>
         {/* Self-Declaration of Medical Fitness */}
-        <Card sx={{ mb: 2, border: '1px solid #e0e0e0', boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
-          <CardHeader 
-            title={
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <MedicalIcon fontSize="small" />
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '1rem' }}>Medical Fitness Declaration</Typography>
-              </Box>
-            }
-            subheader="Simple self-declaration for medical fitness"
-            sx={{ pb: 1 }}
-          />
-          <CardContent sx={{ pt: 0 }}>
+        <Box sx={{ 
+          backgroundColor: 'rgb(255, 255, 255)',
+          color: 'rgb(33, 33, 33)',
+          backgroundImage: 'none',
+          mb: 2,
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          transition: 'box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+          overflow: 'hidden',
+          borderRadius: '12px',
+          p: 2
+        }}>
+          <Box sx={{ mb: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <MedicalIcon fontSize="small" />
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '1rem' }}>Medical Fitness Declaration</Typography>
+            </Box>
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.9rem' }}>
+              Simple self-declaration for medical fitness
+            </Typography>
+          </Box>
             <Alert severity="info" sx={{ mb: 1.5, py: 0.5 }}>
               <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.85rem' }}>
                 Section D: Medical Fitness Declaration
@@ -770,8 +788,7 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
                 </Typography>
               </Alert>
             </Box>
-          </CardContent>
-        </Card>
+        </Box>
       </Box>
     );
   }
