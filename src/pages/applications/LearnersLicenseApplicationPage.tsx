@@ -85,6 +85,8 @@ const LearnersLicenseApplicationPage: React.FC = () => {
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
   const [personFormValid, setPersonFormValid] = useState(false);
   const [medicalFormValid, setMedicalFormValid] = useState(false);
+  const [biometricFormValid, setBiometricFormValid] = useState(false);
+  const [biometricStep, setBiometricStep] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState<LicenseCategory>('' as LicenseCategory);
   const [neverBeenRefused, setNeverBeenRefused] = useState<boolean>(true);
   const [refusalDetails, setRefusalDetails] = useState<string>('');
@@ -305,6 +307,22 @@ const LearnersLicenseApplicationPage: React.FC = () => {
   const handleContinueToBiometric = () => {
     console.log('🎯 User confirmed to continue to biometric capture');
     setActiveStep(3);
+  };
+
+  // Biometric form callbacks (similar to PersonFormWrapper and MedicalInformationSection)
+  const handleBiometricValidationChange = (step: number, isValid: boolean) => {
+    console.log('🎯 BiometricCaptureStep validation callback:', { step, isValid });
+    setBiometricFormValid(isValid);
+  };
+
+  const handleBiometricStepChange = (step: number, canAdvance: boolean) => {
+    console.log('🎯 BiometricCaptureStep step change:', step, 'canAdvance:', canAdvance);
+    setBiometricStep(step);
+  };
+
+  const handleContinueToReview = () => {
+    console.log('🎯 User confirmed to continue to review');
+    setActiveStep(4);
   };
 
   // Navigation handlers
@@ -725,14 +743,8 @@ const LearnersLicenseApplicationPage: React.FC = () => {
       case 2: // Medical step - handled separately to preserve state
         return null;
 
-      case 3: // Biometric step
-        return (
-          <BiometricCaptureStep
-            value={biometricData}
-            onChange={setBiometricData}
-            disabled={false}
-          />
-        );
+      case 3: // Biometric step - handled separately to preserve state
+        return null;
 
       case 4: // Review step
         return (
@@ -1040,13 +1052,29 @@ const LearnersLicenseApplicationPage: React.FC = () => {
               showHeader={false}
             />
           </Box>
+
+          {/* Biometric Form - Always rendered but conditionally visible */}
+          <Box sx={{ display: activeStep === 3 ? 'block' : 'none' }}>
+            <BiometricCaptureStep
+              key="biometric-form-wrapper"
+              value={biometricData}
+              onChange={setBiometricData}
+              disabled={false}
+              externalBiometricStep={biometricStep}
+              onBiometricValidationChange={handleBiometricValidationChange}
+              onBiometricStepChange={handleBiometricStepChange}
+              onContinueToReview={handleContinueToReview}
+              onCancel={handleCancel}
+              showHeader={false}
+            />
+          </Box>
           
           {/* Other step content */}
-          {activeStep !== 0 && activeStep !== 2 && renderStepContent(activeStep)}
+          {activeStep !== 0 && activeStep !== 2 && activeStep !== 3 && renderStepContent(activeStep)}
         </Box>
 
-        {/* Navigation Footer - Only shown when not on person or medical step */}
-        {activeStep !== 0 && activeStep !== 2 && (
+        {/* Navigation Footer - Only shown when not on person, medical, or biometric step */}
+        {activeStep !== 0 && activeStep !== 2 && activeStep !== 3 && (
           <Box sx={{ p: 2, bgcolor: 'white', borderTop: '1px solid', borderColor: 'divider' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Button
