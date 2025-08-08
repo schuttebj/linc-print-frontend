@@ -400,13 +400,14 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
               </Grid>
               
               <Grid item xs={12} md={4}>
-                <FormControl fullWidth>
+                <FormControl fullWidth size="small">
                   <InputLabel>Right Eye Visual Acuity</InputLabel>
                   <Select
                     value={medicalData.vision_test.visual_acuity_right_eye}
                     onChange={(e) => updateVisionTest('visual_acuity_right_eye', e.target.value)}
                     label="Right Eye Visual Acuity"
                     disabled={disabled}
+                    size="small"
                   >
                     <MenuItem value="6/6">6/6 (Perfect)</MenuItem>
                     <MenuItem value="6/9">6/9 (Good)</MenuItem>
@@ -420,13 +421,14 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
               </Grid>
 
               <Grid item xs={12} md={4}>
-                <FormControl fullWidth>
+                <FormControl fullWidth size="small">
                   <InputLabel>Left Eye Visual Acuity</InputLabel>
                   <Select
                     value={medicalData.vision_test.visual_acuity_left_eye}
                     onChange={(e) => updateVisionTest('visual_acuity_left_eye', e.target.value)}
                     label="Left Eye Visual Acuity"
                     disabled={disabled}
+                    size="small"
                   >
                     <MenuItem value="6/6">6/6 (Perfect)</MenuItem>
                     <MenuItem value="6/9">6/9 (Good)</MenuItem>
@@ -440,13 +442,14 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
               </Grid>
 
               <Grid item xs={12} md={4}>
-                <FormControl fullWidth>
+                <FormControl fullWidth size="small">
                   <InputLabel>Binocular Visual Acuity</InputLabel>
                   <Select
                     value={medicalData.vision_test.visual_acuity_binocular}
                     onChange={(e) => updateVisionTest('visual_acuity_binocular', e.target.value)}
                     label="Binocular Visual Acuity"
                     disabled={disabled}
+                    size="small"
                   >
                     <MenuItem value="6/6">6/6 (Perfect)</MenuItem>
                     <MenuItem value="6/9">6/9 (Good)</MenuItem>
@@ -465,13 +468,14 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
               </Grid>
 
               <Grid item xs={12} md={4}>
-                <FormControl fullWidth>
+                <FormControl fullWidth size="small">
                   <InputLabel>Total Horizontal Visual Field</InputLabel>
                   <Select
                     value={medicalData.vision_test.visual_field_horizontal_degrees}
                     onChange={(e) => updateVisionTest('visual_field_horizontal_degrees', Number(e.target.value))}
                     label="Total Horizontal Visual Field"
                     disabled={disabled}
+                    size="small"
                   >
                     <MenuItem value={120}>120° (Standard)</MenuItem>
                     <MenuItem value={130}>130° (Good)</MenuItem>
@@ -485,13 +489,14 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
               </Grid>
 
               <Grid item xs={12} md={4}>
-                <FormControl fullWidth>
+                <FormControl fullWidth size="small">
                   <InputLabel>Left Eye Field</InputLabel>
                   <Select
                     value={medicalData.vision_test.visual_field_left_eye_degrees}
                     onChange={(e) => updateVisionTest('visual_field_left_eye_degrees', Number(e.target.value))}
                     label="Left Eye Field"
                     disabled={disabled}
+                    size="small"
                   >
                     <MenuItem value={70}>70° (Minimum for Driving)</MenuItem>
                     <MenuItem value={80}>80° (Good)</MenuItem>
@@ -501,13 +506,14 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
               </Grid>
 
               <Grid item xs={12} md={4}>
-                <FormControl fullWidth>
+                <FormControl fullWidth size="small">
                   <InputLabel>Right Eye Field</InputLabel>
                   <Select
                     value={medicalData.vision_test.visual_field_right_eye_degrees}
                     onChange={(e) => updateVisionTest('visual_field_right_eye_degrees', Number(e.target.value))}
                     label="Right Eye Field"
                     disabled={disabled}
+                    size="small"
                   >
                     <MenuItem value={70}>70° (Minimum for Driving)</MenuItem>
                     <MenuItem value={80}>80° (Good)</MenuItem>
@@ -580,6 +586,7 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
                   }}
                   disabled={disabled}
                   color="primary"
+                  size="small"
                 />
               }
               label={
@@ -635,6 +642,7 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
                       <Grid item xs={12} md={6}>
                         <TextField
                           fullWidth
+                          size="small"
                           label="Medical Practitioner Name"
                           value={medicalData.medical_practitioner_name}
                           onChange={(e) => updateMedicalInfo('medical_practitioner_name', e.target.value)}
@@ -646,6 +654,7 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
                       <Grid item xs={12} md={6}>
                         <TextField
                           fullWidth
+                          size="small"
                           label="Practice Number"
                           value={medicalData.practice_number}
                           onChange={(e) => updateMedicalInfo('practice_number', e.target.value)}

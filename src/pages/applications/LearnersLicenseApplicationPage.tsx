@@ -29,7 +29,15 @@ import {
   FormHelperText,
   FormControlLabel,
   Checkbox,
-  TextField
+  TextField,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+  Stack,
+  Collapse,
+  IconButton
 } from '@mui/material';
 import {
   PersonSearch as PersonSearchIcon,
@@ -42,7 +50,9 @@ import {
   ArrowBack as ArrowBackIcon,
   CheckCircle as CheckCircleIcon,
   LocationOn as LocationOnIcon,
-  Warning as WarningIcon
+  Warning as WarningIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -84,6 +94,7 @@ const LearnersLicenseApplicationPage: React.FC = () => {
   const [availableLocations, setAvailableLocations] = useState<Location[]>([]);
   const [existingLicenses, setExistingLicenses] = useState<any[]>([]);
   const [loadingExisting, setLoadingExisting] = useState(false);
+  const [showExisting, setShowExisting] = useState(false);
   const [visionTestData, setVisionTestData] = useState<any>(null);
   const [medicalDeclarationData, setMedicalDeclarationData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -484,57 +495,115 @@ const LearnersLicenseApplicationPage: React.FC = () => {
             )}
 
             {/* Existing Licenses */}
-            {existingLicenses.length > 0 && (
-              <Card 
-                elevation={0}
-                sx={{ 
-                  mb: 2,
-                  bgcolor: 'white',
-                  boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-                  borderRadius: 2
-                }}
-              >
-                <CardHeader 
-                  sx={{ p: 1.5 }}
-                  title={
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <CheckCircleIcon color="success" fontSize="small" />
-                      <Typography variant="subtitle1" sx={{ fontSize: '1rem', fontWeight: 600 }}>
-                        Existing Licenses
+            <Card 
+              elevation={0}
+              sx={{ 
+                mb: 2,
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2
+              }}
+            >
+              <CardHeader
+                sx={{ p: 1.5 }}
+                title={
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <CheckCircleIcon color={existingLicenses.length > 0 ? "success" : "disabled"} fontSize="small" />
+                    <Typography variant="subtitle1" sx={{ fontSize: '1rem', fontWeight: 600 }}>
+                      Existing Licenses ({existingLicenses.length})
+                    </Typography>
+                    {existingLicenses.length > 0 && (
+                      <Chip 
+                        label="Found" 
+                        size="small" 
+                        color="success" 
+                        variant="outlined"
+                        sx={{ fontSize: '0.65rem', height: '20px' }}
+                      />
+                    )}
+                    <IconButton 
+                      size="small" 
+                      onClick={() => setShowExisting(!showExisting)}
+                      disabled={loadingExisting}
+                    >
+                      {showExisting ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                    </IconButton>
+                  </Box>
+                }
+                subheader={
+                  <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>
+                    Current licenses in the system - cannot capture duplicates
+                  </Typography>
+                }
+              />
+              <Collapse in={showExisting}>
+                <CardContent sx={{ p: 1.5 }}>
+                  {loadingExisting ? (
+                    <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>Loading existing licenses...</Typography>
+                  ) : existingLicenses.length === 0 ? (
+                    <Alert severity="info" sx={{ py: 1 }}>
+                      <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+                        No existing licenses found. All categories are available for application.
                       </Typography>
-                    </Box>
-                  }
-                  subheader="Current licenses on file"
-                />
-                <CardContent sx={{ p: 1.5, pt: 0 }}>
-                  <Grid container spacing={1}>
-                    {existingLicenses.map((license, index) => (
-                      <Grid item xs={12} key={index}>
-                        <Box sx={{ 
-                          p: 1, 
-                          border: '1px solid #e0e0e0', 
-                          borderRadius: 1, 
-                          backgroundColor: '#f9f9f9',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 1
-                        }}>
-                          <Typography variant="body2" sx={{ fontSize: '0.85rem', fontWeight: 500 }}>
-                            {license.categories?.join(', ') || 'Unknown Category'}
-                          </Typography>
-                          <Chip 
-                            label="Active" 
-                            size="small" 
-                            color="success" 
-                            sx={{ fontSize: '0.7rem', height: '18px' }}
-                          />
-                        </Box>
-                      </Grid>
-                    ))}
-                  </Grid>
+                    </Alert>
+                  ) : (
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>License ID</TableCell>
+                          <TableCell>Categories</TableCell>
+                          <TableCell>Status</TableCell>
+                          <TableCell>Issue Date</TableCell>
+                          <TableCell>Location</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {existingLicenses.map((license) => (
+                          <TableRow key={license.id}>
+                            <TableCell>
+                              <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>
+                                {license.license_number}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Stack direction="row" spacing={0.5}>
+                                {license.categories?.map((cat: string) => (
+                                  <Chip 
+                                    key={cat} 
+                                    label={cat} 
+                                    size="small" 
+                                    color="primary"
+                                    sx={{ fontSize: '0.65rem', height: '20px' }}
+                                  />
+                                ))}
+                              </Stack>
+                            </TableCell>
+                            <TableCell>
+                              <Chip 
+                                label={license.status}
+                                size="small"
+                                color={license.is_active ? 'success' : 'default'}
+                                sx={{ fontSize: '0.65rem', height: '20px' }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                {license.issue_date}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                {license.issuing_location}
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
                 </CardContent>
-              </Card>
-            )}
+              </Collapse>
+            </Card>
 
             {/* Application Details */}
             <Card 
