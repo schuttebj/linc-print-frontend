@@ -1,8 +1,8 @@
 /**
  * MedicalInformationSection Component
  * 
- * Simplified medical assessment for driver's license applications
- * Focuses on vision tests and medical clearance only
+ * Enhanced medical assessment with internal tab navigation for driver's license applications
+ * Now supports both single-component usage and tabbed interface like PersonFormWrapper
  */
 
 import React, { useState, useEffect } from 'react';
@@ -28,7 +28,12 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Collapse
+  Collapse,
+  Container,
+  Paper,
+  Tabs,
+  Tab,
+  CircularProgress
 } from '@mui/material';
 import {
   Visibility as VisionIcon,
@@ -36,7 +41,9 @@ import {
   CloudUpload as UploadIcon,
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon,
-  ExpandMore as ExpandMoreIcon
+  ExpandMore as ExpandMoreIcon,
+  ArrowForward as ArrowForwardIcon,
+  ArrowBack as ArrowBackIcon
 } from '@mui/icons-material';
 
 import { MedicalInformation, VisionTestData } from '../../types';
@@ -46,16 +53,52 @@ interface MedicalInformationSectionProps {
   onChange: (data: MedicalInformation) => void;
   disabled?: boolean;
   isRequired?: boolean;
+  // New props for tabbed interface like PersonFormWrapper
+  selectedCategory?: string;
+  personAge?: number;
+  externalMedicalStep?: number;
+  onMedicalValidationChange?: (step: number, isValid: boolean) => void;
+  onMedicalStepChange?: (step: number, canAdvance: boolean) => void;
+  onContinueToApplication?: () => void;
+  onCancel?: () => void;
+  showHeader?: boolean;
 }
 
 const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
   value,
   onChange,
   disabled = false,
-  isRequired = false
+  isRequired = false,
+  selectedCategory,
+  personAge = 0,
+  externalMedicalStep = 0,
+  onMedicalValidationChange,
+  onMedicalStepChange,
+  onContinueToApplication,
+  onCancel,
+  showHeader = true
 }) => {
   const [medicalCertificateExpanded, setMedicalCertificateExpanded] = useState(isRequired);
   const [selfDeclarationConfirmed, setSelfDeclarationConfirmed] = useState(false);
+  
+  // Internal tab state (only used if using tabbed interface)
+  const [internalStep, setInternalStep] = useState(0);
+  const [loading, setLoading] = useState(false);
+  
+  // Medical steps for tabbed interface
+  const medicalSteps = [
+    {
+      label: 'Vision Test',
+      icon: <VisionIcon />
+    },
+    {
+      label: 'Medical Declaration',
+      icon: <MedicalIcon />
+    }
+  ];
+
+  // Check if we're using the tabbed interface (external callbacks provided)
+  const isTabbed = !!onMedicalStepChange;
 
   // Initialize with excellent vision test defaults
   const medicalData: MedicalInformation = value || {
@@ -241,241 +284,278 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
     }
   };
 
-  return (
-    <Box>
-      {/* Vision Test Section */}
-      <Card sx={{ mb: 2, border: '1px solid #e0e0e0', boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
-        <CardHeader 
-          title={
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <VisionIcon fontSize="small" />
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '1rem' }}>Vision Test</Typography>
-            </Box>
-          }
-          subheader="Complete visual acuity and field tests according to Madagascar standards"
-          sx={{ pb: 1 }}
-        />
-        <CardContent sx={{ pt: 0 }}>
-          <Grid container spacing={2}>
-            {/* Visual Acuity Tests */}
-            <Grid item xs={12}>
-              <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, fontSize: '0.9rem', color: 'primary.main' }}>
-                Visual Acuity (Required: 6/12 minimum each eye)
-              </Typography>
-            </Grid>
-            
-            <Grid item xs={12} md={4}>
-              <FormControl fullWidth>
-                <InputLabel>Right Eye Visual Acuity</InputLabel>
-                <Select
-                  value={medicalData.vision_test.visual_acuity_right_eye}
-                  onChange={(e) => updateVisionTest('visual_acuity_right_eye', e.target.value)}
-                  label="Right Eye Visual Acuity"
-                  disabled={disabled}
-                >
-                  <MenuItem value="6/6">6/6 (Perfect)</MenuItem>
-                  <MenuItem value="6/9">6/9 (Good)</MenuItem>
-                  <MenuItem value="6/12">6/12 (Minimum Standard)</MenuItem>
-                  <MenuItem value="6/18">6/18 (Below Standard)</MenuItem>
-                  <MenuItem value="6/24">6/24 (Poor)</MenuItem>
-                  <MenuItem value="6/60">6/60 (Very Poor)</MenuItem>
-                  <MenuItem value="BLIND">Blind</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
+  // Step validation for tabbed interface
+  const isStepValid = (step: number): boolean => {
+    switch (step) {
+      case 0: // Vision Test
+        return !!medicalData.vision_test.vision_meets_standards;
+      case 1: // Medical Declaration
+        return isRequired ? !!medicalData.medical_clearance : !!selfDeclarationConfirmed;
+      default:
+        return false;
+    }
+  };
 
-            <Grid item xs={12} md={4}>
-              <FormControl fullWidth>
-                <InputLabel>Left Eye Visual Acuity</InputLabel>
-                <Select
-                  value={medicalData.vision_test.visual_acuity_left_eye}
-                  onChange={(e) => updateVisionTest('visual_acuity_left_eye', e.target.value)}
-                  label="Left Eye Visual Acuity"
-                  disabled={disabled}
-                >
-                  <MenuItem value="6/6">6/6 (Perfect)</MenuItem>
-                  <MenuItem value="6/9">6/9 (Good)</MenuItem>
-                  <MenuItem value="6/12">6/12 (Minimum Standard)</MenuItem>
-                  <MenuItem value="6/18">6/18 (Below Standard)</MenuItem>
-                  <MenuItem value="6/24">6/24 (Poor)</MenuItem>
-                  <MenuItem value="6/60">6/60 (Very Poor)</MenuItem>
-                  <MenuItem value="BLIND">Blind</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
+  // Navigation handlers for tabbed interface
+  const handleNext = () => {
+    if (internalStep < medicalSteps.length - 1) {
+      const nextStep = internalStep + 1;
+      setInternalStep(nextStep);
+      if (onMedicalStepChange) {
+        onMedicalStepChange(nextStep, isStepValid(nextStep));
+      }
+    }
+  };
 
-            <Grid item xs={12} md={4}>
-              <FormControl fullWidth>
-                <InputLabel>Binocular Visual Acuity</InputLabel>
-                <Select
-                  value={medicalData.vision_test.visual_acuity_binocular}
-                  onChange={(e) => updateVisionTest('visual_acuity_binocular', e.target.value)}
-                  label="Binocular Visual Acuity"
-                  disabled={disabled}
-                >
-                  <MenuItem value="6/6">6/6 (Perfect)</MenuItem>
-                  <MenuItem value="6/9">6/9 (Good)</MenuItem>
-                  <MenuItem value="6/12">6/12 (Minimum Standard)</MenuItem>
-                  <MenuItem value="6/18">6/18 (Below Standard)</MenuItem>
-                  <MenuItem value="6/24">6/24 (Poor)</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
+  const handleBack = () => {
+    if (internalStep > 0) {
+      const prevStep = internalStep - 1;
+      setInternalStep(prevStep);
+      if (onMedicalStepChange) {
+        onMedicalStepChange(prevStep, isStepValid(prevStep));
+      }
+    }
+  };
 
-            {/* Visual Field Tests */}
-            <Grid item xs={12}>
-              <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, fontSize: '0.9rem', color: 'primary.main', mt: 1 }}>
-                Visual Field (Required: 120° horizontal minimum)
-              </Typography>
-            </Grid>
+  const handleContinue = () => {
+    if (onContinueToApplication) {
+      onContinueToApplication();
+    }
+  };
 
-            <Grid item xs={12} md={4}>
-              <FormControl fullWidth>
-                <InputLabel>Total Horizontal Visual Field</InputLabel>
-                <Select
-                  value={medicalData.vision_test.visual_field_horizontal_degrees}
-                  onChange={(e) => updateVisionTest('visual_field_horizontal_degrees', Number(e.target.value))}
-                  label="Total Horizontal Visual Field"
-                  disabled={disabled}
-                >
-                  <MenuItem value={60}>60° (Very Limited)</MenuItem>
-                  <MenuItem value={90}>90° (Limited)</MenuItem>
-                  <MenuItem value={100}>100° (Below Standard)</MenuItem>
-                  <MenuItem value={110}>110° (Restricted)</MenuItem>
-                  <MenuItem value={115}>115° (Minimum for Impaired)</MenuItem>
-                  <MenuItem value={120}>120° (Standard)</MenuItem>
-                  <MenuItem value={130}>130° (Good)</MenuItem>
-                  <MenuItem value={140}>140° (Very Good)</MenuItem>
-                  <MenuItem value={150}>150° (Excellent)</MenuItem>
-                  <MenuItem value={160}>160° (Superior)</MenuItem>
-                  <MenuItem value={170}>170° (Exceptional)</MenuItem>
-                  <MenuItem value={180}>180° (Full Field)</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
+  // Tab change handler
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    if (newValue <= internalStep || (newValue === internalStep + 1 && isStepValid(internalStep))) {
+      setInternalStep(newValue);
+      if (onMedicalStepChange) {
+        onMedicalStepChange(newValue, isStepValid(newValue));
+      }
+    }
+  };
 
-            <Grid item xs={12} md={4}>
-              <FormControl fullWidth>
-                <InputLabel>Left Eye Field</InputLabel>
-                <Select
-                  value={medicalData.vision_test.visual_field_left_eye_degrees}
-                  onChange={(e) => updateVisionTest('visual_field_left_eye_degrees', Number(e.target.value))}
-                  label="Left Eye Field"
-                  disabled={disabled}
-                >
-                  <MenuItem value={0}>0° (No Vision)</MenuItem>
-                  <MenuItem value={30}>30° (Very Limited)</MenuItem>
-                  <MenuItem value={45}>45° (Limited)</MenuItem>
-                  <MenuItem value={60}>60° (Restricted)</MenuItem>
-                  <MenuItem value={70}>70° (Minimum for Driving)</MenuItem>
-                  <MenuItem value={80}>80° (Good)</MenuItem>
-                  <MenuItem value={90}>90° (Full Field)</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
+  // Helper function to render tab with completion indicator
+  const renderTabLabel = (step: any, index: number) => {
+    const isCompleted = index < internalStep && isStepValid(index);
+    const isCurrent = internalStep === index;
+    
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          color: isCompleted ? 'success.main' : isCurrent ? 'primary.main' : 'text.secondary' 
+        }}>
+          {isCompleted ? <CheckCircleIcon fontSize="small" /> : step.icon}
+        </Box>
+        <Typography 
+          variant="body2" 
+          sx={{ 
+            fontWeight: isCurrent ? 'bold' : 'normal',
+            color: isCompleted ? 'success.main' : isCurrent ? 'primary.main' : 'text.secondary'
+          }}
+        >
+          {step.label}
+        </Typography>
+      </Box>
+    );
+  };
 
-            <Grid item xs={12} md={4}>
-              <FormControl fullWidth>
-                <InputLabel>Right Eye Field</InputLabel>
-                <Select
-                  value={medicalData.vision_test.visual_field_right_eye_degrees}
-                  onChange={(e) => updateVisionTest('visual_field_right_eye_degrees', Number(e.target.value))}
-                  label="Right Eye Field"
-                  disabled={disabled}
-                >
-                  <MenuItem value={0}>0° (No Vision)</MenuItem>
-                  <MenuItem value={30}>30° (Very Limited)</MenuItem>
-                  <MenuItem value={45}>45° (Limited)</MenuItem>
-                  <MenuItem value={60}>60° (Restricted)</MenuItem>
-                  <MenuItem value={70}>70° (Minimum for Driving)</MenuItem>
-                  <MenuItem value={80}>80° (Good)</MenuItem>
-                  <MenuItem value={90}>90° (Full Field)</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
+  // Trigger validation callbacks when data changes
+  useEffect(() => {
+    if (onMedicalValidationChange) {
+      onMedicalValidationChange(internalStep, isStepValid(internalStep));
+    }
+  }, [medicalData, selfDeclarationConfirmed, internalStep, onMedicalValidationChange]);
 
-            {/* Corrective Lenses */}
-            <Grid item xs={12}>
-              <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, fontSize: '0.9rem', color: 'primary.main', mt: 1 }}>
-                Corrective Lenses
-              </Typography>
-            </Grid>
+  // Handle external step changes
+  useEffect(() => {
+    if (externalMedicalStep !== undefined && externalMedicalStep !== internalStep) {
+      setInternalStep(externalMedicalStep);
+    }
+  }, [externalMedicalStep]);
 
-            <Grid item xs={12} md={6}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={medicalData.vision_test.corrective_lenses_required}
-                    disabled={true} // Auto-determined
-                  />
-                }
-                label="Corrective lenses required (auto-determined)"
-              />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={medicalData.vision_test.corrective_lenses_already_used}
-                    onChange={(e) => updateVisionTest('corrective_lenses_already_used', e.target.checked)}
-                    disabled={disabled}
-                  />
-                }
-                label="Already uses corrective lenses"
-              />
-            </Grid>
-
-            {/* Vision Standards Result */}
-            <Grid item xs={12}>
-              <Alert 
-                severity={medicalData.vision_test.vision_meets_standards ? "success" : "error"}
-                sx={{ mt: 2 }}
-              >
-                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                  Vision Standards: {medicalData.vision_test.vision_meets_standards ? "PASS" : "FAIL"}
+  // Vision Test Content
+  function renderVisionTestContent() {
+    return (
+      <Box>
+        {/* Vision Test Section */}
+        <Card sx={{ mb: 2, border: '1px solid #e0e0e0', boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
+          <CardHeader 
+            title={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <VisionIcon fontSize="small" />
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '1rem' }}>Vision Test</Typography>
+              </Box>
+            }
+            subheader="Complete visual acuity and field tests according to Madagascar standards"
+            sx={{ pb: 1 }}
+          />
+          <CardContent sx={{ pt: 0 }}>
+            <Grid container spacing={2}>
+              {/* Visual Acuity Tests */}
+              <Grid item xs={12}>
+                <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, fontSize: '0.9rem', color: 'primary.main' }}>
+                  Visual Acuity (Required: 6/12 minimum each eye)
                 </Typography>
-                {medicalData.vision_test.vision_restrictions.length > 0 && (
-                  <Typography variant="body2">
-                    Restrictions: {medicalData.vision_test.vision_restrictions.join(', ')}
-                  </Typography>
-                )}
-              </Alert>
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
+              </Grid>
+              
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth>
+                  <InputLabel>Right Eye Visual Acuity</InputLabel>
+                  <Select
+                    value={medicalData.vision_test.visual_acuity_right_eye}
+                    onChange={(e) => updateVisionTest('visual_acuity_right_eye', e.target.value)}
+                    label="Right Eye Visual Acuity"
+                    disabled={disabled}
+                  >
+                    <MenuItem value="6/6">6/6 (Perfect)</MenuItem>
+                    <MenuItem value="6/9">6/9 (Good)</MenuItem>
+                    <MenuItem value="6/12">6/12 (Minimum Standard)</MenuItem>
+                    <MenuItem value="6/18">6/18 (Below Standard)</MenuItem>
+                    <MenuItem value="6/24">6/24 (Poor)</MenuItem>
+                    <MenuItem value="6/60">6/60 (Very Poor)</MenuItem>
+                    <MenuItem value="BLIND">Blind</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
 
-      {/* Medical Certificate Section */}
-      <Card sx={{ 
-        border: isRequired ? '2px solid' : '1px solid', 
-        borderColor: isRequired ? 'warning.main' : '#e0e0e0',
-        boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
-      }}>
-        <CardHeader 
-          title={
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <MedicalIcon fontSize="small" />
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '1rem' }}>Medical Assessment</Typography>
-              {isRequired && (
-                <Chip 
-                  label="REQUIRED" 
-                  color="warning" 
-                  size="small" 
-                  sx={{ fontWeight: 600, fontSize: '0.7rem', height: '20px' }}
-                />
-              )}
-            </Box>
-          }
-          subheader={isRequired 
-            ? "Medical certificate is mandatory for this license category" 
-            : "Simple self-declaration for medical fitness"
-          }
-          sx={{ pb: 1 }}
-        />
-        <CardContent sx={{ pt: 0 }}>
-          {/* Self-Declaration of Medical Fitness */}
-          <Box sx={{ mb: 2 }}>
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth>
+                  <InputLabel>Left Eye Visual Acuity</InputLabel>
+                  <Select
+                    value={medicalData.vision_test.visual_acuity_left_eye}
+                    onChange={(e) => updateVisionTest('visual_acuity_left_eye', e.target.value)}
+                    label="Left Eye Visual Acuity"
+                    disabled={disabled}
+                  >
+                    <MenuItem value="6/6">6/6 (Perfect)</MenuItem>
+                    <MenuItem value="6/9">6/9 (Good)</MenuItem>
+                    <MenuItem value="6/12">6/12 (Minimum Standard)</MenuItem>
+                    <MenuItem value="6/18">6/18 (Below Standard)</MenuItem>
+                    <MenuItem value="6/24">6/24 (Poor)</MenuItem>
+                    <MenuItem value="6/60">6/60 (Very Poor)</MenuItem>
+                    <MenuItem value="BLIND">Blind</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth>
+                  <InputLabel>Binocular Visual Acuity</InputLabel>
+                  <Select
+                    value={medicalData.vision_test.visual_acuity_binocular}
+                    onChange={(e) => updateVisionTest('visual_acuity_binocular', e.target.value)}
+                    label="Binocular Visual Acuity"
+                    disabled={disabled}
+                  >
+                    <MenuItem value="6/6">6/6 (Perfect)</MenuItem>
+                    <MenuItem value="6/9">6/9 (Good)</MenuItem>
+                    <MenuItem value="6/12">6/12 (Minimum Standard)</MenuItem>
+                    <MenuItem value="6/18">6/18 (Below Standard)</MenuItem>
+                    <MenuItem value="6/24">6/24 (Poor)</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* Visual Field Tests */}
+              <Grid item xs={12}>
+                <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, fontSize: '0.9rem', color: 'primary.main', mt: 1 }}>
+                  Visual Field (Required: 120° horizontal minimum)
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth>
+                  <InputLabel>Total Horizontal Visual Field</InputLabel>
+                  <Select
+                    value={medicalData.vision_test.visual_field_horizontal_degrees}
+                    onChange={(e) => updateVisionTest('visual_field_horizontal_degrees', Number(e.target.value))}
+                    label="Total Horizontal Visual Field"
+                    disabled={disabled}
+                  >
+                    <MenuItem value={120}>120° (Standard)</MenuItem>
+                    <MenuItem value={130}>130° (Good)</MenuItem>
+                    <MenuItem value={140}>140° (Very Good)</MenuItem>
+                    <MenuItem value={150}>150° (Excellent)</MenuItem>
+                    <MenuItem value={160}>160° (Superior)</MenuItem>
+                    <MenuItem value={170}>170° (Exceptional)</MenuItem>
+                    <MenuItem value={180}>180° (Full Field)</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth>
+                  <InputLabel>Left Eye Field</InputLabel>
+                  <Select
+                    value={medicalData.vision_test.visual_field_left_eye_degrees}
+                    onChange={(e) => updateVisionTest('visual_field_left_eye_degrees', Number(e.target.value))}
+                    label="Left Eye Field"
+                    disabled={disabled}
+                  >
+                    <MenuItem value={70}>70° (Minimum for Driving)</MenuItem>
+                    <MenuItem value={80}>80° (Good)</MenuItem>
+                    <MenuItem value={90}>90° (Full Field)</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth>
+                  <InputLabel>Right Eye Field</InputLabel>
+                  <Select
+                    value={medicalData.vision_test.visual_field_right_eye_degrees}
+                    onChange={(e) => updateVisionTest('visual_field_right_eye_degrees', Number(e.target.value))}
+                    label="Right Eye Field"
+                    disabled={disabled}
+                  >
+                    <MenuItem value={70}>70° (Minimum for Driving)</MenuItem>
+                    <MenuItem value={80}>80° (Good)</MenuItem>
+                    <MenuItem value={90}>90° (Full Field)</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* Vision Standards Result */}
+              <Grid item xs={12}>
+                <Alert 
+                  severity={medicalData.vision_test.vision_meets_standards ? "success" : "error"}
+                  sx={{ mt: 2, py: 0.5 }}
+                >
+                  <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                    Vision Standards: {medicalData.vision_test.vision_meets_standards ? "PASS" : "FAIL"}
+                  </Typography>
+                  {medicalData.vision_test.vision_restrictions.length > 0 && (
+                    <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                      Restrictions: {medicalData.vision_test.vision_restrictions.join(', ')}
+                    </Typography>
+                  )}
+                </Alert>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+      </Box>
+    );
+  }
+
+  // Medical Declaration Content
+  function renderMedicalDeclarationContent() {
+    return (
+      <Box>
+        {/* Self-Declaration of Medical Fitness */}
+        <Card sx={{ mb: 2, border: '1px solid #e0e0e0', boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
+          <CardHeader 
+            title={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <MedicalIcon fontSize="small" />
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '1rem' }}>Medical Fitness Declaration</Typography>
+              </Box>
+            }
+            subheader="Simple self-declaration for medical fitness"
+            sx={{ pb: 1 }}
+          />
+          <CardContent sx={{ pt: 0 }}>
             <Alert severity="info" sx={{ mb: 1.5, py: 0.5 }}>
               <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.85rem' }}>
                 Section D: Medical Fitness Declaration
@@ -508,181 +588,259 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
                 </Typography>
               }
             />
-          </Box>
 
-          {/* Medical Certificate Section - Collapsible */}
-          <Accordion 
-            expanded={medicalCertificateExpanded} 
-            onChange={() => setMedicalCertificateExpanded(!medicalCertificateExpanded)}
-            sx={{ 
-              border: '1px solid',
-              borderColor: 'divider',
-              borderRadius: 1,
-              '&:before': { display: 'none' },
-              boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-              overflow: 'hidden'
-            }}
-          >
-            <AccordionSummary 
-              expandIcon={<ExpandMoreIcon />}
-              sx={{ 
-                backgroundColor: isRequired ? 'warning.50' : 'grey.50',
-                '&.Mui-expanded': { minHeight: 48 }
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '0.95rem' }}>
-                  Medical Certificate Details
-                </Typography>
-                {isRequired && (
-                  <Chip 
-                    label="REQUIRED" 
-                    color="warning" 
-                    size="small" 
-                    sx={{ fontWeight: 600, fontSize: '0.7rem', height: '18px' }}
-                  />
-                )}
+            {/* Medical Certificate Section - Collapsible for Required Cases */}
+            {isRequired && (
+              <Box sx={{ mt: 2 }}>
+                <Accordion 
+                  expanded={medicalCertificateExpanded} 
+                  onChange={() => setMedicalCertificateExpanded(!medicalCertificateExpanded)}
+                  sx={{ 
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    '&:before': { display: 'none' },
+                    boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                    overflow: 'hidden'
+                  }}
+                >
+                  <AccordionSummary 
+                    expandIcon={<ExpandMoreIcon />}
+                    sx={{ 
+                      backgroundColor: 'warning.50',
+                      '&.Mui-expanded': { minHeight: 48 }
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '0.95rem' }}>
+                        Medical Certificate Details
+                      </Typography>
+                      <Chip 
+                        label="REQUIRED" 
+                        color="warning" 
+                        size="small" 
+                        sx={{ fontWeight: 600, fontSize: '0.7rem', height: '18px' }}
+                      />
+                    </Box>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    <Alert severity="warning" sx={{ mb: 2, py: 0.5 }}>
+                      <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                        <strong>Medical certificate is required</strong> for this license category (D1, D, D2 or commercial licenses for 60+ applicants). 
+                        All fields must be completed to proceed.
+                      </Typography>
+                    </Alert>
+
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} md={6}>
+                        <TextField
+                          fullWidth
+                          label="Medical Practitioner Name"
+                          value={medicalData.medical_practitioner_name}
+                          onChange={(e) => updateMedicalInfo('medical_practitioner_name', e.target.value)}
+                          disabled={disabled}
+                          required={isRequired}
+                        />
+                      </Grid>
+
+                      <Grid item xs={12} md={6}>
+                        <TextField
+                          fullWidth
+                          label="Practice Number"
+                          value={medicalData.practice_number}
+                          onChange={(e) => updateMedicalInfo('practice_number', e.target.value)}
+                          disabled={disabled}
+                          required={isRequired}
+                        />
+                      </Grid>
+
+                      <Grid item xs={12}>
+                        <Card variant="outlined" sx={{ p: 1.5, bgcolor: 'warning.50' }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <Box>
+                              <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                                Medical Certificate Passed
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                                Required: Confirm medical certificate has been passed
+                              </Typography>
+                            </Box>
+                            <Switch
+                              checked={medicalData.medical_certificate_passed}
+                              onChange={(e) => updateMedicalInfo('medical_certificate_passed', e.target.checked)}
+                              disabled={disabled}
+                              color="warning"
+                              size="small"
+                            />
+                          </Box>
+                        </Card>
+                      </Grid>
+                    </Grid>
+                  </AccordionDetails>
+                </Accordion>
               </Box>
-            </AccordionSummary>
-            <AccordionDetails>
+            )}
+
+            {/* Overall Medical Clearance */}
+            <Box sx={{ mt: 2 }}>
+              <Alert 
+                severity={medicalData.medical_clearance ? "success" : (isRequired ? "error" : "info")}
+                sx={{ py: 0.5 }}
+              >
+                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                  Medical Clearance: {medicalData.medical_clearance ? "APPROVED" : (isRequired ? "REQUIRED" : "PENDING")}
+                </Typography>
+                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                  {medicalData.medical_clearance 
+                    ? "Medical assessment completed and approved for driving"
+                    : isRequired 
+                      ? "Complete all required medical assessments to proceed"
+                      : "Self-declaration and vision test required for medical clearance"
+                  }
+                </Typography>
+              </Alert>
+            </Box>
+          </CardContent>
+        </Card>
+      </Box>
+    );
+  }
+
+  // Original full medical section (for non-tabbed usage)
+  function renderFullMedicalSection() {
+    return (
+      <Box>
+        {renderVisionTestContent()}
+        {renderMedicalDeclarationContent()}
+      </Box>
+    );
+  }
+
+  // If using tabbed interface, render the full container
+  if (isTabbed) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 1, height: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column' }}>
+        <Paper 
+          elevation={0}
+          sx={{ 
+            flexGrow: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            bgcolor: '#f8f9fa',
+            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+            borderRadius: 2,
+            overflow: 'hidden'
+          }}
+        >
+          {/* Header */}
+          {showHeader && (
+            <Box sx={{ p: 2, bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
+              <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 0.5 }}>
+                Medical Assessment
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Complete vision test and medical clearance requirements
+              </Typography>
               {isRequired && (
-                <Alert severity="warning" sx={{ mb: 2, py: 0.5 }}>
+                <Alert severity="info" sx={{ mt: 1.5, py: 0.5 }}>
                   <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                    <strong>Medical certificate is required</strong> for this license category (D1, D, D2 or commercial licenses for 60+ applicants). 
-                    All fields must be completed to proceed.
+                    <strong>Medical assessment is mandatory</strong> for {
+                      personAge >= 60 ? 'applicants 60+ years' : 'this license category'
+                    }
                   </Typography>
                 </Alert>
               )}
+            </Box>
+          )}
 
-              <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Medical Practitioner Name"
-                    value={medicalData.medical_practitioner_name}
-                    onChange={(e) => updateMedicalInfo('medical_practitioner_name', e.target.value)}
-                    disabled={disabled}
-                    required={isRequired}
-                  />
-                </Grid>
-
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Practice Number"
-                    value={medicalData.practice_number}
-                    onChange={(e) => updateMedicalInfo('practice_number', e.target.value)}
-                    disabled={disabled}
-                    required={isRequired}
-                  />
-                </Grid>
-
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Examined By"
-                    value={medicalData.examined_by}
-                    onChange={(e) => updateMedicalInfo('examined_by', e.target.value)}
-                    disabled={disabled}
-                    required={isRequired}
-                  />
-                </Grid>
-
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    type="date"
-                    label="Examination Date"
-                    value={medicalData.examination_date}
-                    onChange={(e) => updateMedicalInfo('examination_date', e.target.value)}
-                    InputLabelProps={{ shrink: true }}
-                    disabled={disabled}
-                    required={isRequired}
-                  />
-                </Grid>
-
-                <Grid item xs={12}>
-                  <Card variant="outlined" sx={{ p: 1.5, bgcolor: isRequired ? 'warning.50' : 'background.default' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Box>
-                        <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
-                          Medical Certificate Passed
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
-                          {isRequired 
-                            ? "Required: Confirm medical certificate has been passed"
-                            : "Optional: Check if medical certificate has been obtained"
-                          }
-                        </Typography>
-                      </Box>
-                      <Switch
-                        checked={medicalData.medical_certificate_passed}
-                        onChange={(e) => updateMedicalInfo('medical_certificate_passed', e.target.checked)}
-                        disabled={disabled}
-                        color={isRequired ? "warning" : "primary"}
-                        size="small"
-                      />
-                    </Box>
-                  </Card>
-                </Grid>
-
-                {/* Medical Certificate Upload */}
-                <Grid item xs={12}>
-                  <Box sx={{ mb: 1 }}>
-                    <input
-                      accept="image/*,.pdf"
-                      style={{ display: 'none' }}
-                      id="medical-certificate-upload"
-                      type="file"
-                      onChange={handleFileUpload}
-                      disabled={disabled}
-                    />
-                    <label htmlFor="medical-certificate-upload">
-                      <Button 
-                        variant="outlined" 
-                        component="span" 
-                        startIcon={<UploadIcon fontSize="small" />}
-                        disabled={disabled}
-                        size="small"
-                        sx={{ fontSize: '0.8rem' }}
-                      >
-                        {medicalData.medical_certificate_file ? 'Change Certificate' : 'Upload Certificate (Optional)'}
-                      </Button>
-                    </label>
-                    {medicalData.medical_certificate_file && (
-                      <Typography variant="body2" sx={{ mt: 0.5, fontSize: '0.8rem' }}>
-                        File: {medicalData.medical_certificate_file.name}
-                      </Typography>
-                    )}
-                  </Box>
-                </Grid>
-              </Grid>
-            </AccordionDetails>
-          </Accordion>
-
-          {/* Overall Medical Clearance */}
-          <Box sx={{ mt: 2 }}>
-            <Alert 
-              severity={medicalData.medical_clearance ? "success" : (isRequired ? "error" : "info")}
-              sx={{ py: 0.5 }}
-            >
-              <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
-                Medical Clearance: {medicalData.medical_clearance ? "APPROVED" : (isRequired ? "REQUIRED" : "PENDING")}
-              </Typography>
-              <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                {medicalData.medical_clearance 
-                  ? "Medical assessment completed and approved for driving"
-                  : isRequired 
-                    ? "Complete all required medical assessments to proceed"
-                    : "Self-declaration and vision test required for medical clearance"
+          {/* Medical Tabs */}
+          <Box sx={{ bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
+            <Tabs
+              value={internalStep}
+              onChange={handleTabChange}
+              sx={{
+                px: 2,
+                '& .MuiTab-root': {
+                  minHeight: 48,
+                  textTransform: 'none',
+                  fontSize: '0.875rem',
+                  color: 'text.secondary',
+                  bgcolor: 'grey.100',
+                  mx: 0.5,
+                  borderRadius: '8px 8px 0 0',
+                  '&.Mui-selected': {
+                    bgcolor: 'white',
+                    color: 'text.primary',
+                  },
+                  '&:hover': {
+                    bgcolor: 'grey.200',
+                    '&.Mui-selected': {
+                      bgcolor: 'white',
+                    }
+                  }
+                },
+                '& .MuiTabs-indicator': {
+                  display: 'none'
                 }
-              </Typography>
-            </Alert>
+              }}
+            >
+              {medicalSteps.map((step, index) => (
+                <Tab
+                  key={step.label}
+                  label={renderTabLabel(step, index)}
+                  disabled={index > internalStep + 1 || (index === internalStep + 1 && !isStepValid(internalStep))}
+                />
+              ))}
+            </Tabs>
           </Box>
-        </CardContent>
-      </Card>
-    </Box>
-  );
+
+          {/* Tab Content */}
+          <Box sx={{ flexGrow: 1, overflow: 'auto', p: 2 }}>
+            {internalStep === 0 && renderVisionTestContent()}
+            {internalStep === 1 && renderMedicalDeclarationContent()}
+          </Box>
+
+          {/* Navigation Footer */}
+          <Box sx={{ p: 2, bgcolor: 'white', borderTop: '1px solid', borderColor: 'divider' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Button
+                onClick={onCancel}
+                disabled={loading}
+                color="inherit"
+                sx={{ color: 'text.secondary' }}
+              >
+                Cancel
+              </Button>
+              
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  disabled={internalStep <= 0 || loading}
+                  onClick={handleBack}
+                  startIcon={<ArrowBackIcon />}
+                  variant="outlined"
+                >
+                  Back
+                </Button>
+                
+                <Button
+                  variant="contained"
+                  onClick={internalStep === medicalSteps.length - 1 ? handleContinue : handleNext}
+                  disabled={!isStepValid(internalStep) || loading}
+                  startIcon={loading ? <CircularProgress size={20} /> : undefined}
+                  endIcon={internalStep !== medicalSteps.length - 1 ? <ArrowForwardIcon /> : undefined}
+                >
+                  {loading ? 'Processing...' : internalStep === medicalSteps.length - 1 ? 'Continue to Biometric' : 'Next'}
+                </Button>
+              </Box>
+            </Box>
+          </Box>
+        </Paper>
+      </Container>
+    );
+  }
+
+  // Original single-component rendering (fallback for non-tabbed usage)
+  return renderFullMedicalSection();
 };
 
-export default MedicalInformationSection; 
+export default MedicalInformationSection;

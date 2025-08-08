@@ -35,6 +35,7 @@ import {
   PersonSearch as PersonSearchIcon,
   Assignment as AssignmentIcon,
   LocalHospital as MedicalIcon,
+  LocalHospital as LocalHospitalIcon,
   CameraAlt as CameraIcon,
   Preview as PreviewIcon,
   ArrowForward as ArrowForwardIcon,
@@ -70,8 +71,10 @@ const LearnersLicenseApplicationPage: React.FC = () => {
   // Form state
   const [activeStep, setActiveStep] = useState(0);
   const [personStep, setPersonStep] = useState(0);
+  const [medicalStep, setMedicalStep] = useState(0);
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
   const [personFormValid, setPersonFormValid] = useState(false);
+  const [medicalFormValid, setMedicalFormValid] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<LicenseCategory>('' as LicenseCategory);
   const [neverBeenRefused, setNeverBeenRefused] = useState<boolean>(true);
   const [refusalDetails, setRefusalDetails] = useState<string>('');
@@ -79,6 +82,10 @@ const LearnersLicenseApplicationPage: React.FC = () => {
   const [biometricData, setBiometricData] = useState<BiometricData>({});
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [availableLocations, setAvailableLocations] = useState<Location[]>([]);
+  const [existingLicenses, setExistingLicenses] = useState<any[]>([]);
+  const [loadingExisting, setLoadingExisting] = useState(false);
+  const [visionTestData, setVisionTestData] = useState<any>(null);
+  const [medicalDeclarationData, setMedicalDeclarationData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
@@ -169,6 +176,30 @@ const LearnersLicenseApplicationPage: React.FC = () => {
     loadLocations();
   }, [user]);
 
+  // Load existing licenses when person is selected
+  const loadExistingLicenses = async (personId: string) => {
+    setLoadingExisting(true);
+    try {
+      console.log('Loading existing licenses for person:', personId);
+      const response = await applicationService.getPersonLicenses(personId);
+      console.log('Existing licenses response:', response);
+      const licenses = response.system_licenses || [];
+      setExistingLicenses(licenses);
+    } catch (error) {
+      console.error('Error loading existing licenses:', error);
+      setExistingLicenses([]);
+    } finally {
+      setLoadingExisting(false);
+    }
+  };
+
+  // Load existing licenses when person changes
+  useEffect(() => {
+    if (selectedPerson?.id) {
+      loadExistingLicenses(selectedPerson.id);
+    }
+  }, [selectedPerson?.id]);
+
   // Tab label renderer with completion indicators
   const renderTabLabel = (step: any, index: number) => {
     const isCompleted = index < activeStep && isStepValid(index);
@@ -207,6 +238,7 @@ const LearnersLicenseApplicationPage: React.FC = () => {
         const hasRefusalInfo = neverBeenRefused || !!refusalDetails.trim();
         return hasCategory && hasLocation && hasRefusalInfo && !!selectedPerson && !!selectedPerson.id;
       case 2:
+        // Medical assessment validation (both vision and medical)
         const age = selectedPerson?.birth_date ? calculateAge(selectedPerson.birth_date) : 0;
         const isMedicalMandatory = requiresMedicalAlways(selectedCategory) || 
                                  (age >= 60 && requiresMedical60Plus(selectedCategory));
@@ -246,6 +278,22 @@ const LearnersLicenseApplicationPage: React.FC = () => {
   const handleContinueToApplication = () => {
     console.log('🎯 User confirmed to continue to learner\'s license application');
     setActiveStep(1);
+  };
+
+  // Medical form callbacks (similar to PersonFormWrapper)
+  const handleMedicalValidationChange = (step: number, isValid: boolean) => {
+    console.log('🎯 MedicalInformationSection validation callback:', { step, isValid });
+    setMedicalFormValid(isValid);
+  };
+
+  const handleMedicalStepChange = (step: number, canAdvance: boolean) => {
+    console.log('🎯 MedicalInformationSection step change:', step, 'canAdvance:', canAdvance);
+    setMedicalStep(step);
+  };
+
+  const handleContinueToBiometric = () => {
+    console.log('🎯 User confirmed to continue to biometric capture');
+    setActiveStep(3);
   };
 
   // Navigation handlers
@@ -390,24 +438,36 @@ const LearnersLicenseApplicationPage: React.FC = () => {
       case 1: // Application details step - Section B
         return (
           <Box>
-            <Typography variant="h6" gutterBottom>
-              Section B: Application Details
-            </Typography>
-
             {/* Location Selection for Admin Users */}
             {user && !user.primary_location_id && (
-              <Card sx={{ mb: 3 }}>
+              <Card 
+                elevation={0}
+                sx={{ 
+                  mb: 2,
+                  bgcolor: 'white',
+                  boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                  borderRadius: 2
+                }}
+              >
                 <CardHeader 
-                  title="Select Processing Location" 
-                  avatar={<LocationOnIcon />}
+                  sx={{ p: 1.5 }}
+                  title={
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <LocationOnIcon color="primary" fontSize="small" />
+                      <Typography variant="subtitle1" sx={{ fontSize: '1rem', fontWeight: 600 }}>
+                        Select Processing Location
+                      </Typography>
+                    </Box>
+                  }
                 />
-                <CardContent>
-                  <FormControl fullWidth required error={!!error && !selectedLocationId}>
+                <CardContent sx={{ p: 1.5, pt: 0 }}>
+                  <FormControl fullWidth required size="small" error={!!error && !selectedLocationId}>
                     <InputLabel>Processing Location</InputLabel>
                     <Select
                       value={selectedLocationId}
                       onChange={handleLocationChange}
                       label="Processing Location"
+                      size="small"
                     >
                       {Array.isArray(availableLocations) && availableLocations.map((location) => (
                         <MenuItem key={location.id} value={location.id}>
@@ -423,132 +483,178 @@ const LearnersLicenseApplicationPage: React.FC = () => {
               </Card>
             )}
 
-            <Grid container spacing={3}>
-              {/* Learner's Permit Category Selection */}
-              <Grid item xs={12}>
-                <FormControl fullWidth required>
-                  <InputLabel>Learner's Permit Category</InputLabel>
-                  <Select
-                    value={selectedCategory}
-                    onChange={(e) => {
-                      setSelectedCategory(e.target.value as LicenseCategory);
-                      setError('');
-                    }}
-                    label="Learner's Permit Category"
-                  >
-                    {getAvailableLearnerCategories().map((category) => (
-                      <MenuItem key={category.value} value={category.value}>
-                        <Box>
-                          <Typography variant="body2" fontWeight="bold">
-                            {category.label}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Min age: {category.minAge} years • {category.description}
-                          </Typography>
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              {/* Age validation warning */}
-              {selectedPerson && selectedCategory && selectedPerson.birth_date && (
-                (() => {
-                  const age = calculateAge(selectedPerson.birth_date);
-                  const requiredAge = getAvailableLearnerCategories().find(cat => cat.value === selectedCategory)?.minAge || 18;
-                  return age < requiredAge ? (
-                    <Grid item xs={12}>
-                      <Alert severity="warning" icon={<WarningIcon />}>
-                        <Typography variant="body2">
-                          <strong>Age Requirement:</strong> Applicant is {age} years old, but minimum age for {selectedCategory} is {requiredAge} years.
-                        </Typography>
-                      </Alert>
-                    </Grid>
-                  ) : null;
-                })()
-              )}
-
-              {/* Never been refused declaration */}
-              <Grid item xs={12}>
-                <Card variant="outlined">
-                  <CardHeader title="Declaration" />
-                  <CardContent>
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={neverBeenRefused}
-                          onChange={(e) => {
-                            setNeverBeenRefused(e.target.checked);
-                            if (e.target.checked) {
-                              setRefusalDetails('');
-                            }
-                          }}
-                        />
-                      }
-                      label="I have never been refused a driving licence or learner's permit"
-                    />
-                    
-                    {!neverBeenRefused && (
-                      <Box sx={{ mt: 2 }}>
-                        <TextField
-                          fullWidth
-                          multiline
-                          rows={3}
-                          label="Please provide details of refusal"
-                          value={refusalDetails}
-                          onChange={(e) => setRefusalDetails(e.target.value)}
-                          required
-                          placeholder="Provide details about previous refusal including date, reason, and issuing authority..."
-                        />
-                      </Box>
-                    )}
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
-          </Box>
-        );
-
-      case 2: // Medical step - Section D
-        return (
-          <Box>
-            <Typography variant="h6" gutterBottom>
-              Section D: Medical Assessment
-            </Typography>
-            
-            {(() => {
-              const age = selectedPerson?.birth_date ? calculateAge(selectedPerson.birth_date) : 0;
-              const isMedicalMandatory = requiresMedicalAlways(selectedCategory) || 
-                                       (age >= 60 && requiresMedical60Plus(selectedCategory));
-
-              return (
-                <>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                    Complete vision test and medical clearance requirements
-                  </Typography>
-
-                  {isMedicalMandatory && (
-                    <Alert severity="info" sx={{ mb: 3 }}>
-                      <Typography variant="body2">
-                        <strong>Medical assessment is mandatory</strong> for {
-                          age >= 60 ? 'applicants 60+ years' : 'this license category'
-                        }
+            {/* Existing Licenses */}
+            {existingLicenses.length > 0 && (
+              <Card 
+                elevation={0}
+                sx={{ 
+                  mb: 2,
+                  bgcolor: 'white',
+                  boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                  borderRadius: 2
+                }}
+              >
+                <CardHeader 
+                  sx={{ p: 1.5 }}
+                  title={
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <CheckCircleIcon color="success" fontSize="small" />
+                      <Typography variant="subtitle1" sx={{ fontSize: '1rem', fontWeight: 600 }}>
+                        Existing Licenses
                       </Typography>
-                    </Alert>
-                  )}
+                    </Box>
+                  }
+                  subheader="Current licenses on file"
+                />
+                <CardContent sx={{ p: 1.5, pt: 0 }}>
+                  <Grid container spacing={1}>
+                    {existingLicenses.map((license, index) => (
+                      <Grid item xs={12} key={index}>
+                        <Box sx={{ 
+                          p: 1, 
+                          border: '1px solid #e0e0e0', 
+                          borderRadius: 1, 
+                          backgroundColor: '#f9f9f9',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1
+                        }}>
+                          <Typography variant="body2" sx={{ fontSize: '0.85rem', fontWeight: 500 }}>
+                            {license.categories?.join(', ') || 'Unknown Category'}
+                          </Typography>
+                          <Chip 
+                            label="Active" 
+                            size="small" 
+                            color="success" 
+                            sx={{ fontSize: '0.7rem', height: '18px' }}
+                          />
+                        </Box>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </CardContent>
+              </Card>
+            )}
 
-                  <MedicalInformationSection
-                    value={medicalInformation}
-                    onChange={setMedicalInformation}
-                    disabled={false}
-                    isRequired={isMedicalMandatory}
-                  />
-                </>
-              );
-            })()}
+            {/* Application Details */}
+            <Card 
+              elevation={0}
+              sx={{ 
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2
+              }}
+            >
+              <CardHeader 
+                sx={{ p: 1.5 }}
+                title={
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <AssignmentIcon color="primary" fontSize="small" />
+                    <Typography variant="subtitle1" sx={{ fontSize: '1rem', fontWeight: 600 }}>
+                      Application Details
+                    </Typography>
+                  </Box>
+                }
+                subheader="Select learner's permit category and requirements"
+              />
+              <CardContent sx={{ p: 1.5, pt: 0 }}>
+                <Grid container spacing={2}>
+                  {/* Learner's Permit Category Selection */}
+                  <Grid item xs={12}>
+                    <FormControl fullWidth required size="small">
+                      <InputLabel>Learner's Permit Category</InputLabel>
+                      <Select
+                        value={selectedCategory}
+                        onChange={(e) => {
+                          setSelectedCategory(e.target.value as LicenseCategory);
+                          setError('');
+                        }}
+                        label="Learner's Permit Category"
+                        size="small"
+                      >
+                        {getAvailableLearnerCategories().map((category) => (
+                          <MenuItem key={category.value} value={category.value}>
+                            <Box>
+                              <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.9rem' }}>
+                                {category.label}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                                Min age: {category.minAge} years • {category.description}
+                              </Typography>
+                            </Box>
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+
+                    {/* Age validation warning */}
+                    {selectedPerson && selectedCategory && selectedPerson.birth_date && (
+                      (() => {
+                        const age = calculateAge(selectedPerson.birth_date);
+                        const requiredAge = getAvailableLearnerCategories().find(cat => cat.value === selectedCategory)?.minAge || 18;
+                        return age < requiredAge ? (
+                          <Alert severity="warning" icon={<WarningIcon />} sx={{ mt: 1.5, py: 0.5 }}>
+                            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                              <strong>Age Requirement:</strong> Applicant is {age} years old, but minimum age for {selectedCategory} is {requiredAge} years.
+                            </Typography>
+                          </Alert>
+                        ) : null;
+                      })()
+                    )}
+                  </Grid>
+
+                  {/* Never been refused declaration */}
+                  <Grid item xs={12}>
+                    <Box sx={{ mt: 1 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.9rem', color: 'primary.main', mb: 1 }}>
+                        Declaration
+                      </Typography>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={neverBeenRefused}
+                            onChange={(e) => {
+                              setNeverBeenRefused(e.target.checked);
+                              if (e.target.checked) {
+                                setRefusalDetails('');
+                              }
+                            }}
+                            size="small"
+                          />
+                        }
+                        label={
+                          <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                            I have never been refused a driving licence or learner's permit
+                          </Typography>
+                        }
+                      />
+                      
+                      {!neverBeenRefused && (
+                        <Box sx={{ mt: 1.5 }}>
+                          <TextField
+                            fullWidth
+                            multiline
+                            rows={3}
+                            label="Please provide details of refusal"
+                            value={refusalDetails}
+                            onChange={(e) => setRefusalDetails(e.target.value)}
+                            required
+                            placeholder="Provide details about previous refusal including date, reason, and issuing authority..."
+                            size="small"
+                            sx={{ fontSize: '0.85rem' }}
+                          />
+                        </Box>
+                      )}
+                    </Box>
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </Card>
           </Box>
         );
+
+      case 2: // Medical step - handled separately to preserve state
+        return null;
 
       case 3: // Biometric step
         return (
@@ -826,8 +932,8 @@ const LearnersLicenseApplicationPage: React.FC = () => {
         {/* Tab Content */}
         <Box sx={{ 
           flexGrow: 1, 
-          overflow: activeStep === 0 ? 'hidden' : 'auto',
-          p: activeStep === 0 ? 0 : 2
+          overflow: (activeStep === 0 || activeStep === 2) ? 'hidden' : 'auto',
+          p: (activeStep === 0 || activeStep === 2) ? 0 : 2
         }}>
           {/* Person Form - Always rendered but conditionally visible */}
           <Box sx={{ display: activeStep === 0 ? 'block' : 'none' }}>
@@ -843,13 +949,35 @@ const LearnersLicenseApplicationPage: React.FC = () => {
               showHeader={false}
             />
           </Box>
+
+          {/* Medical Form - Always rendered but conditionally visible */}
+          <Box sx={{ display: activeStep === 2 ? 'block' : 'none' }}>
+            <MedicalInformationSection
+              key="medical-form-wrapper"
+              value={medicalInformation}
+              onChange={setMedicalInformation}
+              disabled={false}
+              isRequired={(() => {
+                const age = selectedPerson?.birth_date ? calculateAge(selectedPerson.birth_date) : 0;
+                return requiresMedicalAlways(selectedCategory) || (age >= 60 && requiresMedical60Plus(selectedCategory));
+              })()}
+              selectedCategory={selectedCategory}
+              personAge={selectedPerson?.birth_date ? calculateAge(selectedPerson.birth_date) : 0}
+              externalMedicalStep={medicalStep}
+              onMedicalValidationChange={handleMedicalValidationChange}
+              onMedicalStepChange={handleMedicalStepChange}
+              onContinueToApplication={handleContinueToBiometric}
+              onCancel={handleCancel}
+              showHeader={false}
+            />
+          </Box>
           
           {/* Other step content */}
-          {activeStep !== 0 && renderStepContent(activeStep)}
+          {activeStep !== 0 && activeStep !== 2 && renderStepContent(activeStep)}
         </Box>
 
-        {/* Navigation Footer - Only shown when not on person step */}
-        {activeStep !== 0 && (
+        {/* Navigation Footer - Only shown when not on person or medical step */}
+        {activeStep !== 0 && activeStep !== 2 && (
           <Box sx={{ p: 2, bgcolor: 'white', borderTop: '1px solid', borderColor: 'divider' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Button
