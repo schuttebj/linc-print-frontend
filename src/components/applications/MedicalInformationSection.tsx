@@ -380,18 +380,16 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
     return (
       <Box sx={{ p: 2 }}>
         {/* Vision Test Section */}
-        <Card sx={{ mb: 2, border: '1px solid #e0e0e0', boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
-          <CardHeader 
-            title={
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <VisionIcon fontSize="small" />
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '1rem' }}>Vision Test</Typography>
-              </Box>
-            }
-            subheader="Complete visual acuity and field tests according to Madagascar standards"
-            sx={{ pb: 1 }}
-          />
-          <CardContent sx={{ pt: 0 }}>
+        <Box sx={{ mb: 3 }}>
+          <Box sx={{ mb: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <VisionIcon fontSize="small" />
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '1rem' }}>Vision Test</Typography>
+            </Box>
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.9rem' }}>
+              Complete visual acuity and field tests according to Madagascar standards
+            </Typography>
+          </Box>
             <Grid container spacing={2}>
               {/* Visual Acuity Tests */}
               <Grid item xs={12}>
@@ -540,8 +538,7 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
                 </Alert>
               </Grid>
             </Grid>
-          </CardContent>
-        </Card>
+        </Box>
       </Box>
     );
   }
@@ -902,26 +899,20 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
             </Box>
 
             {/* Main Form Container */}
-            <Paper 
-              elevation={0}
-              sx={{ 
-                bgcolor: 'white',
-                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-                borderRadius: 2,
-                mb: 2,
-                flex: 1,
-                overflow: 'auto',
-                display: 'flex',
-                flexDirection: 'column',
-                mx: 2
-              }}
-            >
+            <Box sx={{ 
+              flex: 1,
+              overflow: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              mx: 2,
+              mb: 2
+            }}>
               {/* Step Content - No padding like PersonFormWrapper */}
               <Box sx={{ flex: 1, overflow: 'visible' }}>
                 {internalStep === 0 && renderVisionTestContent()}
                 {internalStep === 1 && renderMedicalDeclarationContent()}
               </Box>
-            </Paper>
+            </Box>
 
             {/* Navigation Footer */}
             <Box sx={{ 

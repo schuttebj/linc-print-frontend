@@ -2078,11 +2078,12 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
     const renderLookupStep = () => (
         <Paper 
+            key="lookup-step"
             elevation={0}
             sx={{ 
-                bgcolor: 'white',
-                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-                borderRadius: 2
+                bgcolor: 'transparent',
+                boxShadow: 'none',
+                border: 'none'
             }}
         >
             <Box sx={{ p: 2 }}>
@@ -2204,9 +2205,9 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             key="personal-info-step"
             elevation={0}
             sx={{ 
-                bgcolor: 'white',
-                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-                borderRadius: 2
+                bgcolor: 'transparent',
+                boxShadow: 'none',
+                border: 'none'
             }}
         >
             <Box 
@@ -2402,9 +2403,9 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             key="contact-details-step"
             elevation={0}
             sx={{ 
-                bgcolor: 'white',
-                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-                borderRadius: 2
+                bgcolor: 'transparent',
+                boxShadow: 'none',
+                border: 'none'
             }}
         >
             <Box 
@@ -2568,11 +2569,12 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
     const renderIdDocumentsStep = () => (
         <Paper 
+            key="id-documents-step"
             elevation={0}
             sx={{ 
-                bgcolor: 'white',
-                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-                borderRadius: 2
+                bgcolor: 'transparent',
+                boxShadow: 'none',
+                border: 'none'
             }}
         >
             <Box 
@@ -2844,11 +2846,12 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
     const renderAddressStep = () => (
         <Paper 
+            key="address-step"
             elevation={0}
             sx={{ 
-                bgcolor: 'white',
-                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-                borderRadius: 2
+                bgcolor: 'transparent',
+                boxShadow: 'none',
+                border: 'none'
             }}
         >
             <Box 
@@ -3268,11 +3271,12 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
         return (
             <Paper 
+                key="review-step"
                 elevation={0}
                 sx={{ 
-                    bgcolor: 'white',
-                    boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-                    borderRadius: 2
+                    bgcolor: 'transparent',
+                    boxShadow: 'none',
+                    border: 'none'
                 }}
             >
                 <Box sx={{ p: 1.5 }}>
