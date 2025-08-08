@@ -1052,8 +1052,8 @@ const LearnersLicenseApplicationPage: React.FC = () => {
               <Button
                 onClick={handleCancel}
                 disabled={loading}
-                color="inherit"
-                sx={{ color: 'text.secondary' }}
+                color="secondary"
+                size="small"
               >
                 Cancel
               </Button>
@@ -1063,7 +1063,7 @@ const LearnersLicenseApplicationPage: React.FC = () => {
                   disabled={activeStep <= 1 || loading}
                   onClick={handleBack}
                   startIcon={<ArrowBackIcon />}
-                  variant="outlined"
+                  size="small"
                 >
                   Back
                 </Button>
@@ -1074,6 +1074,7 @@ const LearnersLicenseApplicationPage: React.FC = () => {
                   disabled={!isStepValid(activeStep) || loading}
                   startIcon={loading ? <CircularProgress size={20} /> : undefined}
                   endIcon={activeStep !== steps.length - 1 ? <ArrowForwardIcon /> : undefined}
+                  size="small"
                 >
                   {loading ? 'Submitting...' : activeStep === steps.length - 1 ? 'Submit Application' : 'Next'}
                 </Button>

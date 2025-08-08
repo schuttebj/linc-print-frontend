@@ -378,7 +378,7 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
   // Vision Test Content
   function renderVisionTestContent() {
     return (
-      <Box>
+      <Box sx={{ p: 2 }}>
         {/* Vision Test Section */}
         <Card sx={{ mb: 2, border: '1px solid #e0e0e0', boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
           <CardHeader 
@@ -549,7 +549,7 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
   // Medical Declaration Content
   function renderMedicalDeclarationContent() {
     return (
-      <Box>
+      <Box sx={{ p: 2 }}>
         {/* Self-Declaration of Medical Fitness */}
         <Card sx={{ mb: 2, border: '1px solid #e0e0e0', boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
           <CardHeader 
@@ -597,48 +597,57 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
               }
             />
 
-            {/* Detailed Medical Questions Accordion - Show for age 65+ or certain license categories */}
-            {(personAge >= 65 || selectedCategory === 'D1' || selectedCategory === 'D' || selectedCategory === 'D2') && (
-              <Box sx={{ mt: 2 }}>
-                <Accordion 
-                  expanded={detailedMedicalExpanded} 
-                  onChange={() => setDetailedMedicalExpanded(!detailedMedicalExpanded)}
+            {/* Detailed Medical Questions Accordion - Always visible, required for certain cases */}
+            <Box sx={{ mt: 2 }}>
+              <Accordion 
+                expanded={detailedMedicalExpanded} 
+                onChange={() => setDetailedMedicalExpanded(!detailedMedicalExpanded)}
+                sx={{ 
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 1,
+                  '&:before': { display: 'none' },
+                  boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                  overflow: 'hidden'
+                }}
+              >
+                <AccordionSummary 
+                  expandIcon={<ExpandMoreIcon />}
                   sx={{ 
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    borderRadius: 1,
-                    '&:before': { display: 'none' },
-                    boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-                    overflow: 'hidden'
+                    backgroundColor: (personAge >= 65 || selectedCategory === 'D1' || selectedCategory === 'D' || selectedCategory === 'D2') ? 'warning.50' : 'info.50',
+                    '&.Mui-expanded': { minHeight: 48 }
                   }}
                 >
-                  <AccordionSummary 
-                    expandIcon={<ExpandMoreIcon />}
-                    sx={{ 
-                      backgroundColor: 'info.50',
-                      '&.Mui-expanded': { minHeight: 48 }
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '0.95rem' }}>
-                        Detailed Medical Assessment
-                      </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '0.95rem' }}>
+                      Detailed Medical Assessment
+                    </Typography>
+                    {(personAge >= 65 || selectedCategory === 'D1' || selectedCategory === 'D' || selectedCategory === 'D2') && (
                       <Chip 
                         label="REQUIRED" 
-                        color="info" 
+                        color="warning" 
                         size="small" 
                         sx={{ fontWeight: 600, fontSize: '0.7rem', height: '18px' }}
                       />
-                    </Box>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <Alert severity="info" sx={{ mb: 2, py: 0.5 }}>
+                    )}
+                  </Box>
+                </AccordionSummary>
+                <AccordionDetails>
+                  {(personAge >= 65 || selectedCategory === 'D1' || selectedCategory === 'D' || selectedCategory === 'D2') ? (
+                    <Alert severity="warning" sx={{ mb: 2, py: 0.5 }}>
                       <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                         <strong>Additional medical questions required</strong> for applicants {
                           personAge >= 65 ? '65+ years' : 'applying for commercial license categories'
                         }. Please answer all questions honestly.
                       </Typography>
                     </Alert>
+                  ) : (
+                    <Alert severity="info" sx={{ mb: 2, py: 0.5 }}>
+                      <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                        <strong>Optional detailed medical assessment.</strong> Complete only if you have any medical conditions that may affect driving ability.
+                      </Typography>
+                    </Alert>
+                  )}
 
                     <Grid container spacing={2}>
                       {/* Epilepsy */}
@@ -839,10 +848,56 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
                         />
                       </Grid>
                     </Grid>
+
+                    {/* Medical Practitioner Information - Required for completed assessments */}
+                    {(personAge >= 65 || selectedCategory === 'D1' || selectedCategory === 'D' || selectedCategory === 'D2') && (
+                      <>
+                        <Divider sx={{ my: 2 }} />
+                        <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, fontSize: '0.9rem', color: 'primary.main', mb: 2 }}>
+                          Medical Assessment Details
+                        </Typography>
+                        <Grid container spacing={2}>
+                          <Grid item xs={12} md={6}>
+                            <TextField
+                              fullWidth
+                              size="small"
+                              label="Examined By (Medical Practitioner)"
+                              value={medicalData.examined_by}
+                              onChange={(e) => updateMedicalInfo('examined_by', e.target.value)}
+                              disabled={disabled}
+                              required={personAge >= 65 || selectedCategory === 'D1' || selectedCategory === 'D' || selectedCategory === 'D2'}
+                            />
+                          </Grid>
+                          <Grid item xs={12} md={6}>
+                            <TextField
+                              fullWidth
+                              size="small"
+                              label="Examination Date"
+                              type="date"
+                              value={medicalData.examination_date}
+                              onChange={(e) => updateMedicalInfo('examination_date', e.target.value)}
+                              disabled={disabled}
+                              required={personAge >= 65 || selectedCategory === 'D1' || selectedCategory === 'D' || selectedCategory === 'D2'}
+                              InputLabelProps={{ shrink: true }}
+                            />
+                          </Grid>
+                          <Grid item xs={12} md={6}>
+                            <TextField
+                              fullWidth
+                              size="small"
+                              label="Practice Number"
+                              value={medicalData.practice_number}
+                              onChange={(e) => updateMedicalInfo('practice_number', e.target.value)}
+                              disabled={disabled}
+                              required={personAge >= 65 || selectedCategory === 'D1' || selectedCategory === 'D' || selectedCategory === 'D2'}
+                            />
+                          </Grid>
+                        </Grid>
+                      </>
+                    )}
                   </AccordionDetails>
                 </Accordion>
               </Box>
-            )}
 
             {/* Medical Certificate Section - Collapsible for Required Cases */}
             {isRequired && (
@@ -1095,8 +1150,8 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
                 flexDirection: 'column'
               }}
             >
-              {/* Step Content */}
-              <Box sx={{ p: 2, flex: 1 }}>
+              {/* Step Content - No padding like PersonFormWrapper */}
+              <Box sx={{ flex: 1, overflow: 'visible' }}>
                 {internalStep === 0 && renderVisionTestContent()}
                 {internalStep === 1 && renderMedicalDeclarationContent()}
               </Box>
