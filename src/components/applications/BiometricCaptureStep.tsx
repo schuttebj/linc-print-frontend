@@ -334,7 +334,7 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
   // Render functions INSIDE the component
   const renderPhotoContent = () => {
     return (
-      <Box sx={{ p: 2 }}>
+      <Box sx={{ p: 0 }}>
         {/* License Photo - Full Width */}
         <Box sx={{ 
           backgroundColor: 'rgb(255, 255, 255)',
@@ -372,7 +372,7 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
 
   const renderSignatureContent = () => {
     return (
-      <Box sx={{ p: 2 }}>
+      <Box sx={{ p: 0 }}>
         {/* Digital Signature - Full Width */}
         <Box sx={{ 
           backgroundColor: 'rgb(255, 255, 255)',
@@ -410,7 +410,7 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
 
   const renderFingerprintContent = () => {
     return (
-      <Box sx={{ p: 2 }}>
+      <Box sx={{ p: 0 }}>
         {/* Fingerprint Capture */}
         <Box sx={{ 
           backgroundColor: 'rgb(255, 255, 255)',
@@ -494,16 +494,9 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
           display: 'flex',
           flexDirection: 'column'
         }}>
-          {/* Inner tab container - P:2 */}
-          <Box sx={{ 
-            flex: 1,
-            overflow: 'hidden',
-            p: 2, // Inner tab container - P:2
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
-            {/* Header */}
-            {showHeader && (
+          {/* Header */}
+          {showHeader && (
+            <Box sx={{ p: 2 }}>
               <Paper 
                 elevation={0}
                 sx={{ 
@@ -522,8 +515,17 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
                   Capture applicant photo, signature, and fingerprint data for license production
                 </Typography>
               </Paper>
-            )}
+            </Box>
+          )}
 
+          {/* Inner tab container - P:2 */}
+          <Box sx={{ 
+            flex: 1,
+            overflow: 'hidden',
+            p: 2, // Inner tab container - P:2
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
             {/* Tabs - p:0 */}
             <Paper 
               elevation={0}
@@ -601,7 +603,7 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
                     <Alert severity="error" sx={{ mb: 2, py: 0.5 }}>
                       <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
                         {error}
-                    </Typography>
+                      </Typography>
                     </Alert>
                   )}
                 </Box>
