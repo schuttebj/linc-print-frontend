@@ -176,28 +176,66 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
     }
   };
 
-  // Step validation for tabbed interface
+  // Step validation for tabbed interface - same pattern as PersonFormWrapper
+  const [stepValidation, setStepValidation] = useState<boolean[]>([false, true, true]); // Photo required, others optional
+  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+
   const isStepValid = (step: number): boolean => {
     switch (step) {
-      case 0: // Photo Capture
+      case 0: // Photo Capture - REQUIRED
         return !!value.photo;
-      case 1: // Signature
-        return true; // Optional
-      case 2: // Fingerprint
-        return true; // Optional
+      case 1: // Signature - Optional but validate if present
+        return true; // Always valid since optional
+      case 2: // Fingerprint - Optional but validate if present  
+        return true; // Always valid since optional
       default:
         return false;
     }
   };
 
-  // Navigation handlers for tabbed interface
-  const handleNext = () => {
-    if (internalStep < biometricSteps.length - 1) {
+  const markStepValid = (step: number, isValid: boolean) => {
+    setStepValidation(prev => {
+      const updated = [...prev];
+      updated[step] = isValid;
+      return updated;
+    });
+    
+    if (isValid) {
+      setCompletedSteps(prev => new Set(prev).add(step));
+    } else {
+      setCompletedSteps(prev => {
+        const updated = new Set(prev);
+        updated.delete(step);
+        return updated;
+      });
+    }
+  };
+
+  const validateCurrentStep = async () => {
+    console.log(`🔄 Validating biometric step ${internalStep}`);
+    const isValid = isStepValid(internalStep);
+    markStepValid(internalStep, isValid);
+    return isValid;
+  };
+
+  // Next button state - same pattern as PersonFormWrapper
+  const isNextButtonDisabled = (): boolean => {
+    return !stepValidation[internalStep];
+  };
+
+  // Navigation handlers for tabbed interface - with validation like PersonFormWrapper
+  const handleNext = async () => {
+    // Validate current step before proceeding
+    const isCurrentStepValid = await validateCurrentStep();
+    
+    if (isCurrentStepValid && internalStep < biometricSteps.length - 1) {
       const nextStep = internalStep + 1;
       setInternalStep(nextStep);
       if (onBiometricStepChange) {
         onBiometricStepChange(nextStep, isStepValid(nextStep));
       }
+    } else if (!isCurrentStepValid) {
+      console.log(`❌ Cannot proceed: Step ${internalStep} validation failed`);
     }
   };
 
@@ -211,29 +249,47 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
     }
   };
 
-  const handleContinue = () => {
-    if (onContinueToReview) {
+  const handleContinue = async () => {
+    // Validate current step before continuing to review
+    const isCurrentStepValid = await validateCurrentStep();
+    
+    if (isCurrentStepValid && onContinueToReview) {
       onContinueToReview();
+    } else if (!isCurrentStepValid) {
+      console.log(`❌ Cannot continue to review: Step ${internalStep} validation failed`);
     }
   };
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setInternalStep(newValue);
-    if (onBiometricStepChange) {
-      onBiometricStepChange(newValue, isStepValid(newValue));
+    // Enhanced tab navigation: allow clicking on completed steps, current step, or next step if current is valid
+    // Same logic as PersonFormWrapper
+    const isCompletedStep = completedSteps.has(newValue);
+    const isCurrentStep = newValue === internalStep;
+    const isNextStepAvailable = newValue === internalStep + 1 && stepValidation[internalStep];
+    
+    if (isCompletedStep || isCurrentStep || isNextStepAvailable) {
+      setInternalStep(newValue);
+      if (onBiometricStepChange) {
+        onBiometricStepChange(newValue, isStepValid(newValue));
+      }
+    } else {
+      console.log(`❌ Tab ${newValue} not accessible. Current step ${internalStep} must be completed first.`);
     }
   };
 
   const renderTabLabel = (step: any, index: number) => {
-    const isCompleted = index < internalStep && isStepValid(index);
+    // Use completedSteps set instead of index comparison - same as PersonFormWrapper
+    const isCompleted = completedSteps.has(index);
     const isCurrent = internalStep === index;
+    const isValid = stepValidation[index];
+    const isClickable = isCompleted || isCurrent || (index === internalStep + 1 && stepValidation[internalStep]);
     
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
         <Box sx={{ 
           display: 'flex', 
           alignItems: 'center', 
-          color: isCompleted ? 'success.main' : isCurrent ? 'primary.main' : 'text.secondary' 
+          color: isCompleted ? 'success.main' : isCurrent ? 'primary.main' : isClickable ? 'text.secondary' : 'text.disabled'
         }}>
           {isCompleted ? <CheckCircleIcon fontSize="small" /> : step.icon}
         </Box>
@@ -241,7 +297,7 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
           variant="body2" 
           sx={{ 
             fontWeight: isCurrent ? 'bold' : 'normal',
-            color: isCompleted ? 'success.main' : isCurrent ? 'primary.main' : 'text.secondary'
+            color: isCompleted ? 'success.main' : isCurrent ? 'primary.main' : isClickable ? 'text.secondary' : 'text.disabled'
           }}
         >
           {step.label}
@@ -252,6 +308,17 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
 
   // Trigger validation callbacks when data changes
   useEffect(() => {
+    // Validate all steps when biometric data changes
+    const newValidation = biometricSteps.map((_, index) => isStepValid(index));
+    setStepValidation(newValidation);
+    
+    // Update completed steps
+    newValidation.forEach((isValid, index) => {
+      if (isValid) {
+        setCompletedSteps(prev => new Set(prev).add(index));
+      }
+    });
+    
     if (onBiometricValidationChange) {
       onBiometricValidationChange(internalStep, isStepValid(internalStep));
     }
@@ -408,7 +475,7 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
     );
   };
 
-  // If using tabbed interface, render the full container (like PersonFormWrapper and MedicalInformationSection)
+  // If using tabbed interface, render the full container exactly like PersonFormWrapper
   if (isTabbed) {
     return (
       <Box sx={{ 
@@ -419,76 +486,55 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
         height: 'calc(100vh - 200px)',
         minHeight: '600px'
       }}>
+        {/* Content Container - Tabs and Form Content with padding */}
         <Box sx={{ 
           flex: 1,
-          overflow: 'hidden',
-          p: 0,
+          overflow: 'hidden', // No scroll on outer container
+          p: 2, // Padding for content area
           display: 'flex',
           flexDirection: 'column'
         }}>
           <Box sx={{ 
+            maxWidth: 'none', // No max width in application mode
+            mx: 0, // No horizontal margin in application mode
             display: 'flex',
             flexDirection: 'column',
             flex: 1,
-            overflow: 'hidden'
+            overflow: 'hidden' // Prevent this container from scrolling
           }}>
             {/* Header */}
             {showHeader && (
-              <Box sx={{ p: 2 }}>
-                <Paper 
-                  elevation={0}
-                  sx={{ 
-                    p: 2, 
-                    mb: 3,
-                    bgcolor: 'white',
-                    boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-                    borderRadius: 2,
-                    flexShrink: 0
-                  }}
-                >
-                  <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 0.5 }}>
-                    Biometric Data Capture
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Capture applicant photo, signature, and fingerprint data for license production
-                  </Typography>
-                </Paper>
-              </Box>
-            )}
-
-            {/* Success/Error Alerts */}
-            {(success || error) && (
-              <Box sx={{ p: 2, pt: showHeader ? 0 : 2 }}>
-                {success && (
-                  <Alert severity="success" sx={{ mb: 2, py: 0.5 }}>
-                    <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-                      {success}
-                    </Typography>
-                  </Alert>
-                )}
-
-                {error && (
-                  <Alert severity="error" sx={{ mb: 2, py: 0.5 }}>
-                    <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-                      {error}
-                    </Typography>
-                  </Alert>
-                )}
-              </Box>
-            )}
-
-            {/* Biometric Tabs */}
-            <Box sx={{ p: 2, pt: (showHeader || success || error) ? 0 : 2 }}>
               <Paper 
                 elevation={0}
                 sx={{ 
-                  mb: 2,
+                  p: 2, 
+                  mb: 3,
                   bgcolor: 'white',
                   boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
                   borderRadius: 2,
-                  flexShrink: 0
+                  flexShrink: 0 // Prevent header from shrinking
                 }}
               >
+                <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 0.5 }}>
+                  Biometric Data Capture
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Capture applicant photo, signature, and fingerprint data for license production
+                </Typography>
+              </Paper>
+            )}
+
+            {/* Biometric Form Tabs */}
+            <Paper 
+              elevation={0}
+              sx={{
+                mb: 2,
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2,
+                flexShrink: 0 // Prevent tabs from shrinking
+              }}
+            >
               <Tabs
                 value={internalStep}
                 onChange={handleTabChange}
@@ -528,69 +574,98 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
                   />
                 ))}
               </Tabs>
-              </Paper>
-            </Box>
+            </Paper>
 
-            {/* Main Form Container */}
-            <Box sx={{ 
-              flex: 1,
-              overflow: 'auto',
-              display: 'flex',
-              flexDirection: 'column',
-              mx: 2,
-              mb: 2
-            }}>
-              {/* Step Content - No padding like PersonFormWrapper */}
-              <Box sx={{ flex: 1, overflow: 'visible' }}>
+            {/* Main Form Container - Scrollable form content */}
+            <Paper 
+              elevation={0}
+              sx={{ 
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2,
+                mb: 2, // Add margin bottom for spacing from navigation
+                flex: 1,
+                overflow: 'auto', // Allow scroll on form content
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
+              {/* Success/Error Alerts */}
+              {(success || error) && (
+                <Box sx={{ m: 2, mb: 1, flexShrink: 0 }}>
+                  {success && (
+                    <Alert severity="success" sx={{ mb: 2, py: 0.5 }}>
+                      <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                        {success}
+                      </Typography>
+                    </Alert>
+                  )}
+
+                  {error && (
+                    <Alert severity="error" sx={{ mb: 2, py: 0.5 }}>
+                      <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                        {error}
+                      </Typography>
+                    </Alert>
+                  )}
+                </Box>
+              )}
+
+              {/* Step Content - Form content area */}
+              <Box sx={{ 
+                flex: 1,
+                overflow: 'visible' // No scroll here since parent handles it
+              }}>
                 {internalStep === 0 && renderPhotoContent()}
                 {internalStep === 1 && renderSignatureContent()}
                 {internalStep === 2 && renderFingerprintContent()}
               </Box>
-            </Box>
-
-            {/* Navigation Footer */}
-            <Box sx={{ 
-              bgcolor: 'white',
-              borderTop: '1px solid', 
-              borderColor: 'divider', 
-              display: 'flex', 
-              justifyContent: 'flex-end', 
-              gap: 1,
-              p: 2,
-              flexShrink: 0,
-              width: '100%',
-              borderRadius: '0 0 8px 8px'
-            }}>
-              <Button
-                onClick={onCancel}
-                disabled={loading}
-                color="secondary"
-                size="small"
-              >
-                Cancel
-              </Button>
-              
-              <Button
-                disabled={internalStep <= 0 || loading}
-                onClick={handleBack}
-                startIcon={<ArrowBackIcon />}
-                size="small"
-              >
-                Back
-              </Button>
-              
-              <Button
-                variant="contained"
-                onClick={internalStep === biometricSteps.length - 1 ? handleContinue : handleNext}
-                disabled={internalStep === 0 && !value.photo || loading}
-                startIcon={loading ? <CircularProgress size={20} /> : undefined}
-                endIcon={internalStep !== biometricSteps.length - 1 ? <ArrowForwardIcon /> : undefined}
-                size="small"
-              >
-                {loading ? 'Processing...' : internalStep === biometricSteps.length - 1 ? 'Continue to Review' : 'Next'}
-              </Button>
-            </Box>
+            </Paper>
           </Box>
+        </Box>
+
+        {/* Navigation - Full width at bottom */}
+        <Box sx={{ 
+          bgcolor: 'white',
+          borderTop: '1px solid', 
+          borderColor: 'divider', 
+          display: 'flex', 
+          justifyContent: 'flex-end', 
+          gap: 1,
+          p: 2,
+          flexShrink: 0,
+          // Full width navigation styling
+          width: '100%',
+          borderRadius: '0 0 8px 8px' // Only round bottom corners
+        }}>
+          <Button
+            onClick={onCancel}
+            disabled={loading}
+            color="secondary"
+            size="small"
+          >
+            Cancel
+          </Button>
+          
+          <Button
+            disabled={internalStep <= 0 || loading}
+            onClick={handleBack}
+            startIcon={<ArrowBackIcon />}
+            size="small"
+          >
+            Back
+          </Button>
+          
+          <Button
+            variant="contained"
+            onClick={internalStep === biometricSteps.length - 1 ? handleContinue : handleNext}
+            disabled={isNextButtonDisabled() || loading}
+            startIcon={loading ? <CircularProgress size={20} /> : undefined}
+            endIcon={internalStep !== biometricSteps.length - 1 ? <ArrowForwardIcon /> : undefined}
+            size="small"
+          >
+            {loading ? 'Processing...' : internalStep === biometricSteps.length - 1 ? 'Continue to Review' : 'Next'}
+          </Button>
         </Box>
       </Box>
     );

@@ -578,14 +578,6 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
               Simple self-declaration for medical fitness
             </Typography>
           </Box>
-            <Alert severity="info" sx={{ mb: 1.5, py: 0.5 }}>
-              <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.85rem' }}>
-                Section D: Medical Fitness Declaration
-              </Typography>
-              <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                By checking this box, you declare that you are medically fit to drive and have no conditions that would impair your ability to safely operate a motor vehicle.
-              </Typography>
-            </Alert>
             
             <FormControlLabel
               control={
@@ -861,7 +853,7 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
             )}
 
             {/* Medical Tabs */}
-            <Box sx={{ p: 2, pt: showHeader ? 0 : 2 }}>
+            <Box sx={{ p: 0, pt: showHeader ? 0 : 2 }}>
               <Paper 
                 elevation={0}
                 sx={{ 
