@@ -112,49 +112,22 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
   // Check if we're using the tabbed interface (external callbacks provided)
   const isTabbed = !!onBiometricStepChange;
 
+  // Handler functions
   const handlePhotoCapture = async (photoFile: File) => {
     try {
       setSaving(true);
       setError('');
       
-      // Process image directly without requiring an application
-      const response = await applicationService.processImage(photoFile, 'PHOTO');
-
-      if (response.status === 'success') {
-        // Store the processed photo data
-        const updatedBiometricData = {
-          ...value,
-          photo: {
-            filename: `processed_photo_${Date.now()}.jpg`,
-            file_size: response.processed_image.file_size,
-            dimensions: response.processed_image.dimensions || '300x400',
-            format: response.processed_image.format,
-            iso_compliant: response.processing_info?.iso_compliant || true,
-            processed_url: `data:image/jpeg;base64,${response.processed_image.data}`,
-            base64_data: response.processed_image.data // Store base64 for submission
-          }
-        };
-        
-        onChange(updatedBiometricData);
-        
-        const compressionInfo = response.processing_info?.compression_ratio 
-          ? ` (${response.processing_info.compression_ratio}% compression)`
-          : '';
-        
-        setSuccess(`Photo processed successfully! ISO-compliant and ready for license production${compressionInfo}.`);
-        setTimeout(() => setSuccess(''), 3000);
-      }
-    } catch (error) {
-      console.error('Error processing photo:', error);
-      
-      // Store photo locally as fallback
       const updatedBiometricData = {
         ...value,
         photo: photoFile
       };
       onChange(updatedBiometricData);
-      
-      setError('Image processing failed. Photo saved locally - will be processed on submission.');
+      setSuccess('Photo captured successfully!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (error) {
+      console.error('Error processing photo:', error);
+      setError('Photo capture failed.');
       setTimeout(() => setError(''), 5000);
     } finally {
       setSaving(false);
@@ -166,38 +139,16 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
       setSaving(true);
       setError('');
       
-      // Process signature image
-      const response = await applicationService.processImage(signatureFile, 'SIGNATURE');
-
-      if (response.status === 'success') {
-        // Store the processed signature data
-        const updatedBiometricData = {
-          ...value,
-          signature: {
-            filename: `processed_signature_${Date.now()}.${response.processed_image.format.toLowerCase()}`,
-            file_size: response.processed_image.file_size,
-            format: response.processed_image.format,
-            processed_url: `data:image/${response.processed_image.format.toLowerCase()};base64,${response.processed_image.data}`,
-            base64_data: response.processed_image.data // Store base64 for submission
-          }
-        };
-        
-        onChange(updatedBiometricData);
-        
-        setSuccess('Signature processed successfully!');
-        setTimeout(() => setSuccess(''), 3000);
-      }
-    } catch (error) {
-      console.error('Error processing signature:', error);
-      
-      // Store signature locally as fallback
       const updatedBiometricData = {
         ...value,
         signature: signatureFile
       };
       onChange(updatedBiometricData);
-      
-      setError('Signature processing failed. Signature saved locally - will be processed on submission.');
+      setSuccess('Signature captured successfully!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (error) {
+      console.error('Error processing signature:', error);
+      setError('Signature capture failed.');
       setTimeout(() => setError(''), 5000);
     } finally {
       setSaving(false);
@@ -209,38 +160,16 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
       setSaving(true);
       setError('');
       
-      // Process fingerprint image
-      const response = await applicationService.processImage(fingerprintFile, 'FINGERPRINT');
-
-      if (response.status === 'success') {
-        // Store the processed fingerprint data
-        const updatedBiometricData = {
-          ...value,
-          fingerprint: {
-            filename: `processed_fingerprint_${Date.now()}.${response.processed_image.format.toLowerCase()}`,
-            file_size: response.processed_image.file_size,
-            format: response.processed_image.format,
-            processed_url: `data:image/${response.processed_image.format.toLowerCase()};base64,${response.processed_image.data}`,
-            base64_data: response.processed_image.data // Store base64 for submission
-          }
-        };
-        
-        onChange(updatedBiometricData);
-        
-        setSuccess('Fingerprint processed successfully!');
-        setTimeout(() => setSuccess(''), 3000);
-      }
-    } catch (error) {
-      console.error('Error processing fingerprint:', error);
-      
-      // Store fingerprint locally as fallback
       const updatedBiometricData = {
         ...value,
         fingerprint: fingerprintFile
       };
       onChange(updatedBiometricData);
-      
-      setError('Fingerprint processing failed. Fingerprint saved locally - will be processed on submission.');
+      setSuccess('Fingerprint captured successfully!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (error) {
+      console.error('Error processing fingerprint:', error);
+      setError('Fingerprint capture failed.');
       setTimeout(() => setError(''), 5000);
     } finally {
       setSaving(false);
@@ -253,9 +182,9 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
       case 0: // Photo Capture
         return !!value.photo;
       case 1: // Signature
-        return !!value.signature; // Optional, so always valid for navigation
+        return true; // Optional
       case 2: // Fingerprint
-        return true; // Optional, so always valid for navigation
+        return true; // Optional
       default:
         return false;
     }
@@ -288,7 +217,6 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
     }
   };
 
-  // Tab change handler
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setInternalStep(newValue);
     if (onBiometricStepChange) {
@@ -296,7 +224,6 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
     }
   };
 
-  // Helper function to render tab with completion indicator
   const renderTabLabel = (step: any, index: number) => {
     const isCompleted = index < internalStep && isStepValid(index);
     const isCurrent = internalStep === index;
@@ -337,8 +264,8 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
     }
   }, [externalBiometricStep]);
 
-  // Photo Capture Content
-  function renderPhotoContent() {
+  // Render functions INSIDE the component
+  const renderPhotoContent = () => {
     return (
       <Box sx={{ p: 2 }}>
         {/* License Photo - Full Width */}
@@ -365,77 +292,18 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
               ISO-compliant photo (3:4 ratio)
             </Typography>
           </Box>
-            <Box sx={{ mb: 2 }}>
-              <WebcamCapture
-                onPhotoCapture={handlePhotoCapture}
-                disabled={saving || disabled}
-              />
-            </Box>
-            
-            {value.photo ? (
-              <Box>
-                <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
-                  {(value.photo as any).iso_compliant ? 'ISO-Processed Preview' : 'Photo Preview'}
-                </Typography>
-                <Box
-                  sx={{
-                    border: '2px solid',
-                    borderColor: 'success.main',
-                    borderRadius: 1,
-                    p: 1,
-                    mb: 1.5,
-                    backgroundColor: 'background.paper',
-                    display: 'flex',
-                    justifyContent: 'center'
-                  }}
-                >
-                  <img
-                    src={
-                      (value.photo as any).processed_url
-                        ? (value.photo as any).processed_url
-                        : URL.createObjectURL(value.photo as File)
-                    }
-                    alt="License Photo Preview"
-                    style={{
-                      width: '150px',
-                      height: '200px',
-                      objectFit: 'cover',
-                      borderRadius: '4px'
-                    }}
-                    onError={(e) => {
-                      console.error('Image preview error:', e);
-                      // If processed_url fails, try the blob URL
-                      if ((value.photo as any).processed_url) {
-                        e.currentTarget.src = URL.createObjectURL(value.photo as File);
-                      }
-                    }}
-                  />
-                </Box>
-                <Alert severity="success" sx={{ py: 0.5 }}>
-                  <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                    {(value.photo as any).iso_compliant 
-                      ? `✓ Photo processed to ISO standards (${(value.photo as any).dimensions || '300x400px'})`
-                      : '✓ Photo captured successfully'
-                    }
-                  </Typography>
-                </Alert>
-              </Box>
-            ) : (
-              <Alert severity="info" sx={{ py: 0.5 }}>
-                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                  <strong>Required:</strong> Position face within guides and capture photo.
-                  Image will be automatically cropped to ISO standards.
-                </Typography>
-              </Alert>
-            )}
+          <Box sx={{ mb: 2 }}>
+            <WebcamCapture
+              onPhotoCapture={handlePhotoCapture}
+              disabled={saving || disabled}
+            />
           </Box>
         </Box>
       </Box>
     );
-  }
+  };
 
-  // Signature Capture Content
-  function renderSignatureContent() {
+  const renderSignatureContent = () => {
     return (
       <Box sx={{ p: 2 }}>
         {/* Digital Signature - Full Width */}
@@ -467,60 +335,13 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
               onSignatureCapture={handleSignatureCapture}
               disabled={saving || disabled}
             />
-            {value.signature ? (
-              <Box sx={{ mt: 2 }}>
-                {/* Display captured signature if available */}
-                {(value.signature as any).processed_url && (
-                  <Box sx={{ mb: 1.5, textAlign: 'center' }}>
-                    <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
-                      Signature Preview
-                    </Typography>
-                    <Box
-                      sx={{
-                        border: '2px solid',
-                        borderColor: 'success.main',
-                        borderRadius: 1,
-                        p: 1,
-                        backgroundColor: 'background.paper',
-                        display: 'inline-block'
-                      }}
-                    >
-                      <img 
-                        src={(value.signature as any).processed_url}
-                        alt="Captured signature"
-                        style={{
-                          maxWidth: '300px',
-                          maxHeight: '100px',
-                          objectFit: 'contain'
-                        }}
-                      />
-                    </Box>
-                    <Typography variant="caption" display="block" sx={{ mt: 0.5, fontSize: '0.7rem' }}>
-                      {((value.signature as any).file_size / 1024).toFixed(1)}KB | {(value.signature as any).format}
-                    </Typography>
-                  </Box>
-                )}
-                <Alert severity="success" sx={{ py: 0.5 }}>
-                  <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                    ✓ Signature captured successfully
-                  </Typography>
-                </Alert>
-              </Box>
-            ) : (
-              <Alert severity="info" sx={{ mt: 1.5, py: 0.5 }}>
-                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                  Draw your signature in the area above. This will be used on your license card.
-                </Typography>
-              </Alert>
-            )}
           </Box>
         </Box>
       </Box>
     );
-  }
+  };
 
-  // Fingerprint Capture Content
-  function renderFingerprintContent() {
+  const renderFingerprintContent = () => {
     return (
       <Box sx={{ p: 2 }}>
         {/* Fingerprint Capture */}
@@ -547,127 +368,23 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
               Digital fingerprint for enhanced security (optional)
             </Typography>
           </Box>
-            <FingerprintCapture
-              onFingerprintCapture={handleFingerprintCapture}
-              disabled={saving || disabled}
-            />
-            {value.fingerprint ? (
-              <Box sx={{ mt: 2 }}>
-                {/* Display captured fingerprint if available */}
-                {(value.fingerprint as any).processed_url && (
-                  <Box sx={{ mb: 1.5, textAlign: 'center' }}>
-                    <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
-                      Fingerprint Preview
-                    </Typography>
-                    <Box
-                      sx={{
-                        border: '2px solid',
-                        borderColor: 'success.main',
-                        borderRadius: 1,
-                        p: 1,
-                        backgroundColor: 'background.paper',
-                        display: 'inline-block'
-                      }}
-                    >
-                      <img 
-                        src={(value.fingerprint as any).processed_url}
-                        alt="Captured fingerprint"
-                        style={{
-                          maxWidth: '150px',
-                          maxHeight: '150px',
-                          objectFit: 'contain'
-                        }}
-                      />
-                    </Box>
-                    <Typography variant="caption" display="block" sx={{ mt: 0.5, fontSize: '0.7rem' }}>
-                      {((value.fingerprint as any).file_size / 1024).toFixed(1)}KB | {(value.fingerprint as any).format}
-                    </Typography>
-                  </Box>
-                )}
-                <Alert severity="success" sx={{ py: 0.5 }}>
-                  <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                    ✓ Fingerprint captured successfully for enhanced security
-                  </Typography>
-                </Alert>
-              </Box>
-            ) : (
-              <Alert severity="info" sx={{ mt: 1.5, py: 0.5 }}>
-                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                  <strong>Optional:</strong> Capture fingerprint for enhanced security. 
-                  Currently using mock scanner - will be replaced with real scanner integration.
-                </Typography>
-              </Alert>
-            )}
-          </Box>
+          <FingerprintCapture
+            onFingerprintCapture={handleFingerprintCapture}
+            disabled={saving || disabled}
+          />
         </Box>
-
-        {/* Completion Status */}
-        <Card variant="outlined" sx={{ mt: 2, bgcolor: 'background.default', border: '1px solid #e0e0e0', boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
-          <CardContent sx={{ p: 1.5 }}>
-            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, fontSize: '1rem', mb: 1 }}>
-              Biometric Data Status
-            </Typography>
-            <Grid container spacing={1}>
-              <Grid item xs={12} sm={4}>
-                <Box display="flex" alignItems="center" gap={1}>
-                  <CameraIcon color={value.photo ? "success" : "error"} fontSize="small" />
-                  <Typography variant="body2" sx={{ fontWeight: value.photo ? 600 : 400, fontSize: '0.85rem' }}>
-                    Photo: {value.photo ? "✓ Captured (ISO)" : "⚠ Required"}
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <Box display="flex" alignItems="center" gap={1}>
-                  <CreateIcon color={value.signature ? "success" : "action"} fontSize="small" />
-                  <Typography variant="body2" sx={{ fontWeight: value.signature ? 600 : 400, fontSize: '0.85rem' }}>
-                    Signature: {value.signature ? "✓ Captured" : "Optional"}
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <Box display="flex" alignItems="center" gap={1}>
-                  <FingerprintIcon color={value.fingerprint ? "success" : "action"} fontSize="small" />
-                  <Typography variant="body2" sx={{ fontWeight: value.fingerprint ? 600 : 400, fontSize: '0.85rem' }}>
-                    Fingerprint: {value.fingerprint ? "✓ Captured" : "Optional"}
-                  </Typography>
-                </Box>
-              </Grid>
-            </Grid>
-            
-            {!value.photo ? (
-              <Alert severity="error" sx={{ mt: 1.5, py: 0.5 }}>
-                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                  <strong>Action Required:</strong> License photo must be captured to proceed. 
-                  The photo will be automatically cropped to ISO standards (3:4 ratio).
-                </Typography>
-              </Alert>
-            ) : (
-              <Alert severity="success" sx={{ mt: 1.5, py: 0.5 }}>
-                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                  <strong>Ready to proceed!</strong> All required biometric data has been captured.
-                  {!value.signature && !value.fingerprint && 
-                    " Consider adding signature and fingerprint for enhanced security."
-                  }
-                </Typography>
-              </Alert>
-            )}
-          </CardContent>
-        </Card>
       </Box>
     );
-  }
+  };
 
   // Original full biometric section (for non-tabbed usage)
-  function renderFullBiometricSection() {
+  const renderFullBiometricSection = () => {
     return (
       <Box>
         <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, fontSize: '1rem', mb: 1 }}>
           Biometric Data Capture
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontSize: '0.9rem' }}>
-          Capture applicant photo, signature, and fingerprint data for license production
-        </Typography>
-
+        
         {success && (
           <Alert severity="success" sx={{ mb: 2, py: 0.5 }}>
             <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
@@ -689,7 +406,7 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
         {renderFingerprintContent()}
       </Box>
     );
-  }
+  };
 
   // If using tabbed interface, render the full container (like PersonFormWrapper and MedicalInformationSection)
   if (isTabbed) {
@@ -865,7 +582,7 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
               <Button
                 variant="contained"
                 onClick={internalStep === biometricSteps.length - 1 ? handleContinue : handleNext}
-                disabled={internalStep === 0 && !value.photo || loading} // Photo is required for step 0
+                disabled={internalStep === 0 && !value.photo || loading}
                 startIcon={loading ? <CircularProgress size={20} /> : undefined}
                 endIcon={internalStep !== biometricSteps.length - 1 ? <ArrowForwardIcon /> : undefined}
                 size="small"
@@ -883,4 +600,4 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
   return renderFullBiometricSection();
 };
 
-export default BiometricCaptureStep; 
+export default BiometricCaptureStep;
