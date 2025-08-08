@@ -597,7 +597,7 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
               }
             />
 
-            {/* Detailed Medical Questions Accordion - Always visible, required for certain cases */}
+            {/* Medical Certificate Section - Collapsible */}
             <Box sx={{ mt: 2 }}>
               <Accordion 
                 expanded={detailedMedicalExpanded} 
@@ -605,393 +605,154 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
                 sx={{ 
                   border: '1px solid',
                   borderColor: 'divider',
-                  borderRadius: 1,
+                  borderRadius: 2,
                   '&:before': { display: 'none' },
-                  boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                  boxShadow: 'none',
                   overflow: 'hidden'
                 }}
               >
                 <AccordionSummary 
                   expandIcon={<ExpandMoreIcon />}
                   sx={{ 
-                    backgroundColor: (personAge >= 65 || selectedCategory === 'D1' || selectedCategory === 'D' || selectedCategory === 'D2') ? 'warning.50' : 'info.50',
+                    backgroundColor: isRequired ? 'warning.50' : 'grey.50',
                     '&.Mui-expanded': { minHeight: 48 }
                   }}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '0.95rem' }}>
-                      Detailed Medical Assessment
+                    <Typography variant="h6">
+                      Medical Certificate Details
                     </Typography>
-                    {(personAge >= 65 || selectedCategory === 'D1' || selectedCategory === 'D' || selectedCategory === 'D2') && (
+                    {isRequired && (
                       <Chip 
                         label="REQUIRED" 
                         color="warning" 
                         size="small" 
-                        sx={{ fontWeight: 600, fontSize: '0.7rem', height: '18px' }}
+                        sx={{ fontWeight: 600 }}
                       />
                     )}
                   </Box>
                 </AccordionSummary>
                 <AccordionDetails>
-                  {(personAge >= 65 || selectedCategory === 'D1' || selectedCategory === 'D' || selectedCategory === 'D2') ? (
-                    <Alert severity="warning" sx={{ mb: 2, py: 0.5 }}>
-                      <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                        <strong>Additional medical questions required</strong> for applicants {
-                          personAge >= 65 ? '65+ years' : 'applying for commercial license categories'
-                        }. Please answer all questions honestly.
-                      </Typography>
-                    </Alert>
-                  ) : (
-                    <Alert severity="info" sx={{ mb: 2, py: 0.5 }}>
-                      <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                        <strong>Optional detailed medical assessment.</strong> Complete only if you have any medical conditions that may affect driving ability.
-                      </Typography>
-                    </Alert>
-                  )}
-
-                    <Grid container spacing={2}>
-                      {/* Epilepsy */}
-                      <Grid item xs={12}>
-                        <FormControlLabel
-                          control={
-                            <Checkbox
-                              checked={medicalData.medical_conditions.epilepsy}
-                              onChange={(e) => updateMedicalInfo('medical_conditions', {
-                                ...medicalData.medical_conditions,
-                                epilepsy: e.target.checked
-                              })}
-                              disabled={disabled}
-                              size="small"
-                            />
-                          }
-                          label={
-                            <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-                              Do you have or have you ever had epilepsy or seizures?
-                            </Typography>
-                          }
-                        />
-                        {medicalData.medical_conditions.epilepsy && (
-                          <Box sx={{ ml: 4, mt: 1 }}>
-                            <FormControlLabel
-                              control={
-                                <Checkbox
-                                  checked={medicalData.medical_conditions.epilepsy_controlled}
-                                  onChange={(e) => updateMedicalInfo('medical_conditions', {
-                                    ...medicalData.medical_conditions,
-                                    epilepsy_controlled: e.target.checked
-                                  })}
-                                  disabled={disabled}
-                                  size="small"
-                                />
-                              }
-                              label={
-                                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                                  Is your epilepsy controlled with medication?
-                                </Typography>
-                              }
-                            />
-                          </Box>
-                        )}
-                      </Grid>
-
-                      {/* Heart Condition */}
-                      <Grid item xs={12}>
-                        <FormControlLabel
-                          control={
-                            <Checkbox
-                              checked={medicalData.medical_conditions.heart_condition}
-                              onChange={(e) => updateMedicalInfo('medical_conditions', {
-                                ...medicalData.medical_conditions,
-                                heart_condition: e.target.checked
-                              })}
-                              disabled={disabled}
-                              size="small"
-                            />
-                          }
-                          label={
-                            <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-                              Do you have any heart conditions or cardiovascular disease?
-                            </Typography>
-                          }
-                        />
-                      </Grid>
-
-                      {/* Diabetes */}
-                      <Grid item xs={12}>
-                        <FormControlLabel
-                          control={
-                            <Checkbox
-                              checked={medicalData.medical_conditions.diabetes}
-                              onChange={(e) => updateMedicalInfo('medical_conditions', {
-                                ...medicalData.medical_conditions,
-                                diabetes: e.target.checked
-                              })}
-                              disabled={disabled}
-                              size="small"
-                            />
-                          }
-                          label={
-                            <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-                              Do you have diabetes?
-                            </Typography>
-                          }
-                        />
-                        {medicalData.medical_conditions.diabetes && (
-                          <Box sx={{ ml: 4, mt: 1 }}>
-                            <FormControlLabel
-                              control={
-                                <Checkbox
-                                  checked={medicalData.medical_conditions.diabetes_controlled}
-                                  onChange={(e) => updateMedicalInfo('medical_conditions', {
-                                    ...medicalData.medical_conditions,
-                                    diabetes_controlled: e.target.checked
-                                  })}
-                                  disabled={disabled}
-                                  size="small"
-                                />
-                              }
-                              label={
-                                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                                  Is your diabetes well controlled?
-                                </Typography>
-                              }
-                            />
-                          </Box>
-                        )}
-                      </Grid>
-
-                      {/* Mental Health */}
-                      <Grid item xs={12}>
-                        <FormControlLabel
-                          control={
-                            <Checkbox
-                              checked={medicalData.medical_conditions.mental_illness}
-                              onChange={(e) => updateMedicalInfo('medical_conditions', {
-                                ...medicalData.medical_conditions,
-                                mental_illness: e.target.checked
-                              })}
-                              disabled={disabled}
-                              size="small"
-                            />
-                          }
-                          label={
-                            <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-                              Do you have any mental health conditions?
-                            </Typography>
-                          }
-                        />
-                      </Grid>
-
-                      {/* Substance Dependency */}
-                      <Grid item xs={12}>
-                        <FormControlLabel
-                          control={
-                            <Checkbox
-                              checked={medicalData.medical_conditions.alcohol_dependency}
-                              onChange={(e) => updateMedicalInfo('medical_conditions', {
-                                ...medicalData.medical_conditions,
-                                alcohol_dependency: e.target.checked
-                              })}
-                              disabled={disabled}
-                              size="small"
-                            />
-                          }
-                          label={
-                            <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-                              Do you have a history of alcohol or drug dependency?
-                            </Typography>
-                          }
-                        />
-                      </Grid>
-
-                      {/* Fainting/Dizziness */}
-                      <Grid item xs={12}>
-                        <FormControlLabel
-                          control={
-                            <Checkbox
-                              checked={medicalData.medical_conditions.fainting_episodes}
-                              onChange={(e) => updateMedicalInfo('medical_conditions', {
-                                ...medicalData.medical_conditions,
-                                fainting_episodes: e.target.checked
-                              })}
-                              disabled={disabled}
-                              size="small"
-                            />
-                          }
-                          label={
-                            <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-                              Do you experience fainting spells or sudden dizziness?
-                            </Typography>
-                          }
-                        />
-                      </Grid>
-
-                      {/* Medications Affecting Driving */}
-                      <Grid item xs={12}>
-                        <FormControlLabel
-                          control={
-                            <Checkbox
-                              checked={medicalData.medical_conditions.medications_affecting_driving}
-                              onChange={(e) => updateMedicalInfo('medical_conditions', {
-                                ...medicalData.medical_conditions,
-                                medications_affecting_driving: e.target.checked
-                              })}
-                              disabled={disabled}
-                              size="small"
-                            />
-                          }
-                          label={
-                            <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-                              Are you taking any medications that may affect your driving ability?
-                            </Typography>
-                          }
-                        />
-                      </Grid>
-                    </Grid>
-
-                    {/* Medical Practitioner Information - Required for completed assessments */}
-                    {(personAge >= 65 || selectedCategory === 'D1' || selectedCategory === 'D' || selectedCategory === 'D2') && (
-                      <>
-                        <Divider sx={{ my: 2 }} />
-                        <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, fontSize: '0.9rem', color: 'primary.main', mb: 2 }}>
-                          Medical Assessment Details
-                        </Typography>
-                        <Grid container spacing={2}>
-                          <Grid item xs={12} md={6}>
-                            <TextField
-                              fullWidth
-                              size="small"
-                              label="Examined By (Medical Practitioner)"
-                              value={medicalData.examined_by}
-                              onChange={(e) => updateMedicalInfo('examined_by', e.target.value)}
-                              disabled={disabled}
-                              required={personAge >= 65 || selectedCategory === 'D1' || selectedCategory === 'D' || selectedCategory === 'D2'}
-                            />
-                          </Grid>
-                          <Grid item xs={12} md={6}>
-                            <TextField
-                              fullWidth
-                              size="small"
-                              label="Examination Date"
-                              type="date"
-                              value={medicalData.examination_date}
-                              onChange={(e) => updateMedicalInfo('examination_date', e.target.value)}
-                              disabled={disabled}
-                              required={personAge >= 65 || selectedCategory === 'D1' || selectedCategory === 'D' || selectedCategory === 'D2'}
-                              InputLabelProps={{ shrink: true }}
-                            />
-                          </Grid>
-                          <Grid item xs={12} md={6}>
-                            <TextField
-                              fullWidth
-                              size="small"
-                              label="Practice Number"
-                              value={medicalData.practice_number}
-                              onChange={(e) => updateMedicalInfo('practice_number', e.target.value)}
-                              disabled={disabled}
-                              required={personAge >= 65 || selectedCategory === 'D1' || selectedCategory === 'D' || selectedCategory === 'D2'}
-                            />
-                          </Grid>
-                        </Grid>
-                      </>
-                    )}
-                  </AccordionDetails>
-                </Accordion>
-              </Box>
-
-            {/* Medical Certificate Section - Collapsible for Required Cases */}
-            {isRequired && (
-              <Box sx={{ mt: 2 }}>
-                <Accordion 
-                  expanded={medicalCertificateExpanded} 
-                  onChange={() => setMedicalCertificateExpanded(!medicalCertificateExpanded)}
-                  sx={{ 
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    borderRadius: 1,
-                    '&:before': { display: 'none' },
-                    boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-                    overflow: 'hidden'
-                  }}
-                >
-                  <AccordionSummary 
-                    expandIcon={<ExpandMoreIcon />}
-                    sx={{ 
-                      backgroundColor: 'warning.50',
-                      '&.Mui-expanded': { minHeight: 48 }
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '0.95rem' }}>
-                        Medical Certificate Details
-                      </Typography>
-                      <Chip 
-                        label="REQUIRED" 
-                        color="warning" 
-                        size="small" 
-                        sx={{ fontWeight: 600, fontSize: '0.7rem', height: '18px' }}
-                      />
-                    </Box>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <Alert severity="warning" sx={{ mb: 2, py: 0.5 }}>
-                      <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                  {isRequired && (
+                    <Alert severity="warning" sx={{ mb: 3 }}>
+                      <Typography variant="body2">
                         <strong>Medical certificate is required</strong> for this license category (D1, D, D2 or commercial licenses for 60+ applicants). 
                         All fields must be completed to proceed.
                       </Typography>
                     </Alert>
+                  )}
 
-                    <Grid container spacing={2}>
-                      <Grid item xs={12} md={6}>
-                        <TextField
-                          fullWidth
-                          size="small"
-                          label="Medical Practitioner Name"
-                          value={medicalData.medical_practitioner_name}
-                          onChange={(e) => updateMedicalInfo('medical_practitioner_name', e.target.value)}
-                          disabled={disabled}
-                          required={isRequired}
-                        />
-                      </Grid>
-
-                      <Grid item xs={12} md={6}>
-                        <TextField
-                          fullWidth
-                          size="small"
-                          label="Practice Number"
-                          value={medicalData.practice_number}
-                          onChange={(e) => updateMedicalInfo('practice_number', e.target.value)}
-                          disabled={disabled}
-                          required={isRequired}
-                        />
-                      </Grid>
-
-                      <Grid item xs={12}>
-                        <Card variant="outlined" sx={{ p: 1.5, bgcolor: 'warning.50' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <Box>
-                              <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
-                                Medical Certificate Passed
-                              </Typography>
-                              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
-                                Required: Confirm medical certificate has been passed
-                              </Typography>
-                            </Box>
-                            <Switch
-                              checked={medicalData.medical_certificate_passed}
-                              onChange={(e) => updateMedicalInfo('medical_certificate_passed', e.target.checked)}
-                              disabled={disabled}
-                              color="warning"
-                              size="small"
-                            />
-                          </Box>
-                        </Card>
-                      </Grid>
+                  <Grid container spacing={3}>
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        label="Medical Practitioner Name"
+                        value={medicalData.medical_practitioner_name}
+                        onChange={(e) => updateMedicalInfo('medical_practitioner_name', e.target.value)}
+                        disabled={disabled}
+                        required={isRequired}
+                        size="small"
+                      />
                     </Grid>
-                  </AccordionDetails>
-                </Accordion>
-              </Box>
-            )}
+
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        label="Practice Number"
+                        value={medicalData.practice_number}
+                        onChange={(e) => updateMedicalInfo('practice_number', e.target.value)}
+                        disabled={disabled}
+                        required={isRequired}
+                        size="small"
+                      />
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        label="Examined By"
+                        value={medicalData.examined_by}
+                        onChange={(e) => updateMedicalInfo('examined_by', e.target.value)}
+                        disabled={disabled}
+                        required={isRequired}
+                        size="small"
+                      />
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        type="date"
+                        label="Examination Date"
+                        value={medicalData.examination_date}
+                        onChange={(e) => updateMedicalInfo('examination_date', e.target.value)}
+                        InputLabelProps={{ shrink: true }}
+                        disabled={disabled}
+                        required={isRequired}
+                        size="small"
+                      />
+                    </Grid>
+
+                    <Grid item xs={12}>
+                      <Card variant="outlined" sx={{ p: 2, bgcolor: isRequired ? 'warning.50' : 'background.default' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <Box>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                              Medical Certificate Passed
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {isRequired 
+                                ? "Required: Confirm medical certificate has been passed"
+                                : "Optional: Check if medical certificate has been obtained"
+                              }
+                            </Typography>
+                          </Box>
+                          <Switch
+                            checked={medicalData.medical_certificate_passed}
+                            onChange={(e) => updateMedicalInfo('medical_certificate_passed', e.target.checked)}
+                            disabled={disabled}
+                            color={isRequired ? "warning" : "primary"}
+                            size="small"
+                          />
+                        </Box>
+                      </Card>
+                    </Grid>
+
+                    {/* Medical Certificate Upload */}
+                    <Grid item xs={12}>
+                      <Box sx={{ mb: 2 }}>
+                        <input
+                          accept="image/*,.pdf"
+                          style={{ display: 'none' }}
+                          id="medical-certificate-upload"
+                          type="file"
+                          onChange={handleFileUpload}
+                          disabled={disabled}
+                        />
+                        <label htmlFor="medical-certificate-upload">
+                          <Button 
+                            variant="outlined" 
+                            component="span" 
+                            startIcon={<UploadIcon />}
+                            disabled={disabled}
+                            size="small"
+                          >
+                            {medicalData.medical_certificate_file ? 'Change Medical Certificate' : 'Upload Medical Certificate (Optional)'}
+                          </Button>
+                        </label>
+                        {medicalData.medical_certificate_file && (
+                          <Typography variant="body2" sx={{ mt: 1 }}>
+                            File: {medicalData.medical_certificate_file.name}
+                          </Typography>
+                        )}
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </AccordionDetails>
+              </Accordion>
+            </Box>
+
+
 
             {/* Overall Medical Clearance */}
             <Box sx={{ mt: 2 }}>
@@ -1042,7 +803,7 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
         <Box sx={{ 
           flex: 1,
           overflow: 'hidden',
-          p: 2,
+          p: 0,
           display: 'flex',
           flexDirection: 'column'
         }}>
@@ -1054,46 +815,49 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
           }}>
             {/* Header */}
             {showHeader && (
+              <Box sx={{ p: 2 }}>
+                <Paper 
+                  elevation={0}
+                  sx={{ 
+                    p: 2, 
+                    mb: 3,
+                    bgcolor: 'white',
+                    boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                    borderRadius: 2,
+                    flexShrink: 0
+                  }}
+                >
+                  <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 0.5 }}>
+                    Medical Assessment
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Complete vision test and medical clearance requirements
+                  </Typography>
+                  {isRequired && (
+                    <Alert severity="info" sx={{ mt: 1.5, py: 0.5 }}>
+                      <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                        <strong>Medical assessment is mandatory</strong> for {
+                          personAge >= 60 ? 'applicants 60+ years' : 'this license category'
+                        }
+                      </Typography>
+                    </Alert>
+                  )}
+                </Paper>
+              </Box>
+            )}
+
+            {/* Medical Tabs */}
+            <Box sx={{ p: 2, pt: showHeader ? 0 : 2 }}>
               <Paper 
                 elevation={0}
                 sx={{ 
-                  p: 2, 
-                  mb: 3,
+                  mb: 2,
                   bgcolor: 'white',
                   boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
                   borderRadius: 2,
                   flexShrink: 0
                 }}
               >
-                <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 0.5 }}>
-                  Medical Assessment
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Complete vision test and medical clearance requirements
-                </Typography>
-                {isRequired && (
-                  <Alert severity="info" sx={{ mt: 1.5, py: 0.5 }}>
-                    <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                      <strong>Medical assessment is mandatory</strong> for {
-                        personAge >= 60 ? 'applicants 60+ years' : 'this license category'
-                      }
-                    </Typography>
-                  </Alert>
-                )}
-              </Paper>
-            )}
-
-            {/* Medical Tabs */}
-            <Paper 
-              elevation={0}
-              sx={{ 
-                mb: 2,
-                bgcolor: 'white',
-                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-                borderRadius: 2,
-                flexShrink: 0
-              }}
-            >
               <Tabs
                 value={internalStep}
                 onChange={handleTabChange}
@@ -1134,7 +898,8 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
                   />
                 ))}
               </Tabs>
-            </Paper>
+              </Paper>
+            </Box>
 
             {/* Main Form Container */}
             <Paper 
@@ -1147,7 +912,8 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
                 flex: 1,
                 overflow: 'auto',
                 display: 'flex',
-                flexDirection: 'column'
+                flexDirection: 'column',
+                mx: 2
               }}
             >
               {/* Step Content - No padding like PersonFormWrapper */}
