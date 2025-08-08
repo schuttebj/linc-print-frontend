@@ -853,7 +853,7 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
             )}
 
             {/* Medical Tabs */}
-            <Box sx={{ p: 0, pt: showHeader ? 0 : 2 }}>
+            <Box sx={{ p: 2, pt: showHeader ? 0 : 2 }}>
               <Paper 
                 elevation={0}
                 sx={{ 

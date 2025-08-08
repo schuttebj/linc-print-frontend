@@ -524,15 +524,15 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
               </Paper>
             )}
 
-            {/* Biometric Form Tabs */}
+            {/* Biometric Tabs */}
             <Paper 
               elevation={0}
-              sx={{
+              sx={{ 
                 mb: 2,
                 bgcolor: 'white',
                 boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
                 borderRadius: 2,
-                flexShrink: 0 // Prevent tabs from shrinking
+                flexShrink: 0
               }}
             >
               <Tabs
@@ -571,28 +571,25 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
                   <Tab
                     key={step.label}
                     label={renderTabLabel(step, index)}
+                    disabled={index > internalStep + 1 || (index === internalStep + 1 && !stepValidation[internalStep])}
                   />
                 ))}
               </Tabs>
-            </Paper>
+              </Paper>
+            </Box>
 
-            {/* Main Form Container - Scrollable form content */}
-            <Paper 
-              elevation={0}
-              sx={{ 
-                bgcolor: 'white',
-                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-                borderRadius: 2,
-                mb: 2, // Add margin bottom for spacing from navigation
-                flex: 1,
-                overflow: 'auto', // Allow scroll on form content
-                display: 'flex',
-                flexDirection: 'column'
-              }}
-            >
+            {/* Main Form Container */}
+            <Box sx={{ 
+              flex: 1,
+              overflow: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              mx: 2,
+              mb: 2
+            }}>
               {/* Success/Error Alerts */}
               {(success || error) && (
-                <Box sx={{ m: 2, mb: 1, flexShrink: 0 }}>
+                <Box sx={{ mb: 1, flexShrink: 0 }}>
                   {success && (
                     <Alert severity="success" sx={{ mb: 2, py: 0.5 }}>
                       <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
@@ -611,20 +608,16 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
                 </Box>
               )}
 
-              {/* Step Content - Form content area */}
-              <Box sx={{ 
-                flex: 1,
-                overflow: 'visible' // No scroll here since parent handles it
-              }}>
+              {/* Step Content - No padding like PersonFormWrapper */}
+              <Box sx={{ flex: 1, overflow: 'visible' }}>
                 {internalStep === 0 && renderPhotoContent()}
                 {internalStep === 1 && renderSignatureContent()}
                 {internalStep === 2 && renderFingerprintContent()}
               </Box>
-            </Paper>
-          </Box>
+            </Box>
         </Box>
 
-        {/* Navigation - Full width at bottom */}
+        {/* Navigation - Full width at bottom - OUTSIDE content container */}
         <Box sx={{ 
           bgcolor: 'white',
           borderTop: '1px solid', 
