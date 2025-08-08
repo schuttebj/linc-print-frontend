@@ -79,6 +79,7 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
   showHeader = true
 }) => {
   const [medicalCertificateExpanded, setMedicalCertificateExpanded] = useState(isRequired);
+  const [detailedMedicalExpanded, setDetailedMedicalExpanded] = useState(false);
   const [selfDeclarationConfirmed, setSelfDeclarationConfirmed] = useState(false);
   
   // Internal tab state (only used if using tabbed interface)
@@ -596,6 +597,253 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
               }
             />
 
+            {/* Detailed Medical Questions Accordion - Show for age 65+ or certain license categories */}
+            {(personAge >= 65 || selectedCategory === 'D1' || selectedCategory === 'D' || selectedCategory === 'D2') && (
+              <Box sx={{ mt: 2 }}>
+                <Accordion 
+                  expanded={detailedMedicalExpanded} 
+                  onChange={() => setDetailedMedicalExpanded(!detailedMedicalExpanded)}
+                  sx={{ 
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    '&:before': { display: 'none' },
+                    boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                    overflow: 'hidden'
+                  }}
+                >
+                  <AccordionSummary 
+                    expandIcon={<ExpandMoreIcon />}
+                    sx={{ 
+                      backgroundColor: 'info.50',
+                      '&.Mui-expanded': { minHeight: 48 }
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '0.95rem' }}>
+                        Detailed Medical Assessment
+                      </Typography>
+                      <Chip 
+                        label="REQUIRED" 
+                        color="info" 
+                        size="small" 
+                        sx={{ fontWeight: 600, fontSize: '0.7rem', height: '18px' }}
+                      />
+                    </Box>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    <Alert severity="info" sx={{ mb: 2, py: 0.5 }}>
+                      <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                        <strong>Additional medical questions required</strong> for applicants {
+                          personAge >= 65 ? '65+ years' : 'applying for commercial license categories'
+                        }. Please answer all questions honestly.
+                      </Typography>
+                    </Alert>
+
+                    <Grid container spacing={2}>
+                      {/* Epilepsy */}
+                      <Grid item xs={12}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={medicalData.medical_conditions.epilepsy}
+                              onChange={(e) => updateMedicalInfo('medical_conditions', {
+                                ...medicalData.medical_conditions,
+                                epilepsy: e.target.checked
+                              })}
+                              disabled={disabled}
+                              size="small"
+                            />
+                          }
+                          label={
+                            <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                              Do you have or have you ever had epilepsy or seizures?
+                            </Typography>
+                          }
+                        />
+                        {medicalData.medical_conditions.epilepsy && (
+                          <Box sx={{ ml: 4, mt: 1 }}>
+                            <FormControlLabel
+                              control={
+                                <Checkbox
+                                  checked={medicalData.medical_conditions.epilepsy_controlled}
+                                  onChange={(e) => updateMedicalInfo('medical_conditions', {
+                                    ...medicalData.medical_conditions,
+                                    epilepsy_controlled: e.target.checked
+                                  })}
+                                  disabled={disabled}
+                                  size="small"
+                                />
+                              }
+                              label={
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                  Is your epilepsy controlled with medication?
+                                </Typography>
+                              }
+                            />
+                          </Box>
+                        )}
+                      </Grid>
+
+                      {/* Heart Condition */}
+                      <Grid item xs={12}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={medicalData.medical_conditions.heart_condition}
+                              onChange={(e) => updateMedicalInfo('medical_conditions', {
+                                ...medicalData.medical_conditions,
+                                heart_condition: e.target.checked
+                              })}
+                              disabled={disabled}
+                              size="small"
+                            />
+                          }
+                          label={
+                            <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                              Do you have any heart conditions or cardiovascular disease?
+                            </Typography>
+                          }
+                        />
+                      </Grid>
+
+                      {/* Diabetes */}
+                      <Grid item xs={12}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={medicalData.medical_conditions.diabetes}
+                              onChange={(e) => updateMedicalInfo('medical_conditions', {
+                                ...medicalData.medical_conditions,
+                                diabetes: e.target.checked
+                              })}
+                              disabled={disabled}
+                              size="small"
+                            />
+                          }
+                          label={
+                            <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                              Do you have diabetes?
+                            </Typography>
+                          }
+                        />
+                        {medicalData.medical_conditions.diabetes && (
+                          <Box sx={{ ml: 4, mt: 1 }}>
+                            <FormControlLabel
+                              control={
+                                <Checkbox
+                                  checked={medicalData.medical_conditions.diabetes_controlled}
+                                  onChange={(e) => updateMedicalInfo('medical_conditions', {
+                                    ...medicalData.medical_conditions,
+                                    diabetes_controlled: e.target.checked
+                                  })}
+                                  disabled={disabled}
+                                  size="small"
+                                />
+                              }
+                              label={
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                  Is your diabetes well controlled?
+                                </Typography>
+                              }
+                            />
+                          </Box>
+                        )}
+                      </Grid>
+
+                      {/* Mental Health */}
+                      <Grid item xs={12}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={medicalData.medical_conditions.mental_illness}
+                              onChange={(e) => updateMedicalInfo('medical_conditions', {
+                                ...medicalData.medical_conditions,
+                                mental_illness: e.target.checked
+                              })}
+                              disabled={disabled}
+                              size="small"
+                            />
+                          }
+                          label={
+                            <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                              Do you have any mental health conditions?
+                            </Typography>
+                          }
+                        />
+                      </Grid>
+
+                      {/* Substance Dependency */}
+                      <Grid item xs={12}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={medicalData.medical_conditions.alcohol_dependency}
+                              onChange={(e) => updateMedicalInfo('medical_conditions', {
+                                ...medicalData.medical_conditions,
+                                alcohol_dependency: e.target.checked
+                              })}
+                              disabled={disabled}
+                              size="small"
+                            />
+                          }
+                          label={
+                            <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                              Do you have a history of alcohol or drug dependency?
+                            </Typography>
+                          }
+                        />
+                      </Grid>
+
+                      {/* Fainting/Dizziness */}
+                      <Grid item xs={12}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={medicalData.medical_conditions.fainting_episodes}
+                              onChange={(e) => updateMedicalInfo('medical_conditions', {
+                                ...medicalData.medical_conditions,
+                                fainting_episodes: e.target.checked
+                              })}
+                              disabled={disabled}
+                              size="small"
+                            />
+                          }
+                          label={
+                            <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                              Do you experience fainting spells or sudden dizziness?
+                            </Typography>
+                          }
+                        />
+                      </Grid>
+
+                      {/* Medications Affecting Driving */}
+                      <Grid item xs={12}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={medicalData.medical_conditions.medications_affecting_driving}
+                              onChange={(e) => updateMedicalInfo('medical_conditions', {
+                                ...medicalData.medical_conditions,
+                                medications_affecting_driving: e.target.checked
+                              })}
+                              disabled={disabled}
+                              size="small"
+                            />
+                          }
+                          label={
+                            <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                              Are you taking any medications that may affect your driving ability?
+                            </Typography>
+                          }
+                        />
+                      </Grid>
+                    </Grid>
+                  </AccordionDetails>
+                </Accordion>
+              </Box>
+            )}
+
             {/* Medical Certificate Section - Collapsible for Required Cases */}
             {isRequired && (
               <Box sx={{ mt: 2 }}>
@@ -725,126 +973,180 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
     );
   }
 
-  // If using tabbed interface, render the full container
+  // If using tabbed interface, render the full container (like PersonFormWrapper)
   if (isTabbed) {
     return (
-      <Container maxWidth="lg" sx={{ py: 1, height: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column' }}>
-        <Paper 
-          elevation={0}
-          sx={{ 
-            flexGrow: 1,
+      <Box sx={{ 
+        bgcolor: '#f8f9fa', 
+        borderRadius: 2,
+        display: 'flex',
+        flexDirection: 'column',
+        height: 'calc(100vh - 200px)',
+        minHeight: '600px'
+      }}>
+        <Box sx={{ 
+          flex: 1,
+          overflow: 'hidden',
+          p: 2,
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          <Box sx={{ 
             display: 'flex',
             flexDirection: 'column',
-            bgcolor: '#f8f9fa',
-            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-            borderRadius: 2,
+            flex: 1,
             overflow: 'hidden'
-          }}
-        >
-          {/* Header */}
-          {showHeader && (
-            <Box sx={{ p: 2, bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
-              <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 0.5 }}>
-                Medical Assessment
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Complete vision test and medical clearance requirements
-              </Typography>
-              {isRequired && (
-                <Alert severity="info" sx={{ mt: 1.5, py: 0.5 }}>
-                  <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                    <strong>Medical assessment is mandatory</strong> for {
-                      personAge >= 60 ? 'applicants 60+ years' : 'this license category'
-                    }
-                  </Typography>
-                </Alert>
-              )}
-            </Box>
-          )}
+          }}>
+            {/* Header */}
+            {showHeader && (
+              <Paper 
+                elevation={0}
+                sx={{ 
+                  p: 2, 
+                  mb: 3,
+                  bgcolor: 'white',
+                  boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                  borderRadius: 2,
+                  flexShrink: 0
+                }}
+              >
+                <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 0.5 }}>
+                  Medical Assessment
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Complete vision test and medical clearance requirements
+                </Typography>
+                {isRequired && (
+                  <Alert severity="info" sx={{ mt: 1.5, py: 0.5 }}>
+                    <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                      <strong>Medical assessment is mandatory</strong> for {
+                        personAge >= 60 ? 'applicants 60+ years' : 'this license category'
+                      }
+                    </Typography>
+                  </Alert>
+                )}
+              </Paper>
+            )}
 
-          {/* Medical Tabs */}
-          <Box sx={{ bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
-            <Tabs
-              value={internalStep}
-              onChange={handleTabChange}
-              sx={{
-                px: 2,
-                '& .MuiTab-root': {
-                  minHeight: 48,
-                  textTransform: 'none',
-                  fontSize: '0.875rem',
-                  color: 'text.secondary',
-                  bgcolor: 'grey.100',
-                  mx: 0.5,
-                  borderRadius: '8px 8px 0 0',
-                  '&.Mui-selected': {
-                    bgcolor: 'white',
-                    color: 'text.primary',
-                  },
-                  '&:hover': {
-                    bgcolor: 'grey.200',
-                    '&.Mui-selected': {
-                      bgcolor: 'white',
-                    }
-                  }
-                },
-                '& .MuiTabs-indicator': {
-                  display: 'none'
-                }
+            {/* Medical Tabs */}
+            <Paper 
+              elevation={0}
+              sx={{ 
+                mb: 2,
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2,
+                flexShrink: 0
               }}
             >
-              {medicalSteps.map((step, index) => (
-                <Tab
-                  key={step.label}
-                  label={renderTabLabel(step, index)}
-                  disabled={index > internalStep + 1 || (index === internalStep + 1 && !isStepValid(internalStep))}
-                />
-              ))}
-            </Tabs>
-          </Box>
+              <Tabs
+                value={internalStep}
+                onChange={handleTabChange}
+                sx={{
+                  px: 2,
+                  '& .MuiTab-root': {
+                    minHeight: 40,
+                    textTransform: 'none',
+                    fontSize: '0.8rem',
+                    color: 'text.secondary',
+                    bgcolor: 'primary.50',
+                    mx: 0.5,
+                    borderRadius: '6px 6px 0 0',
+                    '&.Mui-selected': {
+                      bgcolor: 'primary.100',
+                      color: 'primary.main',
+                    },
+                    '&:hover': {
+                      bgcolor: 'primary.100',
+                      '&.Mui-selected': {
+                        bgcolor: 'primary.100',
+                      }
+                    },
+                    '&.Mui-disabled': {
+                      opacity: 0.4
+                    }
+                  },
+                  '& .MuiTabs-indicator': {
+                    display: 'none'
+                  }
+                }}
+              >
+                {medicalSteps.map((step, index) => (
+                  <Tab
+                    key={step.label}
+                    label={renderTabLabel(step, index)}
+                    disabled={index > internalStep + 1 || (index === internalStep + 1 && !isStepValid(internalStep))}
+                  />
+                ))}
+              </Tabs>
+            </Paper>
 
-          {/* Tab Content */}
-          <Box sx={{ flexGrow: 1, overflow: 'auto', p: 2 }}>
-            {internalStep === 0 && renderVisionTestContent()}
-            {internalStep === 1 && renderMedicalDeclarationContent()}
-          </Box>
+            {/* Main Form Container */}
+            <Paper 
+              elevation={0}
+              sx={{ 
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2,
+                mb: 2,
+                flex: 1,
+                overflow: 'auto',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
+              {/* Step Content */}
+              <Box sx={{ p: 2, flex: 1 }}>
+                {internalStep === 0 && renderVisionTestContent()}
+                {internalStep === 1 && renderMedicalDeclarationContent()}
+              </Box>
+            </Paper>
 
-          {/* Navigation Footer */}
-          <Box sx={{ p: 2, bgcolor: 'white', borderTop: '1px solid', borderColor: 'divider' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {/* Navigation Footer */}
+            <Box sx={{ 
+              bgcolor: 'white',
+              borderTop: '1px solid', 
+              borderColor: 'divider', 
+              display: 'flex', 
+              justifyContent: 'flex-end', 
+              gap: 1,
+              p: 2,
+              flexShrink: 0,
+              width: '100%',
+              borderRadius: '0 0 8px 8px'
+            }}>
               <Button
                 onClick={onCancel}
                 disabled={loading}
-                color="inherit"
-                sx={{ color: 'text.secondary' }}
+                color="secondary"
+                size="small"
               >
                 Cancel
               </Button>
               
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button
-                  disabled={internalStep <= 0 || loading}
-                  onClick={handleBack}
-                  startIcon={<ArrowBackIcon />}
-                  variant="outlined"
-                >
-                  Back
-                </Button>
-                
-                <Button
-                  variant="contained"
-                  onClick={internalStep === medicalSteps.length - 1 ? handleContinue : handleNext}
-                  disabled={!isStepValid(internalStep) || loading}
-                  startIcon={loading ? <CircularProgress size={20} /> : undefined}
-                  endIcon={internalStep !== medicalSteps.length - 1 ? <ArrowForwardIcon /> : undefined}
-                >
-                  {loading ? 'Processing...' : internalStep === medicalSteps.length - 1 ? 'Continue to Biometric' : 'Next'}
-                </Button>
-              </Box>
+              <Button
+                disabled={internalStep <= 0 || loading}
+                onClick={handleBack}
+                startIcon={<ArrowBackIcon />}
+                size="small"
+              >
+                Back
+              </Button>
+              
+              <Button
+                variant="contained"
+                onClick={internalStep === medicalSteps.length - 1 ? handleContinue : handleNext}
+                disabled={!isStepValid(internalStep) || loading}
+                startIcon={loading ? <CircularProgress size={20} /> : undefined}
+                endIcon={internalStep !== medicalSteps.length - 1 ? <ArrowForwardIcon /> : undefined}
+                size="small"
+              >
+                {loading ? 'Processing...' : internalStep === medicalSteps.length - 1 ? 'Continue to Biometric' : 'Next'}
+              </Button>
             </Box>
           </Box>
-        </Paper>
-      </Container>
+        </Box>
+      </Box>
     );
   }
 
