@@ -389,7 +389,7 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
           transition: 'box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1)',
           overflow: 'hidden',
           borderRadius: '12px',
-          p: 2
+          p: 0
         }}>
           <Box sx={{ mb: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
@@ -567,7 +567,7 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
           transition: 'box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1)',
           overflow: 'hidden',
           borderRadius: '12px',
-          p: 2
+          p: 0
         }}>
           <Box sx={{ mb: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
