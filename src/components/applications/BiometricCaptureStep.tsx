@@ -206,40 +206,47 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
 
   return (
     <Box>
-      <Typography variant="h6" gutterBottom>Biometric Data Capture</Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+      <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, fontSize: '1rem', mb: 1 }}>
+        Biometric Data Capture
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontSize: '0.9rem' }}>
         Capture applicant photo, signature, and fingerprint data for license production
       </Typography>
 
       {success && (
-        <Alert severity="success" sx={{ mb: 3 }}>
-          {success}
+        <Alert severity="success" sx={{ mb: 2, py: 0.5 }}>
+          <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+            {success}
+          </Typography>
         </Alert>
       )}
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
+        <Alert severity="error" sx={{ mb: 2, py: 0.5 }}>
+          <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+            {error}
+          </Typography>
         </Alert>
       )}
 
-      <Grid container spacing={3}>
+      <Grid container spacing={2}>
         {/* License Photo - Full Width */}
         <Grid item xs={12}>
-          <Card sx={{ mb: 3 }}>
+          <Card sx={{ mb: 2, border: '1px solid #e0e0e0', boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
             <CardHeader
               title={
                 <Box display="flex" alignItems="center" gap={1}>
-                  <CameraIcon />
-                  <Typography variant="h6">License Photo</Typography>
+                  <CameraIcon fontSize="small" />
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '1rem' }}>License Photo</Typography>
                   {value.photo && (
-                    <Chip label="Captured" color="success" size="small" icon={<CheckCircleIcon />} />
+                    <Chip label="Captured" color="success" size="small" icon={<CheckCircleIcon fontSize="small" />} sx={{ fontSize: '0.7rem', height: '20px' }} />
                   )}
                 </Box>
               }
               subheader="ISO-compliant photo (3:4 ratio)"
+              sx={{ pb: 1 }}
             />
-            <CardContent>
+            <CardContent sx={{ pt: 0 }}>
               <Box sx={{ mb: 2 }}>
                 <WebcamCapture
                   onPhotoCapture={handlePhotoCapture}
@@ -249,16 +256,16 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
               
               {value.photo ? (
                 <Box>
-                  <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
+                  <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
                     {(value.photo as any).iso_compliant ? 'ISO-Processed Preview' : 'Photo Preview'}
                   </Typography>
                   <Box
                     sx={{
                       border: '2px solid',
                       borderColor: 'success.main',
-                      borderRadius: 2,
+                      borderRadius: 1,
                       p: 1,
-                      mb: 2,
+                      mb: 1.5,
                       backgroundColor: 'background.paper',
                       display: 'flex',
                       justifyContent: 'center'
@@ -286,8 +293,8 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
                       }}
                     />
                   </Box>
-                  <Alert severity="success" sx={{ fontSize: '0.875rem' }}>
-                    <Typography variant="body2">
+                  <Alert severity="success" sx={{ py: 0.5 }}>
+                    <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                       {(value.photo as any).iso_compliant 
                         ? `✓ Photo processed to ISO standards (${(value.photo as any).dimensions || '300x400px'})`
                         : '✓ Photo captured successfully'
@@ -296,8 +303,8 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
                   </Alert>
                 </Box>
               ) : (
-                <Alert severity="info">
-                  <Typography variant="body2">
+                <Alert severity="info" sx={{ py: 0.5 }}>
+                  <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                     <strong>Required:</strong> Position face within guides and capture photo.
                     Image will be automatically cropped to ISO standards.
                   </Typography>
@@ -309,20 +316,21 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
 
         {/* Digital Signature - Full Width */}
         <Grid item xs={12}>
-          <Card>
+          <Card sx={{ border: '1px solid #e0e0e0', boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
             <CardHeader
               title={
                 <Box display="flex" alignItems="center" gap={1}>
-                  <CreateIcon />
-                  <Typography variant="h6">Digital Signature</Typography>
+                  <CreateIcon fontSize="small" />
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '1rem' }}>Digital Signature</Typography>
                   {value.signature && (
-                    <Chip label="Captured" color="success" size="small" icon={<CheckCircleIcon />} />
+                    <Chip label="Captured" color="success" size="small" icon={<CheckCircleIcon fontSize="small" />} sx={{ fontSize: '0.7rem', height: '20px' }} />
                   )}
                 </Box>
               }
               subheader="Draw your signature using mouse or touch"
+              sx={{ pb: 1 }}
             />
-            <CardContent sx={{ '& > *': { minHeight: '200px' } }}>
+            <CardContent sx={{ '& > *': { minHeight: '180px' }, pt: 0 }}>
               <SignatureCapture
                 onSignatureCapture={handleSignatureCapture}
                 disabled={saving || disabled}
@@ -331,15 +339,15 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
                 <Box sx={{ mt: 2 }}>
                   {/* Display captured signature if available */}
                   {(value.signature as any).processed_url && (
-                    <Box sx={{ mb: 2, textAlign: 'center' }}>
-                      <Typography variant="subtitle2" gutterBottom>
+                    <Box sx={{ mb: 1.5, textAlign: 'center' }}>
+                      <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
                         Signature Preview
                       </Typography>
                       <Box
                         sx={{
                           border: '2px solid',
                           borderColor: 'success.main',
-                          borderRadius: 2,
+                          borderRadius: 1,
                           p: 1,
                           backgroundColor: 'background.paper',
                           display: 'inline-block'
@@ -355,20 +363,20 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
                           }}
                         />
                       </Box>
-                      <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                      <Typography variant="caption" display="block" sx={{ mt: 0.5, fontSize: '0.7rem' }}>
                         {((value.signature as any).file_size / 1024).toFixed(1)}KB | {(value.signature as any).format}
                       </Typography>
                     </Box>
                   )}
-                  <Alert severity="success" sx={{ fontSize: '0.875rem' }}>
-                    <Typography variant="body2">
+                  <Alert severity="success" sx={{ py: 0.5 }}>
+                    <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                       ✓ Signature captured successfully
                     </Typography>
                   </Alert>
                 </Box>
               ) : (
-                <Alert severity="info" sx={{ mt: 2 }}>
-                  <Typography variant="body2">
+                <Alert severity="info" sx={{ mt: 1.5, py: 0.5 }}>
+                  <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                     Draw your signature in the area above. This will be used on your license card.
                   </Typography>
                 </Alert>
@@ -379,20 +387,21 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
 
         {/* Fingerprint Capture */}
         <Grid item xs={12}>
-          <Card>
+          <Card sx={{ border: '1px solid #e0e0e0', boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
             <CardHeader
               title={
                 <Box display="flex" alignItems="center" gap={1}>
-                  <FingerprintIcon />
-                  <Typography variant="h6">Fingerprint Scan</Typography>
+                  <FingerprintIcon fontSize="small" />
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '1rem' }}>Fingerprint Scan</Typography>
                   {value.fingerprint && (
-                    <Chip label="Captured" color="success" size="small" icon={<CheckCircleIcon />} />
+                    <Chip label="Captured" color="success" size="small" icon={<CheckCircleIcon fontSize="small" />} sx={{ fontSize: '0.7rem', height: '20px' }} />
                   )}
                 </Box>
               }
               subheader="Digital fingerprint for enhanced security (optional)"
+              sx={{ pb: 1 }}
             />
-            <CardContent>
+            <CardContent sx={{ pt: 0 }}>
               <FingerprintCapture
                 onFingerprintCapture={handleFingerprintCapture}
                 disabled={saving || disabled}
@@ -401,15 +410,15 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
                 <Box sx={{ mt: 2 }}>
                   {/* Display captured fingerprint if available */}
                   {(value.fingerprint as any).processed_url && (
-                    <Box sx={{ mb: 2, textAlign: 'center' }}>
-                      <Typography variant="subtitle2" gutterBottom>
+                    <Box sx={{ mb: 1.5, textAlign: 'center' }}>
+                      <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
                         Fingerprint Preview
                       </Typography>
                       <Box
                         sx={{
                           border: '2px solid',
                           borderColor: 'success.main',
-                          borderRadius: 2,
+                          borderRadius: 1,
                           p: 1,
                           backgroundColor: 'background.paper',
                           display: 'inline-block'
@@ -425,20 +434,20 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
                           }}
                         />
                       </Box>
-                      <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                      <Typography variant="caption" display="block" sx={{ mt: 0.5, fontSize: '0.7rem' }}>
                         {((value.fingerprint as any).file_size / 1024).toFixed(1)}KB | {(value.fingerprint as any).format}
                       </Typography>
                     </Box>
                   )}
-                  <Alert severity="success" sx={{ fontSize: '0.875rem' }}>
-                    <Typography variant="body2">
+                  <Alert severity="success" sx={{ py: 0.5 }}>
+                    <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                       ✓ Fingerprint captured successfully for enhanced security
                     </Typography>
                   </Alert>
                 </Box>
               ) : (
-                <Alert severity="info" sx={{ mt: 2 }}>
-                  <Typography variant="body2">
+                <Alert severity="info" sx={{ mt: 1.5, py: 0.5 }}>
+                  <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                     <strong>Optional:</strong> Capture fingerprint for enhanced security. 
                     Currently using mock scanner - will be replaced with real scanner integration.
                   </Typography>
@@ -450,32 +459,32 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
 
         {/* Completion Status */}
         <Grid item xs={12}>
-          <Card variant="outlined" sx={{ bgcolor: 'background.default' }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
+          <Card variant="outlined" sx={{ bgcolor: 'background.default', border: '1px solid #e0e0e0', boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
+            <CardContent sx={{ p: 1.5 }}>
+              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, fontSize: '1rem', mb: 1 }}>
                 Biometric Data Status
               </Typography>
-              <Grid container spacing={2}>
+              <Grid container spacing={1}>
                 <Grid item xs={12} sm={4}>
                   <Box display="flex" alignItems="center" gap={1}>
-                    <CameraIcon color={value.photo ? "success" : "error"} />
-                    <Typography variant="body1" sx={{ fontWeight: value.photo ? 600 : 400 }}>
+                    <CameraIcon color={value.photo ? "success" : "error"} fontSize="small" />
+                    <Typography variant="body2" sx={{ fontWeight: value.photo ? 600 : 400, fontSize: '0.85rem' }}>
                       Photo: {value.photo ? "✓ Captured (ISO)" : "⚠ Required"}
                     </Typography>
                   </Box>
                 </Grid>
                 <Grid item xs={12} sm={4}>
                   <Box display="flex" alignItems="center" gap={1}>
-                    <CreateIcon color={value.signature ? "success" : "action"} />
-                    <Typography variant="body1" sx={{ fontWeight: value.signature ? 600 : 400 }}>
+                    <CreateIcon color={value.signature ? "success" : "action"} fontSize="small" />
+                    <Typography variant="body2" sx={{ fontWeight: value.signature ? 600 : 400, fontSize: '0.85rem' }}>
                       Signature: {value.signature ? "✓ Captured" : "Optional"}
                     </Typography>
                   </Box>
                 </Grid>
                 <Grid item xs={12} sm={4}>
                   <Box display="flex" alignItems="center" gap={1}>
-                    <FingerprintIcon color={value.fingerprint ? "success" : "action"} />
-                    <Typography variant="body1" sx={{ fontWeight: value.fingerprint ? 600 : 400 }}>
+                    <FingerprintIcon color={value.fingerprint ? "success" : "action"} fontSize="small" />
+                    <Typography variant="body2" sx={{ fontWeight: value.fingerprint ? 600 : 400, fontSize: '0.85rem' }}>
                       Fingerprint: {value.fingerprint ? "✓ Captured" : "Optional"}
                     </Typography>
                   </Box>
@@ -483,15 +492,15 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
               </Grid>
               
               {!value.photo ? (
-                <Alert severity="error" sx={{ mt: 2 }}>
-                  <Typography variant="body2">
+                <Alert severity="error" sx={{ mt: 1.5, py: 0.5 }}>
+                  <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                     <strong>Action Required:</strong> License photo must be captured to proceed. 
                     The photo will be automatically cropped to ISO standards (3:4 ratio).
                   </Typography>
                 </Alert>
               ) : (
-                <Alert severity="success" sx={{ mt: 2 }}>
-                  <Typography variant="body2">
+                <Alert severity="success" sx={{ mt: 1.5, py: 0.5 }}>
+                  <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                     <strong>Ready to proceed!</strong> All required biometric data has been captured.
                     {!value.signature && !value.fingerprint && 
                       " Consider adding signature and fingerprint for enhanced security."

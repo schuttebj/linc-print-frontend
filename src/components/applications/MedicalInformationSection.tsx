@@ -244,21 +244,22 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
   return (
     <Box>
       {/* Vision Test Section */}
-      <Card sx={{ mb: 3 }}>
+      <Card sx={{ mb: 2, border: '1px solid #e0e0e0', boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
         <CardHeader 
           title={
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <VisionIcon />
-              <Typography variant="h6">Vision Test</Typography>
+              <VisionIcon fontSize="small" />
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '1rem' }}>Vision Test</Typography>
             </Box>
           }
           subheader="Complete visual acuity and field tests according to Madagascar standards"
+          sx={{ pb: 1 }}
         />
-        <CardContent>
-          <Grid container spacing={3}>
+        <CardContent sx={{ pt: 0 }}>
+          <Grid container spacing={2}>
             {/* Visual Acuity Tests */}
             <Grid item xs={12}>
-              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
+              <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, fontSize: '0.9rem', color: 'primary.main' }}>
                 Visual Acuity (Required: 6/12 minimum each eye)
               </Typography>
             </Grid>
@@ -323,7 +324,7 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
 
             {/* Visual Field Tests */}
             <Grid item xs={12}>
-              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, mt: 2 }}>
+              <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, fontSize: '0.9rem', color: 'primary.main', mt: 1 }}>
                 Visual Field (Required: 120° horizontal minimum)
               </Typography>
             </Grid>
@@ -395,7 +396,7 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
 
             {/* Corrective Lenses */}
             <Grid item xs={12}>
-              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, mt: 2 }}>
+              <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, fontSize: '0.9rem', color: 'primary.main', mt: 1 }}>
                 Corrective Lenses
               </Typography>
             </Grid>
@@ -446,18 +447,22 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
       </Card>
 
       {/* Medical Certificate Section */}
-      <Card sx={{ border: isRequired ? '2px solid' : '1px solid', borderColor: isRequired ? 'warning.main' : 'divider' }}>
+      <Card sx={{ 
+        border: isRequired ? '2px solid' : '1px solid', 
+        borderColor: isRequired ? 'warning.main' : '#e0e0e0',
+        boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
+      }}>
         <CardHeader 
           title={
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <MedicalIcon />
-              <Typography variant="h6">Medical Assessment</Typography>
+              <MedicalIcon fontSize="small" />
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '1rem' }}>Medical Assessment</Typography>
               {isRequired && (
                 <Chip 
                   label="REQUIRED" 
                   color="warning" 
                   size="small" 
-                  sx={{ fontWeight: 600 }}
+                  sx={{ fontWeight: 600, fontSize: '0.7rem', height: '20px' }}
                 />
               )}
             </Box>
@@ -466,15 +471,16 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
             ? "Medical certificate is mandatory for this license category" 
             : "Simple self-declaration for medical fitness"
           }
+          sx={{ pb: 1 }}
         />
-        <CardContent>
+        <CardContent sx={{ pt: 0 }}>
           {/* Self-Declaration of Medical Fitness */}
-          <Box sx={{ mb: 3 }}>
-            <Alert severity="info" sx={{ mb: 2 }}>
-              <Typography variant="body2" fontWeight="bold">
+          <Box sx={{ mb: 2 }}>
+            <Alert severity="info" sx={{ mb: 1.5, py: 0.5 }}>
+              <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.85rem' }}>
                 Section D: Medical Fitness Declaration
               </Typography>
-              <Typography variant="body2">
+              <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                 By checking this box, you declare that you are medically fit to drive and have no conditions that would impair your ability to safely operate a motor vehicle.
               </Typography>
             </Alert>
@@ -497,7 +503,7 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
                 />
               }
               label={
-                <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
                   I declare that I am medically fit to drive and have no medical conditions that would impair my driving ability
                 </Typography>
               }
@@ -511,10 +517,10 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
             sx={{ 
               border: '1px solid',
               borderColor: 'divider',
-              borderRadius: 2,
+              borderRadius: 1,
               '&:before': { display: 'none' },
-              boxShadow: 'none',
-              overflow: 'hidden' // Ensure content doesn't overflow rounded corners
+              boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+              overflow: 'hidden'
             }}
           >
             <AccordionSummary 
@@ -525,7 +531,7 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography variant="h6">
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '0.95rem' }}>
                   Medical Certificate Details
                 </Typography>
                 {isRequired && (
@@ -533,22 +539,22 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
                     label="REQUIRED" 
                     color="warning" 
                     size="small" 
-                    sx={{ fontWeight: 600 }}
+                    sx={{ fontWeight: 600, fontSize: '0.7rem', height: '18px' }}
                   />
                 )}
               </Box>
             </AccordionSummary>
             <AccordionDetails>
               {isRequired && (
-                <Alert severity="warning" sx={{ mb: 3 }}>
-                  <Typography variant="body2">
+                <Alert severity="warning" sx={{ mb: 2, py: 0.5 }}>
+                  <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                     <strong>Medical certificate is required</strong> for this license category (D1, D, D2 or commercial licenses for 60+ applicants). 
                     All fields must be completed to proceed.
                   </Typography>
                 </Alert>
               )}
 
-              <Grid container spacing={3}>
+              <Grid container spacing={2}>
                 <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
@@ -596,13 +602,13 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
                 </Grid>
 
                 <Grid item xs={12}>
-                  <Card variant="outlined" sx={{ p: 2, bgcolor: isRequired ? 'warning.50' : 'background.default' }}>
+                  <Card variant="outlined" sx={{ p: 1.5, bgcolor: isRequired ? 'warning.50' : 'background.default' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <Box>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
                           Medical Certificate Passed
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
                           {isRequired 
                             ? "Required: Confirm medical certificate has been passed"
                             : "Optional: Check if medical certificate has been obtained"
@@ -614,6 +620,7 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
                         onChange={(e) => updateMedicalInfo('medical_certificate_passed', e.target.checked)}
                         disabled={disabled}
                         color={isRequired ? "warning" : "primary"}
+                        size="small"
                       />
                     </Box>
                   </Card>
@@ -621,7 +628,7 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
 
                 {/* Medical Certificate Upload */}
                 <Grid item xs={12}>
-                  <Box sx={{ mb: 2 }}>
+                  <Box sx={{ mb: 1 }}>
                     <input
                       accept="image/*,.pdf"
                       style={{ display: 'none' }}
@@ -634,14 +641,16 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
                       <Button 
                         variant="outlined" 
                         component="span" 
-                        startIcon={<UploadIcon />}
+                        startIcon={<UploadIcon fontSize="small" />}
                         disabled={disabled}
+                        size="small"
+                        sx={{ fontSize: '0.8rem' }}
                       >
-                        {medicalData.medical_certificate_file ? 'Change Medical Certificate' : 'Upload Medical Certificate (Optional)'}
+                        {medicalData.medical_certificate_file ? 'Change Certificate' : 'Upload Certificate (Optional)'}
                       </Button>
                     </label>
                     {medicalData.medical_certificate_file && (
-                      <Typography variant="body2" sx={{ mt: 1 }}>
+                      <Typography variant="body2" sx={{ mt: 0.5, fontSize: '0.8rem' }}>
                         File: {medicalData.medical_certificate_file.name}
                       </Typography>
                     )}
@@ -652,14 +661,15 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
           </Accordion>
 
           {/* Overall Medical Clearance */}
-          <Box sx={{ mt: 3 }}>
+          <Box sx={{ mt: 2 }}>
             <Alert 
               severity={medicalData.medical_clearance ? "success" : (isRequired ? "error" : "info")}
+              sx={{ py: 0.5 }}
             >
-              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+              <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
                 Medical Clearance: {medicalData.medical_clearance ? "APPROVED" : (isRequired ? "REQUIRED" : "PENDING")}
               </Typography>
-              <Typography variant="body2">
+              <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                 {medicalData.medical_clearance 
                   ? "Medical assessment completed and approved for driving"
                   : isRequired 

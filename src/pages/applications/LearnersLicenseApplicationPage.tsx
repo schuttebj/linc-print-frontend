@@ -11,10 +11,8 @@ import {
   Paper,
   Typography,
   Box,
-  Stepper,
-  Step,
-  StepLabel,
-  StepContent,
+  Tabs,
+  Tab,
   Button,
   Alert,
   CircularProgress,
@@ -71,7 +69,9 @@ const LearnersLicenseApplicationPage: React.FC = () => {
 
   // Form state
   const [activeStep, setActiveStep] = useState(0);
+  const [personStep, setPersonStep] = useState(0);
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
+  const [personFormValid, setPersonFormValid] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<LicenseCategory>('' as LicenseCategory);
   const [neverBeenRefused, setNeverBeenRefused] = useState<boolean>(true);
   const [refusalDetails, setRefusalDetails] = useState<string>('');
@@ -86,28 +86,23 @@ const LearnersLicenseApplicationPage: React.FC = () => {
   // Steps for learner's license application
   const steps = [
     {
-      label: 'Select Person',
-      description: 'Choose existing person or register new learner',
+      label: 'Person',
       icon: <PersonSearchIcon />
     },
     {
       label: 'Application Details',
-      description: 'Select learner\'s permit category and requirements',
       icon: <AssignmentIcon />
     },
     {
       label: 'Medical Assessment',
-      description: 'Complete vision test and medical clearance',
       icon: <MedicalIcon />
     },
     {
       label: 'Biometric Data',
-      description: 'Capture photo, signature, and fingerprint',
       icon: <CameraIcon />
     },
     {
-      label: 'Review & Submit',
-      description: 'Review application details and submit',
+      label: 'Review',
       icon: <PreviewIcon />
     }
   ];
@@ -174,6 +169,33 @@ const LearnersLicenseApplicationPage: React.FC = () => {
     loadLocations();
   }, [user]);
 
+  // Tab label renderer with completion indicators
+  const renderTabLabel = (step: any, index: number) => {
+    const isCompleted = index < activeStep && isStepValid(index);
+    const isCurrent = activeStep === index;
+    
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          color: isCompleted ? 'success.main' : isCurrent ? 'primary.main' : 'text.secondary' 
+        }}>
+          {isCompleted ? <CheckCircleIcon fontSize="small" /> : step.icon}
+        </Box>
+        <Typography 
+          variant="body2" 
+          sx={{ 
+            fontWeight: isCurrent ? 'bold' : 'normal',
+            color: isCompleted ? 'success.main' : isCurrent ? 'primary.main' : 'text.secondary'
+          }}
+        >
+          {step.label}
+        </Typography>
+      </Box>
+    );
+  };
+
   // Step validation
   const isStepValid = (step: number): boolean => {
     switch (step) {
@@ -210,6 +232,22 @@ const LearnersLicenseApplicationPage: React.FC = () => {
     return user?.primary_location_id || selectedLocationId;
   };
 
+  // PersonFormWrapper callbacks
+  const handlePersonValidationChange = (step: number, isValid: boolean) => {
+    console.log('🎯 PersonFormWrapper validation callback:', { step, isValid });
+    setPersonFormValid(isValid);
+  };
+
+  const handlePersonStepChange = (step: number, canAdvance: boolean) => {
+    console.log('🎯 PersonFormWrapper step change:', step, 'canAdvance:', canAdvance);
+    setPersonStep(step);
+  };
+
+  const handleContinueToApplication = () => {
+    console.log('🎯 User confirmed to continue to learner\'s license application');
+    setActiveStep(1);
+  };
+
   // Navigation handlers
   const handleNext = () => {
     if (activeStep < steps.length - 1) {
@@ -233,11 +271,6 @@ const LearnersLicenseApplicationPage: React.FC = () => {
     console.log('Person ID:', person?.id);
     setSelectedPerson(person);
     setError('');
-    
-    // Auto-advance to next step
-    setTimeout(() => {
-      setActiveStep(1);
-    }, 500);
   };
 
   // Submit handler
@@ -342,10 +375,14 @@ const LearnersLicenseApplicationPage: React.FC = () => {
       case 0: // Person step
         return (
           <PersonFormWrapper
+            key="person-form-wrapper"
             mode="application"
+            externalPersonStep={personStep}
             onSuccess={handlePersonSelected}
-            title=""
-            subtitle="Select existing person or register new learner"
+            onPersonValidationChange={handlePersonValidationChange}
+            onPersonStepChange={handlePersonStepChange}
+            onContinueToApplication={handleContinueToApplication}
+            onCancel={handleCancel}
             showHeader={false}
           />
         );
@@ -524,177 +561,194 @@ const LearnersLicenseApplicationPage: React.FC = () => {
 
       case 4: // Review step
         return (
-          <Box>
-            <Typography variant="h6" gutterBottom>
-              Review Learner's License Application
-            </Typography>
+          <Paper 
+            elevation={0}
+            sx={{ 
+              bgcolor: 'white',
+              boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+              borderRadius: 2
+            }}
+          >
+            <Box sx={{ p: 1.5 }}>
+              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, fontSize: '1rem', mb: 1 }}>
+                Review & Submit
+              </Typography>
 
-            {/* Processing Location Display */}
-            <Card sx={{ mb: 3 }}>
-              <CardHeader 
-                title="Processing Location" 
-                avatar={<LocationOnIcon />}
-              />
-              <CardContent>
-                <Typography variant="body1">
-                  {user?.primary_location_id ? (
-                    `User's assigned location: ${user.primary_location_id}`
-                  ) : (
-                    availableLocations.find(loc => loc.id === selectedLocationId)?.name || 'No location selected'
-                  )}
-                  {selectedLocationId && (
-                    <Chip 
-                      label={availableLocations.find(loc => loc.id === selectedLocationId)?.code || selectedLocationId} 
-                      size="small" 
-                      sx={{ ml: 1 }}
-                    />
-                  )}
+              <Alert severity="info" sx={{ mb: 1.5, py: 0.5 }}>
+                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                  Please review the learner's license application details before submission.
                 </Typography>
-              </CardContent>
-            </Card>
-            
-            {/* Person Details */}
-            <Card sx={{ mb: 3 }}>
-              <CardHeader title="Applicant Details" />
-              <CardContent>
-                <Grid container spacing={2}>
+              </Alert>
+
+              {/* Person Summary - Compact (Name + ID Only) */}
+              <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
+                <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+                  Learner's License Applicant
+                </Typography>
+                <Grid container spacing={1}>
                   <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Name</Typography>
-                    <Typography variant="body1">
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Full Name</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                       {selectedPerson?.surname}, {selectedPerson?.first_name} {selectedPerson?.middle_name}
                     </Typography>
                   </Grid>
                   <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Madagascar ID</Typography>
-                    <Typography variant="body1">
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Madagascar ID</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                       {selectedPerson?.aliases?.find(alias => alias.is_primary)?.document_number || 'Not available'}
                     </Typography>
                   </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Birth Date</Typography>
-                    <Typography variant="body1">{selectedPerson?.birth_date}</Typography>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Age</Typography>
-                    <Typography variant="body1">
-                      {selectedPerson?.birth_date ? calculateAge(selectedPerson.birth_date) : 'Unknown'} years
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Nationality</Typography>
-                    <Typography variant="body1">{selectedPerson?.nationality_code}</Typography>
-                  </Grid>
                 </Grid>
-              </CardContent>
-            </Card>
+              </Box>
 
-            {/* Application Details */}
-            <Card sx={{ mb: 3 }}>
-              <CardHeader title="Application Details" />
-              <CardContent>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Application Type</Typography>
-                    <Typography variant="body1">Learner's License Application</Typography>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Category</Typography>
-                    <Chip label={selectedCategory} size="small" color="primary" />
-                  </Grid>
+              {/* Processing Location - Compact */}
+              <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
+                <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+                  Processing Location
+                </Typography>
+                <Grid container spacing={1}>
                   <Grid item xs={12}>
-                    <Typography variant="body2" color="text.secondary">Category Description</Typography>
-                    <Typography variant="body1">
-                      {getAvailableLearnerCategories().find(cat => cat.value === selectedCategory)?.description}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Typography variant="body2" color="text.secondary">Declaration</Typography>
-                    <Typography variant="body1">
-                      {neverBeenRefused ? (
-                        <Chip label="Never been refused" size="small" color="success" />
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Location</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {user?.primary_location_id ? (
+                        `User's assigned location: ${user.primary_location_id}`
                       ) : (
-                        <>
-                          <Chip label="Previously refused" size="small" color="warning" />
-                          <Typography variant="body2" sx={{ mt: 1 }}>
-                            <strong>Details:</strong> {refusalDetails}
-                          </Typography>
-                        </>
+                        availableLocations.find(loc => loc.id === selectedLocationId)?.name || 'No location selected'
+                      )}
+                      {selectedLocationId && (
+                        <Chip 
+                          label={availableLocations.find(loc => loc.id === selectedLocationId)?.code || selectedLocationId} 
+                          size="small" 
+                          sx={{ ml: 1, fontSize: '0.7rem', height: '16px' }}
+                        />
                       )}
                     </Typography>
                   </Grid>
                 </Grid>
-              </CardContent>
-            </Card>
+              </Box>
 
-            {/* Medical Information */}
-            {medicalInformation && (
-              <Card sx={{ mb: 3 }}>
-                <CardHeader title="Medical Assessment" />
-                <CardContent>
-                  <Typography variant="body2" color="text.secondary">Medical Clearance</Typography>
-                  <Chip 
-                    label={medicalInformation.medical_clearance ? 'Cleared' : 'Not Cleared'} 
-                    size="small" 
-                    color={medicalInformation.medical_clearance ? 'success' : 'error'} 
-                  />
-                  {medicalInformation.medical_restrictions.length > 0 && (
-                    <Box sx={{ mt: 1 }}>
-                      <Typography variant="body2" color="text.secondary">Restrictions</Typography>
-                      <Typography variant="body1">{medicalInformation.medical_restrictions.join(', ')}</Typography>
-                    </Box>
+              {/* Application Details - Detailed Focus */}
+              <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+                Application Details
+              </Typography>
+              <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
+                <Grid container spacing={1}>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Category</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      <Chip label={selectedCategory} size="small" color="primary" sx={{ fontSize: '0.7rem', height: '20px' }} />
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Declaration</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {neverBeenRefused ? (
+                        <Chip label="Never been refused" size="small" color="success" sx={{ fontSize: '0.7rem', height: '20px' }} />
+                      ) : (
+                        <Chip label="Previously refused" size="small" color="warning" sx={{ fontSize: '0.7rem', height: '20px' }} />
+                      )}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Description</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {getAvailableLearnerCategories().find(cat => cat.value === selectedCategory)?.description}
+                    </Typography>
+                  </Grid>
+                  {!neverBeenRefused && (
+                    <Grid item xs={12}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Refusal Details</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                        {refusalDetails}
+                      </Typography>
+                    </Grid>
                   )}
-                </CardContent>
-              </Card>
-            )}
+                </Grid>
+              </Box>
 
-            {/* Biometric Data */}
-            <Card sx={{ mb: 3 }}>
-              <CardHeader title="Biometric Data" />
-              <CardContent>
-                <Grid container spacing={2}>
+              {/* Medical Assessment - If Available */}
+              {medicalInformation && (
+                <>
+                  <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+                    Medical Assessment
+                  </Typography>
+                  <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
+                    <Grid container spacing={1}>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Medical Clearance</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                          <Chip 
+                            label={medicalInformation.medical_clearance ? 'Cleared' : 'Not Cleared'} 
+                            size="small" 
+                            color={medicalInformation.medical_clearance ? 'success' : 'error'} 
+                            sx={{ fontSize: '0.7rem', height: '20px' }}
+                          />
+                        </Typography>
+                      </Grid>
+                      {medicalInformation.medical_restrictions.length > 0 && (
+                        <Grid item xs={12} md={6}>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Restrictions</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                            {medicalInformation.medical_restrictions.join(', ')}
+                          </Typography>
+                        </Grid>
+                      )}
+                    </Grid>
+                  </Box>
+                </>
+              )}
+
+              {/* Biometric Data - Compact */}
+              <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+                Biometric Data
+              </Typography>
+              <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
+                <Grid container spacing={1}>
                   <Grid item xs={12} md={4}>
-                    <Typography variant="body2" color="text.secondary">License Photo</Typography>
-                    <Chip 
-                      label={biometricData.photo ? 'Captured' : 'Required'} 
-                      size="small" 
-                      color={biometricData.photo ? 'success' : 'error'} 
-                    />
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>License Photo</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      <Chip 
+                        label={biometricData.photo ? 'Captured' : 'Required'} 
+                        size="small" 
+                        color={biometricData.photo ? 'success' : 'error'} 
+                        sx={{ fontSize: '0.7rem', height: '20px' }}
+                      />
+                    </Typography>
                   </Grid>
                   <Grid item xs={12} md={4}>
-                    <Typography variant="body2" color="text.secondary">Digital Signature</Typography>
-                    <Chip 
-                      label={biometricData.signature ? 'Captured' : 'Optional'} 
-                      size="small" 
-                      color={biometricData.signature ? 'success' : 'default'} 
-                    />
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Digital Signature</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      <Chip 
+                        label={biometricData.signature ? 'Captured' : 'Optional'} 
+                        size="small" 
+                        color={biometricData.signature ? 'success' : 'default'} 
+                        sx={{ fontSize: '0.7rem', height: '20px' }}
+                      />
+                    </Typography>
                   </Grid>
                   <Grid item xs={12} md={4}>
-                    <Typography variant="body2" color="text.secondary">Fingerprint</Typography>
-                    <Chip 
-                      label={biometricData.fingerprint ? 'Captured' : 'Optional'} 
-                      size="small" 
-                      color={biometricData.fingerprint ? 'success' : 'default'} 
-                    />
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Fingerprint</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      <Chip 
+                        label={biometricData.fingerprint ? 'Captured' : 'Optional'} 
+                        size="small" 
+                        color={biometricData.fingerprint ? 'success' : 'default'} 
+                        sx={{ fontSize: '0.7rem', height: '20px' }}
+                      />
+                    </Typography>
                   </Grid>
                 </Grid>
-                {biometricData.photo && (
-                  <Alert severity="success" sx={{ mt: 2 }}>
-                    <Typography variant="body2">
-                      All required biometric data has been captured for license production.
-                    </Typography>
-                  </Alert>
-                )}
-              </CardContent>
-            </Card>
+              </Box>
 
-            {/* Summary */}
-            <Alert severity="info" sx={{ mb: 2 }}>
-              <Typography variant="body2">
-                <strong>Next Steps:</strong> After submission, your learner's license application will be processed. 
-                You will be notified when it's ready for collection or if additional documentation is required.
-              </Typography>
-            </Alert>
-          </Box>
+              {/* Summary Alert */}
+              <Alert severity="info" sx={{ mt: 1.5, py: 0.5 }}>
+                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                  <strong>Next Steps:</strong> After submission, your learner's license application will be processed. 
+                  You will be notified when it's ready for collection or if additional documentation is required.
+                </Typography>
+              </Alert>
+            </Box>
+          </Paper>
         );
 
       default:
@@ -703,107 +757,150 @@ const LearnersLicenseApplicationPage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Paper elevation={3} sx={{ p: 4 }}>
+    <Container maxWidth="lg" sx={{ py: 1, height: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column' }}>
+      <Paper 
+        elevation={0}
+        sx={{ 
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: '#f8f9fa',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          overflow: 'hidden'
+        }}
+      >
         {/* Header */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h4" gutterBottom>
+        <Box sx={{ p: 2, bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 0.5 }}>
             Learner's License Application
           </Typography>
-          <Typography variant="body1" color="text.secondary">
+          <Typography variant="body2" color="text.secondary">
             Apply for a new learner's permit for Madagascar
           </Typography>
         </Box>
 
         {/* Error/Success Messages */}
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-          </Alert>
-        )}
-        
-        {success && (
-          <Alert severity="success" sx={{ mb: 3 }} icon={<CheckCircleIcon />}>
-            {success}
-          </Alert>
+        {(error || success) && (
+          <Box sx={{ p: 2, bgcolor: 'white' }}>
+            {error && (
+              <Alert severity="error" sx={{ mb: 1 }}>
+                {error}
+              </Alert>
+            )}
+            
+            {success && (
+              <Alert severity="success" sx={{ mb: 1 }} icon={<CheckCircleIcon />}>
+                {success}
+              </Alert>
+            )}
+          </Box>
         )}
 
-        {/* Stepper */}
-        <Stepper activeStep={activeStep} orientation="vertical">
-          {steps.map((step, index) => (
-            <Step key={step.label}>
-              <StepLabel
-                optional={
-                  <Typography variant="caption">{step.description}</Typography>
-                }
-                StepIconComponent={() => (
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: 40,
-                      height: 40,
-                      borderRadius: '50%',
-                      bgcolor: activeStep >= index ? 'primary.main' : 'grey.300',
-                      color: activeStep >= index ? 'white' : 'grey.600',
-                    }}
-                  >
-                    {step.icon}
-                  </Box>
-                )}
+        {/* Navigation Tabs */}
+        <Box sx={{ bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Tabs 
+            value={activeStep} 
+            onChange={(e, newValue) => setActiveStep(newValue)}
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{ 
+              '& .MuiTab-root': { 
+                minHeight: 48,
+                textTransform: 'none',
+                fontSize: '0.875rem'
+              }
+            }}
+          >
+            {steps.map((step, index) => (
+              <Tab 
+                key={step.label}
+                label={renderTabLabel(step, index)}
+                disabled={index > 0 && !isStepValid(index - 1)}
+                sx={{ minWidth: 120 }}
+              />
+            ))}
+          </Tabs>
+        </Box>
+
+        {/* Tab Content */}
+        <Box sx={{ 
+          flexGrow: 1, 
+          overflow: activeStep === 0 ? 'hidden' : 'auto',
+          p: activeStep === 0 ? 0 : 2
+        }}>
+          {/* Person Form - Always rendered but conditionally visible */}
+          <Box sx={{ display: activeStep === 0 ? 'block' : 'none' }}>
+            <PersonFormWrapper
+              key="person-form-wrapper"
+              mode="application"
+              externalPersonStep={personStep}
+              onSuccess={handlePersonSelected}
+              onPersonValidationChange={handlePersonValidationChange}
+              onPersonStepChange={handlePersonStepChange}
+              onContinueToApplication={handleContinueToApplication}
+              onCancel={handleCancel}
+              showHeader={false}
+            />
+          </Box>
+          
+          {/* Other step content */}
+          {activeStep !== 0 && renderStepContent(activeStep)}
+        </Box>
+
+        {/* Navigation Footer - Only shown when not on person step */}
+        {activeStep !== 0 && (
+          <Box sx={{ p: 2, bgcolor: 'white', borderTop: '1px solid', borderColor: 'divider' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Button
+                onClick={handleCancel}
+                disabled={loading}
+                color="inherit"
+                sx={{ color: 'text.secondary' }}
               >
-                {step.label}
-              </StepLabel>
-              <StepContent>
-                <Box sx={{ mt: 2, mb: 2 }}>
-                  {renderStepContent(index)}
-                </Box>
+                Cancel
+              </Button>
+              
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  disabled={activeStep <= 1 || loading}
+                  onClick={handleBack}
+                  startIcon={<ArrowBackIcon />}
+                  variant="outlined"
+                >
+                  Back
+                </Button>
                 
-                {/* Navigation Buttons */}
-                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                  <Button
-                    onClick={handleCancel}
-                    disabled={loading}
-                    color="secondary"
-                  >
-                    Cancel
-                  </Button>
-                  
-                  <Button
-                    disabled={index === 0 || loading}
-                    onClick={handleBack}
-                    startIcon={<ArrowBackIcon />}
-                  >
-                    Back
-                  </Button>
-                  
-                  <Button
-                    variant="contained"
-                    onClick={index === steps.length - 1 ? handleSubmit : handleNext}
-                    disabled={!isStepValid(index) || loading}
-                    startIcon={loading ? <CircularProgress size={20} /> : undefined}
-                    endIcon={index !== steps.length - 1 ? <ArrowForwardIcon /> : undefined}
-                  >
-                    {loading ? 'Submitting...' : index === steps.length - 1 ? 'Submit Application' : 'Next'}
-                  </Button>
-                </Box>
-              </StepContent>
-            </Step>
-          ))}
-        </Stepper>
+                <Button
+                  variant="contained"
+                  onClick={activeStep === steps.length - 1 ? handleSubmit : handleNext}
+                  disabled={!isStepValid(activeStep) || loading}
+                  startIcon={loading ? <CircularProgress size={20} /> : undefined}
+                  endIcon={activeStep !== steps.length - 1 ? <ArrowForwardIcon /> : undefined}
+                >
+                  {loading ? 'Submitting...' : activeStep === steps.length - 1 ? 'Submit Application' : 'Next'}
+                </Button>
+              </Box>
+            </Box>
+          </Box>
+        )}
 
         {/* Completion Message */}
         {activeStep === steps.length && (
-          <Paper square elevation={0} sx={{ p: 3 }}>
-            <Typography>All steps completed - learner's license application submitted successfully!</Typography>
+          <Box sx={{ p: 3, bgcolor: 'white', textAlign: 'center' }}>
+            <Typography variant="h6" gutterBottom>
+              Application Submitted Successfully!
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Your learner's license application has been submitted and will be processed.
+            </Typography>
             <Button 
-              onClick={() => navigate('/dashboard/applications/dashboard')} 
-              sx={{ mt: 1, mr: 1 }}
+              variant="contained"
+              onClick={() => navigate('/dashboard/applications/dashboard')}
             >
               Back to Applications
             </Button>
-          </Paper>
+          </Box>
         )}
       </Paper>
     </Container>
