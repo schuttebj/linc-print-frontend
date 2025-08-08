@@ -176,18 +176,18 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
     }
   };
 
-  // Step validation for tabbed interface - same pattern as PersonFormWrapper
-  const [stepValidation, setStepValidation] = useState<boolean[]>([false, true, true]); // Photo required, others optional
+  // Step validation for tabbed interface - all 3 steps required
+  const [stepValidation, setStepValidation] = useState<boolean[]>([false, false, false]); // All required
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 
   const isStepValid = (step: number): boolean => {
     switch (step) {
       case 0: // Photo Capture - REQUIRED
         return !!value.photo;
-      case 1: // Signature - Optional but validate if present
-        return true; // Always valid since optional
-      case 2: // Fingerprint - Optional but validate if present  
-        return true; // Always valid since optional
+      case 1: // Signature - REQUIRED
+        return !!value.signature;
+      case 2: // Fingerprint - REQUIRED  
+        return !!value.fingerprint;
       default:
         return false;
     }
@@ -278,10 +278,9 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
   };
 
   const renderTabLabel = (step: any, index: number) => {
-    // Use completedSteps set instead of index comparison - same as PersonFormWrapper
-    const isCompleted = completedSteps.has(index);
+    // Use actual step validation instead of just completed steps
+    const isCompleted = stepValidation[index]; // Step is completed if validation passes
     const isCurrent = internalStep === index;
-    const isValid = stepValidation[index];
     const isClickable = isCompleted || isCurrent || (index === internalStep + 1 && stepValidation[internalStep]);
     
     return (
@@ -334,37 +333,82 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
   // Render functions INSIDE the component
   const renderPhotoContent = () => {
     return (
-      <Box sx={{ p: 0 }}>
-        {/* License Photo - Full Width */}
+      <Box sx={{ p: 2 }}>
+        {/* License Photo - 2:1 Column Layout */}
         <Box sx={{ 
           backgroundColor: 'rgb(255, 255, 255)',
           color: 'rgb(33, 33, 33)',
           backgroundImage: 'none',
-          mb: 2,
           boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
           transition: 'box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1)',
           overflow: 'hidden',
           borderRadius: '12px',
           p: 2
         }}>
-          <Box sx={{ mb: 2 }}>
-            <Box display="flex" alignItems="center" gap={1} sx={{ mb: 1 }}>
-              <CameraIcon fontSize="small" />
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '1rem' }}>License Photo</Typography>
-              {value.photo && (
-                <Chip label="Captured" color="success" size="small" icon={<CheckCircleIcon fontSize="small" />} sx={{ fontSize: '0.7rem', height: '20px' }} />
-              )}
-            </Box>
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.9rem' }}>
-              ISO-compliant photo (3:4 ratio)
-            </Typography>
-          </Box>
-          <Box sx={{ mb: 2 }}>
-            <WebcamCapture
-              onPhotoCapture={handlePhotoCapture}
-              disabled={saving || disabled}
-            />
-          </Box>
+          <Grid container spacing={2}>
+            {/* Left Column - Instructions and Controls (2/3 width) */}
+            <Grid item xs={8}>
+              <Box sx={{ mb: 2 }}>
+                <Box display="flex" alignItems="center" gap={1} sx={{ mb: 1 }}>
+                  <CameraIcon fontSize="small" />
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '1rem' }}>License Photo</Typography>
+                  {value.photo && (
+                    <Chip label="Captured" color="success" size="small" icon={<CheckCircleIcon fontSize="small" />} sx={{ fontSize: '0.7rem', height: '20px' }} />
+                  )}
+                </Box>
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.9rem', mb: 2 }}>
+                  Position yourself in front of the camera and capture an ISO-compliant photo (3:4 ratio). Ensure good lighting and look directly at the camera.
+                </Typography>
+                <WebcamCapture
+                  onPhotoCapture={handlePhotoCapture}
+                  disabled={saving || disabled}
+                />
+              </Box>
+            </Grid>
+            
+            {/* Right Column - Photo Preview (1/3 width) */}
+            <Grid item xs={4}>
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center',
+                height: '100%',
+                justifyContent: 'center'
+              }}>
+                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>Preview</Typography>
+                <Box sx={{
+                  width: '120px',
+                  height: '160px',
+                  border: '2px dashed #ccc',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  bgcolor: '#f9f9f9',
+                  overflow: 'hidden'
+                }}>
+                  {value.photo ? (
+                    <img 
+                      src={typeof value.photo === 'string' ? value.photo : 
+                           (value.photo instanceof File ? URL.createObjectURL(value.photo) : value.photo.processed_url)}
+                      alt="Captured Photo"
+                      style={{ 
+                        width: '100%', 
+                        height: '100%', 
+                        objectFit: 'cover',
+                        borderRadius: '6px'
+                      }}
+                    />
+                  ) : (
+                    <Box sx={{ textAlign: 'center', color: '#999' }}>
+                      <CameraIcon sx={{ fontSize: 40, mb: 1 }} />
+                      <Typography variant="caption">No photo captured</Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Box>
+            </Grid>
+          </Grid>
         </Box>
       </Box>
     );
@@ -372,37 +416,78 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
 
   const renderSignatureContent = () => {
     return (
-      <Box sx={{ p: 0 }}>
-        {/* Digital Signature - Full Width */}
+      <Box sx={{ p: 2 }}>
+        {/* Digital Signature - 50/50 Column Layout */}
         <Box sx={{ 
           backgroundColor: 'rgb(255, 255, 255)',
           color: 'rgb(33, 33, 33)',
           backgroundImage: 'none',
-          mb: 2,
           boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
           transition: 'box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1)',
           overflow: 'hidden',
           borderRadius: '12px',
           p: 2
         }}>
-          <Box sx={{ mb: 2 }}>
-            <Box display="flex" alignItems="center" gap={1} sx={{ mb: 1 }}>
-              <CreateIcon fontSize="small" />
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '1rem' }}>Digital Signature</Typography>
-              {value.signature && (
-                <Chip label="Captured" color="success" size="small" icon={<CheckCircleIcon fontSize="small" />} sx={{ fontSize: '0.7rem', height: '20px' }} />
-              )}
-            </Box>
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.9rem' }}>
-              Draw your signature using mouse or touch
-            </Typography>
-          </Box>
-          <Box sx={{ '& > *': { minHeight: '180px' } }}>
-            <SignatureCapture
-              onSignatureCapture={handleSignatureCapture}
-              disabled={saving || disabled}
-            />
-          </Box>
+          <Grid container spacing={2}>
+            {/* Left Column - Instructions and Preview */}
+            <Grid item xs={6}>
+              <Box sx={{ mb: 2 }}>
+                <Box display="flex" alignItems="center" gap={1} sx={{ mb: 1 }}>
+                  <CreateIcon fontSize="small" />
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '1rem' }}>Digital Signature</Typography>
+                  {value.signature && (
+                    <Chip label="Captured" color="success" size="small" icon={<CheckCircleIcon fontSize="small" />} sx={{ fontSize: '0.7rem', height: '20px' }} />
+                  )}
+                </Box>
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.9rem', mb: 2 }}>
+                  Use your mouse to draw your signature in the box. On touch devices, use your finger to sign. Click "Clear" to start over or "Save Signature" when finished.
+                </Typography>
+                
+                {/* Signature Preview */}
+                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>Preview</Typography>
+                <Box sx={{
+                  width: '100%',
+                  height: '100px',
+                  border: '2px dashed #ccc',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  bgcolor: '#f9f9f9',
+                  overflow: 'hidden'
+                }}>
+                  {value.signature ? (
+                    <img 
+                      src={typeof value.signature === 'string' ? value.signature : 
+                           (value.signature instanceof File ? URL.createObjectURL(value.signature) : value.signature.processed_url)}
+                      alt="Captured Signature"
+                      style={{ 
+                        width: '100%', 
+                        height: '100%', 
+                        objectFit: 'contain',
+                        borderRadius: '6px'
+                      }}
+                    />
+                  ) : (
+                    <Box sx={{ textAlign: 'center', color: '#999' }}>
+                      <CreateIcon sx={{ fontSize: 30, mb: 1 }} />
+                      <Typography variant="caption">No signature captured</Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Box>
+            </Grid>
+            
+            {/* Right Column - Signature Capture Area */}
+            <Grid item xs={6}>
+              <Box sx={{ '& > *': { minHeight: '200px' } }}>
+                <SignatureCapture
+                  onSignatureCapture={handleSignatureCapture}
+                  disabled={saving || disabled}
+                />
+              </Box>
+            </Grid>
+          </Grid>
         </Box>
       </Box>
     );
@@ -410,35 +495,90 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
 
   const renderFingerprintContent = () => {
     return (
-      <Box sx={{ p: 0 }}>
-        {/* Fingerprint Capture */}
+      <Box sx={{ p: 2 }}>
+        {/* Fingerprint Capture - 2:1 Column Layout with simplified container */}
         <Box sx={{ 
           backgroundColor: 'rgb(255, 255, 255)',
           color: 'rgb(33, 33, 33)',
           backgroundImage: 'none',
-          mb: 2,
           boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
           transition: 'box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1)',
           overflow: 'hidden',
           borderRadius: '12px',
           p: 2
         }}>
-          <Box sx={{ mb: 2 }}>
-            <Box display="flex" alignItems="center" gap={1} sx={{ mb: 1 }}>
-              <FingerprintIcon fontSize="small" />
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '1rem' }}>Fingerprint Scan</Typography>
-              {value.fingerprint && (
-                <Chip label="Captured" color="success" size="small" icon={<CheckCircleIcon fontSize="small" />} sx={{ fontSize: '0.7rem', height: '20px' }} />
-              )}
-            </Box>
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.9rem' }}>
-              Digital fingerprint for enhanced security (optional)
-            </Typography>
-          </Box>
-          <FingerprintCapture
-            onFingerprintCapture={handleFingerprintCapture}
-            disabled={saving || disabled}
-          />
+          <Grid container spacing={2}>
+            {/* Left Column - Instructions and Controls (2/3 width) */}
+            <Grid item xs={8}>
+              <Box sx={{ mb: 2 }}>
+                <Box display="flex" alignItems="center" gap={1} sx={{ mb: 1 }}>
+                  <FingerprintIcon fontSize="small" />
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '1rem' }}>Fingerprint Scan</Typography>
+                  {value.fingerprint && (
+                    <Chip label="Captured" color="success" size="small" icon={<CheckCircleIcon fontSize="small" />} sx={{ fontSize: '0.7rem', height: '20px' }} />
+                  )}
+                </Box>
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.9rem', mb: 2 }}>
+                  Place your finger on the scanner or use the digital fingerprint capture. This provides enhanced security for your license.
+                </Typography>
+                
+                {/* Development Mode Alert */}
+                <Alert severity="info" sx={{ mb: 2, py: 0.5 }}>
+                  <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                    <strong>DEVELOPMENT MODE:</strong> Fingerprint integration is not yet implemented. This is a placeholder for future functionality.
+                  </Typography>
+                </Alert>
+                
+                <FingerprintCapture
+                  onFingerprintCapture={handleFingerprintCapture}
+                  disabled={saving || disabled}
+                />
+              </Box>
+            </Grid>
+            
+            {/* Right Column - Fingerprint Preview (1/3 width) */}
+            <Grid item xs={4}>
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center',
+                height: '100%',
+                justifyContent: 'center'
+              }}>
+                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>Preview</Typography>
+                <Box sx={{
+                  width: '120px',
+                  height: '120px',
+                  border: '2px dashed #ccc',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  bgcolor: '#f9f9f9',
+                  overflow: 'hidden'
+                }}>
+                  {value.fingerprint ? (
+                    <img 
+                      src={typeof value.fingerprint === 'string' ? value.fingerprint : 
+                           (value.fingerprint instanceof File ? URL.createObjectURL(value.fingerprint) : value.fingerprint.processed_url)}
+                      alt="Captured Fingerprint"
+                      style={{ 
+                        width: '100%', 
+                        height: '100%', 
+                        objectFit: 'cover',
+                        borderRadius: '50%'
+                      }}
+                    />
+                  ) : (
+                    <Box sx={{ textAlign: 'center', color: '#999' }}>
+                      <FingerprintIcon sx={{ fontSize: 40, mb: 1 }} />
+                      <Typography variant="caption">No fingerprint captured</Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Box>
+            </Grid>
+          </Grid>
         </Box>
       </Box>
     );
@@ -588,27 +728,6 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
               flexDirection: 'column',
               p: 0 // Tab content - p:0
             }}>
-              {/* Success/Error Alerts */}
-              {(success || error) && (
-                <Box sx={{ mb: 1, flexShrink: 0 }}>
-                  {success && (
-                    <Alert severity="success" sx={{ mb: 2, py: 0.5 }}>
-                      <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-                        {success}
-                      </Typography>
-                    </Alert>
-                  )}
-
-                  {error && (
-                    <Alert severity="error" sx={{ mb: 2, py: 0.5 }}>
-                      <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-                        {error}
-                      </Typography>
-                    </Alert>
-                  )}
-                </Box>
-              )}
-
               {/* Step Content - Aligned at top */}
               <Box sx={{ flex: 1, overflow: 'visible' }}>
                 {internalStep === 0 && renderPhotoContent()}
