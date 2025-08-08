@@ -806,19 +806,14 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
         height: 'calc(100vh - 200px)',
         minHeight: '600px'
       }}>
+        {/* Step content - p:0 */}
         <Box sx={{ 
           flex: 1,
           overflow: 'hidden',
-          p: 0,
+          p: 0, // Step content - p:0
           display: 'flex',
           flexDirection: 'column'
         }}>
-          <Box sx={{ 
-            display: 'flex',
-            flexDirection: 'column',
-            flex: 1,
-            overflow: 'hidden'
-          }}>
             {/* Header */}
             {showHeader && (
               <Box sx={{ p: 2 }}>
@@ -852,90 +847,98 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
               </Box>
             )}
 
-            {/* Medical Tabs */}
-            <Box sx={{ p: 2, pt: showHeader ? 0 : 2 }}>
-              <Paper 
-                elevation={0}
-                sx={{ 
-                  mb: 2,
-                  bgcolor: 'white',
-                  boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-                  borderRadius: 2,
-                  flexShrink: 0
-                }}
-              >
-              <Tabs
-                value={internalStep}
-                onChange={handleTabChange}
-                sx={{
-                  px: 2,
-                  '& .MuiTab-root': {
-                    minHeight: 40,
-                    textTransform: 'none',
-                    fontSize: '0.8rem',
-                    color: 'text.secondary',
-                    bgcolor: 'primary.50',
-                    mx: 0.5,
-                    borderRadius: '6px 6px 0 0',
+          {/* Inner tab container - P:2 */}
+          <Box sx={{ 
+            flex: 1,
+            overflow: 'hidden',
+            p: 2, // Inner tab container - P:2
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            {/* Tabs - p:0 */}
+            <Paper 
+              elevation={0}
+              sx={{ 
+                mb: 2,
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2,
+                flexShrink: 0,
+                p: 0 // Tabs - p:0
+              }}
+            >
+            <Tabs
+              value={internalStep}
+              onChange={handleTabChange}
+              sx={{
+                px: 2,
+                '& .MuiTab-root': {
+                  minHeight: 40,
+                  textTransform: 'none',
+                  fontSize: '0.8rem',
+                  color: 'text.secondary',
+                  bgcolor: 'primary.50',
+                  mx: 0.5,
+                  borderRadius: '6px 6px 0 0',
+                  '&.Mui-selected': {
+                    bgcolor: 'primary.100',
+                    color: 'primary.main',
+                  },
+                  '&:hover': {
+                    bgcolor: 'primary.100',
                     '&.Mui-selected': {
                       bgcolor: 'primary.100',
-                      color: 'primary.main',
-                    },
-                    '&:hover': {
-                      bgcolor: 'primary.100',
-                      '&.Mui-selected': {
-                        bgcolor: 'primary.100',
-                      }
-                    },
-                    '&.Mui-disabled': {
-                      opacity: 0.4
                     }
                   },
-                  '& .MuiTabs-indicator': {
-                    display: 'none'
+                  '&.Mui-disabled': {
+                    opacity: 0.4
                   }
-                }}
-              >
-                {medicalSteps.map((step, index) => (
-                  <Tab
-                    key={step.label}
-                    label={renderTabLabel(step, index)}
-                    disabled={index > internalStep + 1 || (index === internalStep + 1 && !isStepValid(internalStep))}
-                  />
-                ))}
-              </Tabs>
-              </Paper>
-            </Box>
+                },
+                '& .MuiTabs-indicator': {
+                  display: 'none'
+                }
+              }}
+            >
+              {medicalSteps.map((step, index) => (
+                <Tab
+                  key={step.label}
+                  label={renderTabLabel(step, index)}
+                  disabled={index > internalStep + 1 || (index === internalStep + 1 && !isStepValid(internalStep))}
+                />
+              ))}
+            </Tabs>
+            </Paper>
 
-            {/* Main Form Container */}
+            {/* Tab content - p:0 */}
             <Box sx={{ 
               flex: 1,
               overflow: 'auto',
               display: 'flex',
               flexDirection: 'column',
-              mx: 2,
-              mb: 2
+              p: 0 // Tab content - p:0
             }}>
-              {/* Step Content - No padding like PersonFormWrapper */}
+              {/* Step Content - Aligned at top */}
               <Box sx={{ flex: 1, overflow: 'visible' }}>
                 {internalStep === 0 && renderVisionTestContent()}
                 {internalStep === 1 && renderMedicalDeclarationContent()}
               </Box>
             </Box>
+          </Box>
 
-            {/* Navigation Footer */}
-            <Box sx={{ 
-              bgcolor: 'white',
-              borderTop: '1px solid', 
-              borderColor: 'divider', 
-              display: 'flex', 
-              justifyContent: 'flex-end', 
-              gap: 1,
-              p: 2,
-              flexShrink: 0,
-              width: '100%',
-              borderRadius: '0 0 8px 8px'
-            }}>
+          {/* Navigation - P:0 */}
+          <Box sx={{ 
+            bgcolor: 'white',
+            borderTop: '1px solid', 
+            borderColor: 'divider', 
+            display: 'flex', 
+            justifyContent: 'flex-end', 
+            gap: 1,
+            p: 0, // Navigation - P:0
+            flexShrink: 0,
+            width: '100%',
+            borderRadius: '0 0 8px 8px'
+          }}>
+            <Box sx={{ p: 2, display: 'flex', gap: 1, ml: 'auto' }}>
               <Button
                 onClick={onCancel}
                 disabled={loading}

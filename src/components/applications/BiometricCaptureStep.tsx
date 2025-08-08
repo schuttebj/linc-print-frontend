@@ -475,7 +475,7 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
     );
   };
 
-  // If using tabbed interface, render the full container exactly like PersonFormWrapper
+  // If using tabbed interface, render with the exact structure requested
   if (isTabbed) {
     return (
       <Box sx={{ 
@@ -486,21 +486,21 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
         height: 'calc(100vh - 200px)',
         minHeight: '600px'
       }}>
-        {/* Content Container - Tabs and Form Content with padding */}
+        {/* Step content - p:0 */}
         <Box sx={{ 
           flex: 1,
-          overflow: 'hidden', // No scroll on outer container
-          p: 2, // Padding for content area
+          overflow: 'hidden',
+          p: 0, // Step content - p:0
           display: 'flex',
           flexDirection: 'column'
         }}>
+          {/* Inner tab container - P:2 */}
           <Box sx={{ 
-            maxWidth: 'none', // No max width in application mode
-            mx: 0, // No horizontal margin in application mode
-            display: 'flex',
-            flexDirection: 'column',
             flex: 1,
-            overflow: 'hidden' // Prevent this container from scrolling
+            overflow: 'hidden',
+            p: 2, // Inner tab container - P:2
+            display: 'flex',
+            flexDirection: 'column'
           }}>
             {/* Header */}
             {showHeader && (
@@ -512,7 +512,7 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
                   bgcolor: 'white',
                   boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
                   borderRadius: 2,
-                  flexShrink: 0 // Prevent header from shrinking
+                  flexShrink: 0
                 }}
               >
                 <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 0.5 }}>
@@ -524,7 +524,7 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
               </Paper>
             )}
 
-            {/* Biometric Tabs */}
+            {/* Tabs - p:0 */}
             <Paper 
               elevation={0}
               sx={{ 
@@ -532,7 +532,8 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
                 bgcolor: 'white',
                 boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
                 borderRadius: 2,
-                flexShrink: 0
+                flexShrink: 0,
+                p: 0 // Tabs - p:0
               }}
             >
               <Tabs
@@ -575,17 +576,15 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
                   />
                 ))}
               </Tabs>
-              </Paper>
-            </Box>
+            </Paper>
 
-            {/* Main Form Container */}
+            {/* Tab content - p:0 */}
             <Box sx={{ 
               flex: 1,
               overflow: 'auto',
               display: 'flex',
               flexDirection: 'column',
-              mx: 2,
-              mb: 2
+              p: 0 // Tab content - p:0
             }}>
               {/* Success/Error Alerts */}
               {(success || error) && (
@@ -602,63 +601,65 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
                     <Alert severity="error" sx={{ mb: 2, py: 0.5 }}>
                       <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
                         {error}
-                      </Typography>
+                    </Typography>
                     </Alert>
                   )}
                 </Box>
               )}
 
-              {/* Step Content - No padding like PersonFormWrapper */}
+              {/* Step Content - Aligned at top */}
               <Box sx={{ flex: 1, overflow: 'visible' }}>
                 {internalStep === 0 && renderPhotoContent()}
                 {internalStep === 1 && renderSignatureContent()}
                 {internalStep === 2 && renderFingerprintContent()}
               </Box>
             </Box>
-        </Box>
+          </Box>
 
-        {/* Navigation - Full width at bottom - OUTSIDE content container */}
-        <Box sx={{ 
-          bgcolor: 'white',
-          borderTop: '1px solid', 
-          borderColor: 'divider', 
-          display: 'flex', 
-          justifyContent: 'flex-end', 
-          gap: 1,
-          p: 2,
-          flexShrink: 0,
-          // Full width navigation styling
-          width: '100%',
-          borderRadius: '0 0 8px 8px' // Only round bottom corners
-        }}>
-          <Button
-            onClick={onCancel}
-            disabled={loading}
-            color="secondary"
-            size="small"
-          >
-            Cancel
-          </Button>
-          
-          <Button
-            disabled={internalStep <= 0 || loading}
-            onClick={handleBack}
-            startIcon={<ArrowBackIcon />}
-            size="small"
-          >
-            Back
-          </Button>
-          
-          <Button
-            variant="contained"
-            onClick={internalStep === biometricSteps.length - 1 ? handleContinue : handleNext}
-            disabled={isNextButtonDisabled() || loading}
-            startIcon={loading ? <CircularProgress size={20} /> : undefined}
-            endIcon={internalStep !== biometricSteps.length - 1 ? <ArrowForwardIcon /> : undefined}
-            size="small"
-          >
-            {loading ? 'Processing...' : internalStep === biometricSteps.length - 1 ? 'Continue to Review' : 'Next'}
-          </Button>
+          {/* Navigation - P:0 */}
+          <Box sx={{ 
+            bgcolor: 'white',
+            borderTop: '1px solid', 
+            borderColor: 'divider', 
+            display: 'flex', 
+            justifyContent: 'flex-end', 
+            gap: 1,
+            p: 0, // Navigation - P:0
+            flexShrink: 0,
+            width: '100%',
+            borderRadius: '0 0 8px 8px'
+          }}>
+            <Box sx={{ p: 2, display: 'flex', gap: 1, ml: 'auto' }}>
+              <Button
+                onClick={onCancel}
+                disabled={loading}
+                color="secondary"
+                size="small"
+              >
+                Cancel
+              </Button>
+              
+              <Button
+                disabled={internalStep <= 0 || loading}
+                onClick={handleBack}
+                startIcon={<ArrowBackIcon />}
+                size="small"
+              >
+                Back
+              </Button>
+              
+              <Button
+                variant="contained"
+                onClick={internalStep === biometricSteps.length - 1 ? handleContinue : handleNext}
+                disabled={isNextButtonDisabled() || loading}
+                startIcon={loading ? <CircularProgress size={20} /> : undefined}
+                endIcon={internalStep !== biometricSteps.length - 1 ? <ArrowForwardIcon /> : undefined}
+                size="small"
+              >
+                {loading ? 'Processing...' : internalStep === biometricSteps.length - 1 ? 'Continue to Review' : 'Next'}
+              </Button>
+            </Box>
+          </Box>
         </Box>
       </Box>
     );
