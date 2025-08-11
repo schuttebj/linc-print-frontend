@@ -497,7 +497,16 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
     return (
       <Box sx={{ p: 2 }}>
         {/* Fingerprint Capture - 2:1 Column Layout with simplified container */}
-        <Box>
+        <Box sx={{ 
+          backgroundColor: 'rgb(255, 255, 255)',
+          color: 'rgb(33, 33, 33)',
+          backgroundImage: 'none',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          transition: 'box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+          overflow: 'hidden',
+          borderRadius: '12px',
+          p: 2
+        }}>
           <Grid container spacing={2}>
             {/* Left Column - Instructions and Controls (2/3 width) */}
             <Grid item xs={8}>
