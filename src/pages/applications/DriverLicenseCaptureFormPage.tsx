@@ -751,13 +751,23 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
           open={showSuccessSnackbar}
           autoHideDuration={5000}
           onClose={() => setShowSuccessSnackbar(false)}
-          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         >
           <Alert 
             onClose={() => setShowSuccessSnackbar(false)} 
             severity="info" 
             variant="filled"
-            sx={{ width: '100%' }}
+            sx={{ 
+              width: '100%',
+              backgroundColor: 'rgb(25, 118, 210)',
+              color: 'white',
+              '& .MuiAlert-icon': {
+                color: 'white'
+              },
+              '& .MuiAlert-action': {
+                color: 'white'
+              }
+            }}
           >
             Driver's license capture completed successfully!
           </Alert>

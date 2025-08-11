@@ -106,6 +106,168 @@ const LearnersLicenseApplicationPage: React.FC = () => {
   const [success, setSuccess] = useState<string>('');
   const [showSuccessSnackbar, setShowSuccessSnackbar] = useState(false);
 
+  // Form validation helper functions
+  const getFieldStyling = (fieldName: string, value: any, isRequired: boolean = true) => {
+    let fieldState = 'default';
+    
+    if (isRequired && (!value || (typeof value === 'string' && value.trim() === ''))) {
+      fieldState = 'required';
+    } else if (value && value.trim() !== '') {
+      fieldState = 'valid';
+    }
+
+    const baseSx = {
+      '& .MuiOutlinedInput-root': {
+        '& fieldset': {
+          borderWidth: '2px',
+          transition: 'border-color 0.2s ease-in-out',
+        },
+        '&:hover fieldset': {
+          borderWidth: '2px',
+        },
+        '&.Mui-focused fieldset': {
+          borderWidth: '2px',
+        },
+      },
+    };
+
+    switch (fieldState) {
+      case 'required':
+        return {
+          sx: {
+            ...baseSx,
+            '& .MuiOutlinedInput-root': {
+              ...baseSx['& .MuiOutlinedInput-root'],
+              '& fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['& fieldset'],
+                borderColor: '#ff9800', // Orange for required fields
+              },
+              '&:hover fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['&:hover fieldset'],
+                borderColor: '#f57c00', // Darker orange on hover
+              },
+              '&.Mui-focused fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['&.Mui-focused fieldset'],
+                borderColor: '#ff9800', // Orange when focused
+              },
+            },
+          },
+          error: false,
+          helperText: isRequired ? 'This field is required' : undefined,
+        };
+
+      case 'valid':
+        return {
+          sx: {
+            ...baseSx,
+            '& .MuiOutlinedInput-root': {
+              ...baseSx['& .MuiOutlinedInput-root'],
+              '& fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['& fieldset'],
+                borderColor: '#4caf50', // Green for valid fields
+              },
+              '&:hover fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['&:hover fieldset'],
+                borderColor: '#388e3c', // Darker green on hover
+              },
+              '&.Mui-focused fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['&.Mui-focused fieldset'],
+                borderColor: '#4caf50', // Green when focused
+              },
+            },
+          },
+          error: false,
+          helperText: undefined,
+        };
+
+      default:
+        return {
+          sx: baseSx,
+          error: false,
+          helperText: undefined,
+        };
+    }
+  };
+
+  const getSelectStyling = (fieldName: string, value: any, isRequired: boolean = true) => {
+    let fieldState = 'default';
+    
+    if (isRequired && (!value || value === '')) {
+      fieldState = 'required';
+    } else if (value && value !== '') {
+      fieldState = 'valid';
+    }
+
+    const baseSx = {
+      '& .MuiOutlinedInput-root': {
+        '& fieldset': {
+          borderWidth: '2px',
+          transition: 'border-color 0.2s ease-in-out',
+        },
+        '&:hover fieldset': {
+          borderWidth: '2px',
+        },
+        '&.Mui-focused fieldset': {
+          borderWidth: '2px',
+        },
+      },
+    };
+
+    switch (fieldState) {
+      case 'required':
+        return {
+          sx: {
+            ...baseSx,
+            '& .MuiOutlinedInput-root': {
+              ...baseSx['& .MuiOutlinedInput-root'],
+              '& fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['& fieldset'],
+                borderColor: '#ff9800', // Orange for required fields
+              },
+              '&:hover fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['&:hover fieldset'],
+                borderColor: '#f57c00', // Darker orange on hover
+              },
+              '&.Mui-focused fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['&.Mui-focused fieldset'],
+                borderColor: '#ff9800', // Orange when focused
+              },
+            },
+          },
+          error: false,
+        };
+
+      case 'valid':
+        return {
+          sx: {
+            ...baseSx,
+            '& .MuiOutlinedInput-root': {
+              ...baseSx['& .MuiOutlinedInput-root'],
+              '& fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['& fieldset'],
+                borderColor: '#4caf50', // Green for valid fields
+              },
+              '&:hover fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['&:hover fieldset'],
+                borderColor: '#388e3c', // Darker green on hover
+              },
+              '&.Mui-focused fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['&.Mui-focused fieldset'],
+                borderColor: '#4caf50', // Green when focused
+              },
+            },
+          },
+          error: false,
+        };
+
+      default:
+        return {
+          sx: baseSx,
+          error: false,
+        };
+    }
+  };
+
   // Steps for learner's license application
   const steps = [
     {
@@ -494,7 +656,13 @@ const LearnersLicenseApplicationPage: React.FC = () => {
                   }
                 />
                 <CardContent sx={{ p: 1.5, pt: 0 }}>
-                  <FormControl fullWidth required size="small" error={!!error && !selectedLocationId}>
+                  <FormControl 
+                    fullWidth 
+                    required 
+                    size="small" 
+                    error={!!error && !selectedLocationId}
+                    {...getSelectStyling('location', selectedLocationId, true)}
+                  >
                     <InputLabel>Processing Location</InputLabel>
                     <Select
                       value={selectedLocationId}
@@ -510,6 +678,9 @@ const LearnersLicenseApplicationPage: React.FC = () => {
                     </Select>
                     {!!error && !selectedLocationId && (
                       <FormHelperText>Please select a processing location</FormHelperText>
+                    )}
+                    {!selectedLocationId && (
+                      <FormHelperText sx={{ color: '#ff9800' }}>This field is required</FormHelperText>
                     )}
                   </FormControl>
                 </CardContent>
@@ -652,17 +823,22 @@ const LearnersLicenseApplicationPage: React.FC = () => {
                 <Grid container spacing={2}>
               {/* Learner's Permit Category Selection */}
               <Grid item xs={12}>
-                    <FormControl fullWidth required size="small">
-                  <InputLabel>Learner's Permit Category</InputLabel>
-                  <Select
-                    value={selectedCategory}
-                    onChange={(e) => {
-                      setSelectedCategory(e.target.value as LicenseCategory);
-                      setError('');
-                    }}
-                    label="Learner's Permit Category"
+                                        <FormControl 
+                      fullWidth 
+                      required 
+                      size="small"
+                      {...getSelectStyling('category', selectedCategory, true)}
+                    >
+                      <InputLabel>Learner's Permit Category</InputLabel>
+                      <Select
+                        value={selectedCategory}
+                        onChange={(e) => {
+                          setSelectedCategory(e.target.value as LicenseCategory);
+                          setError('');
+                        }}
+                        label="Learner's Permit Category"
                         size="small"
-                  >
+                      >
                     {getAvailableLearnerCategories().map((category) => (
                       <MenuItem key={category.value} value={category.value}>
                         <Box>
@@ -676,6 +852,9 @@ const LearnersLicenseApplicationPage: React.FC = () => {
                       </MenuItem>
                     ))}
                   </Select>
+                  {!selectedCategory && (
+                    <FormHelperText sx={{ color: '#ff9800' }}>This field is required</FormHelperText>
+                  )}
                 </FormControl>
 
               {/* Age validation warning */}
@@ -722,7 +901,7 @@ const LearnersLicenseApplicationPage: React.FC = () => {
                     
                     {!neverBeenRefused && (
                         <Box sx={{ mt: 1.5 }}>
-                        <TextField
+                                                <TextField
                           fullWidth
                           multiline
                           rows={3}
@@ -731,8 +910,8 @@ const LearnersLicenseApplicationPage: React.FC = () => {
                           onChange={(e) => setRefusalDetails(e.target.value)}
                           required
                           placeholder="Provide details about previous refusal including date, reason, and issuing authority..."
-                            size="small"
-                            sx={{ fontSize: '0.85rem' }}
+                          size="small"
+                          {...getFieldStyling('refusalDetails', refusalDetails, !neverBeenRefused)}
                         />
                       </Box>
                     )}
@@ -1145,13 +1324,23 @@ const LearnersLicenseApplicationPage: React.FC = () => {
           open={showSuccessSnackbar}
           autoHideDuration={5000}
           onClose={() => setShowSuccessSnackbar(false)}
-          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         >
           <Alert 
             onClose={() => setShowSuccessSnackbar(false)} 
             severity="info" 
             variant="filled"
-            sx={{ width: '100%' }}
+            sx={{ 
+              width: '100%',
+              backgroundColor: 'rgb(25, 118, 210)',
+              color: 'white',
+              '& .MuiAlert-icon': {
+                color: 'white'
+              },
+              '& .MuiAlert-action': {
+                color: 'white'
+              }
+            }}
           >
             Learner's license application submitted successfully!
           </Alert>
