@@ -853,45 +853,13 @@ const LearnersLicenseApplicationPage: React.FC = () => {
                 </Grid>
               </Box>
 
-              {/* Medical Assessment - If Available */}
-              {medicalInformation && (
-                <>
-                  <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
-                    Medical Assessment
-                  </Typography>
-                  <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
-                    <Grid container spacing={1}>
-                      <Grid item xs={12} md={6}>
-                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Medical Clearance</Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                          <Chip 
-                            label={medicalInformation.medical_clearance ? 'Cleared' : 'Not Cleared'} 
-                            size="small" 
-                            color={medicalInformation.medical_clearance ? 'success' : 'error'} 
-                            sx={{ fontSize: '0.7rem', height: '20px' }}
-                          />
-                        </Typography>
-                      </Grid>
-                      {medicalInformation.medical_restrictions.length > 0 && (
-                        <Grid item xs={12} md={6}>
-                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Restrictions</Typography>
-                          <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                            {medicalInformation.medical_restrictions.join(', ')}
-                          </Typography>
-                        </Grid>
-                      )}
-                    </Grid>
-                  </Box>
-                </>
-              )}
-
-              {/* Biometric Data - Compact */}
+              {/* Biometric & Medical Data - Comprehensive */}
               <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
-                Biometric Data
+                Biometric & Medical Assessment
               </Typography>
               <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
                 <Grid container spacing={1}>
-                  <Grid item xs={12} md={4}>
+                  <Grid item xs={12} md={3}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>License Photo</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                       <Chip 
@@ -902,38 +870,58 @@ const LearnersLicenseApplicationPage: React.FC = () => {
                       />
                     </Typography>
                   </Grid>
-                  <Grid item xs={12} md={4}>
+                  <Grid item xs={12} md={3}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Digital Signature</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                       <Chip 
-                        label={biometricData.signature ? 'Captured' : 'Optional'} 
+                        label={biometricData.signature ? 'Captured' : 'Required'} 
                         size="small" 
-                        color={biometricData.signature ? 'success' : 'default'} 
+                        color={biometricData.signature ? 'success' : 'error'} 
                         sx={{ fontSize: '0.7rem', height: '20px' }}
                       />
                     </Typography>
                   </Grid>
-                  <Grid item xs={12} md={4}>
+                  <Grid item xs={12} md={3}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Fingerprint</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                       <Chip 
-                        label={biometricData.fingerprint ? 'Captured' : 'Optional'} 
+                        label={biometricData.fingerprint ? 'Captured' : 'Required'} 
                         size="small" 
-                        color={biometricData.fingerprint ? 'success' : 'default'} 
+                        color={biometricData.fingerprint ? 'success' : 'error'} 
                         sx={{ fontSize: '0.7rem', height: '20px' }}
                       />
                     </Typography>
                   </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Medical Clearance</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {medicalInformation ? (
+                        <Chip 
+                          label={medicalInformation.medical_clearance ? 'Cleared' : 'Not Cleared'} 
+                          size="small" 
+                          color={medicalInformation.medical_clearance ? 'success' : 'error'} 
+                          sx={{ fontSize: '0.7rem', height: '20px' }}
+                        />
+                      ) : (
+                        <Chip 
+                          label="Required" 
+                          size="small" 
+                          color="error" 
+                          sx={{ fontSize: '0.7rem', height: '20px' }}
+                        />
+                      )}
+                    </Typography>
+                  </Grid>
+                  {medicalInformation && medicalInformation.medical_restrictions.length > 0 && (
+                    <Grid item xs={12}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Medical Restrictions</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                        {medicalInformation.medical_restrictions.join(', ')}
+                      </Typography>
+                    </Grid>
+                  )}
                 </Grid>
               </Box>
-
-              {/* Summary Alert */}
-              <Alert severity="info" sx={{ mt: 1.5, py: 0.5 }}>
-                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                  <strong>Next Steps:</strong> After submission, your learner's license application will be processed. 
-                  You will be notified when it's ready for collection or if additional documentation is required.
-                </Typography>
-              </Alert>
             </Box>
           </Paper>
         );
