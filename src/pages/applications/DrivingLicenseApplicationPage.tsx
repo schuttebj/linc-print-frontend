@@ -295,19 +295,68 @@ const DrivingLicenseApplicationPage: React.FC = () => {
     }
   ];
 
+  // Check if a person qualifies for a specific driving license category
+  const checkCategoryEligibility = (category: LicenseCategory) => {
+    if (!selectedPerson || !existingLicenses) return { eligible: false, reason: 'Person not selected' };
+    
+    const categoryRule = LICENSE_CATEGORY_RULES[category];
+    const errors: string[] = [];
+    
+    // Check age requirement
+    const age = selectedPerson.birth_date ? calculateAge(selectedPerson.birth_date) : 0;
+    if (age < (categoryRule?.minimum_age || 18)) {
+      errors.push(`Minimum age: ${categoryRule?.minimum_age || 18} years (current: ${age})`);
+    }
+    
+    // Get all license categories from existing licenses
+    const existingCategories = existingLicenses.flatMap(license => license.categories || []);
+    
+    // Check prerequisites
+    if (categoryRule?.prerequisites && categoryRule.prerequisites.length > 0) {
+      const missingPrerequisites = categoryRule.prerequisites.filter(reqCategory => 
+        !existingCategories.includes(reqCategory)
+      );
+      if (missingPrerequisites.length > 0) {
+        errors.push(`Requires: ${missingPrerequisites.join(', ')}`);
+      }
+    }
+    
+    // Check for learner's permit requirement
+    if (categoryRule?.requires_learners_permit) {
+      const hasLearnersPermit = existingCategories.some(cat => ['1', '2', '3'].includes(cat));
+      if (!hasLearnersPermit) {
+        errors.push(`Requires learner's permit`);
+      }
+    }
+    
+    // Check if already has this category
+    if (existingCategories.includes(category)) {
+      errors.push(`Already licensed`);
+    }
+    
+    return {
+      eligible: errors.length === 0,
+      reason: errors.length > 0 ? errors.join(' • ') : ''
+    };
+  };
+
   // Available driving license categories (excluding learner's permit codes)
   const getAvailableDrivingCategories = () => {
     return Object.values(LicenseCategory)
       .filter(category => !['1', '2', '3'].includes(category)) // Exclude learner's permit codes
       .map(category => {
         const categoryRule = LICENSE_CATEGORY_RULES[category];
+        const eligibility = checkCategoryEligibility(category);
+        
         return {
           value: category,
           label: `${category} - ${categoryRule?.description || 'License category'}`,
           minAge: categoryRule?.minimum_age || 18,
           prerequisites: categoryRule?.prerequisites || [],
           description: categoryRule?.description || '',
-          requiresLearners: categoryRule?.requires_learners_permit || false
+          requiresLearners: categoryRule?.requires_learners_permit || false,
+          eligible: eligibility.eligible,
+          disabledReason: eligibility.reason
         };
       }).sort((a, b) => {
         // Sort by category order (A1, A2, A, B1, B, B2, BE, C1, C, C1E, CE, D1, D, D2)
@@ -405,41 +454,13 @@ const DrivingLicenseApplicationPage: React.FC = () => {
     );
   };
 
-  // Check license prerequisites when category changes
+  // Update prerequisite errors when category or person changes
   useEffect(() => {
-    if (selectedCategory && selectedPerson && licenseVerification) {
-      const categoryRule = LICENSE_CATEGORY_RULES[selectedCategory];
-      const errors: string[] = [];
-
-      // Check age requirement
-      const age = selectedPerson.birth_date ? calculateAge(selectedPerson.birth_date) : 0;
-      if (age < (categoryRule?.minimum_age || 18)) {
-        errors.push(`Minimum age for ${selectedCategory} is ${categoryRule?.minimum_age || 18} years (applicant is ${age} years)`);
-      }
-
-      // Check prerequisites
-      if (categoryRule?.prerequisites && categoryRule.prerequisites.length > 0) {
-        const hasPrerequisites = categoryRule.prerequisites.every(reqCategory => 
-          licenseVerification.all_license_categories.includes(reqCategory)
-        );
-        if (!hasPrerequisites) {
-          errors.push(`${selectedCategory} requires existing license(s): ${categoryRule.prerequisites.join(', ')}`);
-        }
-      }
-
-      // Check for learner's permit requirement
-      if (categoryRule?.requires_learners_permit) {
-        const hasLearnersPermit = licenseVerification.all_license_categories.some(cat => 
-          ['1', '2', '3'].includes(cat)
-        );
-        if (!hasLearnersPermit) {
-          errors.push(`${selectedCategory} requires a valid learner's permit`);
-        }
-      }
-
-      setPrerequisiteErrors(errors);
+    if (selectedCategory && selectedPerson) {
+      const eligibility = checkCategoryEligibility(selectedCategory);
+      setPrerequisiteErrors(eligibility.eligible ? [] : [eligibility.reason]);
     }
-  }, [selectedCategory, selectedPerson, licenseVerification]);
+  }, [selectedCategory, selectedPerson, existingLicenses]);
 
   // Step validation
   const isStepValid = (step: number): boolean => {
@@ -451,8 +472,7 @@ const DrivingLicenseApplicationPage: React.FC = () => {
         const hasLocation = !!user?.primary_location_id || !!selectedLocationId;
         const hasRefusalInfo = neverBeenRefused || !!refusalDetails.trim();
         const hasValidPrerequisites = prerequisiteErrors.length === 0;
-        const hasLicenseVerification = !!licenseVerification;
-        return hasCategory && hasLocation && hasRefusalInfo && hasValidPrerequisites && hasLicenseVerification && !!selectedPerson && !!selectedPerson.id;
+        return hasCategory && hasLocation && hasRefusalInfo && hasValidPrerequisites && !!selectedPerson && !!selectedPerson.id;
       case 2:
         const age = selectedPerson?.birth_date ? calculateAge(selectedPerson.birth_date) : 0;
         const isMedicalMandatory = requiresMedicalAlways(selectedCategory) || 
@@ -612,7 +632,6 @@ const DrivingLicenseApplicationPage: React.FC = () => {
         application_type: ApplicationType.NEW_LICENSE,
         license_category: selectedCategory,
         medical_information: cleanMedicalInfo,
-        license_verification: licenseVerification,
         never_been_refused: neverBeenRefused,
         refusal_details: neverBeenRefused ? undefined : refusalDetails
         // Note: Biometric data captured but not yet included in submission - backend integration pending
@@ -896,98 +915,102 @@ const DrivingLicenseApplicationPage: React.FC = () => {
               />
               <CardContent sx={{ p: 1.5, pt: 0 }}>
                 <Grid container spacing={2}>
-                  {/* Driving License Category Selection */}
-                  <Grid item xs={12}>
+              {/* Driving License Category Selection */}
+              <Grid item xs={12}>
                     <FormControl 
                       fullWidth 
                       required 
                       size="small"
                       {...getSelectStyling('category', selectedCategory, true)}
                     >
-                      <InputLabel>Driving License Category</InputLabel>
-                      <Select
-                        value={selectedCategory}
-                        onChange={(e) => {
-                          setSelectedCategory(e.target.value as LicenseCategory);
-                          setError('');
-                        }}
-                        label="Driving License Category"
+                  <InputLabel>Driving License Category</InputLabel>
+                  <Select
+                    value={selectedCategory}
+                    onChange={(e) => {
+                      setSelectedCategory(e.target.value as LicenseCategory);
+                      setError('');
+                    }}
+                    label="Driving License Category"
                         size="small"
-                      >
-                        {getAvailableDrivingCategories().map((category) => (
-                          <MenuItem key={category.value} value={category.value}>
-                            <Box>
-                              <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.9rem' }}>
-                                {category.label}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                                Min age: {category.minAge} years
-                                {category.prerequisites.length > 0 && ` • Requires: ${category.prerequisites.join(', ')}`}
-                                {category.requiresLearners && ` • Requires learner's permit`}
-                              </Typography>
-                            </Box>
-                          </MenuItem>
-                        ))}
-                      </Select>
+                  >
+                    {getAvailableDrivingCategories().map((category) => (
+                          <MenuItem 
+                            key={category.value} 
+                            value={category.value}
+                            disabled={!category.eligible}
+                            sx={{
+                              opacity: category.eligible ? 1 : 0.5,
+                              backgroundColor: category.eligible ? 'inherit' : '#f5f5f5'
+                            }}
+                          >
+                        <Box>
+                              <Typography 
+                                variant="body2" 
+                                fontWeight="bold" 
+                                sx={{ 
+                                  fontSize: '0.9rem',
+                                  color: category.eligible ? 'inherit' : 'text.disabled'
+                                }}
+                              >
+                                {category.label} {!category.eligible && ' (Not Eligible)'}
+                          </Typography>
+                              <Typography 
+                                variant="caption" 
+                                color={category.eligible ? "text.secondary" : "error"} 
+                                sx={{ fontSize: '0.75rem' }}
+                              >
+                                {category.eligible ? (
+                                  <>
+                            Min age: {category.minAge} years
+                            {category.prerequisites.length > 0 && ` • Requires: ${category.prerequisites.join(', ')}`}
+                            {category.requiresLearners && ` • Requires learner's permit`}
+                                  </>
+                                ) : (
+                                  <>⚠️ {category.disabledReason}</>
+                                )}
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
                       {!selectedCategory && (
                         <FormHelperText sx={{ color: '#ff9800' }}>This field is required</FormHelperText>
                       )}
-                    </FormControl>
+                </FormControl>
 
-                    {/* Age and prerequisite validation warnings */}
-                    {selectedPerson && selectedCategory && prerequisiteErrors.length > 0 && (
+              {/* Age and prerequisite validation warnings */}
+              {selectedPerson && selectedCategory && prerequisiteErrors.length > 0 && (
                       <Alert severity="error" icon={<ErrorIcon />} sx={{ mt: 1.5, py: 0.5 }}>
                         <Typography variant="body2" fontWeight="bold" gutterBottom sx={{ fontSize: '0.8rem' }}>
-                          Prerequisites Not Met:
-                        </Typography>
-                        {prerequisiteErrors.map((error, index) => (
+                      Prerequisites Not Met:
+                    </Typography>
+                    {prerequisiteErrors.map((error, index) => (
                           <Typography key={index} variant="body2" sx={{ fontSize: '0.8rem' }}>
-                            • {error}
-                          </Typography>
-                        ))}
-                      </Alert>
+                        • {error}
+                      </Typography>
+                    ))}
+                  </Alert>
                     )}
-                  </Grid>
+                </Grid>
 
-                  {/* License Verification Section - Integrated into this card */}
-                  {selectedPerson && (
-                    <Grid item xs={12}>
-                      <Box sx={{ mt: 1 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.9rem', color: 'primary.main', mb: 1 }}>
-                          License Verification
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, fontSize: '0.8rem' }}>
-                          Verify existing licenses and learner's permits to check prerequisites for {selectedCategory || 'selected category'}
-                        </Typography>
-                        <LicenseVerificationSection
-                          personId={selectedPerson.id}
-                          value={licenseVerification}
-                          onChange={setLicenseVerification}
-                          locations={availableLocations}
-                          currentLicenseCategory={selectedCategory}
-                          currentApplicationType={ApplicationType.NEW_LICENSE}
-                          disabled={false}
-                        />
-                      </Box>
-                    </Grid>
-                  )}
 
-                  {/* Never been refused declaration */}
-                  <Grid item xs={12}>
+
+              {/* Never been refused declaration */}
+              <Grid item xs={12}>
                     <Box sx={{ mt: 1 }}>
                       <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.9rem', color: 'primary.main', mb: 1 }}>
                         Declaration
                       </Typography>
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={neverBeenRefused}
-                            onChange={(e) => {
-                              setNeverBeenRefused(e.target.checked);
-                              if (e.target.checked) {
-                                setRefusalDetails('');
-                              }
-                            }}
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={neverBeenRefused}
+                          onChange={(e) => {
+                            setNeverBeenRefused(e.target.checked);
+                            if (e.target.checked) {
+                              setRefusalDetails('');
+                            }
+                          }}
                             size="small"
                           />
                         }
@@ -996,27 +1019,27 @@ const DrivingLicenseApplicationPage: React.FC = () => {
                             I have never been refused a driving licence or learner's permit
                           </Typography>
                         }
-                      />
-                      
-                      {!neverBeenRefused && (
+                    />
+                    
+                    {!neverBeenRefused && (
                         <Box sx={{ mt: 1.5 }}>
-                          <TextField
-                            fullWidth
-                            multiline
-                            rows={3}
-                            label="Please provide details of refusal"
-                            value={refusalDetails}
-                            onChange={(e) => setRefusalDetails(e.target.value)}
-                            required
-                            placeholder="Provide details about previous refusal including date, reason, and issuing authority..."
+                        <TextField
+                          fullWidth
+                          multiline
+                          rows={3}
+                          label="Please provide details of refusal"
+                          value={refusalDetails}
+                          onChange={(e) => setRefusalDetails(e.target.value)}
+                          required
+                          placeholder="Provide details about previous refusal including date, reason, and issuing authority..."
                             size="small"
                             {...getFieldStyling('refusalDetails', refusalDetails, !neverBeenRefused)}
-                          />
-                        </Box>
-                      )}
+                        />
+                      </Box>
+                    )}
                     </Box>
-                  </Grid>
-                </Grid>
+              </Grid>
+            </Grid>
               </CardContent>
             </Card>
           </Box>
@@ -1029,7 +1052,7 @@ const DrivingLicenseApplicationPage: React.FC = () => {
         return null;
 
       case 4: // Review step
-        return (
+              return (
           <Paper 
             elevation={0}
             sx={{ 
@@ -1041,13 +1064,13 @@ const DrivingLicenseApplicationPage: React.FC = () => {
             <Box sx={{ p: 1.5 }}>
               <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, fontSize: '1rem', mb: 1 }}>
                 Review & Submit
-              </Typography>
+                  </Typography>
 
               <Alert severity="info" sx={{ mb: 1.5, py: 0.5 }}>
                 <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                   Please review the driving license application details before submission.
-                </Typography>
-              </Alert>
+                      </Typography>
+                    </Alert>
 
               {/* Person Summary - Compact (Name + ID Only) */}
               <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
@@ -1068,30 +1091,30 @@ const DrivingLicenseApplicationPage: React.FC = () => {
                     </Typography>
                   </Grid>
                 </Grid>
-              </Box>
+          </Box>
 
               {/* Processing Location - Compact */}
               <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
                 <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
                   Processing Location
-                </Typography>
+            </Typography>
                 <Grid container spacing={1}>
                   <Grid item xs={12}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Location</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                      {user?.primary_location_id ? (
-                        `User's assigned location: ${user.primary_location_id}`
-                      ) : (
-                        availableLocations.find(loc => loc.id === selectedLocationId)?.name || 'No location selected'
-                      )}
-                      {selectedLocationId && (
-                        <Chip 
-                          label={availableLocations.find(loc => loc.id === selectedLocationId)?.code || selectedLocationId} 
-                          size="small" 
+                  {user?.primary_location_id ? (
+                    `User's assigned location: ${user.primary_location_id}`
+                  ) : (
+                    availableLocations.find(loc => loc.id === selectedLocationId)?.name || 'No location selected'
+                  )}
+                  {selectedLocationId && (
+                    <Chip 
+                      label={availableLocations.find(loc => loc.id === selectedLocationId)?.code || selectedLocationId} 
+                      size="small" 
                           sx={{ ml: 1, fontSize: '0.7rem', height: '16px' }}
-                        />
-                      )}
-                    </Typography>
+                    />
+                  )}
+                </Typography>
                   </Grid>
                 </Grid>
               </Box>
@@ -1099,7 +1122,7 @@ const DrivingLicenseApplicationPage: React.FC = () => {
               {/* Application Details - Detailed Focus */}
               <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
                 Application Details
-              </Typography>
+                    </Typography>
               <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
                 <Grid container spacing={1}>
                   <Grid item xs={12} md={6}>
@@ -1125,18 +1148,18 @@ const DrivingLicenseApplicationPage: React.FC = () => {
                     </Typography>
                   </Grid>
                   {!neverBeenRefused && (
-                    <Grid item xs={12}>
+                  <Grid item xs={12}>
                       <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Refusal Details</Typography>
                       <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                         {refusalDetails}
-                      </Typography>
-                    </Grid>
+                    </Typography>
+                  </Grid>
                   )}
                   {/* Prerequisites Section */}
                   <Grid item xs={12}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Prerequisites</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                      {prerequisiteErrors.length === 0 ? (
+                  {prerequisiteErrors.length === 0 ? (
                         <Chip label="All prerequisites met" size="small" color="success" sx={{ fontSize: '0.7rem', height: '20px' }} />
                       ) : (
                         <Chip label="Prerequisites not met" size="small" color="error" sx={{ fontSize: '0.7rem', height: '20px' }} />
@@ -1144,43 +1167,43 @@ const DrivingLicenseApplicationPage: React.FC = () => {
                     </Typography>
                   </Grid>
                 </Grid>
-              </Box>
+                    </Box>
 
               {/* Biometric & Medical Data - Comprehensive */}
               <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
                 Biometric & Medical Assessment
-              </Typography>
+                      </Typography>
               <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
                 <Grid container spacing={1}>
                   <Grid item xs={12} md={3}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>License Photo</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                      <Chip 
-                        label={biometricData.photo ? 'Captured' : 'Required'} 
-                        size="small" 
+                      <Chip
+                        label={biometricData.photo ? 'Captured' : 'Required'}
+                        size="small"
                         color={biometricData.photo ? 'success' : 'error'} 
                         sx={{ fontSize: '0.7rem', height: '20px' }}
                       />
-                    </Typography>
+                      </Typography>
                   </Grid>
                   <Grid item xs={12} md={3}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Digital Signature</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                      <Chip 
-                        label={biometricData.signature ? 'Captured' : (selectedCategory && !['1', '2', '3'].includes(selectedCategory) ? 'Required' : 'Optional')} 
-                        size="small" 
+                      <Chip
+                        label={biometricData.signature ? 'Captured' : (selectedCategory && !['1', '2', '3'].includes(selectedCategory) ? 'Required' : 'Optional')}
+                        size="small"
                         color={biometricData.signature ? 'success' : (selectedCategory && !['1', '2', '3'].includes(selectedCategory) ? 'error' : 'default')} 
                         sx={{ fontSize: '0.7rem', height: '20px' }}
                       />
-                    </Typography>
+                      </Typography>
                   </Grid>
                   <Grid item xs={12} md={3}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Fingerprint</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                      <Chip 
-                        label={biometricData.fingerprint ? 'Captured' : 'Optional'} 
+                      <Chip
+                        label={biometricData.fingerprint ? 'Captured' : 'Optional'}
                         size="small" 
-                        color={biometricData.fingerprint ? 'success' : 'default'} 
+                        color={biometricData.fingerprint ? 'success' : 'default'}
                         sx={{ fontSize: '0.7rem', height: '20px' }}
                       />
                     </Typography>
@@ -1191,7 +1214,7 @@ const DrivingLicenseApplicationPage: React.FC = () => {
                       {medicalInformation ? (
                         <Chip 
                           label={medicalInformation.medical_clearance ? 'Cleared' : 'Not Cleared'} 
-                          size="small" 
+                        size="small"
                           color={medicalInformation.medical_clearance ? 'success' : 'error'} 
                           sx={{ fontSize: '0.7rem', height: '20px' }}
                         />
@@ -1210,11 +1233,11 @@ const DrivingLicenseApplicationPage: React.FC = () => {
                       <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Medical Restrictions</Typography>
                       <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                         {medicalInformation.medical_restrictions.join(', ')}
-                      </Typography>
+                    </Typography>
                     </Grid>
                   )}
                 </Grid>
-              </Box>
+          </Box>
             </Box>
           </Paper>
         );
@@ -1251,16 +1274,16 @@ const DrivingLicenseApplicationPage: React.FC = () => {
         {/* Error/Success Messages */}
         {(error || success) && (
           <Box sx={{ p: 2, bgcolor: 'white' }}>
-            {error && (
+        {error && (
               <Alert severity="error" sx={{ mb: 1 }}>
-                {error}
-              </Alert>
-            )}
-            
-            {success && (
+            {error}
+          </Alert>
+        )}
+        
+        {success && (
               <Alert severity="success" sx={{ mb: 1 }} icon={<CheckCircleIcon />}>
-                {success}
-              </Alert>
+            {success}
+          </Alert>
             )}
           </Box>
         )}
@@ -1272,7 +1295,7 @@ const DrivingLicenseApplicationPage: React.FC = () => {
             onChange={(e, newValue) => setActiveStep(newValue)}
             variant="scrollable"
             scrollButtons="auto"
-            sx={{
+                    sx={{
               '& .MuiTab-root': { 
                 minHeight: 48,
                 textTransform: 'none',
@@ -1289,7 +1312,7 @@ const DrivingLicenseApplicationPage: React.FC = () => {
               />
             ))}
           </Tabs>
-        </Box>
+                  </Box>
 
         {/* Tab Content */}
         <Box sx={{ 
@@ -1310,7 +1333,7 @@ const DrivingLicenseApplicationPage: React.FC = () => {
               onCancel={handleCancel}
               showHeader={false}
             />
-          </Box>
+                </Box>
                 
           {/* Medical Form - Always rendered but conditionally visible */}
           <Box sx={{ display: activeStep === 2 ? 'block' : 'none' }}>
@@ -1358,36 +1381,36 @@ const DrivingLicenseApplicationPage: React.FC = () => {
         {activeStep !== 0 && activeStep !== 2 && activeStep !== 3 && (
           <Box sx={{ p: 2, bgcolor: 'white', borderTop: '1px solid', borderColor: 'divider' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Button
-                onClick={handleCancel}
-                disabled={loading}
-                color="secondary"
+                  <Button
+                    onClick={handleCancel}
+                    disabled={loading}
+                    color="secondary"
                 size="small"
-              >
-                Cancel
-              </Button>
+                  >
+                    Cancel
+                  </Button>
                   
               <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button
+                  <Button
                   disabled={activeStep <= 1 || loading}
-                  onClick={handleBack}
-                  startIcon={<ArrowBackIcon />}
+                    onClick={handleBack}
+                    startIcon={<ArrowBackIcon />}
                   size="small"
-                >
-                  Back
-                </Button>
+                  >
+                    Back
+                  </Button>
                   
-                <Button
-                  variant="contained"
+                  <Button
+                    variant="contained"
                   onClick={activeStep === steps.length - 1 ? handleSubmit : handleNext}
                   disabled={!isStepValid(activeStep) || loading}
-                  startIcon={loading ? <CircularProgress size={20} /> : undefined}
+                    startIcon={loading ? <CircularProgress size={20} /> : undefined}
                   endIcon={activeStep !== steps.length - 1 ? <ArrowForwardIcon /> : undefined}
                   size="small"
-                >
+                  >
                   {loading ? 'Submitting...' : activeStep === steps.length - 1 ? 'Submit Application' : 'Next'}
-                </Button>
-              </Box>
+                  </Button>
+                </Box>
             </Box>
           </Box>
         )}
