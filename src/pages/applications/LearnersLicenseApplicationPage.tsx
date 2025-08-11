@@ -37,7 +37,9 @@ import {
   TableCell,
   Stack,
   Collapse,
-  IconButton
+  IconButton,
+  Backdrop,
+  Snackbar
 } from '@mui/material';
 import {
   PersonSearch as PersonSearchIcon,
@@ -102,6 +104,7 @@ const LearnersLicenseApplicationPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
+  const [showSuccessSnackbar, setShowSuccessSnackbar] = useState(false);
 
   // Steps for learner's license application
   const steps = [
@@ -412,8 +415,9 @@ const LearnersLicenseApplicationPage: React.FC = () => {
       const application = await applicationService.createApplication(applicationData);
       
       setSuccess('Learner\'s license application submitted successfully!');
+      setShowSuccessSnackbar(true);
       
-      // Navigate to applications dashboard
+      // Navigate to applications dashboard after showing success
       setTimeout(() => {
         navigate('/dashboard/applications/dashboard', {
           state: { 
@@ -421,7 +425,7 @@ const LearnersLicenseApplicationPage: React.FC = () => {
             application 
           }
         });
-      }, 2000);
+      }, 3000);
 
     } catch (err: any) {
       console.error('Submission error:', err);
@@ -646,66 +650,66 @@ const LearnersLicenseApplicationPage: React.FC = () => {
               />
               <CardContent sx={{ p: 1.5, pt: 0 }}>
                 <Grid container spacing={2}>
-                  {/* Learner's Permit Category Selection */}
-                  <Grid item xs={12}>
+              {/* Learner's Permit Category Selection */}
+              <Grid item xs={12}>
                     <FormControl fullWidth required size="small">
-                      <InputLabel>Learner's Permit Category</InputLabel>
-                      <Select
-                        value={selectedCategory}
-                        onChange={(e) => {
-                          setSelectedCategory(e.target.value as LicenseCategory);
-                          setError('');
-                        }}
-                        label="Learner's Permit Category"
+                  <InputLabel>Learner's Permit Category</InputLabel>
+                  <Select
+                    value={selectedCategory}
+                    onChange={(e) => {
+                      setSelectedCategory(e.target.value as LicenseCategory);
+                      setError('');
+                    }}
+                    label="Learner's Permit Category"
                         size="small"
-                      >
-                        {getAvailableLearnerCategories().map((category) => (
-                          <MenuItem key={category.value} value={category.value}>
-                            <Box>
+                  >
+                    {getAvailableLearnerCategories().map((category) => (
+                      <MenuItem key={category.value} value={category.value}>
+                        <Box>
                               <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.9rem' }}>
-                                {category.label}
-                              </Typography>
+                            {category.label}
+                          </Typography>
                               <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                                Min age: {category.minAge} years • {category.description}
-                              </Typography>
-                            </Box>
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
+                            Min age: {category.minAge} years • {category.description}
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
 
-                    {/* Age validation warning */}
-                    {selectedPerson && selectedCategory && selectedPerson.birth_date && (
-                      (() => {
-                        const age = calculateAge(selectedPerson.birth_date);
-                        const requiredAge = getAvailableLearnerCategories().find(cat => cat.value === selectedCategory)?.minAge || 18;
-                        return age < requiredAge ? (
+              {/* Age validation warning */}
+              {selectedPerson && selectedCategory && selectedPerson.birth_date && (
+                (() => {
+                  const age = calculateAge(selectedPerson.birth_date);
+                  const requiredAge = getAvailableLearnerCategories().find(cat => cat.value === selectedCategory)?.minAge || 18;
+                  return age < requiredAge ? (
                           <Alert severity="warning" icon={<WarningIcon />} sx={{ mt: 1.5, py: 0.5 }}>
                             <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                              <strong>Age Requirement:</strong> Applicant is {age} years old, but minimum age for {selectedCategory} is {requiredAge} years.
-                            </Typography>
-                          </Alert>
-                        ) : null;
-                      })()
-                    )}
+                          <strong>Age Requirement:</strong> Applicant is {age} years old, but minimum age for {selectedCategory} is {requiredAge} years.
+                        </Typography>
+                      </Alert>
+                  ) : null;
+                })()
+              )}
                   </Grid>
 
-                  {/* Never been refused declaration */}
-                  <Grid item xs={12}>
+              {/* Never been refused declaration */}
+              <Grid item xs={12}>
                     <Box sx={{ mt: 1 }}>
                       <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.9rem', color: 'primary.main', mb: 1 }}>
                         Declaration
                       </Typography>
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={neverBeenRefused}
-                            onChange={(e) => {
-                              setNeverBeenRefused(e.target.checked);
-                              if (e.target.checked) {
-                                setRefusalDetails('');
-                              }
-                            }}
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={neverBeenRefused}
+                          onChange={(e) => {
+                            setNeverBeenRefused(e.target.checked);
+                            if (e.target.checked) {
+                              setRefusalDetails('');
+                            }
+                          }}
                             size="small"
                           />
                         }
@@ -714,27 +718,27 @@ const LearnersLicenseApplicationPage: React.FC = () => {
                             I have never been refused a driving licence or learner's permit
                           </Typography>
                         }
-                      />
-                      
-                      {!neverBeenRefused && (
+                    />
+                    
+                    {!neverBeenRefused && (
                         <Box sx={{ mt: 1.5 }}>
-                          <TextField
-                            fullWidth
-                            multiline
-                            rows={3}
-                            label="Please provide details of refusal"
-                            value={refusalDetails}
-                            onChange={(e) => setRefusalDetails(e.target.value)}
-                            required
-                            placeholder="Provide details about previous refusal including date, reason, and issuing authority..."
+                        <TextField
+                          fullWidth
+                          multiline
+                          rows={3}
+                          label="Please provide details of refusal"
+                          value={refusalDetails}
+                          onChange={(e) => setRefusalDetails(e.target.value)}
+                          required
+                          placeholder="Provide details about previous refusal including date, reason, and issuing authority..."
                             size="small"
                             sx={{ fontSize: '0.85rem' }}
-                          />
-                        </Box>
-                      )}
+                        />
+                      </Box>
+                    )}
                     </Box>
-                  </Grid>
-                </Grid>
+              </Grid>
+            </Grid>
               </CardContent>
             </Card>
           </Box>
@@ -747,7 +751,7 @@ const LearnersLicenseApplicationPage: React.FC = () => {
         return null;
 
       case 4: // Review step
-        return (
+              return (
           <Paper 
             elevation={0}
             sx={{ 
@@ -759,13 +763,13 @@ const LearnersLicenseApplicationPage: React.FC = () => {
             <Box sx={{ p: 1.5 }}>
               <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, fontSize: '1rem', mb: 1 }}>
                 Review & Submit
-              </Typography>
+                  </Typography>
 
               <Alert severity="info" sx={{ mb: 1.5, py: 0.5 }}>
                 <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                   Please review the learner's license application details before submission.
-                </Typography>
-              </Alert>
+                      </Typography>
+                    </Alert>
 
               {/* Person Summary - Compact (Name + ID Only) */}
               <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
@@ -786,30 +790,30 @@ const LearnersLicenseApplicationPage: React.FC = () => {
                     </Typography>
                   </Grid>
                 </Grid>
-              </Box>
+          </Box>
 
               {/* Processing Location - Compact */}
               <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
                 <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
                   Processing Location
-                </Typography>
+            </Typography>
                 <Grid container spacing={1}>
                   <Grid item xs={12}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Location</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                      {user?.primary_location_id ? (
-                        `User's assigned location: ${user.primary_location_id}`
-                      ) : (
-                        availableLocations.find(loc => loc.id === selectedLocationId)?.name || 'No location selected'
-                      )}
-                      {selectedLocationId && (
-                        <Chip 
-                          label={availableLocations.find(loc => loc.id === selectedLocationId)?.code || selectedLocationId} 
-                          size="small" 
+                  {user?.primary_location_id ? (
+                    `User's assigned location: ${user.primary_location_id}`
+                  ) : (
+                    availableLocations.find(loc => loc.id === selectedLocationId)?.name || 'No location selected'
+                  )}
+                  {selectedLocationId && (
+                    <Chip 
+                      label={availableLocations.find(loc => loc.id === selectedLocationId)?.code || selectedLocationId} 
+                      size="small" 
                           sx={{ ml: 1, fontSize: '0.7rem', height: '16px' }}
-                        />
-                      )}
-                    </Typography>
+                    />
+                  )}
+                </Typography>
                   </Grid>
                 </Grid>
               </Box>
@@ -817,7 +821,7 @@ const LearnersLicenseApplicationPage: React.FC = () => {
               {/* Application Details - Detailed Focus */}
               <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
                 Application Details
-              </Typography>
+                    </Typography>
               <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
                 <Grid container spacing={1}>
                   <Grid item xs={12} md={6}>
@@ -843,15 +847,15 @@ const LearnersLicenseApplicationPage: React.FC = () => {
                     </Typography>
                   </Grid>
                   {!neverBeenRefused && (
-                    <Grid item xs={12}>
+                  <Grid item xs={12}>
                       <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Refusal Details</Typography>
                       <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                         {refusalDetails}
-                      </Typography>
+                          </Typography>
                     </Grid>
-                  )}
-                </Grid>
-              </Box>
+                      )}
+                  </Grid>
+                    </Box>
 
               {/* Biometric & Medical Data - Comprehensive */}
               <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
@@ -862,34 +866,34 @@ const LearnersLicenseApplicationPage: React.FC = () => {
                   <Grid item xs={12} md={3}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>License Photo</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                      <Chip 
-                        label={biometricData.photo ? 'Captured' : 'Required'} 
-                        size="small" 
-                        color={biometricData.photo ? 'success' : 'error'} 
+                    <Chip 
+                      label={biometricData.photo ? 'Captured' : 'Required'} 
+                      size="small" 
+                      color={biometricData.photo ? 'success' : 'error'} 
                         sx={{ fontSize: '0.7rem', height: '20px' }}
-                      />
+                    />
                     </Typography>
                   </Grid>
                   <Grid item xs={12} md={3}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Digital Signature</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                      <Chip 
+                    <Chip 
                         label={biometricData.signature ? 'Captured' : 'Required'} 
-                        size="small" 
+                      size="small" 
                         color={biometricData.signature ? 'success' : 'error'} 
                         sx={{ fontSize: '0.7rem', height: '20px' }}
-                      />
+                    />
                     </Typography>
                   </Grid>
                   <Grid item xs={12} md={3}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Fingerprint</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                      <Chip 
+                    <Chip 
                         label={biometricData.fingerprint ? 'Captured' : 'Required'} 
-                        size="small" 
+                      size="small" 
                         color={biometricData.fingerprint ? 'success' : 'error'} 
                         sx={{ fontSize: '0.7rem', height: '20px' }}
-                      />
+                    />
                     </Typography>
                   </Grid>
                   <Grid item xs={12} md={3}>
@@ -911,17 +915,17 @@ const LearnersLicenseApplicationPage: React.FC = () => {
                         />
                       )}
                     </Typography>
-                  </Grid>
+                </Grid>
                   {medicalInformation && medicalInformation.medical_restrictions.length > 0 && (
                     <Grid item xs={12}>
                       <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Medical Restrictions</Typography>
                       <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                         {medicalInformation.medical_restrictions.join(', ')}
-                      </Typography>
+                    </Typography>
                     </Grid>
                   )}
                 </Grid>
-              </Box>
+          </Box>
             </Box>
           </Paper>
         );
@@ -958,16 +962,16 @@ const LearnersLicenseApplicationPage: React.FC = () => {
         {/* Error/Success Messages */}
         {(error || success) && (
           <Box sx={{ p: 2, bgcolor: 'white' }}>
-            {error && (
+        {error && (
               <Alert severity="error" sx={{ mb: 1 }}>
-                {error}
-              </Alert>
-            )}
-            
-            {success && (
+            {error}
+          </Alert>
+        )}
+        
+        {success && (
               <Alert severity="success" sx={{ mb: 1 }} icon={<CheckCircleIcon />}>
-                {success}
-              </Alert>
+            {success}
+          </Alert>
             )}
           </Box>
         )}
@@ -979,7 +983,7 @@ const LearnersLicenseApplicationPage: React.FC = () => {
             onChange={(e, newValue) => setActiveStep(newValue)}
             variant="scrollable"
             scrollButtons="auto"
-            sx={{ 
+                    sx={{
               '& .MuiTab-root': { 
                 minHeight: 48,
                 textTransform: 'none',
@@ -996,7 +1000,7 @@ const LearnersLicenseApplicationPage: React.FC = () => {
               />
             ))}
           </Tabs>
-        </Box>
+                  </Box>
 
         {/* Tab Content */}
         <Box sx={{ 
@@ -1017,8 +1021,8 @@ const LearnersLicenseApplicationPage: React.FC = () => {
               onCancel={handleCancel}
               showHeader={false}
             />
-          </Box>
-
+                </Box>
+                
           {/* Medical Form - Always rendered but conditionally visible */}
           <Box sx={{ display: activeStep === 2 ? 'block' : 'none' }}>
             <MedicalInformationSection
@@ -1065,36 +1069,36 @@ const LearnersLicenseApplicationPage: React.FC = () => {
         {activeStep !== 0 && activeStep !== 2 && activeStep !== 3 && (
           <Box sx={{ p: 2, bgcolor: 'white', borderTop: '1px solid', borderColor: 'divider' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Button
-                onClick={handleCancel}
-                disabled={loading}
-                color="secondary"
+                  <Button
+                    onClick={handleCancel}
+                    disabled={loading}
+                    color="secondary"
                 size="small"
-              >
-                Cancel
-              </Button>
-              
+                  >
+                    Cancel
+                  </Button>
+                  
               <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button
+                  <Button
                   disabled={activeStep <= 1 || loading}
-                  onClick={handleBack}
-                  startIcon={<ArrowBackIcon />}
+                    onClick={handleBack}
+                    startIcon={<ArrowBackIcon />}
                   size="small"
-                >
-                  Back
-                </Button>
-                
-                <Button
-                  variant="contained"
+                  >
+                    Back
+                  </Button>
+                  
+                  <Button
+                    variant="contained"
                   onClick={activeStep === steps.length - 1 ? handleSubmit : handleNext}
                   disabled={!isStepValid(activeStep) || loading}
-                  startIcon={loading ? <CircularProgress size={20} /> : undefined}
+                    startIcon={loading ? <CircularProgress size={20} /> : undefined}
                   endIcon={activeStep !== steps.length - 1 ? <ArrowForwardIcon /> : undefined}
                   size="small"
-                >
+                  >
                   {loading ? 'Submitting...' : activeStep === steps.length - 1 ? 'Submit Application' : 'Next'}
-                </Button>
-              </Box>
+                  </Button>
+                </Box>
             </Box>
           </Box>
         )}
@@ -1110,12 +1114,48 @@ const LearnersLicenseApplicationPage: React.FC = () => {
             </Typography>
             <Button 
               variant="contained"
-              onClick={() => navigate('/dashboard/applications/dashboard')}
+              onClick={() => navigate('/dashboard/applications/dashboard')} 
             >
               Back to Applications
             </Button>
           </Box>
         )}
+
+        {/* Loading Backdrop */}
+        <Backdrop
+          sx={{ 
+            color: '#fff', 
+            zIndex: (theme) => theme.zIndex.drawer + 1,
+            flexDirection: 'column',
+            gap: 2
+          }}
+          open={loading}
+        >
+          <CircularProgress color="inherit" size={60} />
+          <Typography variant="h6" color="inherit">
+            Submitting learner's license application...
+          </Typography>
+          <Typography variant="body2" color="inherit" sx={{ opacity: 0.8 }}>
+            Please wait while we process your submission
+          </Typography>
+        </Backdrop>
+
+        {/* Success Snackbar */}
+        <Snackbar
+          open={showSuccessSnackbar}
+          autoHideDuration={5000}
+          onClose={() => setShowSuccessSnackbar(false)}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        >
+          <Alert 
+            onClose={() => setShowSuccessSnackbar(false)} 
+            severity="info" 
+            variant="filled"
+            sx={{ width: '100%' }}
+          >
+            Learner's license application submitted successfully!
+          </Alert>
+        </Snackbar>
       </Paper>
     </Container>
   );

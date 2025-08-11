@@ -26,7 +26,9 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  FormHelperText
+  FormHelperText,
+  Backdrop,
+  Snackbar
 } from '@mui/material';
 import {
   PersonSearch as PersonSearchIcon,
@@ -68,6 +70,7 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
+  const [showSuccessSnackbar, setShowSuccessSnackbar] = useState(false);
 
   // Person form navigation refs - no longer needed with dual navigation
   // const personNextRef = useRef<() => Promise<boolean>>();
@@ -336,8 +339,9 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
       await applicationService.updateApplicationStatus(application.id, ApplicationStatus.COMPLETED);
       
       setSuccess('Learner\'s permit capture completed successfully! License records have been created.');
+      setShowSuccessSnackbar(true);
       
-      // Navigate to applications dashboard
+      // Navigate to applications dashboard after showing success
       setTimeout(() => {
         navigate('/dashboard/applications/dashboard', {
           state: { 
@@ -345,7 +349,7 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
             application 
           }
         });
-      }, 2000);
+      }, 3000);
 
     } catch (err: any) {
       console.error('Submission error:', err);
@@ -722,6 +726,42 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
             </Button>
           </Box>
         )}
+
+        {/* Loading Backdrop */}
+        <Backdrop
+          sx={{ 
+            color: '#fff', 
+            zIndex: (theme) => theme.zIndex.drawer + 1,
+            flexDirection: 'column',
+            gap: 2
+          }}
+          open={loading}
+        >
+          <CircularProgress color="inherit" size={60} />
+          <Typography variant="h6" color="inherit">
+            Submitting learner's permit capture...
+          </Typography>
+          <Typography variant="body2" color="inherit" sx={{ opacity: 0.8 }}>
+            Please wait while we process your submission
+          </Typography>
+        </Backdrop>
+
+        {/* Success Snackbar */}
+        <Snackbar
+          open={showSuccessSnackbar}
+          autoHideDuration={5000}
+          onClose={() => setShowSuccessSnackbar(false)}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        >
+          <Alert 
+            onClose={() => setShowSuccessSnackbar(false)} 
+            severity="info" 
+            variant="filled"
+            sx={{ width: '100%' }}
+          >
+            Learner's permit capture completed successfully!
+          </Alert>
+        </Snackbar>
       </Paper>
     </Container>
   );
