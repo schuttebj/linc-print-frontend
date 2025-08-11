@@ -333,7 +333,7 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
   // Render functions INSIDE the component
   const renderPhotoContent = () => {
     return (
-      <Box sx={{ p: 2 }}>
+      <Box>
         {/* License Photo - 2:1 Column Layout */}
         <Box sx={{ 
           backgroundColor: 'rgb(255, 255, 255)',
@@ -415,7 +415,7 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
 
   const renderSignatureContent = () => {
     return (
-      <Box sx={{ p: 2 }}>
+      <Box>
         {/* Digital Signature - 50/50 Column Layout */}
         <Box sx={{ 
           backgroundColor: 'rgb(255, 255, 255)',
@@ -495,7 +495,7 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
 
   const renderFingerprintContent = () => {
     return (
-      <Box sx={{ p: 2 }}>
+      <Box>
         {/* Fingerprint Capture - 2:1 Column Layout with simplified container */}
         <Box sx={{ 
           backgroundColor: 'rgb(255, 255, 255)',
