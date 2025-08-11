@@ -445,7 +445,7 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
                 {/* Signature Preview */}
                 <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>Preview</Typography>
                 <Box sx={{
-                  width: '100%',
+                  width: 'auto',
                   height: '100px',
                   border: '2px dashed #ccc',
                   borderRadius: '8px',
@@ -497,16 +497,7 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
     return (
       <Box sx={{ p: 2 }}>
         {/* Fingerprint Capture - 2:1 Column Layout with simplified container */}
-        <Box sx={{ 
-          backgroundColor: 'rgb(255, 255, 255)',
-          color: 'rgb(33, 33, 33)',
-          backgroundImage: 'none',
-          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-          transition: 'box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1)',
-          overflow: 'hidden',
-          borderRadius: '12px',
-          p: 2
-        }}>
+        <Box>
           <Grid container spacing={2}>
             {/* Left Column - Instructions and Controls (2/3 width) */}
             <Grid item xs={8}>
@@ -521,13 +512,6 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
                 <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.9rem', mb: 2 }}>
                   Place your finger on the scanner or use the digital fingerprint capture. This provides enhanced security for your license.
                 </Typography>
-                
-                {/* Development Mode Alert */}
-                <Alert severity="info" sx={{ mb: 2, py: 0.5 }}>
-                  <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-                    <strong>DEVELOPMENT MODE:</strong> Fingerprint integration is not yet implemented. This is a placeholder for future functionality.
-                  </Typography>
-                </Alert>
                 
                 <FingerprintCapture
                   onFingerprintCapture={handleFingerprintCapture}
