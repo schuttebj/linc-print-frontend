@@ -375,7 +375,6 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
                 height: '100%',
                 justifyContent: 'center'
               }}>
-                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>Preview</Typography>
                 <Box sx={{
                   width: '120px',
                   height: '160px',
@@ -454,7 +453,8 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
                   alignItems: 'center',
                   justifyContent: 'center',
                   bgcolor: '#f9f9f9',
-                  overflow: 'hidden'
+                  overflow: 'hidden',
+                  aspectRatio: '5.8/2'
                 }}>
                   {value.signature ? (
                     <img 
@@ -480,7 +480,7 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
             
             {/* Right Column - Signature Capture Area */}
             <Grid item xs={6}>
-              <Box sx={{ '& > *': { minHeight: '200px' } }}>
+              <Box sx={{ '& > *': { minHeight: '150px' } }}>
                 <SignatureCapture
                   onSignatureCapture={handleSignatureCapture}
                   disabled={saving || disabled}

@@ -244,14 +244,6 @@ const SignatureCapture: React.FC<SignatureCaptureProps> = ({
           </Button>
         </Grid>
       </Grid>
-
-      <Alert severity="info" sx={{ mt: 2 }}>
-        <Typography variant="body2">
-          <TouchIcon sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'middle' }} />
-          <strong>Instructions:</strong> Use your mouse to draw your signature in the box above. 
-          On touch devices, use your finger to sign. Click "Clear" to start over or "Save Signature" when finished.
-        </Typography>
-      </Alert>
     </>
   );
 };
