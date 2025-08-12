@@ -1005,89 +1005,95 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
 
               {/* Driver Restrictions */}
               <Grid item xs={12} md={6}>
-                <Box>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Driver Restrictions</InputLabel>
-                    <Select
-                      multiple
-                      size="small"
-                      value={license.restrictions?.driver_restrictions || ['00']}
-                      label="Driver Restrictions"
-                      onChange={(e) => updateRestrictions(index, 'driver_restrictions', Array.isArray(e.target.value) ? e.target.value : [])}
-                      disabled={disabled}
-                      renderValue={() => 'Click to select restrictions...'}
-                    >
-                      <MenuItem value="00">00 - None</MenuItem>
-                      <MenuItem value="01">01 - Corrective Lenses Required</MenuItem>
-                      <MenuItem value="02">02 - Artificial Limb/Prosthetics</MenuItem>
-                    </Select>
-                  </FormControl>
-                  
-                  {/* Separate display area for chips with working delete buttons */}
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
-                    {(license.restrictions?.driver_restrictions || ['00']).map((value) => (
-                      <Chip 
-                        key={value} 
-                        label={`${value} - ${getRestrictionDisplayName(value)}`}
-                        size="small"
-                        color="primary"
-                        sx={{ fontSize: '0.65rem', height: '20px' }}
-                        onDelete={value !== '00' || (license.restrictions?.driver_restrictions || ['00']).length > 1 ? () => {
-                          const currentValues = license.restrictions?.driver_restrictions || ['00'];
-                          const newValues = currentValues.filter(v => v !== value);
-                          updateRestrictions(index, 'driver_restrictions', newValues);
-                        } : undefined}
-                      />
-                    ))}
-                  </Box>
-                </Box>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Driver Restrictions</InputLabel>
+                  <Select
+                    multiple
+                    size="small"
+                    value={license.restrictions?.driver_restrictions || ['00']}
+                    label="Driver Restrictions"
+                    onChange={(e) => updateRestrictions(index, 'driver_restrictions', Array.isArray(e.target.value) ? e.target.value : [])}
+                    disabled={disabled}
+                    renderValue={(selected) => (
+                      <Box 
+                        sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}
+                        onClick={(e) => e.stopPropagation()} // Prevent Select from opening when clicking on the Box
+                      >
+                        {(selected as string[]).map((value) => (
+                          <Chip 
+                            key={value} 
+                            label={`${value} - ${getRestrictionDisplayName(value)}`}
+                            size="small"
+                            color="primary"
+                            sx={{ fontSize: '0.65rem', height: '20px' }}
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent Select from opening when clicking chip
+                            }}
+                            onDelete={value !== '00' || selected.length > 1 ? (e) => {
+                              e?.stopPropagation(); // Prevent Select from opening
+                              const newValues = selected.filter(v => v !== value);
+                              updateRestrictions(index, 'driver_restrictions', newValues);
+                            } : undefined}
+                          />
+                        ))}
+                      </Box>
+                    )}
+                  >
+                    <MenuItem value="00">00 - None</MenuItem>
+                    <MenuItem value="01">01 - Corrective Lenses Required</MenuItem>
+                    <MenuItem value="02">02 - Artificial Limb/Prosthetics</MenuItem>
+                  </Select>
+                </FormControl>
               </Grid>
 
               {/* Vehicle Restrictions */}
               <Grid item xs={12} md={6}>
-                <Box>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Vehicle Restrictions</InputLabel>
-                    <Select
-                      multiple
-                      size="small"
-                      value={license.restrictions?.vehicle_restrictions || ['00']}
-                      label="Vehicle Restrictions"
-                      onChange={(e) => updateRestrictions(index, 'vehicle_restrictions', Array.isArray(e.target.value) ? e.target.value : [])}
-                      disabled={disabled}
-                      renderValue={() => 'Click to select restrictions...'}
-                    >
-                      <MenuItem value="00">00 - None</MenuItem>
-                      <MenuItem value="01">01 - Automatic Transmission Only</MenuItem>
-                      <MenuItem value="02">02 - Electric Powered Vehicles Only</MenuItem>
-                      <MenuItem value="03">03 - Vehicles Adapted for Physical Disabilities</MenuItem>
-                      {applicationtype === ApplicationType.DRIVERS_LICENSE_CAPTURE && (
-                        <>
-                          <MenuItem value="04">04 - Tractor Vehicles Only</MenuItem>
-                          <MenuItem value="05">05 - Industrial/Agriculture Vehicles Only</MenuItem>
-                        </>
-                      )}
-                    </Select>
-                  </FormControl>
-                  
-                  {/* Separate display area for chips with working delete buttons */}
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
-                    {(license.restrictions?.vehicle_restrictions || ['00']).map((value) => (
-                      <Chip 
-                        key={value} 
-                        label={`${value} - ${getRestrictionDisplayName(value)}`}
-                        size="small"
-                        color="secondary"
-                        sx={{ fontSize: '0.65rem', height: '20px' }}
-                        onDelete={value !== '00' || (license.restrictions?.vehicle_restrictions || ['00']).length > 1 ? () => {
-                          const currentValues = license.restrictions?.vehicle_restrictions || ['00'];
-                          const newValues = currentValues.filter(v => v !== value);
-                          updateRestrictions(index, 'vehicle_restrictions', newValues);
-                        } : undefined}
-                      />
-                    ))}
-                  </Box>
-                </Box>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Vehicle Restrictions</InputLabel>
+                  <Select
+                    multiple
+                    size="small"
+                    value={license.restrictions?.vehicle_restrictions || ['00']}
+                    label="Vehicle Restrictions"
+                    onChange={(e) => updateRestrictions(index, 'vehicle_restrictions', Array.isArray(e.target.value) ? e.target.value : [])}
+                    disabled={disabled}
+                    renderValue={(selected) => (
+                      <Box 
+                        sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}
+                        onClick={(e) => e.stopPropagation()} // Prevent Select from opening when clicking on the Box
+                      >
+                        {(selected as string[]).map((value) => (
+                          <Chip 
+                            key={value} 
+                            label={`${value} - ${getRestrictionDisplayName(value)}`}
+                            size="small"
+                            color="secondary"
+                            sx={{ fontSize: '0.65rem', height: '20px' }}
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent Select from opening when clicking chip
+                            }}
+                            onDelete={value !== '00' || selected.length > 1 ? (e) => {
+                              e?.stopPropagation(); // Prevent Select from opening
+                              const newValues = selected.filter(v => v !== value);
+                              updateRestrictions(index, 'vehicle_restrictions', newValues);
+                            } : undefined}
+                          />
+                        ))}
+                      </Box>
+                    )}
+                  >
+                    <MenuItem value="00">00 - None</MenuItem>
+                    <MenuItem value="01">01 - Automatic Transmission Only</MenuItem>
+                    <MenuItem value="02">02 - Electric Powered Vehicles Only</MenuItem>
+                    <MenuItem value="03">03 - Vehicles Adapted for Physical Disabilities</MenuItem>
+                    {applicationtype === ApplicationType.DRIVERS_LICENSE_CAPTURE && (
+                      <>
+                        <MenuItem value="04">04 - Tractor Vehicles Only</MenuItem>
+                        <MenuItem value="05">05 - Industrial/Agriculture Vehicles Only</MenuItem>
+                      </>
+                    )}
+                  </Select>
+                </FormControl>
               </Grid>
 
               {/* Verification */}
