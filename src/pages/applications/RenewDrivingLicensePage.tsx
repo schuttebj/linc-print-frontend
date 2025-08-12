@@ -90,8 +90,7 @@ const RenewDrivingLicensePage: React.FC = () => {
   const [biometricFormValid, setBiometricFormValid] = useState(false);
   const [biometricStep, setBiometricStep] = useState(0);
   const [replacementReason, setReplacementReason] = useState<string>('');
-  const [officeOfIssue, setOfficeOfIssue] = useState<string>('');
-  const [dateOfChange, setDateOfChange] = useState<string>('');
+
   const [licenseVerification, setLicenseVerification] = useState<LicenseVerificationData | null>(null);
   const [medicalInformation, setMedicalInformation] = useState<MedicalInformation | null>(null);
   const [biometricData, setBiometricData] = useState<BiometricData>({});
@@ -445,9 +444,7 @@ const RenewDrivingLicensePage: React.FC = () => {
         const hasValidLicenses = existingLicenses.length > 0;
         const hasLocation = !!user?.primary_location_id || !!selectedLocationId;
         const hasRenewalReason = !!replacementReason;
-        const hasOfficeOfIssue = !!officeOfIssue.trim();
-        const hasDateOfChange = !!dateOfChange;
-        return hasValidLicenses && hasLocation && hasRenewalReason && hasOfficeOfIssue && hasDateOfChange && !!selectedPerson && !!selectedPerson.id;
+        return hasValidLicenses && hasLocation && hasRenewalReason && !!selectedPerson && !!selectedPerson.id;
       case 2:
         const age = selectedPerson?.birth_date ? calculateAge(selectedPerson.birth_date) : 0;
         const isMedicalMandatory = licenseVerification?.all_license_categories?.some(cat => requiresMedicalAlways(cat as LicenseCategory)) || 
@@ -561,9 +558,7 @@ const RenewDrivingLicensePage: React.FC = () => {
         license_category: primaryCategory, // System will determine what to renew
         medical_information: cleanMedicalInfo,
         license_verification: licenseVerification,
-        replacement_reason: replacementReason as any,
-        office_of_issue: officeOfIssue,
-        date_of_change: dateOfChange
+        replacement_reason: replacementReason as any
       };
 
       console.log('User info:', user);
@@ -850,34 +845,7 @@ const RenewDrivingLicensePage: React.FC = () => {
                     </FormControl>
                   </Grid>
 
-                  {/* Office of Issue */}
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      label="Office of Issue"
-                      value={officeOfIssue}
-                      onChange={(e) => setOfficeOfIssue(e.target.value)}
-                      required
-                      placeholder="Enter the office where the current license was issued"
-                      size="small"
-                      {...getFieldStyling('officeOfIssue', officeOfIssue, true)}
-                    />
-                  </Grid>
 
-                  {/* Date of Change */}
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      type="date"
-                      label="Date of Renewal Request"
-                      value={dateOfChange}
-                      onChange={(e) => setDateOfChange(e.target.value)}
-                      InputLabelProps={{ shrink: true }}
-                      required
-                      size="small"
-                      {...getFieldStyling('dateOfChange', dateOfChange, true)}
-                    />
-                  </Grid>
                 </Grid>
               </CardContent>
             </Card>
@@ -975,18 +943,7 @@ const RenewDrivingLicensePage: React.FC = () => {
                       />
                     </Typography>
                   </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Office of Issue</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                      {officeOfIssue}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Date of Renewal Request</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                      {dateOfChange}
-                    </Typography>
-                  </Grid>
+
                 </Grid>
               </Box>
 
