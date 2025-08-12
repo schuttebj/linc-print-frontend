@@ -132,7 +132,8 @@ import {
   VisionTestData,
   MedicalConditions,
   ProcessedBiometricFile,
-  ProfessionalPermitCategory
+  ProfessionalPermitCategory,
+  ReplacementReason
 } from '../../types';
 
 interface ApplicationFormWrapperProps {
@@ -715,7 +716,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
           errors.push('Date of change is required');
         }
         // Police report validation for theft/loss
-        if ((formData.replacement_reason === 'theft' || formData.replacement_reason === 'loss') && formData.police_reported) {
+        if ((formData.replacement_reason === ReplacementReason.STOLEN || formData.replacement_reason === ReplacementReason.LOST) && formData.police_reported) {
           if (!formData.police_station?.trim()) {
             errors.push('Police station is required when theft/loss is reported');
           }
@@ -1536,14 +1537,14 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                   police_reference_number: ''
                 }))}
               >
-                <MenuItem value="theft">Theft</MenuItem>
-                <MenuItem value="loss">Loss</MenuItem>
-                <MenuItem value="destruction">Destruction</MenuItem>
-                <MenuItem value="recovery">Recovery</MenuItem>
+                <MenuItem value={ReplacementReason.STOLEN}>Theft</MenuItem>
+                <MenuItem value={ReplacementReason.LOST}>Loss</MenuItem>
+                <MenuItem value={ReplacementReason.DAMAGED}>Destruction</MenuItem>
+                <MenuItem value={ReplacementReason.OTHER}>Recovery</MenuItem>
                 {/* Additional options for renewal applications only */}
                 {formData.application_type === ApplicationType.RENEWAL && [
-                  <MenuItem key="new_card" value="new_card">New Card</MenuItem>,
-                  <MenuItem key="change_particulars" value="change_particulars">Change of Particulars (ID, name, address)</MenuItem>
+                  <MenuItem key="new_card" value={ReplacementReason.OTHER}>New Card</MenuItem>,
+                  <MenuItem key="change_particulars" value={ReplacementReason.OTHER}>Change of Particulars (ID, name, address)</MenuItem>
                 ]}
               </Select>
             </FormControl>
@@ -1580,7 +1581,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         </Grid>
 
           {/* Police Report Section - Only for theft/loss */}
-          {(formData.replacement_reason === 'theft' || formData.replacement_reason === 'loss') && (
+          {(formData.replacement_reason === ReplacementReason.STOLEN || formData.replacement_reason === ReplacementReason.LOST) && (
             <>
         <Grid item xs={12}>
                 <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
@@ -1598,7 +1599,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                       }))}
                     />
                   }
-                  label={`${formData.replacement_reason === 'theft' ? 'Theft' : 'Loss'} reported to Police`}
+                  label={`${formData.replacement_reason === ReplacementReason.STOLEN ? 'Theft' : 'Loss'} reported to Police`}
                 />
         </Grid>
 
