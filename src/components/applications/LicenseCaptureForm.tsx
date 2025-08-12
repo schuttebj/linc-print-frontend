@@ -130,8 +130,8 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
           : LicenseCategory.B,
         issue_date: '',
         restrictions: {
-          driver_restrictions: [],
-          vehicle_restrictions: []
+          driver_restrictions: ['00'], // Default to "00 - None"
+          vehicle_restrictions: ['00']  // Default to "00 - None"
         },
         verified: false,
         verification_notes: ''
@@ -558,8 +558,8 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
         : LicenseCategory.B,
       issue_date: '',
       restrictions: {
-        driver_restrictions: [],
-        vehicle_restrictions: []
+        driver_restrictions: ['00'], // Default to "00 - None"
+        vehicle_restrictions: ['00']  // Default to "00 - None"
       },
       verified: false,
       verification_notes: ''
@@ -641,14 +641,14 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
   const getRestrictionDisplayName = (code: string): string => {
     // Driver restrictions mapping
     const driverRestrictionMap: Record<string, string> = {
-      '00': 'No Driver Restrictions',
+      '00': 'None',
       '01': 'Corrective Lenses Required',
       '02': 'Artificial Limb/Prosthetics'
     };
     
     // Vehicle restrictions mapping
     const vehicleRestrictionMap: Record<string, string> = {
-      '00': 'No Vehicle Restrictions',
+      '00': 'None',
       '01': 'Automatic Transmission Only',
       '02': 'Electric Powered Vehicles Only',
       '03': 'Vehicles Adapted for Physical Disabilities',
@@ -657,6 +657,30 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
     };
     
     return driverRestrictionMap[code] || vehicleRestrictionMap[code] || `Restriction ${code}`;
+  };
+
+  // Helper function to manage automatic "00 - None" default logic
+  const updateRestrictions = (licenseIndex: number, restrictionType: 'driver_restrictions' | 'vehicle_restrictions', selectedValues: string[]) => {
+    const license = captureData.captured_licenses[licenseIndex];
+    
+    // If no values selected or only "00" is selected when others are added, automatically add "00"
+    let finalValues = [...selectedValues];
+    
+    // If selecting other restrictions while "00" is present, remove "00"
+    if (finalValues.length > 1 && finalValues.includes('00')) {
+      finalValues = finalValues.filter(value => value !== '00');
+    }
+    
+    // If no restrictions selected, automatically add "00" as default
+    if (finalValues.length === 0) {
+      finalValues = ['00'];
+    }
+    
+    // Update the license with new restrictions
+    updateLicense(licenseIndex, 'restrictions', {
+      ...license.restrictions,
+      [restrictionType]: finalValues
+    });
   };
 
   const validateDate = (dateValue: string): string => {
@@ -970,27 +994,29 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                   <Select
                     multiple
                     size="small"
-                    value={license.restrictions?.driver_restrictions || []}
+                    value={license.restrictions?.driver_restrictions || ['00']}
                     label="Driver Restrictions"
-                    onChange={(e) => updateLicense(index, 'restrictions', {
-                      ...license.restrictions,
-                      driver_restrictions: Array.isArray(e.target.value) ? e.target.value : []
-                    })}
+                    onChange={(e) => updateRestrictions(index, 'driver_restrictions', Array.isArray(e.target.value) ? e.target.value : [])}
                     disabled={disabled}
                     renderValue={(selected) => (
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                         {(selected as string[]).map((value) => (
                           <Chip 
                             key={value} 
-                            label={getRestrictionDisplayName(value)} 
+                            label={`${value} - ${getRestrictionDisplayName(value)}`}
                             size="small"
                             color="primary"
                             sx={{ fontSize: '0.65rem', height: '20px' }}
+                            onDelete={value !== '00' || selected.length > 1 ? () => {
+                              const newValues = selected.filter(v => v !== value);
+                              updateRestrictions(index, 'driver_restrictions', newValues);
+                            } : undefined}
                           />
                         ))}
                       </Box>
                     )}
                   >
+                    <MenuItem value="00">00 - None</MenuItem>
                     <MenuItem value="01">01 - Corrective Lenses Required</MenuItem>
                     <MenuItem value="02">02 - Artificial Limb/Prosthetics</MenuItem>
                   </Select>
@@ -1004,27 +1030,29 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                   <Select
                     multiple
                     size="small"
-                    value={license.restrictions?.vehicle_restrictions || []}
+                    value={license.restrictions?.vehicle_restrictions || ['00']}
                     label="Vehicle Restrictions"
-                    onChange={(e) => updateLicense(index, 'restrictions', {
-                      ...license.restrictions,
-                      vehicle_restrictions: Array.isArray(e.target.value) ? e.target.value : []
-                    })}
+                    onChange={(e) => updateRestrictions(index, 'vehicle_restrictions', Array.isArray(e.target.value) ? e.target.value : [])}
                     disabled={disabled}
                     renderValue={(selected) => (
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                         {(selected as string[]).map((value) => (
                           <Chip 
                             key={value} 
-                            label={getRestrictionDisplayName(value)} 
+                            label={`${value} - ${getRestrictionDisplayName(value)}`}
                             size="small"
                             color="secondary"
                             sx={{ fontSize: '0.65rem', height: '20px' }}
+                            onDelete={value !== '00' || selected.length > 1 ? () => {
+                              const newValues = selected.filter(v => v !== value);
+                              updateRestrictions(index, 'vehicle_restrictions', newValues);
+                            } : undefined}
                           />
                         ))}
                       </Box>
                     )}
                   >
+                    <MenuItem value="00">00 - None</MenuItem>
                     <MenuItem value="01">01 - Automatic Transmission Only</MenuItem>
                     <MenuItem value="02">02 - Electric Powered Vehicles Only</MenuItem>
                     <MenuItem value="03">03 - Vehicles Adapted for Physical Disabilities</MenuItem>
