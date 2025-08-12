@@ -239,8 +239,8 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
         license_category: LicenseCategory.B, // Default to B category
         issue_date: '',
         restrictions: {
-          driver_restrictions: [],
-          vehicle_restrictions: []
+          driver_restrictions: ['00'], // Default to "00 - None"
+          vehicle_restrictions: ['00']  // Default to "00 - None"
         },
         verified: false,
         verification_notes: ''

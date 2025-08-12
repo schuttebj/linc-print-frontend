@@ -120,7 +120,23 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
   // Initialize data from props
   useEffect(() => {
     if (value) {
-      setCaptureData(value);
+      // Ensure existing data has default "00" values if restrictions are empty
+      const processedValue = {
+        ...value,
+        captured_licenses: value.captured_licenses.map(license => ({
+          ...license,
+          restrictions: {
+            driver_restrictions: license.restrictions?.driver_restrictions?.length > 0 
+              ? license.restrictions.driver_restrictions 
+              : ['00'],
+            vehicle_restrictions: license.restrictions?.vehicle_restrictions?.length > 0 
+              ? license.restrictions.vehicle_restrictions 
+              : ['00']
+          }
+        }))
+      };
+      setCaptureData(processedValue);
+      onChange(processedValue);
     } else {
       // Always start with at least one license for capture forms
       const initialLicense: CapturedLicense = {
@@ -1007,7 +1023,8 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                             size="small"
                             color="primary"
                             sx={{ fontSize: '0.65rem', height: '20px' }}
-                            onDelete={value !== '00' || selected.length > 1 ? () => {
+                            onDelete={value !== '00' || selected.length > 1 ? (event) => {
+                              event?.stopPropagation(); // Prevent dropdown from opening
                               const newValues = selected.filter(v => v !== value);
                               updateRestrictions(index, 'driver_restrictions', newValues);
                             } : undefined}
@@ -1043,7 +1060,8 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                             size="small"
                             color="secondary"
                             sx={{ fontSize: '0.65rem', height: '20px' }}
-                            onDelete={value !== '00' || selected.length > 1 ? () => {
+                            onDelete={value !== '00' || selected.length > 1 ? (event) => {
+                              event?.stopPropagation(); // Prevent dropdown from opening
                               const newValues = selected.filter(v => v !== value);
                               updateRestrictions(index, 'vehicle_restrictions', newValues);
                             } : undefined}

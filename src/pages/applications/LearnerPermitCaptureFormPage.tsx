@@ -243,8 +243,8 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
         license_category: LicenseCategory.LEARNERS_1, // Default to LEARNERS_1 (only valid database value)
         issue_date: '',
         restrictions: {
-          driver_restrictions: [],
-          vehicle_restrictions: []
+          driver_restrictions: ['00'], // Default to "00 - None"
+          vehicle_restrictions: ['00']  // Default to "00 - None"
         },
         verified: false,
         verification_notes: ''
