@@ -4,11 +4,9 @@ import {
   Container,
   Paper,
   Typography,
-  Stepper,
-  Step,
-  StepLabel,
-  StepContent,
   Box,
+  Tabs,
+  Tab,
   Button,
   Alert,
   Grid,
@@ -24,7 +22,9 @@ import {
   FormControlLabel,
   Checkbox,
   TextField,
-  CircularProgress
+  CircularProgress,
+  Backdrop,
+  Snackbar
 } from '@mui/material';
 import {
   PersonSearch as PersonSearchIcon,
@@ -44,6 +44,10 @@ import {
 import PersonFormWrapper from '../../components/PersonFormWrapper';
 import MedicalInformationSection from '../../components/applications/MedicalInformationSection';
 import BiometricCaptureStep, { BiometricData } from '../../components/applications/BiometricCaptureStep';
+import ForeignLicenseCaptureForm, { 
+  ForeignLicenseCaptureData, 
+  validateForeignLicenseCaptureData 
+} from '../../components/applications/ForeignLicenseCaptureForm';
 import { 
   Person, 
   ApplicationType, 
@@ -57,31 +61,27 @@ import { useAuth } from '../../contexts/AuthContext';
 import { applicationService } from '../../services/applicationService';
 import { lookupService } from '../../services/lookupService';
 import type { Location } from '../../services/lookupService';
+import { API_ENDPOINTS, getAuthToken } from '../../config/api';
 
 const steps = [
   {
-    label: 'Select Person',
-    description: 'Choose existing person or register new applicant',
+    label: 'Person',
     icon: <PersonSearchIcon />
   },
   {
     label: 'Foreign License Details',
-    description: 'Enter foreign license details for conversion',
     icon: <AssignmentIcon />
   },
   {
     label: 'Medical Assessment',
-    description: 'Complete vision test and medical clearance',
     icon: <MedicalIcon />
   },
   {
     label: 'Biometric Data',
-    description: 'Capture photo, signature, and fingerprint',
     icon: <CameraIcon />
   },
   {
-    label: 'Review & Submit',
-    description: 'Review application details and submit',
+    label: 'Review',
     icon: <PreviewIcon />
   }
 ];
@@ -90,86 +90,241 @@ const ForeignConversionApplicationPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // State
+  // Form state
   const [activeStep, setActiveStep] = useState(0);
+  const [personStep, setPersonStep] = useState(0);
+  const [medicalStep, setMedicalStep] = useState(0);
+  const [biometricStep, setBiometricStep] = useState(0);
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
+  const [personFormValid, setPersonFormValid] = useState(false);
+  const [medicalFormValid, setMedicalFormValid] = useState(false);
+  const [biometricFormValid, setBiometricFormValid] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<LicenseCategory | null>(null);
   const [medicalInformation, setMedicalInformation] = useState<MedicalInformation | null>(null);
   const [biometricData, setBiometricData] = useState<BiometricData>({});
   const [neverBeenRefused, setNeverBeenRefused] = useState<boolean>(true);
   const [refusalDetails, setRefusalDetails] = useState<string>('');
-  
-  // Foreign license details
-  const [foreignLicenseNumber, setForeignLicenseNumber] = useState<string>('');
-  const [foreignCountry, setForeignCountry] = useState<string>('');
-  const [foreignIssueDate, setForeignIssueDate] = useState<string>('');
-  const [foreignExpiryDate, setForeignExpiryDate] = useState<string>('');
-  const [foreignLicenseType, setForeignLicenseType] = useState<string>('');
-
-  // UI State  
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [foreignLicenseCaptureData, setForeignLicenseCaptureData] = useState<ForeignLicenseCaptureData | null>(null);
+  const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [availableLocations, setAvailableLocations] = useState<Location[]>([]);
-  const [selectedLocationId, setSelectedLocationId] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>('');
+  const [success, setSuccess] = useState<string>('');
+  const [showSuccessSnackbar, setShowSuccessSnackbar] = useState(false);
 
-  // Load locations on component mount
-  useEffect(() => {
-    const loadLocations = async () => {
-      try {
-        const locations = await lookupService.getLocations();
-        setAvailableLocations(locations || []);
-        
-        // Auto-select if user has primary location
-        if (user?.primary_location_id) {
-          setSelectedLocationId(user.primary_location_id);
-        }
-      } catch (err) {
-        console.error('Failed to load locations:', err);
-        setError('Failed to load locations. Please refresh the page.');
-      }
+  // Form validation helper functions
+  const getFieldStyling = (fieldName: string, value: any, isRequired: boolean = true) => {
+    let fieldState = 'default';
+    
+    if (isRequired && (!value || (typeof value === 'string' && value.trim() === ''))) {
+      fieldState = 'required';
+    } else if (value && value.trim() !== '') {
+      fieldState = 'valid';
+    }
+
+    const baseSx = {
+      '& .MuiOutlinedInput-root': {
+        '& fieldset': {
+          borderWidth: '2px',
+          transition: 'border-color 0.2s ease-in-out',
+        },
+        '&:hover fieldset': {
+          borderWidth: '2px',
+        },
+        '&.Mui-focused fieldset': {
+          borderWidth: '2px',
+        },
+      },
     };
 
+    switch (fieldState) {
+      case 'required':
+        return {
+          sx: {
+            ...baseSx,
+            '& .MuiOutlinedInput-root': {
+              ...baseSx['& .MuiOutlinedInput-root'],
+              '& fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['& fieldset'],
+                borderColor: '#ff9800', // Orange for required fields
+              },
+              '&:hover fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['&:hover fieldset'],
+                borderColor: '#f57c00', // Darker orange on hover
+              },
+              '&.Mui-focused fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['&.Mui-focused fieldset'],
+                borderColor: '#ff9800', // Orange when focused
+              },
+            },
+          },
+          error: false,
+          helperText: isRequired ? 'This field is required' : undefined,
+        };
+
+      case 'valid':
+        return {
+          sx: {
+            ...baseSx,
+            '& .MuiOutlinedInput-root': {
+              ...baseSx['& .MuiOutlinedInput-root'],
+              '& fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['& fieldset'],
+                borderColor: '#4caf50', // Green for valid fields
+              },
+              '&:hover fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['&:hover fieldset'],
+                borderColor: '#388e3c', // Darker green on hover
+              },
+              '&.Mui-focused fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['&.Mui-focused fieldset'],
+                borderColor: '#4caf50', // Green when focused
+              },
+            },
+          },
+          error: false,
+          helperText: undefined,
+        };
+
+      default:
+        return {
+          sx: baseSx,
+          error: false,
+          helperText: undefined,
+        };
+    }
+  };
+
+  const getSelectStyling = (fieldName: string, value: any, isRequired: boolean = true) => {
+    let fieldState = 'default';
+    
+    if (isRequired && (!value || value === '')) {
+      fieldState = 'required';
+    } else if (value && value !== '') {
+      fieldState = 'valid';
+    }
+
+    const baseSx = {
+      '& .MuiOutlinedInput-root': {
+        '& fieldset': {
+          borderWidth: '2px',
+          transition: 'border-color 0.2s ease-in-out',
+        },
+        '&:hover fieldset': {
+          borderWidth: '2px',
+        },
+        '&.Mui-focused fieldset': {
+          borderWidth: '2px',
+        },
+      },
+    };
+
+    switch (fieldState) {
+      case 'required':
+        return {
+          sx: {
+            ...baseSx,
+            '& .MuiOutlinedInput-root': {
+              ...baseSx['& .MuiOutlinedInput-root'],
+              '& fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['& fieldset'],
+                borderColor: '#ff9800', // Orange for required fields
+              },
+              '&:hover fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['&:hover fieldset'],
+                borderColor: '#f57c00', // Darker orange on hover
+              },
+              '&.Mui-focused fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['&.Mui-focused fieldset'],
+                borderColor: '#ff9800', // Orange when focused
+              },
+            },
+          },
+          error: false,
+        };
+
+      case 'valid':
+        return {
+          sx: {
+            ...baseSx,
+            '& .MuiOutlinedInput-root': {
+              ...baseSx['& .MuiOutlinedInput-root'],
+              '& fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['& fieldset'],
+                borderColor: '#4caf50', // Green for valid fields
+              },
+              '&:hover fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['&:hover fieldset'],
+                borderColor: '#388e3c', // Darker green on hover
+              },
+              '&.Mui-focused fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['&.Mui-focused fieldset'],
+                borderColor: '#4caf50', // Green when focused
+              },
+            },
+          },
+          error: false,
+        };
+
+      default:
+        return {
+          sx: baseSx,
+          error: false,
+        };
+    }
+  };
+
+  // Load available locations for admin users
+  useEffect(() => {
+    const loadLocations = async () => {
+      if (user && !user.primary_location_id) {
+        try {
+          const token = getAuthToken();
+          if (!token) return;
+
+          const response = await fetch(API_ENDPOINTS.locations, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setAvailableLocations(data.locations || []);
+          }
+        } catch (error) {
+          console.error('Error loading locations:', error);
+        }
+      }
+    };
     loadLocations();
   }, [user]);
 
-  const getAvailableConversionCategories = () => {
-    return [
-      {
-        value: LicenseCategory.B,
-        label: 'B - Light Motor Vehicle',
-        description: 'Standard passenger cars and light vehicles (up to 3.5t)',
-        minAge: 18,
-        icon: <DirectionsCarIcon />
-      },
-      {
-        value: LicenseCategory.C,
-        label: 'C - Heavy Goods Vehicle',
-        description: 'Heavy goods vehicles (over 7.5t)',
-        minAge: 21,
-        icon: <DirectionsCarIcon />
-      },
-      {
-        value: LicenseCategory.D,
-        label: 'D - Passenger Transport',
-        description: 'Buses and coaches (over 16 passengers)',
-        minAge: 24,
-        icon: <DirectionsCarIcon />
-      }
-    ];
-  };
-
-  const getCommonCountries = () => {
-    return [
-      'South Africa',
-      'France',
-      'United Kingdom',
-      'United States',
-      'Canada',
-      'Australia',
-      'Germany',
-      'Other'
-    ];
+  // Tab label renderer with completion indicators
+  const renderTabLabel = (step: any, index: number) => {
+    const isCompleted = index < activeStep && isStepValid(index);
+    const isCurrent = activeStep === index;
+    
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          color: isCompleted ? 'success.main' : isCurrent ? 'primary.main' : 'text.secondary' 
+        }}>
+          {isCompleted ? <CheckCircleIcon fontSize="small" /> : step.icon}
+        </Box>
+        <Typography 
+          variant="body2" 
+          sx={{ 
+            fontWeight: isCurrent ? 'bold' : 'normal',
+            color: isCompleted ? 'success.main' : isCurrent ? 'primary.main' : 'text.secondary'
+          }}
+        >
+          {step.label}
+        </Typography>
+      </Box>
+    );
   };
 
   const calculateAge = (birthDate: string): number => {
@@ -189,29 +344,31 @@ const ForeignConversionApplicationPage: React.FC = () => {
   const isStepValid = (step: number): boolean => {
     switch (step) {
       case 0: // Person step
-        return selectedPerson !== null && selectedPerson.id !== undefined;
+        return !!selectedPerson && !!selectedPerson.id;
       case 1: // Foreign license details step
-        const locationValid = user?.primary_location_id || selectedLocationId;
-        return locationValid && selectedCategory !== null && 
-               foreignLicenseNumber.trim() !== '' && 
-               foreignCountry.trim() !== '' && 
-               foreignIssueDate.trim() !== '' && 
-               foreignExpiryDate.trim() !== '';
+        const hasLocation = !!user?.primary_location_id || !!selectedLocationId;
+        const hasValidForeignLicenseData = !!foreignLicenseCaptureData && 
+          validateForeignLicenseCaptureData(foreignLicenseCaptureData).isValid;
+        const hasRefusalInfo = neverBeenRefused || !!refusalDetails.trim();
+        return hasLocation && hasValidForeignLicenseData && hasRefusalInfo && !!selectedPerson && !!selectedPerson.id;
       case 2: // Medical step
         if (!selectedPerson || !selectedCategory) return false;
         const age = selectedPerson.birth_date ? calculateAge(selectedPerson.birth_date) : 0;
         const isMedicalMandatory = requiresMedicalAlways(selectedCategory) || 
                                  (age >= 60 && requiresMedical60Plus(selectedCategory));
         return !isMedicalMandatory || (medicalInformation?.medical_clearance === true);
-      case 3:
-        // Biometric step - photo and signature required for foreign conversion (card-eligible)
+      case 3: // Biometric step
+        // Photo and signature required for foreign conversion (card-eligible)
         const hasPhoto = !!biometricData.photo;
         const hasRequiredSignature = !!biometricData.signature; // Required for foreign conversions
         return hasPhoto && hasRequiredSignature;
-      case 4:
+      case 4: // Review step
         const finalHasPhoto = !!biometricData.photo;
-        const finalHasRequiredSignature = !!biometricData.signature; // Required for foreign conversions
-        return !!selectedPerson && !!selectedPerson.id && !!selectedCategory && !!foreignLicenseNumber && finalHasPhoto && finalHasRequiredSignature;
+        const finalHasRequiredSignature = !!biometricData.signature; 
+        const finalHasValidForeignLicenseData = !!foreignLicenseCaptureData && 
+          validateForeignLicenseCaptureData(foreignLicenseCaptureData).isValid;
+        return !!selectedPerson && !!selectedPerson.id && !!selectedCategory && 
+               finalHasValidForeignLicenseData && finalHasPhoto && finalHasRequiredSignature;
       default:
         return false;
     }
@@ -226,6 +383,54 @@ const ForeignConversionApplicationPage: React.FC = () => {
   // Get location ID to use
   const getLocationId = (): string => {
     return user?.primary_location_id || selectedLocationId;
+  };
+
+  // PersonFormWrapper callbacks
+  const handlePersonValidationChange = (step: number, isValid: boolean) => {
+    console.log('🎯 PersonFormWrapper validation callback:', { step, isValid });
+    setPersonFormValid(isValid);
+  };
+
+  const handlePersonStepChange = (step: number, canAdvance: boolean) => {
+    console.log('🎯 PersonFormWrapper step change:', step, 'canAdvance:', canAdvance);
+    setPersonStep(step);
+  };
+
+  const handleContinueToApplication = () => {
+    console.log('🎯 User confirmed to continue to foreign license conversion');
+    setActiveStep(1);
+  };
+
+  // Medical form callbacks
+  const handleMedicalValidationChange = (step: number, isValid: boolean) => {
+    console.log('🎯 MedicalInformationSection validation callback:', { step, isValid });
+    setMedicalFormValid(isValid);
+  };
+
+  const handleMedicalStepChange = (step: number, canAdvance: boolean) => {
+    console.log('🎯 MedicalInformationSection step change:', step, 'canAdvance:', canAdvance);
+    setMedicalStep(step);
+  };
+
+  const handleContinueToBiometric = () => {
+    console.log('🎯 User confirmed to continue to biometric capture');
+    setActiveStep(3);
+  };
+
+  // Biometric form callbacks
+  const handleBiometricValidationChange = (step: number, isValid: boolean) => {
+    console.log('🎯 BiometricCaptureStep validation callback:', { step, isValid });
+    setBiometricFormValid(isValid);
+  };
+
+  const handleBiometricStepChange = (step: number, canAdvance: boolean) => {
+    console.log('🎯 BiometricCaptureStep step change:', step, 'canAdvance:', canAdvance);
+    setBiometricStep(step);
+  };
+
+  const handleContinueToReview = () => {
+    console.log('🎯 User confirmed to continue to review');
+    setActiveStep(4);
   };
 
   // Navigation handlers
@@ -251,16 +456,23 @@ const ForeignConversionApplicationPage: React.FC = () => {
     console.log('Person ID:', person?.id);
     setSelectedPerson(person);
     setError('');
+  };
+
+  // Foreign license capture handler
+  const handleForeignLicenseCaptureChange = (data: ForeignLicenseCaptureData | null) => {
+    setForeignLicenseCaptureData(data);
     
-    // Auto-advance to next step
-    setTimeout(() => {
-      setActiveStep(1);
-    }, 500);
+    // Auto-select category from first foreign license if available
+    if (data && data.foreign_licenses.length > 0 && data.foreign_licenses[0].license_category_madagascar) {
+      setSelectedCategory(data.foreign_licenses[0].license_category_madagascar);
+    }
+    
+    setError('');
   };
 
   // Submit handler
   const handleSubmit = async () => {
-    if (!selectedPerson || !selectedCategory) {
+    if (!selectedPerson || !selectedCategory || !foreignLicenseCaptureData) {
       setError('Missing required data for submission');
       return;
     }
@@ -315,28 +527,43 @@ const ForeignConversionApplicationPage: React.FC = () => {
       console.log('Selected person ID:', selectedPerson.id);
       console.log('Selected location ID:', locationId);
       console.log('Selected category:', selectedCategory);
-      console.log('Foreign license details:', {
-        number: foreignLicenseNumber,
-        country: foreignCountry,
-        issueDate: foreignIssueDate,
-        expiryDate: foreignExpiryDate,
-        type: foreignLicenseType
-      });
+      console.log('Foreign license capture data:', foreignLicenseCaptureData);
       console.log('Submitting application data:', applicationData);
 
       const application = await applicationService.createApplication(applicationData);
       
-      setSuccess('Foreign driving license conversion application submitted successfully!');
+      // Store biometric data if captured
+      if (biometricData.photo || biometricData.signature || biometricData.fingerprint) {
+        try {
+          console.log('Storing biometric data for application:', application.id);
+          const biometricResult = await applicationService.storeBiometricDataForApplication(
+            application.id,
+            biometricData
+          );
+          
+          if (biometricResult.success) {
+            console.log('✅ Biometric data stored successfully:', biometricResult);
+          } else {
+            console.warn('⚠️ Some biometric data failed to store:', biometricResult.errors);
+          }
+        } catch (biometricError) {
+          console.error('Biometric storage error (non-critical):', biometricError);
+          // Don't fail the entire application for biometric storage issues
+        }
+      }
       
-      // Navigate to application details
+      setSuccess('Foreign driving license conversion application submitted successfully!');
+      setShowSuccessSnackbar(true);
+      
+      // Navigate to applications dashboard after showing success
       setTimeout(() => {
-        navigate(`/dashboard/applications/${application.id}`, {
+        navigate('/dashboard/applications/dashboard', {
           state: { 
             message: 'Foreign driving license conversion application submitted successfully',
             application 
           }
         });
-      }, 2000);
+      }, 3000);
 
     } catch (err: any) {
       console.error('Submission error:', err);
@@ -364,38 +591,48 @@ const ForeignConversionApplicationPage: React.FC = () => {
   // Render step content
   const renderStepContent = (step: number) => {
     switch (step) {
-      case 0: // Person step
-        return (
-          <PersonFormWrapper
-            mode="application"
-            onSuccess={handlePersonSelected}
-            title=""
-            subtitle="Select existing person or register new applicant"
-            showHeader={false}
-          />
-        );
+      case 0: // Person step - handled separately to preserve state
+        return null;
 
-      case 1: // Foreign license details step - Section B
+      case 1: // Foreign license details step
         return (
           <Box>
-            <Typography variant="h6" gutterBottom>
-              Section B: Foreign License Conversion Details
-            </Typography>
-
             {/* Location Selection for Admin Users */}
             {user && !user.primary_location_id && (
-              <Card sx={{ mb: 3 }}>
+              <Card 
+                elevation={0}
+                sx={{ 
+                  mb: 2,
+                  bgcolor: 'white',
+                  boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                  borderRadius: 2
+                }}
+              >
                 <CardHeader 
-                  title="Select Processing Location" 
-                  avatar={<LocationOnIcon />}
+                  sx={{ p: 1.5 }}
+                  title={
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <LocationOnIcon color="primary" fontSize="small" />
+                      <Typography variant="subtitle1" sx={{ fontSize: '1rem', fontWeight: 600 }}>
+                        Select Processing Location
+                      </Typography>
+                    </Box>
+                  }
                 />
-                <CardContent>
-                  <FormControl fullWidth required error={!!error && !selectedLocationId}>
+                <CardContent sx={{ p: 1.5, pt: 0 }}>
+                  <FormControl 
+                    fullWidth 
+                    required 
+                    size="small" 
+                    error={!!error && !selectedLocationId}
+                    {...getSelectStyling('location', selectedLocationId, true)}
+                  >
                     <InputLabel>Processing Location</InputLabel>
                     <Select
                       value={selectedLocationId}
                       onChange={handleLocationChange}
                       label="Processing Location"
+                      size="small"
                     >
                       {Array.isArray(availableLocations) && availableLocations.map((location) => (
                         <MenuItem key={location.id} value={location.id}>
@@ -406,395 +643,209 @@ const ForeignConversionApplicationPage: React.FC = () => {
                     {!!error && !selectedLocationId && (
                       <FormHelperText>Please select a processing location</FormHelperText>
                     )}
+                    {!selectedLocationId && (
+                      <FormHelperText sx={{ color: '#ff9800' }}>This field is required</FormHelperText>
+                    )}
                   </FormControl>
                 </CardContent>
               </Card>
             )}
 
-            <Grid container spacing={3}>
-              {/* Madagascar License Category Selection */}
-              <Grid item xs={12}>
-                <FormControl fullWidth required>
-                  <InputLabel>Madagascar License Category (to convert to)</InputLabel>
-                  <Select
-                    value={selectedCategory}
-                    onChange={(e) => {
-                      setSelectedCategory(e.target.value as LicenseCategory);
-                      setError('');
-                    }}
-                    label="Madagascar License Category (to convert to)"
-                  >
-                    {getAvailableConversionCategories().map((category) => (
-                      <MenuItem key={category.value} value={category.value}>
-                        <Box display="flex" alignItems="center">
-                          {category.icon}
-                          <Box sx={{ ml: 2 }}>
-                            <Typography variant="body2" fontWeight="bold">
-                              {category.label}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              Min age: {category.minAge} years • {category.description}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              {/* Foreign License Details */}
-              <Grid item xs={12}>
-                <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
-                  Foreign License Details
-                </Typography>
-              </Grid>
-
-              {/* Foreign License Number */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Foreign License Number"
-                  value={foreignLicenseNumber}
-                  onChange={(e) => setForeignLicenseNumber(e.target.value)}
-                  required
-                  placeholder="Enter foreign license number"
-                />
-              </Grid>
-
-              {/* Country of Issue */}
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth required>
-                  <InputLabel>Country of Issue</InputLabel>
-                  <Select
-                    value={foreignCountry}
-                    onChange={(e) => setForeignCountry(e.target.value)}
-                    label="Country of Issue"
-                  >
-                    {getCommonCountries().map((country) => (
-                      <MenuItem key={country} value={country}>
-                        <Box display="flex" alignItems="center">
-                          <LanguageIcon sx={{ mr: 1 }} />
-                          {country}
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              {/* Issue Date */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  type="date"
-                  label="Foreign License Issue Date"
-                  value={foreignIssueDate}
-                  onChange={(e) => setForeignIssueDate(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                  required
-                />
-              </Grid>
-
-              {/* Expiry Date */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  type="date"
-                  label="Foreign License Expiry Date"
-                  value={foreignExpiryDate}
-                  onChange={(e) => setForeignExpiryDate(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                  required
-                />
-              </Grid>
-
-              {/* Foreign License Type/Categories */}
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Foreign License Type/Categories"
-                  value={foreignLicenseType}
-                  onChange={(e) => setForeignLicenseType(e.target.value)}
-                  placeholder="Enter the categories/classes from your foreign license (e.g., Class C, Category B, etc.)"
-                  multiline
-                  rows={2}
-                />
-              </Grid>
-
-              {/* Age validation warning */}
-              {selectedPerson && selectedCategory && selectedPerson.birth_date && (
-                (() => {
-                  const age = calculateAge(selectedPerson.birth_date);
-                  const requiredAge = getAvailableConversionCategories().find(cat => cat.value === selectedCategory)?.minAge || 18;
-                  return age < requiredAge ? (
-                    <Grid item xs={12}>
-                      <Alert severity="warning" icon={<WarningIcon />}>
-                        <Typography variant="body2">
-                          <strong>Age Requirement Not Met:</strong> Applicant is {age} years old, but category {selectedCategory} requires minimum {requiredAge} years.
-                        </Typography>
-                      </Alert>
-                    </Grid>
-                  ) : null;
-                })()
-              )}
-
-              {/* Foreign License Expiry Warning */}
-              {foreignExpiryDate && (
-                (() => {
-                  const expiryDate = new Date(foreignExpiryDate);
-                  const today = new Date();
-                  const isExpired = expiryDate < today;
-                  const daysUntilExpiry = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-                  
-                  if (isExpired) {
-                    return (
-                      <Grid item xs={12}>
-                        <Alert severity="error" icon={<WarningIcon />}>
-                          <Typography variant="body2">
-                            <strong>Expired Foreign License:</strong> Your foreign license expired on {foreignExpiryDate}. 
-                            Additional documentation may be required.
-                          </Typography>
-                        </Alert>
-                      </Grid>
-                    );
-                  } else if (daysUntilExpiry <= 30) {
-                    return (
-                      <Grid item xs={12}>
-                        <Alert severity="warning" icon={<WarningIcon />}>
-                          <Typography variant="body2">
-                            <strong>Foreign License Expires Soon:</strong> Your foreign license expires in {daysUntilExpiry} days. 
-                            Consider completing the conversion process promptly.
-                          </Typography>
-                        </Alert>
-                      </Grid>
-                    );
-                  }
-                  return null;
-                })()
-              )}
-
-              {/* Never Been Refused Declaration */}
-              <Grid item xs={12}>
-                <Card variant="outlined" sx={{ bgcolor: 'grey.50' }}>
-                  <CardContent>
-                    <Typography variant="subtitle1" gutterBottom>
-                      Declaration - Section B
-                    </Typography>
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={neverBeenRefused}
-                          onChange={(e) => {
-                            setNeverBeenRefused(e.target.checked);
-                            if (e.target.checked) {
-                              setRefusalDetails('');
-                            }
-                          }}
-                        />
-                      }
-                      label="I have never been refused a driving license or had a driving license suspended or revoked in any country"
-                    />
-                    
-                    {!neverBeenRefused && (
-                      <TextField
-                        fullWidth
-                        label="Details of Previous Refusal/Suspension/Revocation"
-                        value={refusalDetails}
-                        onChange={(e) => setRefusalDetails(e.target.value)}
-                        multiline
-                        rows={3}
-                        sx={{ mt: 2 }}
-                        required
-                        placeholder="Please provide details of any previous refusal, suspension, or revocation in any country"
-                      />
-                    )}
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              {/* Information Card */}
-              <Grid item xs={12}>
-                <Card variant="outlined" sx={{ bgcolor: 'info.50' }}>
-                  <CardContent sx={{ py: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      <strong>Section B:</strong> Foreign license conversion allows holders of valid foreign driving licenses 
-                      to convert to a Madagascar license. You must provide the original foreign license and supporting documents.
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
-          </Box>
-        );
-
-      case 2: // Medical step - Section D
-        return (
-          <Box>
-            <Typography variant="h6" gutterBottom>
-              Section D: Medical Assessment
-            </Typography>
-            
-            {(() => {
-              const age = selectedPerson?.birth_date ? calculateAge(selectedPerson.birth_date) : 0;
-              const isMedicalMandatory = requiresMedicalAlways(selectedCategory) || 
-                                       (age >= 60 && requiresMedical60Plus(selectedCategory));
-
-              return (
-                <>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                    Complete vision test and medical clearance requirements for license conversion
-                  </Typography>
-
-                  {isMedicalMandatory && (
-                    <Alert severity="info" sx={{ mb: 3 }}>
-                      <Typography variant="body2">
-                        <strong>Medical assessment is mandatory</strong> for {
-                          age >= 60 ? 'applicants 60+ years' : 'this license category'
-                        }
-                      </Typography>
-                    </Alert>
-                  )}
-
-                  <MedicalInformationSection
-                    value={medicalInformation}
-                    onChange={setMedicalInformation}
-                    disabled={false}
-                    isRequired={isMedicalMandatory}
-                  />
-                </>
-              );
-            })()}
-          </Box>
-        );
-
-      case 3: // Biometric step
-        return (
-          <Box>
-            <Typography variant="h6" gutterBottom>
-              Section E: Biometric Data Capture
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Capture photo, signature, and fingerprint for license production
-            </Typography>
-            
-            <BiometricCaptureStep
-              value={biometricData}
-              onChange={setBiometricData}
+            <ForeignLicenseCaptureForm
+              value={foreignLicenseCaptureData}
+              onChange={handleForeignLicenseCaptureChange}
+              disabled={loading}
+              personBirthDate={selectedPerson?.birth_date}
             />
+
+            {/* Declaration Section */}
+            <Card 
+              elevation={0}
+              sx={{ 
+                mt: 2,
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2
+              }}
+            >
+              <CardHeader 
+                sx={{ p: 1.5 }}
+                title={
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <CheckCircleIcon color="primary" fontSize="small" />
+                    <Typography variant="subtitle1" sx={{ fontSize: '1rem', fontWeight: 600 }}>
+                      Declaration
+                    </Typography>
+                  </Box>
+                }
+                subheader="Verify that you have never been refused a license"
+              />
+              <CardContent sx={{ p: 1.5, pt: 0 }}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={neverBeenRefused}
+                      onChange={(e) => {
+                        setNeverBeenRefused(e.target.checked);
+                        if (e.target.checked) {
+                          setRefusalDetails('');
+                        }
+                      }}
+                      size="small"
+                    />
+                  }
+                  label={
+                    <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                      I have never been refused a driving license or had a driving license suspended or revoked in any country
+                    </Typography>
+                  }
+                />
+                
+                {!neverBeenRefused && (
+                  <Box sx={{ mt: 1.5 }}>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={3}
+                      label="Please provide details of refusal"
+                      value={refusalDetails}
+                      onChange={(e) => setRefusalDetails(e.target.value)}
+                      required
+                      placeholder="Provide details about previous refusal including date, reason, and issuing authority..."
+                      size="small"
+                      {...getFieldStyling('refusalDetails', refusalDetails, !neverBeenRefused)}
+                    />
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
           </Box>
         );
+
+      case 2: // Medical step - handled separately to preserve state
+        return null;
+
+      case 3: // Biometric step - handled separately to preserve state
+        return null;
 
       case 4: // Review step
         return (
-          <Box>
-            <Typography variant="h6" gutterBottom>
-              Review Foreign License Conversion Application
-            </Typography>
+          <Paper 
+            elevation={0}
+            sx={{ 
+              bgcolor: 'white',
+              boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+              borderRadius: 2
+            }}
+          >
+            <Box sx={{ p: 1.5 }}>
+              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, fontSize: '1rem', mb: 1 }}>
+                Review & Submit
+              </Typography>
 
-            {/* Processing Location Display */}
-            <Card sx={{ mb: 3 }}>
-              <CardHeader 
-                title="Processing Location" 
-                avatar={<LocationOnIcon />}
-              />
-              <CardContent>
-                <Typography variant="body1">
-                  {user?.primary_location_id ? (
-                    `User's assigned location: ${user.primary_location_id}`
-                  ) : (
-                    availableLocations.find(loc => loc.id === selectedLocationId)?.name || 'No location selected'
-                  )}
-                  {selectedLocationId && (
-                    <Chip 
-                      label={availableLocations.find(loc => loc.id === selectedLocationId)?.code || selectedLocationId} 
-                      size="small" 
-                      sx={{ ml: 1 }}
-                    />
-                  )}
+              <Alert severity="info" sx={{ mb: 1.5, py: 0.5 }}>
+                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                  Please review the foreign license conversion application details before submission.
                 </Typography>
-              </CardContent>
-            </Card>
-            
-            {/* Person Details */}
-            <Card sx={{ mb: 3 }}>
-              <CardHeader title="Applicant Details" />
-              <CardContent>
-                <Grid container spacing={2}>
+              </Alert>
+
+              {/* Person Summary - Compact */}
+              <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
+                <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+                  Foreign License Conversion Applicant
+                </Typography>
+                <Grid container spacing={1}>
                   <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Name</Typography>
-                    <Typography variant="body1">
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Full Name</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                       {selectedPerson?.surname}, {selectedPerson?.first_name} {selectedPerson?.middle_name}
                     </Typography>
                   </Grid>
                   <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Madagascar ID</Typography>
-                    <Typography variant="body1">
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Madagascar ID</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                       {selectedPerson?.aliases?.find(alias => alias.is_primary)?.document_number || 'Not available'}
                     </Typography>
                   </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Birth Date</Typography>
-                    <Typography variant="body1">{selectedPerson?.birth_date}</Typography>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Age</Typography>
-                    <Typography variant="body1">
-                      {selectedPerson?.birth_date ? calculateAge(selectedPerson.birth_date) : 'Unknown'} years
+                </Grid>
+              </Box>
+
+              {/* Processing Location - Compact */}
+              <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
+                <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+                  Processing Location
+                </Typography>
+                <Grid container spacing={1}>
+                  <Grid item xs={12}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Location</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {user?.primary_location_id ? (
+                        `User's assigned location: ${user.primary_location_id}`
+                      ) : (
+                        availableLocations.find(loc => loc.id === selectedLocationId)?.name || 'No location selected'
+                      )}
+                      {selectedLocationId && (
+                        <Chip 
+                          label={availableLocations.find(loc => loc.id === selectedLocationId)?.code || selectedLocationId} 
+                          size="small" 
+                          sx={{ ml: 1, fontSize: '0.6rem', height: '18px' }}
+                        />
+                      )}
                     </Typography>
                   </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Nationality</Typography>
-                    <Typography variant="body1">{selectedPerson?.nationality_code}</Typography>
-                  </Grid>
                 </Grid>
-              </CardContent>
-            </Card>
+              </Box>
 
-            {/* Application Details */}
-            <Card sx={{ mb: 3 }}>
-              <CardHeader title="Conversion Details" />
-              <CardContent>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Application Type</Typography>
-                    <Typography variant="body1">Foreign License Conversion</Typography>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Madagascar Category</Typography>
-                    <Chip label={selectedCategory} size="small" color="primary" />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Foreign License Number</Typography>
-                    <Typography variant="body1">{foreignLicenseNumber}</Typography>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Country of Issue</Typography>
-                    <Typography variant="body1">{foreignCountry}</Typography>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Issue Date</Typography>
-                    <Typography variant="body1">{foreignIssueDate}</Typography>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Expiry Date</Typography>
-                    <Typography variant="body1">{foreignExpiryDate}</Typography>
-                  </Grid>
-                  {foreignLicenseType && (
-                    <Grid item xs={12}>
-                      <Typography variant="body2" color="text.secondary">Foreign License Type</Typography>
-                      <Typography variant="body1">{foreignLicenseType}</Typography>
+              {/* Foreign Licenses - Detailed Focus */}
+              <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+                Foreign Licenses for Conversion ({foreignLicenseCaptureData?.foreign_licenses?.length || 0})
+              </Typography>
+              {foreignLicenseCaptureData?.foreign_licenses?.map((license, index) => (
+                <Box key={license.id} sx={{ mb: 0.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
+                  <Grid container spacing={1}>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Foreign License</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                        {license.license_number} ({license.country_of_issue})
+                      </Typography>
                     </Grid>
-                  )}
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Madagascar Category</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                        <Chip label={license.license_category_madagascar} size="small" color="primary" sx={{ fontSize: '0.6rem', height: '18px' }} />
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Foreign Category</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                        {license.license_category_foreign}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Validity</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                        {license.issue_date} to {license.expiry_date}
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                </Box>
+              ))}
+
+              {/* Declaration */}
+              <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
+                <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+                  Declaration
+                </Typography>
+                <Grid container spacing={1}>
                   <Grid item xs={12}>
-                    <Typography variant="body2" color="text.secondary">Declaration</Typography>
-                    <Typography variant="body1">
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Previous Refusals</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                       {neverBeenRefused ? (
-                        <Chip label="Never been refused" size="small" color="success" />
+                        <Chip label="Never been refused" size="small" color="success" sx={{ fontSize: '0.6rem', height: '18px' }} />
                       ) : (
                         <>
-                          <Chip label="Previously refused" size="small" color="warning" />
-                          <Typography variant="body2" sx={{ mt: 1 }}>
+                          <Chip label="Previously refused" size="small" color="warning" sx={{ fontSize: '0.6rem', height: '18px' }} />
+                          <Typography variant="body2" sx={{ mt: 0.5, fontSize: '0.75rem' }}>
                             <strong>Details:</strong> {refusalDetails}
                           </Typography>
                         </>
@@ -802,71 +853,79 @@ const ForeignConversionApplicationPage: React.FC = () => {
                     </Typography>
                   </Grid>
                 </Grid>
-              </CardContent>
-            </Card>
+              </Box>
 
-            {/* Medical Information */}
-            {medicalInformation && (
-              <Card sx={{ mb: 3 }}>
-                <CardHeader title="Medical Assessment" />
-                <CardContent>
-                  <Typography variant="body2" color="text.secondary">Medical Clearance</Typography>
-                  <Chip 
-                    label={medicalInformation.medical_clearance ? 'Cleared' : 'Not Cleared'} 
-                    size="small" 
-                    color={medicalInformation.medical_clearance ? 'success' : 'error'} 
-                  />
-                  {medicalInformation.medical_restrictions.length > 0 && (
-                    <Box sx={{ mt: 1 }}>
-                      <Typography variant="body2" color="text.secondary">Restrictions</Typography>
-                      <Typography variant="body1">{medicalInformation.medical_restrictions.join(', ')}</Typography>
-                    </Box>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Biometric Information */}
-            <Card sx={{ mb: 3 }}>
-              <CardHeader title="Biometric Data" />
-              <CardContent>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} md={4}>
-                    <Typography variant="body2" color="text.secondary">License Photo</Typography>
-                    <Chip 
-                      label={biometricData.photo ? 'Captured' : 'Not Captured'} 
-                      size="small" 
-                      color={biometricData.photo ? 'success' : 'default'} 
-                    />
+              {/* Medical & Biometric Data - Comprehensive */}
+              <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+                Medical Assessment & Biometric Data
+              </Typography>
+              <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
+                <Grid container spacing={1}>
+                  <Grid item xs={12} md={3}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>License Photo</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      <Chip
+                        label={biometricData.photo ? 'Captured' : 'Required'}
+                        size="small"
+                        color={biometricData.photo ? 'success' : 'error'} 
+                        sx={{ fontSize: '0.6rem', height: '18px' }}
+                      />
+                    </Typography>
                   </Grid>
-                  <Grid item xs={12} md={4}>
-                    <Typography variant="body2" color="text.secondary">Digital Signature</Typography>
-                    <Chip
-                      label={biometricData.signature ? 'Captured' : 'Required'}
-                      color={biometricData.signature ? 'success' : 'warning'}
-                      size="small"
-                    />
+                  <Grid item xs={12} md={3}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Digital Signature</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      <Chip
+                        label={biometricData.signature ? 'Captured' : 'Required'}
+                        size="small"
+                        color={biometricData.signature ? 'success' : 'error'} 
+                        sx={{ fontSize: '0.6rem', height: '18px' }}
+                      />
+                    </Typography>
                   </Grid>
-                  <Grid item xs={12} md={4}>
-                    <Typography variant="body2" color="text.secondary">Fingerprint</Typography>
-                    <Chip 
-                      label={biometricData.fingerprint ? 'Captured' : 'Not Captured'} 
-                      size="small" 
-                      color={biometricData.fingerprint ? 'success' : 'default'} 
-                    />
+                  <Grid item xs={12} md={3}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Fingerprint</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      <Chip
+                        label={biometricData.fingerprint ? 'Captured' : 'Optional'}
+                        size="small" 
+                        color={biometricData.fingerprint ? 'success' : 'default'}
+                        sx={{ fontSize: '0.6rem', height: '18px' }}
+                      />
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Medical Clearance</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {medicalInformation ? (
+                        <Chip 
+                          label={medicalInformation.medical_clearance ? 'Cleared' : 'Not Cleared'} 
+                          size="small"
+                          color={medicalInformation.medical_clearance ? 'success' : 'error'} 
+                          sx={{ fontSize: '0.6rem', height: '18px' }}
+                        />
+                      ) : (
+                        <Chip 
+                          label="Not Required" 
+                          size="small" 
+                          color="default" 
+                          sx={{ fontSize: '0.6rem', height: '18px' }}
+                        />
+                      )}
+                    </Typography>
                   </Grid>
                 </Grid>
-              </CardContent>
-            </Card>
+              </Box>
 
-            {/* Summary */}
-            <Alert severity="info" sx={{ mb: 2 }}>
-              <Typography variant="body2">
-                <strong>Next Steps:</strong> After submission, you must provide the original foreign license and supporting documents. 
-                A theory test may be required depending on the country of issue.
-              </Typography>
-            </Alert>
-          </Box>
+              {/* Summary */}
+              <Alert severity="info" sx={{ mt: 1.5, py: 0.5 }}>
+                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                  <strong>Next Steps:</strong> After submission, you must provide the original foreign license and supporting documents. 
+                  A theory test may be required depending on the country of issue and license category.
+                </Typography>
+              </Alert>
+            </Box>
+          </Paper>
         );
 
       default:
@@ -875,108 +934,219 @@ const ForeignConversionApplicationPage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Paper elevation={3} sx={{ p: 4 }}>
+    <Container maxWidth="lg" sx={{ py: 1, height: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column' }}>
+      <Paper 
+        elevation={0}
+        sx={{ 
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: '#f8f9fa',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          overflow: 'hidden'
+        }}
+      >
         {/* Header */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h4" gutterBottom>
+        <Box sx={{ p: 2, bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 0.5 }}>
             Foreign License Conversion Application
           </Typography>
-          <Typography variant="body1" color="text.secondary">
+          <Typography variant="body2" color="text.secondary">
             Convert your foreign driving license to a Madagascar license
           </Typography>
         </Box>
 
         {/* Error/Success Messages */}
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-          </Alert>
-        )}
-        
-        {success && (
-          <Alert severity="success" sx={{ mb: 3 }}>
-            {success}
-          </Alert>
+        {(error || success) && (
+          <Box sx={{ p: 2, bgcolor: 'white' }}>
+            {error && (
+              <Alert severity="error" sx={{ mb: 1 }}>
+                {error}
+              </Alert>
+            )}
+            
+            {success && (
+              <Alert severity="success" sx={{ mb: 1 }} icon={<CheckCircleIcon />}>
+                {success}
+              </Alert>
+            )}
+          </Box>
         )}
 
-        {/* Stepper */}
-        <Stepper activeStep={activeStep} orientation="vertical">
-          {steps.map((step, index) => (
-            <Step key={step.label}>
-              <StepLabel
-                optional={
-                  <Typography variant="caption">{step.description}</Typography>
-                }
-                StepIconComponent={() => (
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: 40,
-                      height: 40,
-                      borderRadius: '50%',
-                      bgcolor: activeStep >= index ? 'primary.main' : 'grey.300',
-                      color: activeStep >= index ? 'white' : 'grey.600',
-                    }}
-                  >
-                    {step.icon}
-                  </Box>
-                )}
+        {/* Navigation Tabs */}
+        <Box sx={{ bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Tabs 
+            value={activeStep} 
+            onChange={(e, newValue) => setActiveStep(newValue)}
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{
+              '& .MuiTab-root': { 
+                minHeight: 48,
+                textTransform: 'none',
+                fontSize: '0.875rem'
+              }
+            }}
+          >
+            {steps.map((step, index) => (
+              <Tab 
+                key={step.label}
+                label={renderTabLabel(step, index)}
+                disabled={index > 0 && !isStepValid(index - 1)}
+                sx={{ minWidth: 120 }}
+              />
+            ))}
+          </Tabs>
+        </Box>
+
+        {/* Tab Content */}
+        <Box sx={{ 
+          flexGrow: 1, 
+          overflow: (activeStep === 0 || activeStep === 2 || activeStep === 3) ? 'hidden' : 'auto',
+          p: (activeStep === 0 || activeStep === 2 || activeStep === 3) ? 0 : 2
+        }}>
+          {/* Person Form - Always rendered but conditionally visible */}
+          <Box sx={{ display: activeStep === 0 ? 'block' : 'none' }}>
+            <PersonFormWrapper
+              key="person-form-wrapper"
+              mode="application"
+              externalPersonStep={personStep}
+              onSuccess={handlePersonSelected}
+              onPersonValidationChange={handlePersonValidationChange}
+              onPersonStepChange={handlePersonStepChange}
+              onContinueToApplication={handleContinueToApplication}
+              onComplete={handleContinueToApplication} // For new persons to advance to next step
+              onCancel={handleCancel}
+              showHeader={false}
+            />
+          </Box>
+          
+          {/* Medical Form - Always rendered but conditionally visible */}
+          <Box sx={{ display: activeStep === 2 ? 'block' : 'none' }}>
+            <MedicalInformationSection
+              key="medical-form-wrapper"
+              value={medicalInformation}
+              onChange={setMedicalInformation}
+              disabled={false}
+              isRequired={(() => {
+                const age = selectedPerson?.birth_date ? calculateAge(selectedPerson.birth_date) : 0;
+                return requiresMedicalAlways(selectedCategory) || (age >= 60 && requiresMedical60Plus(selectedCategory));
+              })()}
+              selectedCategory={selectedCategory}
+              personAge={selectedPerson?.birth_date ? calculateAge(selectedPerson.birth_date) : 0}
+              externalMedicalStep={medicalStep}
+              onMedicalValidationChange={handleMedicalValidationChange}
+              onMedicalStepChange={handleMedicalStepChange}
+              onContinueToApplication={handleContinueToBiometric}
+              onCancel={handleCancel}
+              showHeader={false}
+            />
+          </Box>
+
+          {/* Biometric Form - Always rendered but conditionally visible */}
+          <Box sx={{ display: activeStep === 3 ? 'block' : 'none' }}>
+            <BiometricCaptureStep
+              key="biometric-form-wrapper"
+              value={biometricData}
+              onChange={setBiometricData}
+              disabled={false}
+              externalBiometricStep={biometricStep}
+              onBiometricValidationChange={handleBiometricValidationChange}
+              onBiometricStepChange={handleBiometricStepChange}
+              onContinueToReview={handleContinueToReview}
+              onCancel={handleCancel}
+              showHeader={false}
+            />
+          </Box>
+          
+          {/* Other step content */}
+          {activeStep !== 0 && activeStep !== 2 && activeStep !== 3 && renderStepContent(activeStep)}
+        </Box>
+
+        {/* Navigation Footer - Only shown when not on person, medical, or biometric step */}
+        {activeStep !== 0 && activeStep !== 2 && activeStep !== 3 && (
+          <Box sx={{ p: 2, bgcolor: 'white', borderTop: '1px solid', borderColor: 'divider' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Button
+                onClick={handleCancel}
+                disabled={loading}
+                color="secondary"
+                size="small"
               >
-                {step.label}
-              </StepLabel>
-              <StepContent>
-                <Box sx={{ mt: 2, mb: 2 }}>
-                  {renderStepContent(index)}
-                </Box>
+                Cancel
+              </Button>
+              
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  disabled={activeStep <= 1 || loading}
+                  onClick={handleBack}
+                  startIcon={<ArrowBackIcon />}
+                  size="small"
+                >
+                  Back
+                </Button>
                 
-                {/* Navigation Buttons */}
-                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                  <Button
-                    onClick={handleCancel}
-                    disabled={loading}
-                    color="secondary"
-                  >
-                    Cancel
-                  </Button>
-                  
-                  <Button
-                    disabled={index === 0 || loading}
-                    onClick={handleBack}
-                    startIcon={<ArrowBackIcon />}
-                  >
-                    Back
-                  </Button>
-                  
-                  <Button
-                    variant="contained"
-                    onClick={index === steps.length - 1 ? handleSubmit : handleNext}
-                    disabled={!isStepValid(index) || loading}
-                    startIcon={loading ? <CircularProgress size={20} /> : undefined}
-                    endIcon={index !== steps.length - 1 ? <ArrowForwardIcon /> : undefined}
-                  >
-                    {loading ? 'Submitting...' : index === steps.length - 1 ? 'Submit Application' : 'Next'}
-                  </Button>
-                </Box>
-              </StepContent>
-            </Step>
-          ))}
-        </Stepper>
-
-        {/* Completion Message */}
-        {activeStep === steps.length && (
-          <Paper square elevation={0} sx={{ p: 3 }}>
-            <Typography>All steps completed - foreign license conversion application submitted successfully!</Typography>
-            <Button 
-              onClick={() => navigate('/dashboard/applications/dashboard')} 
-              sx={{ mt: 1, mr: 1 }}
-            >
-              Back to Applications
-            </Button>
-          </Paper>
+                <Button
+                  variant="contained"
+                  onClick={activeStep === steps.length - 1 ? handleSubmit : handleNext}
+                  disabled={!isStepValid(activeStep) || loading}
+                  startIcon={loading ? <CircularProgress size={20} /> : undefined}
+                  endIcon={activeStep !== steps.length - 1 ? <ArrowForwardIcon /> : undefined}
+                  size="small"
+                >
+                  {loading ? 'Submitting...' : activeStep === steps.length - 1 ? 'Submit Application' : 'Next'}
+                </Button>
+              </Box>
+            </Box>
+          </Box>
         )}
+
+        {/* Loading Backdrop */}
+        <Backdrop
+          sx={{ 
+            color: '#fff', 
+            zIndex: (theme) => theme.zIndex.drawer + 1,
+            flexDirection: 'column',
+            gap: 2
+          }}
+          open={loading}
+        >
+          <CircularProgress color="inherit" size={60} />
+          <Typography variant="h6" color="inherit">
+            Submitting foreign license conversion application...
+          </Typography>
+          <Typography variant="body2" color="inherit" sx={{ opacity: 0.8 }}>
+            Please wait while we process your submission
+          </Typography>
+        </Backdrop>
+
+        {/* Success Snackbar */}
+        <Snackbar
+          open={showSuccessSnackbar}
+          autoHideDuration={5000}
+          onClose={() => setShowSuccessSnackbar(false)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        >
+          <Alert 
+            onClose={() => setShowSuccessSnackbar(false)} 
+            severity="info" 
+            variant="filled"
+            sx={{ 
+              width: '100%',
+              backgroundColor: 'rgb(25, 118, 210)',
+              color: 'white',
+              '& .MuiAlert-icon': {
+                color: 'white'
+              },
+              '& .MuiAlert-action': {
+                color: 'white'
+              }
+            }}
+          >
+            Foreign license conversion application submitted successfully!
+          </Alert>
+        </Snackbar>
       </Paper>
     </Container>
   );
