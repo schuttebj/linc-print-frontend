@@ -1016,7 +1016,13 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                     disabled={disabled}
                     renderValue={(selected) => (
                       <Box 
-                        sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}
+                        sx={{ 
+                          display: 'flex', 
+                          flexWrap: 'wrap', 
+                          gap: 0.5,
+                          zIndex: 1400, // Above MUI Select dropdown
+                          position: 'relative' // Ensure z-index takes effect
+                        }}
                         onClick={(e) => e.stopPropagation()} // Prevent Select from opening when clicking on the Box
                       >
                         {(selected as string[]).map((value) => (
@@ -1025,7 +1031,12 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                             label={`${value} - ${getRestrictionDisplayName(value)}`}
                             size="small"
                             color="primary"
-                            sx={{ fontSize: '0.65rem', height: '20px' }}
+                            sx={{ 
+                              fontSize: '0.65rem', 
+                              height: '20px',
+                              zIndex: 1400, // Above MUI Select dropdown (which is typically 1300)
+                              position: 'relative' // Ensure z-index takes effect
+                            }}
                             onClick={(e) => {
                               e.stopPropagation(); // Prevent Select from opening when clicking chip
                             }}
@@ -1059,7 +1070,13 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                     disabled={disabled}
                     renderValue={(selected) => (
                       <Box 
-                        sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}
+                        sx={{ 
+                          display: 'flex', 
+                          flexWrap: 'wrap', 
+                          gap: 0.5,
+                          zIndex: 1400, // Above MUI Select dropdown
+                          position: 'relative' // Ensure z-index takes effect
+                        }}
                         onClick={(e) => e.stopPropagation()} // Prevent Select from opening when clicking on the Box
                       >
                         {(selected as string[]).map((value) => (
@@ -1068,7 +1085,12 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                             label={`${value} - ${getRestrictionDisplayName(value)}`}
                             size="small"
                             color="secondary"
-                            sx={{ fontSize: '0.65rem', height: '20px' }}
+                            sx={{ 
+                              fontSize: '0.65rem', 
+                              height: '20px',
+                              zIndex: 1400, // Above MUI Select dropdown (which is typically 1300)
+                              position: 'relative' // Ensure z-index takes effect
+                            }}
                             onClick={(e) => {
                               e.stopPropagation(); // Prevent Select from opening when clicking chip
                             }}
