@@ -67,6 +67,7 @@ import {
   LicenseCategory,
   Location,
   MedicalInformation,
+  ReplacementReason,
   requiresMedicalAlways,
   requiresMedical60Plus
 } from '../../types';
@@ -85,7 +86,7 @@ const DuplicateLearnersLicensePage: React.FC = () => {
   const [medicalFormValid, setMedicalFormValid] = useState(false);
   const [biometricFormValid, setBiometricFormValid] = useState(false);
   const [biometricStep, setBiometricStep] = useState(0);
-  const [replacementReason, setReplacementReason] = useState<string>('');
+  const [replacementReason, setReplacementReason] = useState<ReplacementReason | ''>('');
   const [medicalInformation, setMedicalInformation] = useState<MedicalInformation | null>(null);
   const [biometricData, setBiometricData] = useState<BiometricData>({});
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
@@ -259,6 +260,14 @@ const DuplicateLearnersLicensePage: React.FC = () => {
         };
     }
   };
+
+  // Replacement reason mapping - Frontend labels to Backend enum values
+  const replacementReasonOptions = [
+    { value: ReplacementReason.STOLEN, label: 'Theft', frontendValue: 'theft' },
+    { value: ReplacementReason.LOST, label: 'Loss', frontendValue: 'loss' },
+    { value: ReplacementReason.DAMAGED, label: 'Destruction', frontendValue: 'destruction' },
+    { value: ReplacementReason.OTHER, label: 'Recovery', frontendValue: 'recovery' }
+  ];
 
   // Steps for learner's permit duplicate
   const steps = [
@@ -544,10 +553,10 @@ const DuplicateLearnersLicensePage: React.FC = () => {
       const applicationData: ApplicationCreate = {
         person_id: selectedPerson.id,
         location_id: locationId,
-        application_type: ApplicationType.LEARNERS_PERMIT_DUPLICATE,
+        application_type: ApplicationType.REPLACEMENT,
         license_category: primaryCategory, // System will determine what to duplicate
         medical_information: cleanMedicalInfo,
-        replacement_reason: replacementReason as any
+        replacement_reason: replacementReason
       };
 
       console.log('User info:', user);
@@ -816,16 +825,17 @@ const DuplicateLearnersLicensePage: React.FC = () => {
                       <Select
                         value={replacementReason}
                         onChange={(e) => {
-                          setReplacementReason(e.target.value);
+                          setReplacementReason(e.target.value as ReplacementReason);
                           setError('');
                         }}
                         label="Reason for Duplicate Request"
                         size="small"
                       >
-                        <MenuItem value="theft">Theft</MenuItem>
-                        <MenuItem value="loss">Loss</MenuItem>
-                        <MenuItem value="destruction">Destruction</MenuItem>
-                        <MenuItem value="recovery">Recovery</MenuItem>
+                        {replacementReasonOptions.map((option) => (
+                          <MenuItem key={option.value} value={option.value}>
+                            {option.label}
+                          </MenuItem>
+                        ))}
                       </Select>
                       {!replacementReason && (
                         <FormHelperText sx={{ color: '#ff9800' }}>This field is required</FormHelperText>
@@ -928,7 +938,7 @@ const DuplicateLearnersLicensePage: React.FC = () => {
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Reason</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                       <Chip 
-                        label={replacementReason.charAt(0).toUpperCase() + replacementReason.slice(1)} 
+                        label={replacementReasonOptions.find(opt => opt.value === replacementReason)?.label || replacementReason} 
                         size="small" 
                         color="primary" 
                         sx={{ fontSize: '0.7rem', height: '20px' }} 

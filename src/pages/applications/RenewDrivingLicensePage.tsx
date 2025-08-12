@@ -71,6 +71,7 @@ import {
   Location,
   MedicalInformation,
   LicenseVerificationData,
+  ReplacementReason,
   requiresMedicalAlways,
   requiresMedical60Plus
 } from '../../types';
@@ -89,7 +90,7 @@ const RenewDrivingLicensePage: React.FC = () => {
   const [medicalFormValid, setMedicalFormValid] = useState(false);
   const [biometricFormValid, setBiometricFormValid] = useState(false);
   const [biometricStep, setBiometricStep] = useState(0);
-  const [replacementReason, setReplacementReason] = useState<string>('');
+  const [replacementReason, setReplacementReason] = useState<ReplacementReason | ''>('');
 
   const [licenseVerification, setLicenseVerification] = useState<LicenseVerificationData | null>(null);
   const [medicalInformation, setMedicalInformation] = useState<MedicalInformation | null>(null);
@@ -265,6 +266,15 @@ const RenewDrivingLicensePage: React.FC = () => {
         };
     }
   };
+
+  // Replacement reason mapping - Frontend labels to Backend enum values (for renewals)
+  const replacementReasonOptions = [
+    { value: ReplacementReason.STOLEN, label: 'Theft', frontendValue: 'theft' },
+    { value: ReplacementReason.LOST, label: 'Loss', frontendValue: 'loss' },
+    { value: ReplacementReason.DAMAGED, label: 'Destruction', frontendValue: 'destruction' },
+    { value: ReplacementReason.OTHER, label: 'Recovery', frontendValue: 'recovery' },
+    { value: ReplacementReason.OTHER, label: 'New Card', frontendValue: 'new_card' }
+  ];
 
   // Steps for renewal application
   const steps = [
@@ -558,7 +568,7 @@ const RenewDrivingLicensePage: React.FC = () => {
         license_category: primaryCategory, // System will determine what to renew
         medical_information: cleanMedicalInfo,
         license_verification: licenseVerification,
-        replacement_reason: replacementReason as any
+        replacement_reason: replacementReason
       };
 
       console.log('User info:', user);
@@ -824,21 +834,21 @@ const RenewDrivingLicensePage: React.FC = () => {
                       {...getSelectStyling('renewalReason', replacementReason, true)}
                     >
                       <InputLabel>Reason for Renewal</InputLabel>
-                      <Select
-                        value={replacementReason}
-                        onChange={(e) => {
-                          setReplacementReason(e.target.value);
-                          setError('');
-                        }}
-                        label="Reason for Renewal"
+                                        <Select
+                    value={replacementReason}
+                    onChange={(e) => {
+                      setReplacementReason(e.target.value as ReplacementReason);
+                      setError('');
+                    }}
+                    label="Reason for Renewal"
                         size="small"
                       >
-                        <MenuItem value="theft">Theft</MenuItem>
-                        <MenuItem value="loss">Loss</MenuItem>
-                        <MenuItem value="destruction">Destruction</MenuItem>
-                        <MenuItem value="recovery">Recovery</MenuItem>
-                        <MenuItem value="new_card">New Card</MenuItem>
-                      </Select>
+                        {replacementReasonOptions.map((option) => (
+                          <MenuItem key={option.value + option.frontendValue} value={option.value}>
+                            {option.label}
+                          </MenuItem>
+                        ))}
+                  </Select>
                       {!replacementReason && (
                         <FormHelperText sx={{ color: '#ff9800' }}>This field is required</FormHelperText>
                       )}
@@ -934,13 +944,13 @@ const RenewDrivingLicensePage: React.FC = () => {
                 <Grid container spacing={1}>
                   <Grid item xs={12} md={6}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Renewal Reason</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                      <Chip 
-                        label={replacementReason.charAt(0).toUpperCase() + replacementReason.slice(1)} 
-                        size="small" 
+                                        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                    <Chip 
+                        label={replacementReasonOptions.find(opt => opt.value === replacementReason)?.label || replacementReason} 
+                      size="small" 
                         color="primary" 
                         sx={{ fontSize: '0.7rem', height: '20px' }} 
-                      />
+                    />
                     </Typography>
                   </Grid>
 

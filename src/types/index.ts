@@ -253,7 +253,7 @@ export interface ApplicationCreate {
   never_been_refused?: boolean;
   refusal_details?: string;
   // Section C data (for duplicates, renewals, etc.)
-  replacement_reason?: 'theft' | 'loss' | 'destruction' | 'recovery' | 'new_card' | 'change_particulars';
+  replacement_reason?: ReplacementReason;
   office_of_issue?: string;
   police_reported?: boolean;
   police_station?: string;
@@ -281,6 +281,7 @@ export enum ApplicationType {
   LEARNERS_PERMIT = 'LEARNERS_PERMIT', 
   LEARNERS_PERMIT_DUPLICATE = 'LEARNERS_PERMIT_DUPLICATE',
   RENEWAL = 'RENEWAL',
+  REPLACEMENT = 'REPLACEMENT',
   TEMPORARY_LICENSE = 'TEMPORARY_LICENSE',
   INTERNATIONAL_PERMIT = 'INTERNATIONAL_PERMIT',
   DRIVERS_LICENSE_CAPTURE = 'DRIVERS_LICENSE_CAPTURE',
@@ -584,7 +585,7 @@ export interface ApplicationFormData {
   professional_permit_refusal_details?: string;
   
   // Step 3: Section C - Notice/Replacement Details (for specific application types)
-  replacement_reason?: 'theft' | 'loss' | 'destruction' | 'recovery' | 'new_card' | 'change_particulars';
+  replacement_reason?: ReplacementReason;
   office_of_issue?: string;
   police_reported?: boolean;
   police_station?: string;
