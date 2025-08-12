@@ -924,15 +924,20 @@ const DrivingLicenseApplicationPage: React.FC = () => {
                       {...getSelectStyling('category', selectedCategory, true)}
                     >
                   <InputLabel>Driving License Category</InputLabel>
-                  <Select
-                    value={selectedCategory}
-                    onChange={(e) => {
-                      setSelectedCategory(e.target.value as LicenseCategory);
-                      setError('');
-                    }}
-                    label="Driving License Category"
+                                        <Select
+                        value={selectedCategory}
+                        onChange={(e) => {
+                          setSelectedCategory(e.target.value as LicenseCategory);
+                          setError('');
+                        }}
+                        label="Driving License Category"
                         size="small"
-                  >
+                        renderValue={(selected) => {
+                          if (!selected) return '';
+                          const selectedCategoryData = getAvailableDrivingCategories().find(cat => cat.value === selected);
+                          return selectedCategoryData ? selectedCategoryData.label : selected;
+                        }}
+                      >
                     {getAvailableDrivingCategories().map((category) => (
                           <MenuItem 
                             key={category.value} 

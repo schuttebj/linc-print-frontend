@@ -838,6 +838,11 @@ const LearnersLicenseApplicationPage: React.FC = () => {
                         }}
                         label="Learner's Permit Category"
                         size="small"
+                        renderValue={(selected) => {
+                          if (!selected) return '';
+                          const selectedCategoryData = getAvailableLearnerCategories().find(cat => cat.value === selected);
+                          return selectedCategoryData ? selectedCategoryData.label : selected;
+                        }}
                       >
                     {getAvailableLearnerCategories().map((category) => (
                       <MenuItem key={category.value} value={category.value}>
