@@ -1202,6 +1202,7 @@ const LearnersLicenseApplicationPage: React.FC = () => {
               onPersonValidationChange={handlePersonValidationChange}
               onPersonStepChange={handlePersonStepChange}
               onContinueToApplication={handleContinueToApplication}
+              onComplete={handleContinueToApplication} // For new persons to advance to next step
               onCancel={handleCancel}
               showHeader={false}
             />

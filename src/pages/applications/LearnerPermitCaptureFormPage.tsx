@@ -399,7 +399,29 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
                   }
                 />
                 <CardContent sx={{ p: 1.5, pt: 0 }}>
-                  <FormControl fullWidth required size="small" error={!!error && !selectedLocationId}>
+                  <FormControl 
+                    fullWidth 
+                    required 
+                    size="small" 
+                    error={!!error && !selectedLocationId}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        '& fieldset': {
+                          borderWidth: '2px',
+                          borderColor: !selectedLocationId ? '#ff9800' : undefined,
+                          transition: 'border-color 0.2s ease-in-out',
+                        },
+                        '&:hover fieldset': {
+                          borderWidth: '2px',
+                          borderColor: !selectedLocationId ? '#f57c00' : undefined,
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderWidth: '2px',
+                          borderColor: !selectedLocationId ? '#ff9800' : undefined,
+                        },
+                      },
+                    }}
+                  >
                     <InputLabel>Processing Location</InputLabel>
                     <Select
                       value={selectedLocationId}
@@ -415,6 +437,9 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
                     </Select>
                     {!!error && !selectedLocationId && (
                       <FormHelperText>Please select a processing location</FormHelperText>
+                    )}
+                    {!selectedLocationId && (
+                      <FormHelperText sx={{ color: '#ff9800' }}>This field is required</FormHelperText>
                     )}
                   </FormControl>
                 </CardContent>
