@@ -146,7 +146,8 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
         const hasLocation = !!user?.primary_location_id || !!selectedLocationId;
         const hasPerson = !!selectedPerson && !!selectedPerson.id;
         
-        console.log('🔍 Step 1 validation debug:', {
+        // Removed excessive validation logging to prevent memory issues
+        /*console.log('🔍 Step 1 validation debug:', {
           hasValidLicenseData,
           hasLocation,
           hasPerson,
@@ -155,7 +156,7 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
           licenseCaptureData,
           selectedPerson: selectedPerson?.id,
           selectedPersonFull: selectedPerson
-        });
+        });*/
         
         return hasValidLicenseData && hasLocation && hasPerson;
       case 2:

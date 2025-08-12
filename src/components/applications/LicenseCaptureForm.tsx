@@ -1023,11 +1023,27 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                             size="small"
                             color="primary"
                             sx={{ fontSize: '0.65rem', height: '20px' }}
-                            onDelete={value !== '00' || selected.length > 1 ? (event) => {
-                              event?.stopPropagation(); // Prevent dropdown from opening
-                              const newValues = selected.filter(v => v !== value);
-                              updateRestrictions(index, 'driver_restrictions', newValues);
+                            onDelete={value !== '00' || selected.length > 1 ? () => {
+                              // Use setTimeout to ensure the deletion happens after the render cycle
+                              setTimeout(() => {
+                                const newValues = selected.filter(v => v !== value);
+                                updateRestrictions(index, 'driver_restrictions', newValues);
+                              }, 0);
                             } : undefined}
+                            deleteIcon={value !== '00' || selected.length > 1 ? (
+                              <Box
+                                component="span"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                  const newValues = selected.filter(v => v !== value);
+                                  updateRestrictions(index, 'driver_restrictions', newValues);
+                                }}
+                                sx={{ cursor: 'pointer', '&:hover': { opacity: 0.7 } }}
+                              >
+                                ✕
+                              </Box>
+                            ) : undefined}
                           />
                         ))}
                       </Box>
@@ -1060,11 +1076,27 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                             size="small"
                             color="secondary"
                             sx={{ fontSize: '0.65rem', height: '20px' }}
-                            onDelete={value !== '00' || selected.length > 1 ? (event) => {
-                              event?.stopPropagation(); // Prevent dropdown from opening
-                              const newValues = selected.filter(v => v !== value);
-                              updateRestrictions(index, 'vehicle_restrictions', newValues);
+                            onDelete={value !== '00' || selected.length > 1 ? () => {
+                              // Use setTimeout to ensure the deletion happens after the render cycle
+                              setTimeout(() => {
+                                const newValues = selected.filter(v => v !== value);
+                                updateRestrictions(index, 'vehicle_restrictions', newValues);
+                              }, 0);
                             } : undefined}
+                            deleteIcon={value !== '00' || selected.length > 1 ? (
+                              <Box
+                                component="span"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                  const newValues = selected.filter(v => v !== value);
+                                  updateRestrictions(index, 'vehicle_restrictions', newValues);
+                                }}
+                                sx={{ cursor: 'pointer', '&:hover': { opacity: 0.7 } }}
+                              >
+                                ✕
+                              </Box>
+                            ) : undefined}
                           />
                         ))}
                       </Box>

@@ -131,16 +131,7 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
         const hasLocation = !!user?.primary_location_id || !!selectedLocationId;
         const hasPerson = !!selectedPerson && !!selectedPerson.id;
         
-        console.log('🔍 Step 1 validation debug:', {
-          hasValidLicenseData,
-          hasLocation,
-          hasPerson,
-          userPrimaryLocation: user?.primary_location_id,
-          selectedLocationId,
-          licenseCaptureData,
-          selectedPerson: selectedPerson?.id,
-          selectedPersonFull: selectedPerson
-        });
+        // Removed excessive validation logging to prevent memory issues
         
         return hasValidLicenseData && hasLocation && hasPerson;
       case 2:
