@@ -11,10 +11,8 @@ import {
   Paper,
   Typography,
   Box,
-  Stepper,
-  Step,
-  StepLabel,
-  StepContent,
+  Tabs,
+  Tab,
   Button,
   Alert,
   CircularProgress,
@@ -23,18 +21,29 @@ import {
   CardContent,
   CardHeader,
   Chip,
+  Divider,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
   FormHelperText,
   TextField,
-  Stack
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+  Stack,
+  Collapse,
+  IconButton,
+  Backdrop,
+  Snackbar
 } from '@mui/material';
 import {
   PersonSearch as PersonSearchIcon,
   Refresh as RenewalIcon,
   LocalHospital as MedicalIcon,
+  LocalHospital as LocalHospitalIcon,
   CameraAlt as CameraIcon,
   Preview as PreviewIcon,
   ArrowForward as ArrowForwardIcon,
@@ -42,7 +51,9 @@ import {
   CheckCircle as CheckCircleIcon,
   LocationOn as LocationOnIcon,
   Warning as WarningIcon,
-  Edit as EditIcon
+  Error as ErrorIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -71,7 +82,13 @@ const RenewDrivingLicensePage: React.FC = () => {
 
   // Form state
   const [activeStep, setActiveStep] = useState(0);
+  const [personStep, setPersonStep] = useState(0);
+  const [medicalStep, setMedicalStep] = useState(0);
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
+  const [personFormValid, setPersonFormValid] = useState(false);
+  const [medicalFormValid, setMedicalFormValid] = useState(false);
+  const [biometricFormValid, setBiometricFormValid] = useState(false);
+  const [biometricStep, setBiometricStep] = useState(0);
   const [replacementReason, setReplacementReason] = useState<string>('');
   const [officeOfIssue, setOfficeOfIssue] = useState<string>('');
   const [dateOfChange, setDateOfChange] = useState<string>('');
@@ -80,35 +97,196 @@ const RenewDrivingLicensePage: React.FC = () => {
   const [biometricData, setBiometricData] = useState<BiometricData>({});
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [availableLocations, setAvailableLocations] = useState<Location[]>([]);
+  const [existingLicenses, setExistingLicenses] = useState<any[]>([]);
+  const [loadingExisting, setLoadingExisting] = useState(false);
+  const [showExisting, setShowExisting] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
+  const [showSuccessSnackbar, setShowSuccessSnackbar] = useState(false);
+
+  // Form validation helper functions
+  const getFieldStyling = (fieldName: string, value: any, isRequired: boolean = true) => {
+    let fieldState = 'default';
+    
+    if (isRequired && (!value || (typeof value === 'string' && value.trim() === ''))) {
+      fieldState = 'required';
+    } else if (value && value.trim() !== '') {
+      fieldState = 'valid';
+    }
+
+    const baseSx = {
+      '& .MuiOutlinedInput-root': {
+        '& fieldset': {
+          borderWidth: '2px',
+          transition: 'border-color 0.2s ease-in-out',
+        },
+        '&:hover fieldset': {
+          borderWidth: '2px',
+        },
+        '&.Mui-focused fieldset': {
+          borderWidth: '2px',
+        },
+      },
+    };
+
+    switch (fieldState) {
+      case 'required':
+        return {
+          sx: {
+            ...baseSx,
+            '& .MuiOutlinedInput-root': {
+              ...baseSx['& .MuiOutlinedInput-root'],
+              '& fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['& fieldset'],
+                borderColor: '#ff9800', // Orange for required fields
+              },
+              '&:hover fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['&:hover fieldset'],
+                borderColor: '#f57c00', // Darker orange on hover
+              },
+              '&.Mui-focused fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['&.Mui-focused fieldset'],
+                borderColor: '#ff9800', // Orange when focused
+              },
+            },
+          },
+          error: false,
+          helperText: isRequired ? 'This field is required' : undefined,
+        };
+
+      case 'valid':
+        return {
+          sx: {
+            ...baseSx,
+            '& .MuiOutlinedInput-root': {
+              ...baseSx['& .MuiOutlinedInput-root'],
+              '& fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['& fieldset'],
+                borderColor: '#4caf50', // Green for valid fields
+              },
+              '&:hover fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['&:hover fieldset'],
+                borderColor: '#388e3c', // Darker green on hover
+              },
+              '&.Mui-focused fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['&.Mui-focused fieldset'],
+                borderColor: '#4caf50', // Green when focused
+              },
+            },
+          },
+          error: false,
+          helperText: undefined,
+        };
+
+      default:
+        return {
+          sx: baseSx,
+          error: false,
+          helperText: undefined,
+        };
+    }
+  };
+
+  const getSelectStyling = (fieldName: string, value: any, isRequired: boolean = true) => {
+    let fieldState = 'default';
+    
+    if (isRequired && (!value || value === '')) {
+      fieldState = 'required';
+    } else if (value && value !== '') {
+      fieldState = 'valid';
+    }
+
+    const baseSx = {
+      '& .MuiOutlinedInput-root': {
+        '& fieldset': {
+          borderWidth: '2px',
+          transition: 'border-color 0.2s ease-in-out',
+        },
+        '&:hover fieldset': {
+          borderWidth: '2px',
+        },
+        '&.Mui-focused fieldset': {
+          borderWidth: '2px',
+        },
+      },
+    };
+
+    switch (fieldState) {
+      case 'required':
+        return {
+          sx: {
+            ...baseSx,
+            '& .MuiOutlinedInput-root': {
+              ...baseSx['& .MuiOutlinedInput-root'],
+              '& fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['& fieldset'],
+                borderColor: '#ff9800', // Orange for required fields
+              },
+              '&:hover fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['&:hover fieldset'],
+                borderColor: '#f57c00', // Darker orange on hover
+              },
+              '&.Mui-focused fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['&.Mui-focused fieldset'],
+                borderColor: '#ff9800', // Orange when focused
+              },
+            },
+          },
+          error: false,
+        };
+
+      case 'valid':
+        return {
+          sx: {
+            ...baseSx,
+            '& .MuiOutlinedInput-root': {
+              ...baseSx['& .MuiOutlinedInput-root'],
+              '& fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['& fieldset'],
+                borderColor: '#4caf50', // Green for valid fields
+              },
+              '&:hover fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['&:hover fieldset'],
+                borderColor: '#388e3c', // Darker green on hover
+              },
+              '&.Mui-focused fieldset': {
+                ...baseSx['& .MuiOutlinedInput-root']['&.Mui-focused fieldset'],
+                borderColor: '#4caf50', // Green when focused
+              },
+            },
+          },
+          error: false,
+        };
+
+      default:
+        return {
+          sx: baseSx,
+          error: false,
+        };
+    }
+  };
 
   // Steps for renewal application
   const steps = [
     {
-      label: 'Select Person',
-      description: 'Choose person whose license needs renewal',
+      label: 'Person',
       icon: <PersonSearchIcon />
     },
     {
       label: 'Renewal Details',
-      description: 'Provide renewal information and verify existing licenses',
       icon: <RenewalIcon />
     },
     {
       label: 'Medical Assessment',
-      description: 'Complete medical clearance if required',
       icon: <MedicalIcon />
     },
     {
       label: 'Biometric Data',
-      description: 'Capture photo, signature, and fingerprint',
       icon: <CameraIcon />
     },
     {
-      label: 'Review & Submit',
-      description: 'Review renewal details and submit',
+      label: 'Review',
       icon: <PreviewIcon />
     }
   ];
@@ -151,15 +329,125 @@ const RenewDrivingLicensePage: React.FC = () => {
     loadLocations();
   }, [user]);
 
+  // Load existing licenses when person is selected - filter for driving licenses only (not permits)
+  const loadExistingLicenses = async (personId: string) => {
+    setLoadingExisting(true);
+    try {
+      console.log('Loading existing licenses for person:', personId);
+      const response = await applicationService.getPersonLicenses(personId);
+      console.log('Existing licenses response:', response);
+      const licenses = response.system_licenses || [];
+      
+      // Filter to only include driving licenses (not learner's permits)
+      const drivingLicenses = licenses.filter((license: any) => {
+        const categories = license.categories || [];
+        // Check if any category is NOT a learner's permit (1, 2, 3)
+        return categories.some((cat: string) => !['1', '2', '3'].includes(cat));
+      });
+      
+      setExistingLicenses(drivingLicenses);
+    } catch (error) {
+      console.error('Error loading existing licenses:', error);
+      setExistingLicenses([]);
+    } finally {
+      setLoadingExisting(false);
+    }
+  };
+
+  // Load existing licenses when person changes
+  useEffect(() => {
+    if (selectedPerson?.id) {
+      loadExistingLicenses(selectedPerson.id);
+    }
+  }, [selectedPerson?.id]);
+
+  // Tab label renderer with completion indicators
+  const renderTabLabel = (step: any, index: number) => {
+    const isCompleted = index < activeStep && isStepValid(index);
+    const isCurrent = activeStep === index;
+    
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          color: isCompleted ? 'success.main' : isCurrent ? 'primary.main' : 'text.secondary' 
+        }}>
+          {isCompleted ? <CheckCircleIcon fontSize="small" /> : step.icon}
+        </Box>
+        <Typography 
+          variant="body2" 
+          sx={{ 
+            fontWeight: isCurrent ? 'bold' : 'normal',
+            color: isCompleted ? 'success.main' : isCurrent ? 'primary.main' : 'text.secondary'
+          }}
+        >
+          {step.label}
+        </Typography>
+      </Box>
+    );
+  };
+
+  // PersonFormWrapper callbacks
+  const handlePersonValidationChange = (step: number, isValid: boolean) => {
+    console.log('🎯 PersonFormWrapper validation callback:', { step, isValid });
+    setPersonFormValid(isValid);
+  };
+
+  const handlePersonStepChange = (step: number, canAdvance: boolean) => {
+    console.log('🎯 PersonFormWrapper step change:', step, 'canAdvance:', canAdvance);
+    setPersonStep(step);
+  };
+
+  const handleContinueToApplication = () => {
+    console.log('🎯 User confirmed to continue to renewal application');
+    setActiveStep(1);
+  };
+
+  // Medical form callbacks (similar to PersonFormWrapper)
+  const handleMedicalValidationChange = (step: number, isValid: boolean) => {
+    console.log('🎯 MedicalInformationSection validation callback:', { step, isValid });
+    setMedicalFormValid(isValid);
+  };
+
+  const handleMedicalStepChange = (step: number, canAdvance: boolean) => {
+    console.log('🎯 MedicalInformationSection step change:', step, 'canAdvance:', canAdvance);
+    setMedicalStep(step);
+  };
+
+  const handleContinueToBiometric = () => {
+    console.log('🎯 User confirmed to continue to biometric capture');
+    setActiveStep(3);
+  };
+
+  // Biometric form callbacks (similar to PersonFormWrapper and MedicalInformationSection)
+  const handleBiometricValidationChange = (step: number, isValid: boolean) => {
+    console.log('🎯 BiometricCaptureStep validation callback:', { step, isValid });
+    setBiometricFormValid(isValid);
+  };
+
+  const handleBiometricStepChange = (step: number, canAdvance: boolean) => {
+    console.log('🎯 BiometricCaptureStep step change:', step, 'canAdvance:', canAdvance);
+    setBiometricStep(step);
+  };
+
+  const handleContinueToReview = () => {
+    console.log('🎯 User confirmed to continue to review');
+    setActiveStep(4);
+  };
+
   // Step validation
   const isStepValid = (step: number): boolean => {
     switch (step) {
       case 0:
         return !!selectedPerson && !!selectedPerson.id;
       case 1:
-        const hasValidLicenses = licenseVerification?.all_license_categories?.length > 0;
+        const hasValidLicenses = existingLicenses.length > 0;
         const hasLocation = !!user?.primary_location_id || !!selectedLocationId;
-        return hasValidLicenses && hasLocation && !!selectedPerson && !!selectedPerson.id;
+        const hasRenewalReason = !!replacementReason;
+        const hasOfficeOfIssue = !!officeOfIssue.trim();
+        const hasDateOfChange = !!dateOfChange;
+        return hasValidLicenses && hasLocation && hasRenewalReason && hasOfficeOfIssue && hasDateOfChange && !!selectedPerson && !!selectedPerson.id;
       case 2:
         const age = selectedPerson?.birth_date ? calculateAge(selectedPerson.birth_date) : 0;
         const isMedicalMandatory = licenseVerification?.all_license_categories?.some(cat => requiresMedicalAlways(cat as LicenseCategory)) || 
@@ -213,11 +501,6 @@ const RenewDrivingLicensePage: React.FC = () => {
     console.log('Person ID:', person?.id);
     setSelectedPerson(person);
     setError('');
-    
-    // Auto-advance to next step
-    setTimeout(() => {
-      setActiveStep(1);
-    }, 500);
   };
 
   // Submit handler
@@ -293,8 +576,9 @@ const RenewDrivingLicensePage: React.FC = () => {
       const application = await applicationService.createApplication(applicationData);
       
       setSuccess('Driving license renewal submitted successfully!');
+      setShowSuccessSnackbar(true);
       
-      // Navigate to applications dashboard
+      // Navigate to applications dashboard after showing success
       setTimeout(() => {
         navigate('/dashboard/applications/dashboard', {
           state: { 
@@ -302,7 +586,7 @@ const RenewDrivingLicensePage: React.FC = () => {
             application 
           }
         });
-      }, 2000);
+      }, 3000);
 
     } catch (err: any) {
       console.error('Submission error:', err);
@@ -333,10 +617,14 @@ const RenewDrivingLicensePage: React.FC = () => {
       case 0: // Person step
         return (
           <PersonFormWrapper
+            key="person-form-wrapper"
             mode="application"
+            externalPersonStep={personStep}
             onSuccess={handlePersonSelected}
-            title=""
-            subtitle="Select person whose license needs renewal"
+            onPersonValidationChange={handlePersonValidationChange}
+            onPersonStepChange={handlePersonStepChange}
+            onContinueToApplication={handleContinueToApplication}
+            onCancel={handleCancel}
             showHeader={false}
           />
         );
@@ -344,24 +632,42 @@ const RenewDrivingLicensePage: React.FC = () => {
       case 1: // Renewal details step - Section C
         return (
           <Box>
-            <Typography variant="h6" gutterBottom>
-              Section C: Renewal Details
-            </Typography>
-
             {/* Location Selection for Admin Users */}
             {user && !user.primary_location_id && (
-              <Card sx={{ mb: 3 }}>
+              <Card 
+                elevation={0}
+                sx={{ 
+                  mb: 2,
+                  bgcolor: 'white',
+                  boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                  borderRadius: 2
+                }}
+              >
                 <CardHeader 
-                  title="Select Processing Location" 
-                  avatar={<LocationOnIcon />}
+                  sx={{ p: 1.5 }}
+                  title={
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <LocationOnIcon color="primary" fontSize="small" />
+                      <Typography variant="subtitle1" sx={{ fontSize: '1rem', fontWeight: 600 }}>
+                        Select Processing Location
+                      </Typography>
+                    </Box>
+                  }
                 />
-                <CardContent>
-                  <FormControl fullWidth required error={!!error && !selectedLocationId}>
+                <CardContent sx={{ p: 1.5, pt: 0 }}>
+                  <FormControl 
+                    fullWidth 
+                    required 
+                    size="small" 
+                    error={!!error && !selectedLocationId}
+                    {...getSelectStyling('location', selectedLocationId, true)}
+                  >
                     <InputLabel>Processing Location</InputLabel>
                     <Select
                       value={selectedLocationId}
                       onChange={handleLocationChange}
                       label="Processing Location"
+                      size="small"
                     >
                       {Array.isArray(availableLocations) && availableLocations.map((location) => (
                         <MenuItem key={location.id} value={location.id}>
@@ -372,362 +678,423 @@ const RenewDrivingLicensePage: React.FC = () => {
                     {!!error && !selectedLocationId && (
                       <FormHelperText>Please select a processing location</FormHelperText>
                     )}
+                    {!selectedLocationId && (
+                      <FormHelperText sx={{ color: '#ff9800' }}>This field is required</FormHelperText>
+                    )}
                   </FormControl>
                 </CardContent>
               </Card>
             )}
 
-            <Grid container spacing={3}>
-              {/* Renewal Reason */}
-              <Grid item xs={12}>
-                <FormControl fullWidth required>
-                  <InputLabel>Reason for Renewal</InputLabel>
-                  <Select
-                    value={replacementReason}
-                    onChange={(e) => {
-                      setReplacementReason(e.target.value);
-                      setError('');
-                    }}
-                    label="Reason for Renewal"
-                  >
-                    <MenuItem value="new_card">New Card (Standard Renewal)</MenuItem>
-                    <MenuItem value="change_particulars">Change of Particulars (ID, name, address)</MenuItem>
-                    <MenuItem value="recovery">Recovery (after suspension/revocation)</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              {/* Office of Issue */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Office of Issue"
-                  value={officeOfIssue}
-                  onChange={(e) => setOfficeOfIssue(e.target.value)}
-                  required
-                  placeholder="Enter the office where the current license was issued"
-                />
-              </Grid>
-
-              {/* Date of Change */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  type="date"
-                  label="Date of Change/Renewal Request"
-                  value={dateOfChange}
-                  onChange={(e) => setDateOfChange(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                  required
-                />
-              </Grid>
-
-              {/* License Verification Section */}
-              {selectedPerson && (
-                <Grid item xs={12}>
-                  <Card variant="outlined">
-                    <CardHeader title="Current License Verification" />
-                    <CardContent>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        Verify existing licenses to determine what can be renewed
-                      </Typography>
-                      <LicenseVerificationSection
-                        personId={selectedPerson.id}
-                        value={licenseVerification}
-                        onChange={setLicenseVerification}
-                        locations={availableLocations}
-                        currentLicenseCategory={null}
-                        currentApplicationType={ApplicationType.RENEWAL}
-                        disabled={false}
-                      />
-                      
-                      {licenseVerification && licenseVerification.all_license_categories.length === 0 && (
-                        <Alert severity="warning" sx={{ mt: 2 }}>
-                          <Typography variant="body2">
-                            <strong>No active licenses found.</strong> This person must have existing valid licenses to renew. 
-                            If they have licenses from an external system, please verify them above.
-                          </Typography>
-                        </Alert>
-                      )}
-                    </CardContent>
-                  </Card>
-                </Grid>
-              )}
-
-              {/* Information Card */}
-              <Grid item xs={12}>
-                <Card variant="outlined" sx={{ bgcolor: 'info.50' }}>
-                  <CardContent sx={{ py: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      <strong>Section C:</strong> This section applies to driving license renewals. 
-                      Please specify the reason for renewal and verify the person's current licenses. 
-                      Only licenses that are currently active or recently expired can be renewed.
+            {/* Existing Licenses - Driving Licenses Only */}
+            <Card 
+              elevation={0}
+              sx={{ 
+                mb: 2,
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2
+              }}
+            >
+              <CardHeader
+                sx={{ p: 1.5 }}
+                title={
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <CheckCircleIcon color={existingLicenses.length > 0 ? "success" : "disabled"} fontSize="small" />
+                    <Typography variant="subtitle1" sx={{ fontSize: '1rem', fontWeight: 600 }}>
+                      Driving Licenses ({existingLicenses.length})
                     </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
-          </Box>
-        );
-
-      case 2: // Medical step - Section D
-        return (
-          <Box>
-            <Typography variant="h6" gutterBottom>
-              Section D: Medical Assessment
-            </Typography>
-            
-            {(() => {
-              const age = selectedPerson?.birth_date ? calculateAge(selectedPerson.birth_date) : 0;
-              const isMedicalMandatory = licenseVerification?.all_license_categories?.some(cat => requiresMedicalAlways(cat as LicenseCategory)) || 
-                                       (age >= 60 && licenseVerification?.all_license_categories?.some(cat => requiresMedical60Plus(cat as LicenseCategory)));
-
-              return (
-                <>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                    Medical assessment for license renewal
+                    {existingLicenses.length > 0 && (
+                      <Chip 
+                        label="Eligible for Renewal" 
+                        size="small" 
+                        color="success" 
+                        variant="outlined"
+                        sx={{ fontSize: '0.65rem', height: '20px' }}
+                      />
+                    )}
+                    <IconButton 
+                      size="small" 
+                      onClick={() => setShowExisting(!showExisting)}
+                      disabled={loadingExisting}
+                    >
+                      {showExisting ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                    </IconButton>
+                  </Box>
+                }
+                subheader={
+                  <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>
+                    Current driving licenses eligible for renewal (excludes learner's permits)
                   </Typography>
-
-                  {isMedicalMandatory ? (
-                    <Alert severity="info" sx={{ mb: 3 }}>
-                      <Typography variant="body2">
-                        <strong>Medical assessment is mandatory</strong> for {
-                          age >= 60 ? 'applicants 60+ years' : 'commercial license categories being renewed'
-                        }
+                }
+              />
+              <Collapse in={showExisting}>
+                <CardContent sx={{ p: 1.5 }}>
+                  {loadingExisting ? (
+                    <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>Loading existing licenses...</Typography>
+                  ) : existingLicenses.length === 0 ? (
+                    <Alert severity="warning" sx={{ py: 1 }}>
+                      <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+                        No driving licenses found for renewal. Person must have active driving licenses to proceed with renewal.
                       </Typography>
                     </Alert>
                   ) : (
-                    <Alert severity="success" sx={{ mb: 3 }}>
-                      <Typography variant="body2">
-                        <strong>Medical assessment is optional</strong> for this renewal. 
-                        Standard vision test may be conducted during license collection.
-                      </Typography>
-                    </Alert>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>License ID</TableCell>
+                          <TableCell>Categories</TableCell>
+                          <TableCell>Status</TableCell>
+                          <TableCell>Issue Date</TableCell>
+                          <TableCell>Location</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {existingLicenses.map((license) => (
+                          <TableRow key={license.id}>
+                            <TableCell>
+                              <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>
+                                {license.license_number}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Stack direction="row" spacing={0.5}>
+                                {license.categories?.filter((cat: string) => !['1', '2', '3'].includes(cat)).map((cat: string) => (
+                                  <Chip 
+                                    key={cat} 
+                                    label={cat} 
+                                    size="small" 
+                                    color="primary"
+                                    sx={{ fontSize: '0.65rem', height: '20px' }}
+                                  />
+                                ))}
+                              </Stack>
+                            </TableCell>
+                            <TableCell>
+                              <Chip 
+                                label={license.status}
+                                size="small"
+                                color={license.is_active ? 'success' : 'default'}
+                                sx={{ fontSize: '0.65rem', height: '20px' }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                {license.issue_date}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                {license.issuing_location}
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   )}
+                </CardContent>
+              </Collapse>
+            </Card>
 
-                  <MedicalInformationSection
-                    value={medicalInformation}
-                    onChange={setMedicalInformation}
-                    disabled={false}
-                    isRequired={isMedicalMandatory}
-                  />
-                </>
-              );
-            })()}
+            {/* Renewal Details */}
+            <Card 
+              elevation={0}
+              sx={{ 
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2
+              }}
+            >
+              <CardHeader 
+                sx={{ p: 1.5 }}
+                title={
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <RenewalIcon color="primary" fontSize="small" />
+                    <Typography variant="subtitle1" sx={{ fontSize: '1rem', fontWeight: 600 }}>
+                      Renewal Information
+                    </Typography>
+                  </Box>
+                }
+                subheader="Provide renewal details and reason"
+              />
+              <CardContent sx={{ p: 1.5, pt: 0 }}>
+                <Grid container spacing={2}>
+                  {/* Renewal Reason */}
+                  <Grid item xs={12}>
+                    <FormControl 
+                      fullWidth 
+                      required 
+                      size="small"
+                      {...getSelectStyling('renewalReason', replacementReason, true)}
+                    >
+                      <InputLabel>Reason for Renewal</InputLabel>
+                      <Select
+                        value={replacementReason}
+                        onChange={(e) => {
+                          setReplacementReason(e.target.value);
+                          setError('');
+                        }}
+                        label="Reason for Renewal"
+                        size="small"
+                      >
+                        <MenuItem value="theft">Theft</MenuItem>
+                        <MenuItem value="loss">Loss</MenuItem>
+                        <MenuItem value="destruction">Destruction</MenuItem>
+                        <MenuItem value="recovery">Recovery</MenuItem>
+                        <MenuItem value="new_card">New Card</MenuItem>
+                      </Select>
+                      {!replacementReason && (
+                        <FormHelperText sx={{ color: '#ff9800' }}>This field is required</FormHelperText>
+                      )}
+                    </FormControl>
+                  </Grid>
+
+                  {/* Office of Issue */}
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      label="Office of Issue"
+                      value={officeOfIssue}
+                      onChange={(e) => setOfficeOfIssue(e.target.value)}
+                      required
+                      placeholder="Enter the office where the current license was issued"
+                      size="small"
+                      {...getFieldStyling('officeOfIssue', officeOfIssue, true)}
+                    />
+                  </Grid>
+
+                  {/* Date of Change */}
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      type="date"
+                      label="Date of Renewal Request"
+                      value={dateOfChange}
+                      onChange={(e) => setDateOfChange(e.target.value)}
+                      InputLabelProps={{ shrink: true }}
+                      required
+                      size="small"
+                      {...getFieldStyling('dateOfChange', dateOfChange, true)}
+                    />
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </Card>
           </Box>
         );
 
-      case 3: // Biometric step
-        return (
-          <Box>
-            <Typography variant="h6" gutterBottom>
-              Section E: Biometric Data Capture
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Capture photo, signature, and fingerprint for license production
-            </Typography>
-            
-            <BiometricCaptureStep
-              value={biometricData}
-              onChange={setBiometricData}
-            />
-          </Box>
-        );
+      case 2: // Medical step - handled separately to preserve state
+        return null;
+
+      case 3: // Biometric step - handled separately to preserve state
+        return null;
 
       case 4: // Review step
         return (
-          <Box>
-            <Typography variant="h6" gutterBottom>
-              Review Driving License Renewal
-            </Typography>
+          <Paper 
+            elevation={0}
+            sx={{ 
+              bgcolor: 'white',
+              boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+              borderRadius: 2
+            }}
+          >
+            <Box sx={{ p: 1.5 }}>
+              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, fontSize: '1rem', mb: 1 }}>
+                Review & Submit
+              </Typography>
 
-            {/* Processing Location Display */}
-            <Card sx={{ mb: 3 }}>
-              <CardHeader 
-                title="Processing Location" 
-                avatar={<LocationOnIcon />}
-              />
-              <CardContent>
-                <Typography variant="body1">
-                  {user?.primary_location_id ? (
-                    `User's assigned location: ${user.primary_location_id}`
-                  ) : (
-                    availableLocations.find(loc => loc.id === selectedLocationId)?.name || 'No location selected'
-                  )}
-                  {selectedLocationId && (
-                    <Chip 
-                      label={availableLocations.find(loc => loc.id === selectedLocationId)?.code || selectedLocationId} 
-                      size="small" 
-                      sx={{ ml: 1 }}
-                    />
-                  )}
+              <Alert severity="info" sx={{ mb: 1.5, py: 0.5 }}>
+                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                  Please review the driving license renewal details before submission.
                 </Typography>
-              </CardContent>
-            </Card>
-            
-            {/* Person Details */}
-            <Card sx={{ mb: 3 }}>
-              <CardHeader title="License Holder Details" />
-              <CardContent>
-                <Grid container spacing={2}>
+              </Alert>
+
+              {/* Person Summary - Compact (Name + ID Only) */}
+              <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
+                <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+                  License Holder
+                </Typography>
+                <Grid container spacing={1}>
                   <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Name</Typography>
-                    <Typography variant="body1">
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Full Name</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                       {selectedPerson?.surname}, {selectedPerson?.first_name} {selectedPerson?.middle_name}
                     </Typography>
                   </Grid>
                   <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Madagascar ID</Typography>
-                    <Typography variant="body1">
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Madagascar ID</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                       {selectedPerson?.aliases?.find(alias => alias.is_primary)?.document_number || 'Not available'}
                     </Typography>
                   </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Birth Date</Typography>
-                    <Typography variant="body1">{selectedPerson?.birth_date}</Typography>
+                </Grid>
+              </Box>
+
+              {/* Processing Location - Compact */}
+              <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
+                <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+                  Processing Location
+                </Typography>
+                <Grid container spacing={1}>
+                  <Grid item xs={12}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Location</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {user?.primary_location_id ? (
+                        `User's assigned location: ${user.primary_location_id}`
+                      ) : (
+                        availableLocations.find(loc => loc.id === selectedLocationId)?.name || 'No location selected'
+                      )}
+                      {selectedLocationId && (
+                        <Chip 
+                          label={availableLocations.find(loc => loc.id === selectedLocationId)?.code || selectedLocationId} 
+                          size="small" 
+                          sx={{ ml: 1, fontSize: '0.7rem', height: '16px' }}
+                        />
+                      )}
+                    </Typography>
                   </Grid>
+                </Grid>
+              </Box>
+
+              {/* Renewal Details - Detailed Focus */}
+              <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+                Renewal Details
+              </Typography>
+              <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
+                <Grid container spacing={1}>
                   <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Age</Typography>
-                    <Typography variant="body1">
-                      {selectedPerson?.birth_date ? calculateAge(selectedPerson.birth_date) : 'Unknown'} years
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Renewal Reason</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      <Chip 
+                        label={replacementReason.charAt(0).toUpperCase() + replacementReason.slice(1)} 
+                        size="small" 
+                        color="primary" 
+                        sx={{ fontSize: '0.7rem', height: '20px' }} 
+                      />
                     </Typography>
                   </Grid>
                   <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Nationality</Typography>
-                    <Typography variant="body1">{selectedPerson?.nationality_code}</Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Office of Issue</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {officeOfIssue}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Date of Renewal Request</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {dateOfChange}
+                    </Typography>
                   </Grid>
                 </Grid>
-              </CardContent>
-            </Card>
+              </Box>
 
-            {/* Renewal Details */}
-            <Card sx={{ mb: 3 }}>
-              <CardHeader title="Renewal Details" />
-              <CardContent>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Application Type</Typography>
-                    <Typography variant="body1">Driving License Renewal</Typography>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Renewal Reason</Typography>
-                    <Chip 
-                      label={replacementReason.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} 
-                      size="small" 
-                      color="info" 
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Office of Issue</Typography>
-                    <Typography variant="body1">{officeOfIssue}</Typography>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.secondary">Date of Renewal Request</Typography>
-                    <Typography variant="body1">{dateOfChange}</Typography>
-                  </Grid>
-                </Grid>
-              </CardContent>
-            </Card>
-
-            {/* Current Licenses */}
-            {licenseVerification && (
-              <Card sx={{ mb: 3 }}>
-                <CardHeader title="Current Licenses to Renew" />
-                <CardContent>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Verified License Categories
-                  </Typography>
-                  <Box sx={{ mb: 2 }}>
-                    {licenseVerification.all_license_categories.length > 0 ? (
-                      licenseVerification.all_license_categories.map((cat, index) => (
-                        <Chip key={index} label={cat} size="small" color="primary" sx={{ mr: 1, mb: 1 }} />
-                      ))
-                    ) : (
-                      <Alert severity="warning">
-                        <Typography variant="body2">No existing licenses found to renew</Typography>
-                      </Alert>
-                    )}
-                  </Box>
-                  
-                  {licenseVerification.all_license_categories.length > 0 && (
-                    <Alert severity="success">
-                      <Typography variant="body2">
-                        {licenseVerification.all_license_categories.length} license categor{licenseVerification.all_license_categories.length === 1 ? 'y' : 'ies'} eligible for renewal
-                      </Typography>
-                    </Alert>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Medical Information */}
-            {medicalInformation && (
-              <Card sx={{ mb: 3 }}>
-                <CardHeader title="Medical Assessment" />
-                <CardContent>
-                  <Typography variant="body2" color="text.secondary">Medical Clearance</Typography>
-                  <Chip 
-                    label={medicalInformation.medical_clearance ? 'Cleared' : 'Not Cleared'} 
-                    size="small" 
-                    color={medicalInformation.medical_clearance ? 'success' : 'error'} 
-                  />
-                  {medicalInformation.medical_restrictions.length > 0 && (
-                    <Box sx={{ mt: 1 }}>
-                      <Typography variant="body2" color="text.secondary">Restrictions</Typography>
-                      <Typography variant="body1">{medicalInformation.medical_restrictions.join(', ')}</Typography>
-                    </Box>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Biometric Information */}
-            <Card sx={{ mb: 3 }}>
-              <CardHeader title="Biometric Data" />
-              <CardContent>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} md={4}>
-                    <Typography variant="body2" color="text.secondary">License Photo</Typography>
-                    <Chip 
-                      label={biometricData.photo ? 'Captured' : 'Not Captured'} 
-                      size="small" 
-                      color={biometricData.photo ? 'success' : 'default'} 
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={4}>
-                    <Stack direction="row" spacing={2} alignItems="center">
-                      <EditIcon color={biometricData.signature ? 'success' : 'warning'} />
-                      <Typography variant="body2">
-                        Signature
-                      </Typography>
-                      <Chip
-                        label={biometricData.signature ? 'Captured' : 'Required'}
-                        color={biometricData.signature ? 'success' : 'warning'}
-                        size="small"
-                      />
-                    </Stack>
-                  </Grid>
-                  <Grid item xs={12} md={4}>
-                    <Typography variant="body2" color="text.secondary">Fingerprint</Typography>
-                    <Chip 
-                      label={biometricData.fingerprint ? 'Captured' : 'Not Captured'} 
-                      size="small" 
-                      color={biometricData.fingerprint ? 'success' : 'default'} 
-                    />
-                  </Grid>
-                </Grid>
-              </CardContent>
-            </Card>
-
-            {/* Summary */}
-            <Alert severity="info" sx={{ mb: 2 }}>
-              <Typography variant="body2">
-                <strong>Next Steps:</strong> After submission, your license renewal will be processed. 
-                The system will generate a new license card with updated information and extended validity. 
-                You will be notified when it's ready for collection.
+              {/* Current Licenses to Renew */}
+              <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+                Licenses for Renewal
               </Typography>
-            </Alert>
-          </Box>
+              <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
+                <Grid container spacing={1}>
+                  <Grid item xs={12}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Driving License Categories</Typography>
+                    <Box sx={{ mt: 0.5 }}>
+                      {existingLicenses.length > 0 ? (
+                        existingLicenses.flatMap(license => 
+                          license.categories?.filter((cat: string) => !['1', '2', '3'].includes(cat)) || []
+                        ).map((cat: string, index: number) => (
+                          <Chip 
+                            key={index} 
+                            label={cat} 
+                            size="small" 
+                            color="success" 
+                            sx={{ mr: 0.5, mb: 0.5, fontSize: '0.7rem', height: '20px' }} 
+                          />
+                        ))
+                      ) : (
+                        <Chip 
+                          label="No licenses found" 
+                          size="small" 
+                          color="error" 
+                          sx={{ fontSize: '0.7rem', height: '20px' }} 
+                        />
+                      )}
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Box>
+
+              {/* Biometric & Medical Data - Comprehensive */}
+              <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+                Biometric & Medical Assessment
+              </Typography>
+              <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
+                <Grid container spacing={1}>
+                  <Grid item xs={12} md={3}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>License Photo</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      <Chip 
+                        label={biometricData.photo ? 'Captured' : 'Required'} 
+                        size="small" 
+                        color={biometricData.photo ? 'success' : 'error'} 
+                        sx={{ fontSize: '0.7rem', height: '20px' }}
+                      />
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Digital Signature</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      <Chip 
+                        label={biometricData.signature ? 'Captured' : 'Required'} 
+                        size="small" 
+                        color={biometricData.signature ? 'success' : 'error'} 
+                        sx={{ fontSize: '0.7rem', height: '20px' }}
+                      />
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Fingerprint</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      <Chip 
+                        label={biometricData.fingerprint ? 'Captured' : 'Optional'} 
+                        size="small" 
+                        color={biometricData.fingerprint ? 'success' : 'default'} 
+                        sx={{ fontSize: '0.7rem', height: '20px' }}
+                      />
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Medical Clearance</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {medicalInformation ? (
+                        <Chip 
+                          label={medicalInformation.medical_clearance ? 'Cleared' : 'Not Cleared'} 
+                          size="small" 
+                          color={medicalInformation.medical_clearance ? 'success' : 'error'} 
+                          sx={{ fontSize: '0.7rem', height: '20px' }}
+                        />
+                      ) : (
+                        <Chip 
+                          label="Not Required" 
+                          size="small" 
+                          color="default" 
+                          sx={{ fontSize: '0.7rem', height: '20px' }}
+                        />
+                      )}
+                    </Typography>
+                  </Grid>
+                  {medicalInformation && medicalInformation.medical_restrictions.length > 0 && (
+                    <Grid item xs={12}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Medical Restrictions</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                        {medicalInformation.medical_restrictions.join(', ')}
+                      </Typography>
+                    </Grid>
+                  )}
+                </Grid>
+              </Box>
+            </Box>
+          </Paper>
         );
 
       default:
@@ -736,108 +1103,237 @@ const RenewDrivingLicensePage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Paper elevation={3} sx={{ p: 4 }}>
+    <Container maxWidth="lg" sx={{ py: 1, height: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column' }}>
+      <Paper 
+        elevation={0}
+        sx={{ 
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: '#f8f9fa',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          overflow: 'hidden'
+        }}
+      >
         {/* Header */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h4" gutterBottom>
-            Renew Driving License Card
+        <Box sx={{ p: 2, bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 0.5 }}>
+            Renew Driving License
           </Typography>
-          <Typography variant="body1" color="text.secondary">
+          <Typography variant="body2" color="text.secondary">
             Renew existing driving license for Madagascar
           </Typography>
         </Box>
 
         {/* Error/Success Messages */}
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-          </Alert>
-        )}
-        
-        {success && (
-          <Alert severity="success" sx={{ mb: 3 }} icon={<CheckCircleIcon />}>
-            {success}
-          </Alert>
+        {(error || success) && (
+          <Box sx={{ p: 2, bgcolor: 'white' }}>
+            {error && (
+              <Alert severity="error" sx={{ mb: 1 }}>
+                {error}
+              </Alert>
+            )}
+            
+            {success && (
+              <Alert severity="success" sx={{ mb: 1 }} icon={<CheckCircleIcon />}>
+                {success}
+              </Alert>
+            )}
+          </Box>
         )}
 
-        {/* Stepper */}
-        <Stepper activeStep={activeStep} orientation="vertical">
-          {steps.map((step, index) => (
-            <Step key={step.label}>
-              <StepLabel
-                optional={
-                  <Typography variant="caption">{step.description}</Typography>
-                }
-                StepIconComponent={() => (
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: 40,
-                      height: 40,
-                      borderRadius: '50%',
-                      bgcolor: activeStep >= index ? 'primary.main' : 'grey.300',
-                      color: activeStep >= index ? 'white' : 'grey.600',
-                    }}
-                  >
-                    {step.icon}
-                  </Box>
-                )}
-              >
-                {step.label}
-              </StepLabel>
-              <StepContent>
-                <Box sx={{ mt: 2, mb: 2 }}>
-                  {renderStepContent(index)}
-                </Box>
+        {/* Navigation Tabs */}
+        <Box sx={{ bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Tabs 
+            value={activeStep} 
+            onChange={(e, newValue) => setActiveStep(newValue)}
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{
+              '& .MuiTab-root': { 
+                minHeight: 48,
+                textTransform: 'none',
+                fontSize: '0.875rem'
+              }
+            }}
+          >
+            {steps.map((step, index) => (
+              <Tab 
+                key={step.label}
+                label={renderTabLabel(step, index)}
+                disabled={index > 0 && !isStepValid(index - 1)}
+                sx={{ minWidth: 120 }}
+              />
+            ))}
+          </Tabs>
+        </Box>
+
+        {/* Tab Content */}
+        <Box sx={{ 
+          flexGrow: 1, 
+          overflow: (activeStep === 0 || activeStep === 2 || activeStep === 3) ? 'hidden' : 'auto',
+          p: (activeStep === 0 || activeStep === 2 || activeStep === 3) ? 0 : 2
+        }}>
+          {/* Person Form - Always rendered but conditionally visible */}
+          <Box sx={{ display: activeStep === 0 ? 'block' : 'none' }}>
+            <PersonFormWrapper
+              key="person-form-wrapper"
+              mode="application"
+              externalPersonStep={personStep}
+              onSuccess={handlePersonSelected}
+              onPersonValidationChange={handlePersonValidationChange}
+              onPersonStepChange={handlePersonStepChange}
+              onContinueToApplication={handleContinueToApplication}
+              onCancel={handleCancel}
+              showHeader={false}
+            />
+          </Box>
                 
-                {/* Navigation Buttons */}
-                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                  <Button
-                    onClick={handleCancel}
-                    disabled={loading}
-                    color="secondary"
-                  >
-                    Cancel
-                  </Button>
+          {/* Medical Form - Always rendered but conditionally visible */}
+          <Box sx={{ display: activeStep === 2 ? 'block' : 'none' }}>
+            <MedicalInformationSection
+              key="medical-form-wrapper"
+              value={medicalInformation}
+              onChange={setMedicalInformation}
+              disabled={false}
+              isRequired={(() => {
+                const age = selectedPerson?.birth_date ? calculateAge(selectedPerson.birth_date) : 0;
+                const existingCategories = existingLicenses.flatMap(license => license.categories || []);
+                return age >= 60 || existingCategories.some(cat => requiresMedicalAlways(cat as LicenseCategory));
+              })()}
+              selectedCategory={null}
+              personAge={selectedPerson?.birth_date ? calculateAge(selectedPerson.birth_date) : 0}
+              externalMedicalStep={medicalStep}
+              onMedicalValidationChange={handleMedicalValidationChange}
+              onMedicalStepChange={handleMedicalStepChange}
+              onContinueToApplication={handleContinueToBiometric}
+              onCancel={handleCancel}
+              showHeader={false}
+            />
+          </Box>
+
+          {/* Biometric Form - Always rendered but conditionally visible */}
+          <Box sx={{ display: activeStep === 3 ? 'block' : 'none' }}>
+            <BiometricCaptureStep
+              key="biometric-form-wrapper"
+              value={biometricData}
+              onChange={setBiometricData}
+              disabled={false}
+              externalBiometricStep={biometricStep}
+              onBiometricValidationChange={handleBiometricValidationChange}
+              onBiometricStepChange={handleBiometricStepChange}
+              onContinueToReview={handleContinueToReview}
+              onCancel={handleCancel}
+              showHeader={false}
+            />
+          </Box>
+          
+          {/* Other step content */}
+          {activeStep !== 0 && activeStep !== 2 && activeStep !== 3 && renderStepContent(activeStep)}
+        </Box>
+
+        {/* Navigation Footer - Only shown when not on person, medical, or biometric step */}
+        {activeStep !== 0 && activeStep !== 2 && activeStep !== 3 && (
+          <Box sx={{ p: 2, bgcolor: 'white', borderTop: '1px solid', borderColor: 'divider' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Button
+                onClick={handleCancel}
+                disabled={loading}
+                color="secondary"
+                size="small"
+              >
+                Cancel
+              </Button>
                   
-                  <Button
-                    disabled={index === 0 || loading}
-                    onClick={handleBack}
-                    startIcon={<ArrowBackIcon />}
-                  >
-                    Back
-                  </Button>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  disabled={activeStep <= 1 || loading}
+                  onClick={handleBack}
+                  startIcon={<ArrowBackIcon />}
+                  size="small"
+                >
+                  Back
+                </Button>
                   
-                  <Button
-                    variant="contained"
-                    onClick={index === steps.length - 1 ? handleSubmit : handleNext}
-                    disabled={!isStepValid(index) || loading}
-                    startIcon={loading ? <CircularProgress size={20} /> : undefined}
-                    endIcon={index !== steps.length - 1 ? <ArrowForwardIcon /> : undefined}
-                  >
-                    {loading ? 'Submitting...' : index === steps.length - 1 ? 'Submit Renewal' : 'Next'}
-                  </Button>
-                </Box>
-              </StepContent>
-            </Step>
-          ))}
-        </Stepper>
+                <Button
+                  variant="contained"
+                  onClick={activeStep === steps.length - 1 ? handleSubmit : handleNext}
+                  disabled={!isStepValid(activeStep) || loading}
+                  startIcon={loading ? <CircularProgress size={20} /> : undefined}
+                  endIcon={activeStep !== steps.length - 1 ? <ArrowForwardIcon /> : undefined}
+                  size="small"
+                >
+                  {loading ? 'Submitting...' : activeStep === steps.length - 1 ? 'Submit Renewal' : 'Next'}
+                </Button>
+              </Box>
+            </Box>
+          </Box>
+        )}
 
         {/* Completion Message */}
         {activeStep === steps.length && (
-          <Paper square elevation={0} sx={{ p: 3 }}>
-            <Typography>All steps completed - driving license renewal submitted successfully!</Typography>
+          <Box sx={{ p: 3, bgcolor: 'white', textAlign: 'center' }}>
+            <Typography variant="h6" gutterBottom>
+              Renewal Submitted Successfully!
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Your driving license renewal has been submitted and will be processed.
+            </Typography>
             <Button 
+              variant="contained"
               onClick={() => navigate('/dashboard/applications/dashboard')} 
-              sx={{ mt: 1, mr: 1 }}
             >
               Back to Applications
             </Button>
-          </Paper>
+          </Box>
         )}
+
+        {/* Loading Backdrop */}
+        <Backdrop
+          sx={{ 
+            color: '#fff', 
+            zIndex: (theme) => theme.zIndex.drawer + 1,
+            flexDirection: 'column',
+            gap: 2
+          }}
+          open={loading}
+        >
+          <CircularProgress color="inherit" size={60} />
+          <Typography variant="h6" color="inherit">
+            Submitting license renewal...
+          </Typography>
+          <Typography variant="body2" color="inherit" sx={{ opacity: 0.8 }}>
+            Please wait while we process your submission
+          </Typography>
+        </Backdrop>
+
+        {/* Success Snackbar */}
+        <Snackbar
+          open={showSuccessSnackbar}
+          autoHideDuration={5000}
+          onClose={() => setShowSuccessSnackbar(false)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        >
+          <Alert 
+            onClose={() => setShowSuccessSnackbar(false)} 
+            severity="info" 
+            variant="filled"
+            sx={{ 
+              width: '100%',
+              backgroundColor: 'rgb(25, 118, 210)',
+              color: 'white',
+              '& .MuiAlert-icon': {
+                color: 'white'
+              },
+              '& .MuiAlert-action': {
+                color: 'white'
+              }
+            }}
+          >
+            Driving license renewal submitted successfully!
+          </Alert>
+        </Snackbar>
       </Paper>
     </Container>
   );
