@@ -21,7 +21,8 @@ import {
   IconButton,
   Alert,
   Chip,
-  FormHelperText
+  FormHelperText,
+  Tooltip
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -29,7 +30,9 @@ import {
   Language as LanguageIcon,
   Assignment as AssignmentIcon,
   DateRange as DateRangeIcon,
-  Flag as FlagIcon
+  Flag as FlagIcon,
+  CheckCircle as CheckCircleIcon,
+  Warning as WarningIcon
 } from '@mui/icons-material';
 import { LicenseCategory } from '../../types';
 import { useDebounceValidation } from '../../hooks/useDebounceValidation';
@@ -37,13 +40,10 @@ import { useDebounceValidation } from '../../hooks/useDebounceValidation';
 export interface ForeignLicense {
   id: string; // temp ID for form management
   country_of_issue: string;
-  license_number: string;
   license_category_foreign: string; // Foreign country's license code/category
   license_category_madagascar: LicenseCategory; // Madagascar equivalent category
   issue_date: string;
-  expiry_date: string;
   verified: boolean;
-  verification_notes?: string;
 }
 
 export interface ForeignLicenseCaptureData {
@@ -136,12 +136,6 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
         }
         return { isValid: true, state: 'valid' };
 
-      case 'license_number':
-        if (!value || value.trim() === '') {
-          return { isValid: false, state: 'required', errorMessage: 'Foreign license number is required' };
-        }
-        return { isValid: true, state: 'valid' };
-
       case 'license_category_foreign':
         if (!value || value.trim() === '') {
           return { isValid: false, state: 'required', errorMessage: 'Foreign license category is required' };
@@ -168,19 +162,6 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
         
         if (dateObj > currentDate) {
           return { isValid: false, state: 'invalid', errorMessage: 'Issue date cannot be in the future' };
-        }
-        
-        return { isValid: true, state: 'valid' };
-
-      case 'expiry_date':
-        if (!value || value === '') {
-          return { isValid: false, state: 'required', errorMessage: 'Expiry date is required' };
-        }
-        
-        const expiryDateObj = new Date(value);
-        
-        if (isNaN(expiryDateObj.getTime())) {
-          return { isValid: false, state: 'invalid', errorMessage: 'Invalid date format' };
         }
         
         return { isValid: true, state: 'valid' };
@@ -305,13 +286,10 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
     const newLicense: ForeignLicense = {
       id: `foreign-license-${Date.now()}`,
       country_of_issue: '',
-      license_number: '',
       license_category_foreign: '',
       license_category_madagascar: '' as LicenseCategory,
       issue_date: '',
-      expiry_date: '',
-      verified: false,
-      verification_notes: ''
+      verified: false
     };
 
     updateCaptureData({
@@ -360,242 +338,157 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
         Enter details for each foreign license you want to convert to a Madagascar license
       </Typography>
 
+      {captureData.foreign_licenses.length === 0 ? (
+        <Alert severity="info" sx={{ mb: 2, py: 1 }}>
+          <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+            No foreign licenses added yet. Click "Add Foreign License" to get started.
+          </Typography>
+        </Alert>
+      ) : null}
+
+      {/* Foreign License List */}
       {captureData.foreign_licenses.map((license, index) => (
-        <Card 
-          key={license.id}
-          elevation={0}
+        <Box 
+          key={license.id} 
           sx={{ 
-            mb: 2,
-            bgcolor: 'white',
-            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-            borderRadius: 2
+            mb: 2, 
+            p: 1.5, 
+            border: 1, 
+            borderColor: 'divider', 
+            borderRadius: 2,
+            bgcolor: '#fafafa',
+            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
           }}
         >
-          <CardHeader
-            sx={{ p: 1.5 }}
-            title={
-              <Box display="flex" alignItems="center" justifyContent="space-between">
-                <Box display="flex" alignItems="center" gap={1}>
-                  <FlagIcon color="primary" fontSize="small" />
-                  <Typography variant="subtitle1" sx={{ fontSize: '1rem', fontWeight: 600 }}>
-                    Foreign License #{index + 1}
-                  </Typography>
-                  {license.verified && (
-                    <Chip label="Verified" size="small" color="success" />
-                  )}
-                </Box>
-                {captureData.foreign_licenses.length > 1 && (
-                  <IconButton
-                    size="small"
-                    onClick={() => removeForeignLicense(index)}
-                    disabled={disabled}
-                    color="error"
-                  >
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
-                )}
-              </Box>
-            }
-          />
-          <CardContent sx={{ p: 1.5, pt: 0 }}>
-            <Grid container spacing={2}>
-              {/* Country of Issue */}
-              <Grid item xs={12} md={6}>
-                <FormControl 
-                  fullWidth 
-                  required 
+          <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+            <Box display="flex" alignItems="center" gap={1}>
+              <Typography variant="subtitle1" color="primary" sx={{ fontSize: '1rem', fontWeight: 600 }}>
+                Foreign License {index + 1}
+              </Typography>
+              <Chip
+                icon={license.verified ? <CheckCircleIcon /> : <WarningIcon />}
+                label={license.verified ? 'Verified' : 'Pending'}
+                color={license.verified ? 'success' : 'warning'}
+                size="small"
+                sx={{ fontSize: '0.65rem', height: '20px' }}
+              />
+            </Box>
+            {/* Only show delete button for additional licenses (not the first one) */}
+            {index > 0 && (
+              <Tooltip title="Remove this foreign license">
+                <IconButton
+                  onClick={() => removeForeignLicense(index)}
+                  disabled={disabled}
+                  color="error"
                   size="small"
-                  {...getSelectStyling(license.id, 'country_of_issue')}
                 >
-                  <InputLabel>Country of Issue</InputLabel>
-                  <Select
-                    value={license.country_of_issue}
-                    onChange={(e) => updateForeignLicense(index, 'country_of_issue', e.target.value)}
-                    label="Country of Issue"
-                    disabled={disabled}
-                    size="small"
-                  >
-                    {getCommonCountries().map((country) => (
-                      <MenuItem key={country.code} value={country.code}>
-                        <Box display="flex" alignItems="center" gap={1}>
-                          <LanguageIcon fontSize="small" />
-                          {country.name}
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {!license.country_of_issue && (
-                    <FormHelperText sx={{ color: '#ff9800' }}>This field is required</FormHelperText>
-                  )}
-                </FormControl>
-              </Grid>
+                  <DeleteIcon />
+                </IconButton>
+              </Tooltip>
+            )}
+          </Box>
 
-              {/* Foreign License Number */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Foreign License Number"
-                  value={license.license_number}
-                  onChange={(e) => updateForeignLicense(index, 'license_number', e.target.value)}
+          <Grid container spacing={2}>
+            {/* Country of Issue */}
+            <Grid item xs={12} md={6}>
+              <FormControl 
+                fullWidth 
+                required 
+                size="small"
+                {...getSelectStyling(license.id, 'country_of_issue')}
+              >
+                <InputLabel>Country of Issue</InputLabel>
+                <Select
+                  value={license.country_of_issue}
+                  onChange={(e) => updateForeignLicense(index, 'country_of_issue', e.target.value)}
+                  label="Country of Issue"
                   disabled={disabled}
-                  required
                   size="small"
-                  placeholder="Enter your foreign license number"
-                  {...getFieldStyling(license.id, 'license_number')}
-                />
-              </Grid>
-
-              {/* Foreign License Category/Code */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Foreign License Category/Code"
-                  value={license.license_category_foreign}
-                  onChange={(e) => updateForeignLicense(index, 'license_category_foreign', e.target.value)}
-                  disabled={disabled}
-                  required
-                  size="small"
-                  placeholder="e.g., Class C, Category B, etc."
-                  helperText="Enter the category/class as shown on your foreign license"
-                  {...getFieldStyling(license.id, 'license_category_foreign')}
-                />
-              </Grid>
-
-              {/* Madagascar Equivalent Category */}
-              <Grid item xs={12} md={6}>
-                <FormControl 
-                  fullWidth 
-                  required 
-                  size="small"
-                  {...getSelectStyling(license.id, 'license_category_madagascar')}
                 >
-                  <InputLabel>Madagascar Equivalent Category</InputLabel>
-                  <Select
-                    value={license.license_category_madagascar}
-                    onChange={(e) => updateForeignLicense(index, 'license_category_madagascar', e.target.value)}
-                    label="Madagascar Equivalent Category"
-                    disabled={disabled}
-                    size="small"
-                  >
-                    {getAvailableMadagascarCategories().map((category) => (
-                      <MenuItem key={category.value} value={category.value}>
-                        {category.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {!license.license_category_madagascar && (
-                    <FormHelperText sx={{ color: '#ff9800' }}>This field is required</FormHelperText>
-                  )}
-                </FormControl>
-              </Grid>
-
-              {/* Issue Date */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  type="date"
-                  label="Issue Date"
-                  value={license.issue_date}
-                  onChange={(e) => updateForeignLicense(index, 'issue_date', e.target.value)}
-                  disabled={disabled}
-                  required
-                  size="small"
-                  InputLabelProps={{ shrink: true }}
-                  {...getFieldStyling(license.id, 'issue_date')}
-                />
-              </Grid>
-
-              {/* Expiry Date */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  type="date"
-                  label="Expiry Date"
-                  value={license.expiry_date}
-                  onChange={(e) => updateForeignLicense(index, 'expiry_date', e.target.value)}
-                  disabled={disabled}
-                  required
-                  size="small"
-                  InputLabelProps={{ shrink: true }}
-                  {...getFieldStyling(license.id, 'expiry_date')}
-                />
-              </Grid>
-
-              {/* Verification Notes */}
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={2}
-                  label="Verification Notes (Optional)"
-                  value={license.verification_notes}
-                  onChange={(e) => updateForeignLicense(index, 'verification_notes', e.target.value)}
-                  disabled={disabled}
-                  size="small"
-                  placeholder="Any additional notes about this foreign license..."
-                  {...getFieldStyling(license.id, 'verification_notes', false)}
-                />
-              </Grid>
-
-              {/* Expiry Warning */}
-              {license.expiry_date && (
-                (() => {
-                  const expiryDate = new Date(license.expiry_date);
-                  const today = new Date();
-                  const isExpired = expiryDate < today;
-                  const daysUntilExpiry = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-                  
-                  if (isExpired) {
-                    return (
-                      <Grid item xs={12}>
-                        <Alert severity="error">
-                          <Typography variant="body2">
-                            <strong>Expired License:</strong> This foreign license expired on {license.expiry_date}. 
-                            Additional documentation may be required for conversion.
-                          </Typography>
-                        </Alert>
-                      </Grid>
-                    );
-                  } else if (daysUntilExpiry <= 30) {
-                    return (
-                      <Grid item xs={12}>
-                        <Alert severity="warning">
-                          <Typography variant="body2">
-                            <strong>License Expires Soon:</strong> This foreign license expires in {daysUntilExpiry} days. 
-                            Consider completing the conversion process promptly.
-                          </Typography>
-                        </Alert>
-                      </Grid>
-                    );
-                  }
-                  return null;
-                })()
-              )}
+                  {getCommonCountries().map((country) => (
+                    <MenuItem key={country.code} value={country.code}>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <LanguageIcon fontSize="small" />
+                        {country.name}
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Grid>
-          </CardContent>
-        </Card>
+
+            {/* Foreign License Category/Code */}
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Foreign License Category/Code"
+                value={license.license_category_foreign}
+                onChange={(e) => updateForeignLicense(index, 'license_category_foreign', e.target.value)}
+                disabled={disabled}
+                required
+                size="small"
+                placeholder="e.g., Class C, Category B, etc."
+                {...getFieldStyling(license.id, 'license_category_foreign')}
+              />
+            </Grid>
+
+            {/* Madagascar Equivalent Category */}
+            <Grid item xs={12} md={6}>
+              <FormControl 
+                fullWidth 
+                required 
+                size="small"
+                {...getSelectStyling(license.id, 'license_category_madagascar')}
+              >
+                <InputLabel>Madagascar Equivalent Category</InputLabel>
+                <Select
+                  value={license.license_category_madagascar}
+                  onChange={(e) => updateForeignLicense(index, 'license_category_madagascar', e.target.value)}
+                  label="Madagascar Equivalent Category"
+                  disabled={disabled}
+                  size="small"
+                >
+                  {getAvailableMadagascarCategories().map((category) => (
+                    <MenuItem key={category.value} value={category.value}>
+                      {category.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            {/* Issue Date */}
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                type="date"
+                label="Issue Date"
+                value={license.issue_date}
+                onChange={(e) => updateForeignLicense(index, 'issue_date', e.target.value)}
+                disabled={disabled}
+                required
+                size="small"
+                InputLabelProps={{ shrink: true }}
+                {...getFieldStyling(license.id, 'issue_date')}
+              />
+            </Grid>
+          </Grid>
+        </Box>
       ))}
 
       {/* Add License Button */}
-      <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
         <Button
           variant="outlined"
           startIcon={<AddIcon />}
           onClick={addForeignLicense}
           disabled={disabled}
+          color="primary"
           size="small"
         >
-          Add Another Foreign License
+          Add Foreign License
         </Button>
       </Box>
-
-      {/* Information Card */}
-      <Alert severity="info" sx={{ mt: 3 }}>
-        <Typography variant="body2">
-          <strong>Note:</strong> You must provide the original foreign license documents and supporting materials 
-          for verification. Theory or practical tests may be required depending on the country of issue and license category.
-        </Typography>
-      </Alert>
     </Box>
   );
 };
@@ -618,9 +511,6 @@ export const validateForeignLicenseCaptureData = (data: ForeignLicenseCaptureDat
     if (!license.country_of_issue) {
       errors.push(`License ${index + 1}: Country of issue is required`);
     }
-    if (!license.license_number) {
-      errors.push(`License ${index + 1}: License number is required`);
-    }
     if (!license.license_category_foreign) {
       errors.push(`License ${index + 1}: Foreign license category is required`);
     }
@@ -629,9 +519,6 @@ export const validateForeignLicenseCaptureData = (data: ForeignLicenseCaptureDat
     }
     if (!license.issue_date) {
       errors.push(`License ${index + 1}: Issue date is required`);
-    }
-    if (!license.expiry_date) {
-      errors.push(`License ${index + 1}: Expiry date is required`);
     }
   });
   

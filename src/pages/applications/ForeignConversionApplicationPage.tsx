@@ -340,6 +340,25 @@ const ForeignConversionApplicationPage: React.FC = () => {
     return age;
   };
 
+  // Common countries for foreign license conversion (matching ForeignLicenseCaptureForm)
+  const getCommonCountries = () => {
+    return [
+      { code: 'ZAF', name: 'South Africa' },
+      { code: 'FRA', name: 'France' },
+      { code: 'GBR', name: 'United Kingdom' },
+      { code: 'USA', name: 'United States' },
+      { code: 'CAN', name: 'Canada' },
+      { code: 'AUS', name: 'Australia' },
+      { code: 'DEU', name: 'Germany' },
+      { code: 'ITA', name: 'Italy' },
+      { code: 'ESP', name: 'Spain' },
+      { code: 'BEL', name: 'Belgium' },
+      { code: 'NLD', name: 'Netherlands' },
+      { code: 'CHE', name: 'Switzerland' },
+      { code: 'OTHER', name: 'Other' }
+    ];
+  };
+
   // Step validation
   const isStepValid = (step: number): boolean => {
     switch (step) {
@@ -804,9 +823,9 @@ const ForeignConversionApplicationPage: React.FC = () => {
                 <Box key={license.id} sx={{ mb: 0.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
                   <Grid container spacing={1}>
                     <Grid item xs={12} md={6}>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Foreign License</Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Country of Issue</Typography>
                       <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                        {license.license_number} ({license.country_of_issue})
+                        {getCommonCountries().find(c => c.code === license.country_of_issue)?.name || license.country_of_issue}
                       </Typography>
                     </Grid>
                     <Grid item xs={12} md={6}>
@@ -822,9 +841,9 @@ const ForeignConversionApplicationPage: React.FC = () => {
                       </Typography>
                     </Grid>
                     <Grid item xs={12} md={6}>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Validity</Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Issue Date</Typography>
                       <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                        {license.issue_date} to {license.expiry_date}
+                        {license.issue_date}
                       </Typography>
                     </Grid>
                   </Grid>
