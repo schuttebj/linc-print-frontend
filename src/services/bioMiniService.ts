@@ -149,7 +149,9 @@ class BioMiniService {
    */
   async getScannerList(): Promise<BioMiniDeviceInfo[]> {
     try {
-      const response = await fetch(`${WEB_AGENT_URL}/api/getScannerList`, {
+      // Add dummy parameter like all other API calls
+      const url = `${WEB_AGENT_URL}/api/getScannerList?dummy=${this.getDummyParam()}`;
+      const response = await fetch(url, {
         method: 'GET'
       });
       const result: BioMiniResponse = await response.json();
@@ -287,7 +289,8 @@ class BioMiniService {
    */
   async getFingerprintTemplate(): Promise<string> {
     try {
-      const response = await fetch(`${WEB_AGENT_URL}/api/getTemplateData`, {
+      const url = `${WEB_AGENT_URL}/api/getTemplateData?dummy=${this.getDummyParam()}`;
+      const response = await fetch(url, {
         method: 'POST'
       });
       const result: BioMiniResponse = await response.json();
@@ -308,7 +311,8 @@ class BioMiniService {
    */
   async startLivePreview(): Promise<boolean> {
     try {
-      const response = await fetch(`${WEB_AGENT_URL}/api/startCapturing`, {
+      const url = `${WEB_AGENT_URL}/api/startCapturing?dummy=${this.getDummyParam()}`;
+      const response = await fetch(url, {
         method: 'POST'
       });
       const result: BioMiniResponse = await response.json();
@@ -325,7 +329,8 @@ class BioMiniService {
    */
   async stopCapture(): Promise<boolean> {
     try {
-      const response = await fetch(`${WEB_AGENT_URL}/api/abortCapturing`, {
+      const url = `${WEB_AGENT_URL}/api/abortCapturing?dummy=${this.getDummyParam()}`;
+      const response = await fetch(url, {
         method: 'POST'
       });
       const result: BioMiniResponse = await response.json();
