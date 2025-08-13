@@ -57,6 +57,8 @@ const FingerprintTestPage: React.FC = () => {
   };
 
   const handleFingerprintCapture = (fingerprintFile: File) => {
+    console.log('🎯 TEST PAGE: handleFingerprintCapture called!', fingerprintFile);
+    
     // Clean up previous image URL if exists
     if (capturedImageUrl) {
       URL.revokeObjectURL(capturedImageUrl);
@@ -68,11 +70,16 @@ const FingerprintTestPage: React.FC = () => {
     setCapturedImageUrl(imageUrl);
     setCaptureTimestamp(new Date().toLocaleString());
     
+    addLog(`🎯 TEST PAGE CALLBACK TRIGGERED!`, 'success');
     addLog(`✅ Fingerprint captured successfully!`, 'success');
     addLog(`📁 File: ${fingerprintFile.name}`, 'info');
     addLog(`📊 Size: ${fingerprintFile.size} bytes (${(fingerprintFile.size/1024).toFixed(1)} KB)`, 'info');
     addLog(`🖼️ Type: ${fingerprintFile.type}`, 'info');
     addLog(`⏰ Captured at: ${new Date().toLocaleTimeString()}`, 'info');
+    addLog(`🔗 Image URL created: ${imageUrl.substring(0, 50)}...`, 'info');
+    
+    console.log('🖼️ Image URL created:', imageUrl);
+    console.log('📊 States updated - capturedFingerprint:', !!fingerprintFile, 'capturedImageUrl:', !!imageUrl);
   };
 
   // Check what's available via the proxy
@@ -230,6 +237,22 @@ const FingerprintTestPage: React.FC = () => {
                 onFingerprintCapture={handleFingerprintCapture}
                 disabled={false}
               />
+              
+              {/* Debug info about FingerprintCapture */}
+              <Alert severity="info" sx={{ mt: 2 }}>
+                <Typography variant="body2">
+                  🔍 <strong>Debug:</strong> FingerprintCapture component rendered
+                </Typography>
+                <Typography variant="caption" display="block">
+                  • Callback function: {typeof handleFingerprintCapture}
+                </Typography>
+                <Typography variant="caption" display="block">
+                  • Current captured state: {capturedFingerprint ? 'Has file' : 'No file'}
+                </Typography>
+                <Typography variant="caption" display="block">
+                  • Image URL state: {capturedImageUrl ? 'Has URL' : 'No URL'}
+                </Typography>
+              </Alert>
               
               {capturedFingerprint && capturedImageUrl && (
                 <Card sx={{ mt: 3, border: '2px solid #4caf50' }}>
@@ -436,6 +459,44 @@ const FingerprintTestPage: React.FC = () => {
                     size="small"
                   >
                     Debug Info
+                  </Button>
+                </Grid>
+                <Grid item xs={6}>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    color="secondary"
+                    onClick={() => {
+                      addLog('🧪 Testing callback with simulated fingerprint...', 'info');
+                      
+                      // Create a test image file to simulate capture
+                      const canvas = document.createElement('canvas');
+                      canvas.width = 300;
+                      canvas.height = 300;
+                      const ctx = canvas.getContext('2d');
+                      
+                      if (ctx) {
+                        // Draw a test pattern
+                        ctx.fillStyle = '#f0f0f0';
+                        ctx.fillRect(0, 0, 300, 300);
+                        ctx.fillStyle = '#333';
+                        ctx.font = '20px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('TEST FINGERPRINT', 150, 150);
+                        ctx.fillText(new Date().toLocaleTimeString(), 150, 180);
+                        
+                        canvas.toBlob((blob) => {
+                          if (blob) {
+                            const testFile = new File([blob], `test_fingerprint_${Date.now()}.bmp`, { type: 'image/bmp' });
+                            addLog('🧪 Simulated capture created, calling callback...', 'info');
+                            handleFingerprintCapture(testFile);
+                          }
+                        }, 'image/png');
+                      }
+                    }}
+                    size="small"
+                  >
+                    Test Callback
                   </Button>
                 </Grid>
                 <Grid item xs={6}>
