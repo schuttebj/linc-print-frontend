@@ -228,6 +228,7 @@ class BioMiniService {
             if (checkResult.lfdScore) {
               console.log('🔍 LFD Score:', checkResult.lfdScore);
             }
+            break; // Exit polling loop immediately
           } else {
             console.log(`⏳ Poll ${attempts + 1}: Still capturing... (captureEnd: ${checkResult.captureEnd})`);
           }
@@ -242,10 +243,43 @@ class BioMiniService {
         throw new Error('Capture timeout - please place finger firmly on scanner and try again');
       }
 
-      // Step 3: Get image - EXACT URL like BiominiWebAgent.js line 604 
+      // Step 3A: IMMEDIATE image fetch while session is still hot (critical timing!)
+      console.log('⚡ Attempting IMMEDIATE image fetch (timing critical)...');
+      try {
+        const immediateImageUrl = `${WEB_AGENT_URL}/img/CaptureImg.bmp?dummy=${this.getDummyParam()}&shandle=${this.deviceHandle}&id=${this.pageId}`;
+        console.log('🖼️ Immediate image URL:', immediateImageUrl);
+        
+        const immediateResponse = await fetch(immediateImageUrl, { 
+          method: 'GET',
+          headers: { 'Accept': 'image/bmp,image/*,*/*' }
+        });
+        
+        console.log('📥 Immediate response:', immediateResponse.status, immediateResponse.statusText);
+        
+        if (immediateResponse.ok) {
+          const immediateBlob = await immediateResponse.blob();
+          console.log('📊 Immediate blob size:', immediateBlob.size, 'bytes');
+          
+          if (immediateBlob.size > 0) {
+            const fingerprintFile = new File([immediateBlob], `fingerprint_${Date.now()}.bmp`, {
+              type: 'image/bmp'
+            });
+            
+            console.log(`✅ IMMEDIATE SUCCESS! Fingerprint: ${fingerprintFile.size} bytes`);
+            return fingerprintFile; // Success - return immediately!
+          }
+        }
+      } catch (immediateError) {
+        console.log('❌ Immediate fetch failed:', immediateError.message);
+      }
+
+      // Step 3B: Fallback methods if immediate fetch failed
+      console.log('🔄 Immediate fetch failed, trying fallback methods...');
+      
+      // Get image - EXACT URL like BiominiWebAgent.js line 604 
       // NOTE: Uses 'shandle' (not 'sHandle') in image URL
       const imageUrl = `${WEB_AGENT_URL}/img/CaptureImg.bmp?dummy=${this.getDummyParam()}&shandle=${this.deviceHandle}&id=${this.pageId}`;
-      console.log('🖼️ Image URL:', imageUrl);
+      console.log('🖼️ Fallback image URL:', imageUrl);
       console.log('🌐 Full image URL for proxy:', imageUrl);
       
       let imageResponse: Response;
