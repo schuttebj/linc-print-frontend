@@ -359,7 +359,7 @@ const FingerprintTestPage: React.FC = () => {
                       cleanup();
                     };
                   }}
-                  disabled={disabled}
+                  disabled={false}
                 >
                   🌉 Capture via Bridge (Production)
                 </Button>

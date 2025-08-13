@@ -29,6 +29,8 @@ export interface BioMiniResponse {
   IsFingerOn?: boolean;
   lfdScore?: number;
   ScannerCount?: number;
+  sessionId?: string;
+  imageBase64?: string;
 }
 
 export interface BioMiniServiceStatus {
