@@ -149,7 +149,10 @@ const FingerprintTestPage: React.FC = () => {
 
   useEffect(() => {
     addLog('🚀 Fingerprint Test Page loaded', 'info');
-    addLog('Web Agent URL: https://localhost:443', 'info');
+    addLog('🎯 CORRECTED IMPLEMENTATION: Based on BiominiWebAgent.js analysis', 'info');
+    addLog('📡 API Endpoints: /api/initDevice, /api/captureSingle, /api/getCaptureEnd', 'info');
+    addLog('🖼️ Image Endpoint: /img/CaptureImg.bmp with session parameters', 'info');
+    addLog('🌐 Development: Using Vite proxy /biomini → https://localhost', 'info');
     
     // Auto-run diagnostics
     setTimeout(() => {
@@ -312,13 +315,16 @@ const FingerprintTestPage: React.FC = () => {
             <CardHeader title="Connection Information" />
             <CardContent>
               <Typography variant="body2" sx={{ fontFamily: 'monospace', mb: 1 }}>
-                <strong>Web Agent URL:</strong> https://localhost:443
+                <strong>Web Agent URL:</strong> /biomini (dev) | https://localhost (prod)
               </Typography>
               <Typography variant="body2" sx={{ fontFamily: 'monospace', mb: 1 }}>
-                <strong>Expected Service:</strong> BioMiniWebAgent.exe
+                <strong>Service:</strong> BioMiniWebAgent.exe (running on port 443)
+              </Typography>
+              <Typography variant="body2" sx={{ fontFamily: 'monospace', mb: 1 }}>
+                <strong>API Pattern:</strong> /api/initDevice, /api/captureSingle, /api/getCaptureEnd
               </Typography>
               <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                <strong>Device:</strong> BioMini Slim 2
+                <strong>Device:</strong> BioMini Slim 2 (via DeviceHandle parameter)
               </Typography>
               
               <Divider sx={{ my: 2 }} />
