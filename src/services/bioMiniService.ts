@@ -175,10 +175,10 @@ class BioMiniService {
 
   /**
    * Capture a single fingerprint and return as File object
-   * Uses CORRECT API implementation from BiominiWebAgent.js:
-   * 1. POST to /api/captureSingle with data parameters
-   * 2. Poll /api/getCaptureEnd until captureEnd: true
-   * 3. Get image from /img/CaptureImg.bmp with session parameters
+   * FIXED: Uses EXACT API implementation from BiominiWebAgent.js
+   * 1. GET to /api/captureSingle?dummy=X&sHandle=Y&id=Z&resetTimer=30000
+   * 2. Poll /api/getCaptureEnd?dummy=X&sHandle=Y&id=Z until captureEnd: true  
+   * 3. Get image from /img/CaptureImg.bmp?dummy=X&shandle=Y&id=Z
    */
   async captureFingerprint(): Promise<File> {
     if (!this.status.initialized || !this.deviceHandle) {
@@ -186,85 +186,91 @@ class BioMiniService {
     }
 
     try {
-      // Step 1: Start capture using CORRECT API pattern (like BiominiWebAgent.js line 500)
-      const captureData = new URLSearchParams({
-        sHandle: this.deviceHandle,
-        id: this.pageId,
-        resetTimer: '30000'
-      });
+      console.log('🔄 Starting fingerprint capture...');
+      console.log('📱 Device handle:', this.deviceHandle);
+      console.log('🆔 Page ID:', this.pageId);
 
-      const captureUrl = `${WEB_AGENT_URL}/api/captureSingle?dummy=${this.getDummyParam()}`;
-      const captureResponse = await fetch(captureUrl, { 
-        method: 'GET',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-      });
-      
-      // Add data as query parameters (how jQuery does it)
-      const captureUrlWithData = `${captureUrl}&${captureData.toString()}`;
-      const captureResponseFinal = await fetch(captureUrlWithData, { method: 'GET' });
-      const captureResult = await captureResponseFinal.json();
+      // Step 1: Start capture - EXACT URL like BiominiWebAgent.js line 500
+      const captureUrl = `${WEB_AGENT_URL}/api/captureSingle?dummy=${this.getDummyParam()}&sHandle=${this.deviceHandle}&id=${this.pageId}&resetTimer=30000`;
+      console.log('📡 Capture URL:', captureUrl);
 
-      if (captureResult.retValue !== 0) {
+      const captureResponse = await fetch(captureUrl, { method: 'GET' });
+      const captureResult: BioMiniResponse = await captureResponse.json();
+
+      console.log('📥 Capture API response:', captureResult);
+
+      if (!this.isApiSuccess(captureResult.retValue)) {
         throw new Error(captureResult.retString || 'Fingerprint capture failed');
       }
 
-      console.log('Capture started, polling for completion...');
+      console.log('✅ Capture started successfully, polling for completion...');
 
-      // Step 2: Poll /api/getCaptureEnd until captureEnd: true (like BiominiWebAgent.js line 576)
+      // Step 2: Poll /api/getCaptureEnd - EXACT pattern like BiominiWebAgent.js line 576
       let captureComplete = false;
       let attempts = 0;
-      const maxAttempts = 60; // Match the sample UI limit
+      const maxAttempts = 60; // Match the sample UI limit (BiominiWebAgent.js line 615)
 
       while (!captureComplete && attempts < maxAttempts) {
         await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second intervals
         
-        const checkData = new URLSearchParams({
-          sHandle: this.deviceHandle,
-          id: this.pageId
-        });
-        
-        const checkUrl = `${WEB_AGENT_URL}/api/getCaptureEnd?dummy=${this.getDummyParam()}&${checkData.toString()}`;
+        const checkUrl = `${WEB_AGENT_URL}/api/getCaptureEnd?dummy=${this.getDummyParam()}&sHandle=${this.deviceHandle}&id=${this.pageId}`;
         
         try {
           const checkResponse = await fetch(checkUrl, { method: 'GET' });
-          const checkResult = await checkResponse.json();
+          const checkResult: BioMiniResponse = await checkResponse.json();
+          
+          console.log(`📊 Poll ${attempts + 1}:`, checkResult);
           
           // Check for captureEnd property (like BiominiWebAgent.js line 585)
           if (checkResult.captureEnd === true) {
             captureComplete = true;
-            console.log('Capture completed successfully');
+            console.log('🎉 Capture completed successfully!');
+            if (checkResult.lfdScore) {
+              console.log('🔍 LFD Score:', checkResult.lfdScore);
+            }
+          } else {
+            console.log(`⏳ Poll ${attempts + 1}: Still capturing... (captureEnd: ${checkResult.captureEnd})`);
           }
         } catch (error) {
-          console.log(`Poll attempt ${attempts + 1}: checking capture status...`);
+          console.log(`❌ Poll ${attempts + 1} failed:`, error);
         }
         
         attempts++;
       }
 
       if (!captureComplete) {
-        throw new Error('Capture timeout - please place finger on scanner and try again');
+        throw new Error('Capture timeout - please place finger firmly on scanner and try again');
       }
 
-      // Step 3: Get image using session parameters (like BiominiWebAgent.js line 604)
-      const sessionData = `shandle=${this.deviceHandle}&id=${this.pageId}`;
-      const imageUrl = `${WEB_AGENT_URL}/img/CaptureImg.bmp?dummy=${this.getDummyParam()}&${sessionData}`;
+      // Step 3: Get image - EXACT URL like BiominiWebAgent.js line 604 
+      // NOTE: Uses 'shandle' (not 'sHandle') in image URL
+      const imageUrl = `${WEB_AGENT_URL}/img/CaptureImg.bmp?dummy=${this.getDummyParam()}&shandle=${this.deviceHandle}&id=${this.pageId}`;
+      console.log('🖼️ Image URL:', imageUrl);
       
       const imageResponse = await fetch(imageUrl, { method: 'GET' });
       
       if (!imageResponse.ok) {
-        throw new Error(`Failed to retrieve fingerprint image: ${imageResponse.status}`);
+        throw new Error(`Failed to retrieve fingerprint image: ${imageResponse.status} ${imageResponse.statusText}`);
       }
 
       // Convert response to blob, then to File
       const imageBlob = await imageResponse.blob();
+      console.log('📊 Image blob size:', imageBlob.size, 'bytes');
+      
       const fingerprintFile = new File([imageBlob], `fingerprint_${Date.now()}.bmp`, {
         type: 'image/bmp'
       });
 
-      console.log(`Fingerprint captured successfully: ${fingerprintFile.size} bytes`);
+      console.log(`✅ Fingerprint captured successfully: ${fingerprintFile.size} bytes`);
+      console.log('📁 File details:', {
+        name: fingerprintFile.name,
+        size: fingerprintFile.size,
+        type: fingerprintFile.type
+      });
+      
       return fingerprintFile;
     } catch (error) {
-      console.error('Fingerprint capture failed:', error);
+      console.error('❌ Fingerprint capture failed:', error);
       throw error;
     }
   }
