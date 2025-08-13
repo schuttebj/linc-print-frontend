@@ -670,11 +670,21 @@ const ForeignConversionApplicationPage: React.FC = () => {
               </Card>
             )}
 
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
+                Foreign License Conversion
+                            </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Provide details for each foreign license you want to convert to a Madagascar license
+                            </Typography>
+                          </Box>
+
             <ForeignLicenseCaptureForm
               value={foreignLicenseCaptureData}
               onChange={handleForeignLicenseCaptureChange}
               disabled={loading}
               personBirthDate={selectedPerson?.birth_date}
+              personId={selectedPerson?.id}
             />
 
             {/* Declaration Section */}
@@ -694,22 +704,22 @@ const ForeignConversionApplicationPage: React.FC = () => {
                     <CheckCircleIcon color="primary" fontSize="small" />
                     <Typography variant="subtitle1" sx={{ fontSize: '1rem', fontWeight: 600 }}>
                       Declaration
-                    </Typography>
+                        </Typography>
                   </Box>
                 }
                 subheader="Verify that you have never been refused a license"
               />
               <CardContent sx={{ p: 1.5, pt: 0 }}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={neverBeenRefused}
-                      onChange={(e) => {
-                        setNeverBeenRefused(e.target.checked);
-                        if (e.target.checked) {
-                          setRefusalDetails('');
-                        }
-                      }}
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={neverBeenRefused}
+                          onChange={(e) => {
+                            setNeverBeenRefused(e.target.checked);
+                            if (e.target.checked) {
+                              setRefusalDetails('');
+                            }
+                          }}
                       size="small"
                     />
                   }
@@ -718,26 +728,26 @@ const ForeignConversionApplicationPage: React.FC = () => {
                       I have never been refused a driving license or had a driving license suspended or revoked in any country
                     </Typography>
                   }
-                />
-                
-                {!neverBeenRefused && (
+                    />
+                    
+                    {!neverBeenRefused && (
                   <Box sx={{ mt: 1.5 }}>
-                    <TextField
-                      fullWidth
-                      multiline
-                      rows={3}
+                      <TextField
+                        fullWidth
+                        multiline
+                        rows={3}
                       label="Please provide details of refusal"
                       value={refusalDetails}
                       onChange={(e) => setRefusalDetails(e.target.value)}
-                      required
+                        required
                       placeholder="Provide details about previous refusal including date, reason, and issuing authority..."
                       size="small"
                       {...getFieldStyling('refusalDetails', refusalDetails, !neverBeenRefused)}
-                    />
+                      />
                   </Box>
-                )}
-              </CardContent>
-            </Card>
+                    )}
+                  </CardContent>
+                </Card>
           </Box>
         );
 
@@ -748,7 +758,7 @@ const ForeignConversionApplicationPage: React.FC = () => {
         return null;
 
       case 4: // Review step
-        return (
+              return (
           <Paper 
             elevation={0}
             sx={{ 
@@ -760,25 +770,25 @@ const ForeignConversionApplicationPage: React.FC = () => {
             <Box sx={{ p: 1.5 }}>
               <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, fontSize: '1rem', mb: 1 }}>
                 Review & Submit
-              </Typography>
+                  </Typography>
 
               <Alert severity="info" sx={{ mb: 1.5, py: 0.5 }}>
                 <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                   Please review the foreign license conversion application details before submission.
-                </Typography>
-              </Alert>
+                      </Typography>
+                    </Alert>
 
               {/* Person Summary - Compact */}
               <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
                 <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
                   Foreign License Conversion Applicant
-                </Typography>
+            </Typography>
                 <Grid container spacing={1}>
                   <Grid item xs={12} md={6}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Full Name</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                       {selectedPerson?.surname}, {selectedPerson?.first_name} {selectedPerson?.middle_name}
-                    </Typography>
+            </Typography>
                   </Grid>
                   <Grid item xs={12} md={6}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Madagascar ID</Typography>
@@ -787,30 +797,30 @@ const ForeignConversionApplicationPage: React.FC = () => {
                     </Typography>
                   </Grid>
                 </Grid>
-              </Box>
+          </Box>
 
               {/* Processing Location - Compact */}
               <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
                 <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
                   Processing Location
-                </Typography>
+            </Typography>
                 <Grid container spacing={1}>
                   <Grid item xs={12}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Location</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                      {user?.primary_location_id ? (
-                        `User's assigned location: ${user.primary_location_id}`
-                      ) : (
-                        availableLocations.find(loc => loc.id === selectedLocationId)?.name || 'No location selected'
-                      )}
-                      {selectedLocationId && (
-                        <Chip 
-                          label={availableLocations.find(loc => loc.id === selectedLocationId)?.code || selectedLocationId} 
-                          size="small" 
+                  {user?.primary_location_id ? (
+                    `User's assigned location: ${user.primary_location_id}`
+                  ) : (
+                    availableLocations.find(loc => loc.id === selectedLocationId)?.name || 'No location selected'
+                  )}
+                  {selectedLocationId && (
+                    <Chip 
+                      label={availableLocations.find(loc => loc.id === selectedLocationId)?.code || selectedLocationId} 
+                      size="small" 
                           sx={{ ml: 1, fontSize: '0.6rem', height: '18px' }}
-                        />
-                      )}
-                    </Typography>
+                    />
+                  )}
+                </Typography>
                   </Grid>
                 </Grid>
               </Box>
@@ -822,30 +832,30 @@ const ForeignConversionApplicationPage: React.FC = () => {
               {foreignLicenseCaptureData?.foreign_licenses?.map((license, index) => (
                 <Box key={license.id} sx={{ mb: 0.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
                   <Grid container spacing={1}>
-                    <Grid item xs={12} md={6}>
+                  <Grid item xs={12} md={6}>
                       <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Country of Issue</Typography>
                       <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                         {getCommonCountries().find(c => c.code === license.country_of_issue)?.name || license.country_of_issue}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={12} md={6}>
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
                       <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Madagascar Category</Typography>
                       <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                         <Chip label={license.license_category_madagascar} size="small" color="primary" sx={{ fontSize: '0.6rem', height: '18px' }} />
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={12} md={6}>
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
                       <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Foreign Category</Typography>
                       <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                         {license.license_category_foreign}
                       </Typography>
-                    </Grid>
-                    <Grid item xs={12} md={6}>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
                       <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Issue Date</Typography>
                       <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                         {license.issue_date}
-                      </Typography>
-                    </Grid>
+                    </Typography>
+                  </Grid>
                   </Grid>
                 </Box>
               ))}
@@ -856,7 +866,7 @@ const ForeignConversionApplicationPage: React.FC = () => {
                   Declaration
                 </Typography>
                 <Grid container spacing={1}>
-                  <Grid item xs={12}>
+                    <Grid item xs={12}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Previous Refusals</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                       {neverBeenRefused ? (
@@ -872,7 +882,7 @@ const ForeignConversionApplicationPage: React.FC = () => {
                     </Typography>
                   </Grid>
                 </Grid>
-              </Box>
+                    </Box>
 
               {/* Medical & Biometric Data - Comprehensive */}
               <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
@@ -883,34 +893,34 @@ const ForeignConversionApplicationPage: React.FC = () => {
                   <Grid item xs={12} md={3}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>License Photo</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                      <Chip
+                    <Chip 
                         label={biometricData.photo ? 'Captured' : 'Required'}
-                        size="small"
+                      size="small" 
                         color={biometricData.photo ? 'success' : 'error'} 
                         sx={{ fontSize: '0.6rem', height: '18px' }}
-                      />
+                    />
                     </Typography>
                   </Grid>
                   <Grid item xs={12} md={3}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Digital Signature</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                      <Chip
-                        label={biometricData.signature ? 'Captured' : 'Required'}
-                        size="small"
+                    <Chip
+                      label={biometricData.signature ? 'Captured' : 'Required'}
+                      size="small"
                         color={biometricData.signature ? 'success' : 'error'} 
                         sx={{ fontSize: '0.6rem', height: '18px' }}
-                      />
+                    />
                     </Typography>
                   </Grid>
                   <Grid item xs={12} md={3}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Fingerprint</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                      <Chip
+                    <Chip 
                         label={biometricData.fingerprint ? 'Captured' : 'Optional'}
-                        size="small" 
-                        color={biometricData.fingerprint ? 'success' : 'default'}
+                      size="small" 
+                      color={biometricData.fingerprint ? 'success' : 'default'} 
                         sx={{ fontSize: '0.6rem', height: '18px' }}
-                      />
+                    />
                     </Typography>
                   </Grid>
                   <Grid item xs={12} md={3}>
@@ -932,18 +942,18 @@ const ForeignConversionApplicationPage: React.FC = () => {
                         />
                       )}
                     </Typography>
-                  </Grid>
+                </Grid>
                 </Grid>
               </Box>
 
-              {/* Summary */}
+            {/* Summary */}
               <Alert severity="info" sx={{ mt: 1.5, py: 0.5 }}>
                 <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                  <strong>Next Steps:</strong> After submission, you must provide the original foreign license and supporting documents. 
+                <strong>Next Steps:</strong> After submission, you must provide the original foreign license and supporting documents. 
                   A theory test may be required depending on the country of issue and license category.
-                </Typography>
-              </Alert>
-            </Box>
+              </Typography>
+            </Alert>
+          </Box>
           </Paper>
         );
 
@@ -979,16 +989,16 @@ const ForeignConversionApplicationPage: React.FC = () => {
         {/* Error/Success Messages */}
         {(error || success) && (
           <Box sx={{ p: 2, bgcolor: 'white' }}>
-            {error && (
+        {error && (
               <Alert severity="error" sx={{ mb: 1 }}>
-                {error}
-              </Alert>
-            )}
-            
-            {success && (
+            {error}
+          </Alert>
+        )}
+        
+        {success && (
               <Alert severity="success" sx={{ mb: 1 }} icon={<CheckCircleIcon />}>
-                {success}
-              </Alert>
+            {success}
+          </Alert>
             )}
           </Box>
         )}
@@ -1000,7 +1010,7 @@ const ForeignConversionApplicationPage: React.FC = () => {
             onChange={(e, newValue) => setActiveStep(newValue)}
             variant="scrollable"
             scrollButtons="auto"
-            sx={{
+                    sx={{
               '& .MuiTab-root': { 
                 minHeight: 48,
                 textTransform: 'none',
@@ -1017,7 +1027,7 @@ const ForeignConversionApplicationPage: React.FC = () => {
               />
             ))}
           </Tabs>
-        </Box>
+                  </Box>
 
         {/* Tab Content */}
         <Box sx={{ 
@@ -1039,8 +1049,8 @@ const ForeignConversionApplicationPage: React.FC = () => {
               onCancel={handleCancel}
               showHeader={false}
             />
-          </Box>
-          
+                </Box>
+                
           {/* Medical Form - Always rendered but conditionally visible */}
           <Box sx={{ display: activeStep === 2 ? 'block' : 'none' }}>
             <MedicalInformationSection
@@ -1087,36 +1097,36 @@ const ForeignConversionApplicationPage: React.FC = () => {
         {activeStep !== 0 && activeStep !== 2 && activeStep !== 3 && (
           <Box sx={{ p: 2, bgcolor: 'white', borderTop: '1px solid', borderColor: 'divider' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Button
-                onClick={handleCancel}
-                disabled={loading}
-                color="secondary"
+                  <Button
+                    onClick={handleCancel}
+                    disabled={loading}
+                    color="secondary"
                 size="small"
-              >
-                Cancel
-              </Button>
-              
+                  >
+                    Cancel
+                  </Button>
+                  
               <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button
+                  <Button
                   disabled={activeStep <= 1 || loading}
-                  onClick={handleBack}
-                  startIcon={<ArrowBackIcon />}
+                    onClick={handleBack}
+                    startIcon={<ArrowBackIcon />}
                   size="small"
-                >
-                  Back
-                </Button>
-                
-                <Button
-                  variant="contained"
+                  >
+                    Back
+                  </Button>
+                  
+                  <Button
+                    variant="contained"
                   onClick={activeStep === steps.length - 1 ? handleSubmit : handleNext}
                   disabled={!isStepValid(activeStep) || loading}
-                  startIcon={loading ? <CircularProgress size={20} /> : undefined}
+                    startIcon={loading ? <CircularProgress size={20} /> : undefined}
                   endIcon={activeStep !== steps.length - 1 ? <ArrowForwardIcon /> : undefined}
                   size="small"
-                >
+                  >
                   {loading ? 'Submitting...' : activeStep === steps.length - 1 ? 'Submit Application' : 'Next'}
-                </Button>
-              </Box>
+                  </Button>
+                </Box>
             </Box>
           </Box>
         )}

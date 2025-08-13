@@ -22,7 +22,17 @@ import {
   Alert,
   Chip,
   FormHelperText,
-  Tooltip
+  Tooltip,
+  Divider,
+  FormControlLabel,
+  Checkbox,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+  Collapse,
+  Stack
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -32,10 +42,14 @@ import {
   DateRange as DateRangeIcon,
   Flag as FlagIcon,
   CheckCircle as CheckCircleIcon,
-  Warning as WarningIcon
+  Warning as WarningIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
+  VerifiedUser as VerifiedIcon
 } from '@mui/icons-material';
 import { LicenseCategory } from '../../types';
 import { useDebounceValidation } from '../../hooks/useDebounceValidation';
+import { applicationService } from '../../services/applicationService';
 
 export interface ForeignLicense {
   id: string; // temp ID for form management
@@ -43,6 +57,10 @@ export interface ForeignLicense {
   license_category_foreign: string; // Foreign country's license code/category
   license_category_madagascar: LicenseCategory; // Madagascar equivalent category
   issue_date: string;
+  restrictions: {
+    driver_restrictions: string[];
+    vehicle_restrictions: string[];
+  }; // License restrictions in structured format
   verified: boolean;
 }
 
@@ -55,16 +73,21 @@ interface ForeignLicenseCaptureFormProps {
   onChange: (data: ForeignLicenseCaptureData | null) => void;
   disabled?: boolean;
   personBirthDate?: string; // For age validation
+  personId?: string; // For loading existing licenses
 }
 
 const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
   value,
   onChange,
   disabled = false,
-  personBirthDate
+  personBirthDate,
+  personId
 }) => {
-  const captureData = value || { foreign_licenses: [] };
+  const [captureData, setCaptureData] = useState<ForeignLicenseCaptureData>(value || { foreign_licenses: [] });
   const [fieldStates, setFieldStates] = useState<{ [key: string]: 'valid' | 'invalid' | 'required' | 'default' }>({});
+  const [existingLicenses, setExistingLicenses] = useState<any[]>([]);
+  const [loadingExisting, setLoadingExisting] = useState(false);
+  const [showExisting, setShowExisting] = useState(false);
 
   // Common countries for foreign license conversion
   const getCommonCountries = () => {
@@ -278,6 +301,7 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
 
   // Update capture data
   const updateCaptureData = (newData: ForeignLicenseCaptureData) => {
+    setCaptureData(newData);
     onChange(newData);
   };
 
@@ -289,11 +313,61 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
       license_category_foreign: '',
       license_category_madagascar: '' as LicenseCategory,
       issue_date: '',
+      restrictions: {
+        driver_restrictions: ['00'], // Default to "00 - None"
+        vehicle_restrictions: ['00']  // Default to "00 - None"
+      },
       verified: false
     };
 
     updateCaptureData({
       foreign_licenses: [...captureData.foreign_licenses, newLicense]
+    });
+  };
+
+  // Helper function to get restriction display name
+  const getRestrictionDisplayName = (code: string): string => {
+    // Driver restrictions mapping
+    const driverRestrictionMap: Record<string, string> = {
+      '00': 'None',
+      '01': 'Corrective Lenses Required',
+      '02': 'Artificial Limb/Prosthetics'
+    };
+    
+    // Vehicle restrictions mapping
+    const vehicleRestrictionMap: Record<string, string> = {
+      '00': 'None',
+      '01': 'Automatic Transmission Only',
+      '02': 'Electric Powered Vehicles Only',
+      '03': 'Vehicles Adapted for Physical Disabilities',
+      '04': 'Tractor Vehicles Only',
+      '05': 'Industrial/Agriculture Vehicles Only'
+    };
+    
+    return driverRestrictionMap[code] || vehicleRestrictionMap[code] || `Restriction ${code}`;
+  };
+
+  // Helper function to manage automatic "00 - None" default logic
+  const updateRestrictions = (licenseIndex: number, restrictionType: 'driver_restrictions' | 'vehicle_restrictions', selectedValues: string[]) => {
+    const license = captureData.foreign_licenses[licenseIndex];
+    
+    // If no values selected or only "00" is selected when others are added, automatically add "00"
+    let finalValues = [...selectedValues];
+    
+    // If selecting other restrictions while "00" is present, remove "00"
+    if (finalValues.length > 1 && finalValues.includes('00')) {
+      finalValues = finalValues.filter(value => value !== '00');
+    }
+    
+    // If no restrictions selected, automatically add "00" as default
+    if (finalValues.length === 0) {
+      finalValues = ['00'];
+    }
+    
+    // Update the license with new restrictions
+    updateForeignLicense(licenseIndex, 'restrictions', {
+      ...license.restrictions,
+      [restrictionType]: finalValues
     });
   };
 
@@ -322,6 +396,53 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
     });
   };
 
+  // Load existing licenses when person changes
+  const loadExistingLicenses = async (personId: string) => {
+    setLoadingExisting(true);
+    try {
+      console.log('Loading existing licenses for person:', personId);
+      const response = await applicationService.getPersonLicenses(personId);
+      console.log('Existing licenses response:', response);
+      const licenses = response.system_licenses || [];
+      setExistingLicenses(licenses);
+      
+      // Keep existing licenses collapsed by default
+    } catch (error) {
+      console.error('Error loading existing licenses:', error);
+      setExistingLicenses([]);
+    } finally {
+      setLoadingExisting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (personId) {
+      loadExistingLicenses(personId);
+    }
+  }, [personId]);
+
+  // Initialize data from props
+  useEffect(() => {
+    if (value) {
+      // Ensure existing data has default restrictions if empty
+      const processedValue = {
+        ...value,
+        foreign_licenses: value.foreign_licenses.map(license => ({
+          ...license,
+          restrictions: {
+            driver_restrictions: license.restrictions?.driver_restrictions?.length > 0 
+              ? license.restrictions.driver_restrictions 
+              : ['00'],
+            vehicle_restrictions: license.restrictions?.vehicle_restrictions?.length > 0 
+              ? license.restrictions.vehicle_restrictions 
+              : ['00']
+          }
+        }))
+      };
+      setCaptureData(processedValue);
+    }
+  }, [value]);
+
   // Initialize with one license if empty
   useEffect(() => {
     if (captureData.foreign_licenses.length === 0) {
@@ -330,166 +451,409 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
   }, []);
 
   return (
-    <Box>
-      <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
-        Foreign License Details
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Enter details for each foreign license you want to convert to a Madagascar license
-      </Typography>
-
-      {captureData.foreign_licenses.length === 0 ? (
-        <Alert severity="info" sx={{ mb: 2, py: 1 }}>
-          <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
-            No foreign licenses added yet. Click "Add Foreign License" to get started.
-          </Typography>
-        </Alert>
-      ) : null}
-
-      {/* Foreign License List */}
-      {captureData.foreign_licenses.map((license, index) => (
-        <Box 
-          key={license.id} 
+    <Card 
+      elevation={0}
+      sx={{ 
+        bgcolor: 'white',
+        boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+        borderRadius: 2
+      }}
+    >
+      <CardContent sx={{ p: 2 }}>
+        {/* Existing Licenses Section */}
+        <Card 
+          elevation={0}
           sx={{ 
             mb: 2, 
-            p: 1.5, 
-            border: 1, 
-            borderColor: 'divider', 
-            borderRadius: 2,
-            bgcolor: '#fafafa',
-            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
+            bgcolor: 'grey.50',
+            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+            borderRadius: 2
           }}
         >
-          <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
-            <Box display="flex" alignItems="center" gap={1}>
-              <Typography variant="subtitle1" color="primary" sx={{ fontSize: '1rem', fontWeight: 600 }}>
-                Foreign License {index + 1}
-              </Typography>
-              <Chip
-                icon={license.verified ? <CheckCircleIcon /> : <WarningIcon />}
-                label={license.verified ? 'Verified' : 'Pending'}
-                color={license.verified ? 'success' : 'warning'}
-                size="small"
-                sx={{ fontSize: '0.65rem', height: '20px' }}
-              />
-            </Box>
-            {/* Only show delete button for additional licenses (not the first one) */}
-            {index > 0 && (
-              <Tooltip title="Remove this foreign license">
-                <IconButton
-                  onClick={() => removeForeignLicense(index)}
-                  disabled={disabled}
-                  color="error"
-                  size="small"
+          <CardHeader
+            sx={{ p: 1.5 }}
+            title={
+              <Box display="flex" alignItems="center" gap={1}>
+                <CheckCircleIcon color={existingLicenses.length > 0 ? "success" : "disabled"} />
+                <Typography variant="subtitle1" sx={{ fontSize: '1rem' }}>
+                  Existing Licenses ({existingLicenses.length})
+                </Typography>
+                {existingLicenses.length > 0 && (
+                  <Chip 
+                    label="Found" 
+                    size="small" 
+                    color="success" 
+                    variant="outlined"
+                    sx={{ fontSize: '0.65rem', height: '20px' }}
+                  />
+                )}
+                <IconButton 
+                  size="small" 
+                  onClick={() => setShowExisting(!showExisting)}
+                  disabled={loadingExisting}
                 >
-                  <DeleteIcon />
+                  {showExisting ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                 </IconButton>
-              </Tooltip>
-            )}
-          </Box>
+              </Box>
+            }
+            subheader={
+              <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>
+                Current licenses in the system - cannot convert duplicates
+              </Typography>
+            }
+          />
+          <Collapse in={showExisting}>
+            <CardContent sx={{ p: 1.5 }}>
+              {loadingExisting ? (
+                <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>Loading existing licenses...</Typography>
+              ) : existingLicenses.length === 0 ? (
+                <Alert severity="info" sx={{ py: 1 }}>
+                  <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+                    No existing licenses found. All categories are available for conversion.
+                  </Typography>
+                </Alert>
+              ) : (
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>License ID</TableCell>
+                      <TableCell>Categories</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Issue Date</TableCell>
+                      <TableCell>Location</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {existingLicenses.map((license) => (
+                      <TableRow key={license.id}>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>
+                            {license.license_number}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Stack direction="row" spacing={0.5}>
+                            {license.categories.map((cat: string) => (
+                              <Chip 
+                                key={cat} 
+                                label={cat} 
+                                size="small" 
+                                color="primary"
+                                sx={{ fontSize: '0.65rem', height: '20px' }}
+                              />
+                            ))}
+                          </Stack>
+                        </TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={license.status}
+                            size="small"
+                            color={license.is_active ? 'success' : 'default'}
+                            sx={{ fontSize: '0.65rem', height: '20px' }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                            {license.issue_date}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                            {license.issuing_location}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Collapse>
+        </Card>
 
-          <Grid container spacing={2}>
-            {/* Country of Issue */}
-            <Grid item xs={12} md={6}>
-              <FormControl 
-                fullWidth 
-                required 
-                size="small"
-                {...getSelectStyling(license.id, 'country_of_issue')}
-              >
-                <InputLabel>Country of Issue</InputLabel>
-                <Select
-                  value={license.country_of_issue}
-                  onChange={(e) => updateForeignLicense(index, 'country_of_issue', e.target.value)}
-                  label="Country of Issue"
-                  disabled={disabled}
+        {captureData.foreign_licenses.length === 0 ? (
+          <Alert severity="info" sx={{ mb: 2, py: 1 }}>
+            <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+              No foreign licenses added yet. Click "Add Foreign License" to get started.
+            </Typography>
+          </Alert>
+        ) : null}
+
+        {/* Foreign License List */}
+        {captureData.foreign_licenses.map((license, index) => (
+          <Box 
+            key={license.id} 
+            sx={{ 
+              mb: 2, 
+              p: 1.5, 
+              border: 1, 
+              borderColor: 'divider', 
+              borderRadius: 2,
+              bgcolor: '#fafafa',
+              boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
+            }}
+          >
+            <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+              <Box display="flex" alignItems="center" gap={1}>
+                <Typography variant="subtitle1" color="primary" sx={{ fontSize: '1rem', fontWeight: 600 }}>
+                  Foreign License {index + 1}
+                </Typography>
+                <Chip
+                  icon={license.verified ? <CheckCircleIcon /> : <WarningIcon />}
+                  label={license.verified ? 'Verified' : 'Pending'}
+                  color={license.verified ? 'success' : 'warning'}
                   size="small"
+                  sx={{ fontSize: '0.65rem', height: '20px' }}
+                />
+              </Box>
+              {/* Only show delete button for additional licenses (not the first one) */}
+              {index > 0 && (
+                <Tooltip title="Remove this foreign license">
+                  <IconButton
+                    onClick={() => removeForeignLicense(index)}
+                    disabled={disabled}
+                    color="error"
+                    size="small"
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </Tooltip>
+              )}
+            </Box>
+
+            <Grid container spacing={2}>
+              {/* Country of Issue */}
+              <Grid item xs={12} md={6}>
+                <FormControl 
+                  fullWidth 
+                  required 
+                  size="small"
+                  {...getSelectStyling(license.id, 'country_of_issue')}
                 >
-                  {getCommonCountries().map((country) => (
-                    <MenuItem key={country.code} value={country.code}>
-                      <Box display="flex" alignItems="center" gap={1}>
-                        <LanguageIcon fontSize="small" />
-                        {country.name}
+                  <InputLabel>Country of Issue</InputLabel>
+                  <Select
+                    value={license.country_of_issue}
+                    onChange={(e) => updateForeignLicense(index, 'country_of_issue', e.target.value)}
+                    label="Country of Issue"
+                    disabled={disabled}
+                    size="small"
+                  >
+                    {getCommonCountries().map((country) => (
+                      <MenuItem key={country.code} value={country.code}>
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <LanguageIcon fontSize="small" />
+                          {country.name}
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* Foreign License Category/Code */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Foreign License Category/Code"
+                  value={license.license_category_foreign}
+                  onChange={(e) => updateForeignLicense(index, 'license_category_foreign', e.target.value)}
+                  disabled={disabled}
+                  required
+                  size="small"
+                  placeholder="e.g., Class C, Category B, etc."
+                  {...getFieldStyling(license.id, 'license_category_foreign')}
+                />
+              </Grid>
+
+              {/* Madagascar Equivalent Category */}
+              <Grid item xs={12} md={6}>
+                <FormControl 
+                  fullWidth 
+                  required 
+                  size="small"
+                  {...getSelectStyling(license.id, 'license_category_madagascar')}
+                >
+                  <InputLabel>Madagascar Equivalent Category</InputLabel>
+                  <Select
+                    value={license.license_category_madagascar}
+                    onChange={(e) => updateForeignLicense(index, 'license_category_madagascar', e.target.value)}
+                    label="Madagascar Equivalent Category"
+                    disabled={disabled}
+                    size="small"
+                  >
+                    {getAvailableMadagascarCategories().map((category) => (
+                      <MenuItem key={category.value} value={category.value}>
+                        {category.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* Issue Date */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  type="date"
+                  label="Issue Date"
+                  value={license.issue_date}
+                  onChange={(e) => updateForeignLicense(index, 'issue_date', e.target.value)}
+                  disabled={disabled}
+                  required
+                  size="small"
+                  InputLabelProps={{ shrink: true }}
+                  {...getFieldStyling(license.id, 'issue_date')}
+                />
+              </Grid>
+
+              {/* Driver Restrictions */}
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Driver Restrictions</InputLabel>
+                  <Select
+                    multiple
+                    size="small"
+                    value={license.restrictions?.driver_restrictions || ['00']}
+                    label="Driver Restrictions"
+                    onChange={(e) => updateRestrictions(index, 'driver_restrictions', Array.isArray(e.target.value) ? e.target.value : [])}
+                    disabled={disabled}
+                    renderValue={(selected) => (
+                      <Box 
+                        sx={{ 
+                          display: 'flex', 
+                          flexWrap: 'wrap', 
+                          gap: 0.5,
+                          zIndex: 1400, // Above MUI Select dropdown
+                          position: 'relative' // Ensure z-index takes effect
+                        }}
+                        onClick={(e) => e.stopPropagation()} // Prevent Select from opening when clicking on the Box
+                      >
+                        {(selected as string[]).map((value) => (
+                          <Chip 
+                            key={value} 
+                            label={`${value} - ${getRestrictionDisplayName(value)}`}
+                            size="small"
+                            color="primary"
+                            sx={{ 
+                              fontSize: '0.65rem', 
+                              height: '20px',
+                              zIndex: 1400, // Above MUI Select dropdown (which is typically 1300)
+                              position: 'relative' // Ensure z-index takes effect
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent Select from opening when clicking chip
+                            }}
+                            onDelete={value !== '00' || selected.length > 1 ? (e) => {
+                              e?.stopPropagation(); // Prevent Select from opening
+                              const newValues = selected.filter(v => v !== value);
+                              updateRestrictions(index, 'driver_restrictions', newValues);
+                            } : undefined}
+                          />
+                        ))}
                       </Box>
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
+                    )}
+                  >
+                    <MenuItem value="00">00 - None</MenuItem>
+                    <MenuItem value="01">01 - Corrective Lenses Required</MenuItem>
+                    <MenuItem value="02">02 - Artificial Limb/Prosthetics</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
 
-            {/* Foreign License Category/Code */}
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Foreign License Category/Code"
-                value={license.license_category_foreign}
-                onChange={(e) => updateForeignLicense(index, 'license_category_foreign', e.target.value)}
-                disabled={disabled}
-                required
-                size="small"
-                placeholder="e.g., Class C, Category B, etc."
-                {...getFieldStyling(license.id, 'license_category_foreign')}
-              />
-            </Grid>
+              {/* Vehicle Restrictions */}
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Vehicle Restrictions</InputLabel>
+                  <Select
+                    multiple
+                    size="small"
+                    value={license.restrictions?.vehicle_restrictions || ['00']}
+                    label="Vehicle Restrictions"
+                    onChange={(e) => updateRestrictions(index, 'vehicle_restrictions', Array.isArray(e.target.value) ? e.target.value : [])}
+                    disabled={disabled}
+                    renderValue={(selected) => (
+                      <Box 
+                        sx={{ 
+                          display: 'flex', 
+                          flexWrap: 'wrap', 
+                          gap: 0.5,
+                          zIndex: 1400, // Above MUI Select dropdown
+                          position: 'relative' // Ensure z-index takes effect
+                        }}
+                        onClick={(e) => e.stopPropagation()} // Prevent Select from opening when clicking on the Box
+                      >
+                        {(selected as string[]).map((value) => (
+                          <Chip 
+                            key={value} 
+                            label={`${value} - ${getRestrictionDisplayName(value)}`}
+                            size="small"
+                            color="secondary"
+                            sx={{ 
+                              fontSize: '0.65rem', 
+                              height: '20px',
+                              zIndex: 1400, // Above MUI Select dropdown (which is typically 1300)
+                              position: 'relative' // Ensure z-index takes effect
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent Select from opening when clicking chip
+                            }}
+                            onDelete={value !== '00' || selected.length > 1 ? (e) => {
+                              e?.stopPropagation(); // Prevent Select from opening
+                              const newValues = selected.filter(v => v !== value);
+                              updateRestrictions(index, 'vehicle_restrictions', newValues);
+                            } : undefined}
+                          />
+                        ))}
+                      </Box>
+                    )}
+                  >
+                    <MenuItem value="00">00 - None</MenuItem>
+                    <MenuItem value="01">01 - Automatic Transmission Only</MenuItem>
+                    <MenuItem value="02">02 - Electric Powered Vehicles Only</MenuItem>
+                    <MenuItem value="03">03 - Vehicles Adapted for Physical Disabilities</MenuItem>
+                    <MenuItem value="04">04 - Tractor Vehicles Only</MenuItem>
+                    <MenuItem value="05">05 - Industrial/Agriculture Vehicles Only</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
 
-            {/* Madagascar Equivalent Category */}
-            <Grid item xs={12} md={6}>
-              <FormControl 
-                fullWidth 
-                required 
-                size="small"
-                {...getSelectStyling(license.id, 'license_category_madagascar')}
-              >
-                <InputLabel>Madagascar Equivalent Category</InputLabel>
-                <Select
-                  value={license.license_category_madagascar}
-                  onChange={(e) => updateForeignLicense(index, 'license_category_madagascar', e.target.value)}
-                  label="Madagascar Equivalent Category"
-                  disabled={disabled}
-                  size="small"
-                >
-                  {getAvailableMadagascarCategories().map((category) => (
-                    <MenuItem key={category.value} value={category.value}>
-                      {category.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              {/* Verification */}
+              <Grid item xs={12}>
+                <Divider sx={{ my: 1 }} />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={license.verified}
+                      onChange={(e) => updateForeignLicense(index, 'verified', e.target.checked)}
+                      disabled={disabled}
+                      size="small"
+                    />
+                  }
+                  label={
+                    <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+                      I have physically verified this foreign license is authentic and valid
+                    </Typography>
+                  }
+                  sx={{ color: license.verified ? 'success.main' : 'warning.main' }}
+                />
+              </Grid>
             </Grid>
+          </Box>
+        ))}
 
-            {/* Issue Date */}
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                type="date"
-                label="Issue Date"
-                value={license.issue_date}
-                onChange={(e) => updateForeignLicense(index, 'issue_date', e.target.value)}
-                disabled={disabled}
-                required
-                size="small"
-                InputLabelProps={{ shrink: true }}
-                {...getFieldStyling(license.id, 'issue_date')}
-              />
-            </Grid>
-          </Grid>
-        </Box>
-      ))}
-
-      {/* Add License Button */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+        {/* Add License Button */}
         <Button
           variant="outlined"
-          startIcon={<AddIcon />}
-          onClick={addForeignLicense}
-          disabled={disabled}
-          color="primary"
           size="small"
+          onClick={addForeignLicense}
+          startIcon={<AddIcon />}
+          disabled={disabled}
+          sx={{ mt: 2 }}
         >
           Add Foreign License
         </Button>
-      </Box>
-    </Box>
+      </CardContent>
+    </Card>
   );
 };
 
@@ -519,6 +883,12 @@ export const validateForeignLicenseCaptureData = (data: ForeignLicenseCaptureDat
     }
     if (!license.issue_date) {
       errors.push(`License ${index + 1}: Issue date is required`);
+    }
+    if (!license.restrictions?.driver_restrictions?.length) {
+      errors.push(`License ${index + 1}: Driver restrictions are required`);
+    }
+    if (!license.restrictions?.vehicle_restrictions?.length) {
+      errors.push(`License ${index + 1}: Vehicle restrictions are required`);
     }
   });
   
