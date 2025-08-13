@@ -62,6 +62,9 @@ import AuditLogViewer from './pages/admin/AuditLogViewer';
 // Analytics Pages
 import AnalyticsDashboard from './pages/analytics/AnalyticsDashboard';
 
+// Temporary Test Pages
+import FingerprintTestPage from './pages/temp/FingerprintTestPage';
+
 function App() {
   return (
     <AuthProvider>
@@ -435,6 +438,16 @@ function App() {
                 element={
                   <ProtectedRoute requiredPermission="admin.audit">
                     <AuditLogViewer />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* Temporary Test Route - Remove after testing */}
+              <Route 
+                path="fingerprint-test" 
+                element={
+                  <ProtectedRoute requiredPermission="admin.read">
+                    <FingerprintTestPage />
                   </ProtectedRoute>
                 } 
               />

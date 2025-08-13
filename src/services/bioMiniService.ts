@@ -5,7 +5,7 @@
  * Provides fingerprint capture functionality for React components
  */
 
-const WEB_AGENT_URL = 'http://localhost:8084';
+const WEB_AGENT_URL = 'https://localhost:443';
 
 export interface BioMiniDeviceInfo {
   ID: string;
