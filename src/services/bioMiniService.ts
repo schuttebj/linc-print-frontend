@@ -9,17 +9,17 @@
 const WEB_AGENT_URL = import.meta.env.DEV ? '/biomini' : 'https://localhost';
 
 export interface BioMiniDeviceInfo {
-  ID: string;
-  ScannerType: string;
-  Serial: string;
-  DeviceHandle: string;
+  ID?: string;
+  ScannerType?: string;
+  Serial?: string;
+  DeviceHandle: number | string; // API returns number
   DeviceIndex?: number;
-  Scannername?: string;
+  ScannerName?: string; // API uses ScannerName (capital N)
   DeviceType?: string;
 }
 
 export interface BioMiniResponse {
-  retValue: number;
+  retValue: number | string; // API returns string "0" for success
   retString?: string;
   data?: string;
   ScannerInfos?: BioMiniDeviceInfo[];
@@ -57,6 +57,14 @@ class BioMiniService {
    */
   private getDummyParam(): string {
     return Math.random().toString();
+  }
+
+  /**
+   * Check if API response indicates success
+   * Handles both string "0" and number 0 return values
+   */
+  private isApiSuccess(retValue: number | string): boolean {
+    return retValue === 0 || retValue === "0";
   }
 
   /**
@@ -104,22 +112,29 @@ class BioMiniService {
       });
       const result: BioMiniResponse = await response.json();
 
-      if (result.retValue === 0) {
+      // Check for success - API returns string "0" or number 0
+      const isSuccess = this.isApiSuccess(result.retValue);
+      
+      if (isSuccess) {
         this.status.initialized = true;
         this.status.error = undefined;
+        
+        console.log('✅ Device initialization response:', result);
         
         // Store device info from initialization response
         if (result.ScannerInfos && result.ScannerInfos.length > 0) {
           this.status.devices = result.ScannerInfos;
           // Store device handle (DeviceHandle property from BiominiWebAgent.js line 503)
-          this.deviceHandle = result.ScannerInfos[0].DeviceHandle || result.ScannerInfos[0].ID;
-          console.log('Device initialized successfully');
-          console.log('Device handle:', this.deviceHandle);
-          console.log('Scanner type:', result.ScannerInfos[0].ScannerType);
+          this.deviceHandle = String(result.ScannerInfos[0].DeviceHandle);
+          console.log('✅ Device initialized successfully');
+          console.log('📱 Device handle:', this.deviceHandle);
+          console.log('🔧 Device type:', result.ScannerInfos[0].DeviceType);
+          console.log('📇 Scanner name:', result.ScannerInfos[0].ScannerName);
         }
         
         return true;
       } else {
+        console.error('❌ Device initialization failed:', result);
         throw new Error(result.retString || 'Device initialization failed');
       }
     } catch (error) {
@@ -139,7 +154,7 @@ class BioMiniService {
       });
       const result: BioMiniResponse = await response.json();
 
-      if (result.retValue === 0 && result.ScannerInfos) {
+      if (this.isApiSuccess(result.retValue) && result.ScannerInfos) {
         this.status.devices = result.ScannerInfos;
         return result.ScannerInfos;
       } else {
@@ -277,7 +292,7 @@ class BioMiniService {
       });
       const result: BioMiniResponse = await response.json();
 
-      if (result.retValue === 0 && result.data) {
+      if (this.isApiSuccess(result.retValue) && result.data) {
         return result.data;
       } else {
         throw new Error(result.retString || 'Failed to get template data');
@@ -298,7 +313,7 @@ class BioMiniService {
       });
       const result: BioMiniResponse = await response.json();
 
-      return result.retValue === 0;
+      return this.isApiSuccess(result.retValue);
     } catch (error) {
       console.error('Failed to start live preview:', error);
       return false;
@@ -315,7 +330,7 @@ class BioMiniService {
       });
       const result: BioMiniResponse = await response.json();
 
-      return result.retValue === 0;
+      return this.isApiSuccess(result.retValue);
     } catch (error) {
       console.error('Failed to stop capture:', error);
       return false;
@@ -335,7 +350,7 @@ class BioMiniService {
       });
       const result: BioMiniResponse = await response.json();
 
-      if (result.retValue === 0) {
+      if (this.isApiSuccess(result.retValue)) {
         this.status.initialized = false;
         this.status.devices = [];
         this.deviceHandle = '';
