@@ -32,7 +32,8 @@ import {
   TableRow,
   TableCell,
   Collapse,
-  Stack
+  Stack,
+  Autocomplete
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -50,6 +51,7 @@ import {
 import { LicenseCategory } from '../../types';
 import { useDebounceValidation } from '../../hooks/useDebounceValidation';
 import { applicationService } from '../../services/applicationService';
+import { lookupService, Country } from '../../services/lookupService';
 
 export interface ForeignLicense {
   id: string; // temp ID for form management
@@ -88,24 +90,29 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
   const [existingLicenses, setExistingLicenses] = useState<any[]>([]);
   const [loadingExisting, setLoadingExisting] = useState(false);
   const [showExisting, setShowExisting] = useState(false);
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [loadingCountries, setLoadingCountries] = useState(false);
 
-  // Common countries for foreign license conversion
-  const getCommonCountries = () => {
-    return [
-      { code: 'ZAF', name: 'South Africa' },
-      { code: 'FRA', name: 'France' },
-      { code: 'GBR', name: 'United Kingdom' },
-      { code: 'USA', name: 'United States' },
-      { code: 'CAN', name: 'Canada' },
-      { code: 'AUS', name: 'Australia' },
-      { code: 'DEU', name: 'Germany' },
-      { code: 'ITA', name: 'Italy' },
-      { code: 'ESP', name: 'Spain' },
-      { code: 'BEL', name: 'Belgium' },
-      { code: 'NLD', name: 'Netherlands' },
-      { code: 'CHE', name: 'Switzerland' },
-      { code: 'OTHER', name: 'Other' }
-    ];
+  // Load countries from lookup service
+  const loadCountries = async () => {
+    setLoadingCountries(true);
+    try {
+      const countryData = await lookupService.getCountries();
+      setCountries(countryData);
+    } catch (error) {
+      console.error('Error loading countries:', error);
+      // Fallback to basic list
+      setCountries([
+        { value: 'MG', label: 'Madagascar' },
+        { value: 'FR', label: 'France' },
+        { value: 'GB', label: 'United Kingdom' },
+        { value: 'US', label: 'United States' },
+        { value: 'ZA', label: 'South Africa' },
+        { value: 'OTHER', label: 'Other' }
+      ]);
+    } finally {
+      setLoadingCountries(false);
+    }
   };
 
   // Available Madagascar license categories for conversion
@@ -421,6 +428,11 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
     }
   }, [personId]);
 
+  // Load countries on component mount
+  useEffect(() => {
+    loadCountries();
+  }, []);
+
   // Initialize data from props
   useEffect(() => {
     if (value) {
@@ -624,30 +636,47 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
             <Grid container spacing={2}>
               {/* Country of Issue */}
               <Grid item xs={12} md={6}>
-                <FormControl 
-                  fullWidth 
-                  required 
+                <Autocomplete
+                  options={countries}
+                  getOptionLabel={(option) => option.label}
+                  value={countries.find(country => country.value === license.country_of_issue) || null}
+                  onChange={(event, newValue) => {
+                    updateForeignLicense(index, 'country_of_issue', newValue?.value || '');
+                  }}
+                  disabled={disabled || loadingCountries}
+                  loading={loadingCountries}
                   size="small"
-                  {...getSelectStyling(license.id, 'country_of_issue')}
-                >
-                  <InputLabel>Country of Issue</InputLabel>
-                  <Select
-                    value={license.country_of_issue}
-                    onChange={(e) => updateForeignLicense(index, 'country_of_issue', e.target.value)}
-                    label="Country of Issue"
-                    disabled={disabled}
-                    size="small"
-                  >
-                    {getCommonCountries().map((country) => (
-                      <MenuItem key={country.code} value={country.code}>
-                        <Box display="flex" alignItems="center" gap={1}>
-                          <LanguageIcon fontSize="small" />
-                          {country.name}
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                  componentsProps={{
+                    popper: {
+                      sx: { zIndex: 1500 } // Higher than chips (1400)
+                    }
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Country of Issue"
+                      required
+                      {...getFieldStyling(license.id, 'country_of_issue')}
+                      InputProps={{
+                        ...params.InputProps,
+                        startAdornment: <LanguageIcon fontSize="small" sx={{ mr: 1, color: 'action.active' }} />,
+                        endAdornment: (
+                          <>
+                            {loadingCountries ? <div>Loading...</div> : null}
+                            {params.InputProps.endAdornment}
+                          </>
+                        ),
+                      }}
+                      onBlur={() => debouncedValidation('country_of_issue', license.country_of_issue, license.id)}
+                    />
+                  )}
+                  renderOption={(props, option) => (
+                    <Box component="li" {...props} display="flex" alignItems="center" gap={1}>
+                      <LanguageIcon fontSize="small" />
+                      {option.label}
+                    </Box>
+                  )}
+                />
               </Grid>
 
               {/* Foreign License Category/Code */}
@@ -657,6 +686,7 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                   label="Foreign License Category/Code"
                   value={license.license_category_foreign}
                   onChange={(e) => updateForeignLicense(index, 'license_category_foreign', e.target.value)}
+                  onBlur={() => debouncedValidation('license_category_foreign', license.license_category_foreign, license.id)}
                   disabled={disabled}
                   required
                   size="small"
@@ -677,9 +707,15 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                   <Select
                     value={license.license_category_madagascar}
                     onChange={(e) => updateForeignLicense(index, 'license_category_madagascar', e.target.value)}
+                    onBlur={() => debouncedValidation('license_category_madagascar', license.license_category_madagascar, license.id)}
                     label="Madagascar Equivalent Category"
                     disabled={disabled}
                     size="small"
+                    MenuProps={{
+                      PaperProps: {
+                        sx: { zIndex: 1500 } // Higher than chips (1400)
+                      }
+                    }}
                   >
                     {getAvailableMadagascarCategories().map((category) => (
                       <MenuItem key={category.value} value={category.value}>
@@ -698,10 +734,15 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                   label="Issue Date"
                   value={license.issue_date}
                   onChange={(e) => updateForeignLicense(index, 'issue_date', e.target.value)}
+                  onBlur={() => debouncedValidation('issue_date', license.issue_date, license.id)}
                   disabled={disabled}
                   required
                   size="small"
                   InputLabelProps={{ shrink: true }}
+                  inputProps={{
+                    max: new Date().toISOString().split('T')[0], // Prevent future dates
+                    min: '1900-01-01' // Reasonable minimum date
+                  }}
                   {...getFieldStyling(license.id, 'issue_date')}
                 />
               </Grid>
@@ -717,6 +758,11 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                     label="Driver Restrictions"
                     onChange={(e) => updateRestrictions(index, 'driver_restrictions', Array.isArray(e.target.value) ? e.target.value : [])}
                     disabled={disabled}
+                    MenuProps={{
+                      PaperProps: {
+                        sx: { zIndex: 1500 } // Higher than chips (1400)
+                      }
+                    }}
                     renderValue={(selected) => (
                       <Box 
                         sx={{ 
@@ -771,6 +817,11 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                     label="Vehicle Restrictions"
                     onChange={(e) => updateRestrictions(index, 'vehicle_restrictions', Array.isArray(e.target.value) ? e.target.value : [])}
                     disabled={disabled}
+                    MenuProps={{
+                      PaperProps: {
+                        sx: { zIndex: 1500 } // Higher than chips (1400)
+                      }
+                    }}
                     renderValue={(selected) => (
                       <Box 
                         sx={{ 

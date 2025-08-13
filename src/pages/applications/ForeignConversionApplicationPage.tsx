@@ -687,67 +687,7 @@ const ForeignConversionApplicationPage: React.FC = () => {
               personId={selectedPerson?.id}
             />
 
-            {/* Declaration Section */}
-            <Card 
-              elevation={0}
-              sx={{ 
-                mt: 2,
-                bgcolor: 'white',
-                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-                borderRadius: 2
-              }}
-            >
-              <CardHeader 
-                sx={{ p: 1.5 }}
-                title={
-                  <Box display="flex" alignItems="center" gap={1}>
-                    <CheckCircleIcon color="primary" fontSize="small" />
-                    <Typography variant="subtitle1" sx={{ fontSize: '1rem', fontWeight: 600 }}>
-                      Declaration
-                        </Typography>
-                  </Box>
-                }
-                subheader="Verify that you have never been refused a license"
-              />
-              <CardContent sx={{ p: 1.5, pt: 0 }}>
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={neverBeenRefused}
-                          onChange={(e) => {
-                            setNeverBeenRefused(e.target.checked);
-                            if (e.target.checked) {
-                              setRefusalDetails('');
-                            }
-                          }}
-                      size="small"
-                    />
-                  }
-                  label={
-                    <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-                      I have never been refused a driving license or had a driving license suspended or revoked in any country
-                    </Typography>
-                  }
-                    />
-                    
-                    {!neverBeenRefused && (
-                  <Box sx={{ mt: 1.5 }}>
-                      <TextField
-                        fullWidth
-                        multiline
-                        rows={3}
-                      label="Please provide details of refusal"
-                      value={refusalDetails}
-                      onChange={(e) => setRefusalDetails(e.target.value)}
-                        required
-                      placeholder="Provide details about previous refusal including date, reason, and issuing authority..."
-                      size="small"
-                      {...getFieldStyling('refusalDetails', refusalDetails, !neverBeenRefused)}
-                      />
-                  </Box>
-                    )}
-                  </CardContent>
-                </Card>
+
           </Box>
         );
 
