@@ -32,7 +32,7 @@ export interface BioMiniResponse {
   sessionId?: string;
   imageBase64?: string;
   templateBase64?: string; // For template data
-  retVerify?: boolean; // For verify results
+  retVerify?: boolean | string; // For verify results
   matchedIndex?: number; // For identify results
   matchedID?: string; // For identify results
   verifySucceed?: boolean; // For file verification
@@ -629,7 +629,7 @@ class BioMiniService {
       const result: BioMiniResponse = await response.json();
 
       if (this.isApiSuccess(result.retValue)) {
-        const verified = result.retVerify === true || result.retVerify === 'true';
+        const verified = result.retVerify === true || result.retVerify === 'true' || result.retVerify === 'True';
         console.log(`${verified ? '✅' : '❌'} Template verification: ${verified ? 'MATCH' : 'NO MATCH'}`);
         
         if (result.score !== undefined) {
