@@ -35,6 +35,8 @@ import { debugBioMini } from '../../debug/biomini-debug';
 
 const FingerprintTestPage: React.FC = () => {
   const [capturedFingerprint, setCapturedFingerprint] = useState<File | null>(null);
+  const [capturedImageUrl, setCapturedImageUrl] = useState<string>('');
+  const [captureTimestamp, setCaptureTimestamp] = useState<string>('');
   const [testLog, setTestLog] = useState<string[]>([]);
   const [serviceStatus, setServiceStatus] = useState<{
     available: boolean;
@@ -55,8 +57,22 @@ const FingerprintTestPage: React.FC = () => {
   };
 
   const handleFingerprintCapture = (fingerprintFile: File) => {
+    // Clean up previous image URL if exists
+    if (capturedImageUrl) {
+      URL.revokeObjectURL(capturedImageUrl);
+    }
+    
+    // Create new image URL and set states
+    const imageUrl = URL.createObjectURL(fingerprintFile);
     setCapturedFingerprint(fingerprintFile);
-    addLog(`Fingerprint captured: ${fingerprintFile.name} (${fingerprintFile.size} bytes)`, 'success');
+    setCapturedImageUrl(imageUrl);
+    setCaptureTimestamp(new Date().toLocaleString());
+    
+    addLog(`✅ Fingerprint captured successfully!`, 'success');
+    addLog(`📁 File: ${fingerprintFile.name}`, 'info');
+    addLog(`📊 Size: ${fingerprintFile.size} bytes (${(fingerprintFile.size/1024).toFixed(1)} KB)`, 'info');
+    addLog(`🖼️ Type: ${fingerprintFile.type}`, 'info');
+    addLog(`⏰ Captured at: ${new Date().toLocaleTimeString()}`, 'info');
   };
 
   // Check what's available via the proxy
@@ -174,6 +190,16 @@ const FingerprintTestPage: React.FC = () => {
     }, 1000);
   }, []);
 
+  // Cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      // Clean up image URL to prevent memory leaks
+      if (capturedImageUrl) {
+        URL.revokeObjectURL(capturedImageUrl);
+      }
+    };
+  }, [capturedImageUrl]);
+
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       {/* Header */}
@@ -205,31 +231,123 @@ const FingerprintTestPage: React.FC = () => {
                 disabled={false}
               />
               
-              {capturedFingerprint && (
-                <Box sx={{ mt: 3 }}>
-                  <Alert severity="success">
-                    <Typography variant="body2">
-                      ✅ Fingerprint captured successfully!
-                    </Typography>
-                    <Typography variant="caption" display="block">
-                      File: {capturedFingerprint.name} ({capturedFingerprint.size} bytes)
-                    </Typography>
-                  </Alert>
-                  
-                  {/* Preview captured fingerprint */}
-                  <Box sx={{ mt: 2, textAlign: 'center' }}>
-                    <img 
-                      src={URL.createObjectURL(capturedFingerprint)}
-                      alt="Captured fingerprint"
-                      style={{ 
-                        maxWidth: '200px', 
-                        maxHeight: '200px',
-                        border: '2px solid #ddd',
-                        borderRadius: '8px'
-                      }}
-                    />
-                  </Box>
-                </Box>
+              {capturedFingerprint && capturedImageUrl && (
+                <Card sx={{ mt: 3, border: '2px solid #4caf50' }}>
+                  <CardHeader 
+                    title={
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <FingerprintIcon color="success" />
+                        <Typography variant="h6">Captured Fingerprint</Typography>
+                      </Box>
+                    }
+                    subheader={`Captured on ${captureTimestamp}`}
+                    action={
+                      <Chip 
+                        label="SUCCESS" 
+                        color="success" 
+                        size="small"
+                        icon={<CheckCircleIcon />}
+                      />
+                    }
+                  />
+                  <CardContent>
+                    {/* Image Preview */}
+                    <Box sx={{ textAlign: 'center', mb: 3 }}>
+                      <Paper 
+                        elevation={3}
+                        sx={{ 
+                          display: 'inline-block', 
+                          p: 3, 
+                          backgroundColor: '#f8f9fa',
+                          border: '3px solid #4caf50',
+                          borderRadius: 2
+                        }}
+                      >
+                        <img 
+                          src={capturedImageUrl}
+                          alt="Captured fingerprint from BioMini Slim 2"
+                          style={{ 
+                            maxWidth: '400px', 
+                            maxHeight: '400px',
+                            width: 'auto',
+                            height: 'auto',
+                            border: '1px solid #ccc',
+                            borderRadius: '4px'
+                          }}
+                        />
+                      </Paper>
+                    </Box>
+
+                    {/* File Information */}
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6}>
+                        <Paper sx={{ p: 2, backgroundColor: '#e8f5e8' }}>
+                          <Typography variant="subtitle2" gutterBottom>
+                            📁 File Details
+                          </Typography>
+                          <Typography variant="body2" component="div">
+                            <strong>Name:</strong> {capturedFingerprint.name}
+                          </Typography>
+                          <Typography variant="body2" component="div">
+                            <strong>Size:</strong> {capturedFingerprint.size} bytes ({(capturedFingerprint.size/1024).toFixed(1)} KB)
+                          </Typography>
+                          <Typography variant="body2" component="div">
+                            <strong>Type:</strong> {capturedFingerprint.type}
+                          </Typography>
+                        </Paper>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Paper sx={{ p: 2, backgroundColor: '#e3f2fd' }}>
+                          <Typography variant="subtitle2" gutterBottom>
+                            🎯 Capture Status
+                          </Typography>
+                          <Typography variant="body2" component="div">
+                            <strong>Source:</strong> BioMini Slim 2
+                          </Typography>
+                          <Typography variant="body2" component="div">
+                            <strong>Format:</strong> Bitmap (BMP)
+                          </Typography>
+                          <Typography variant="body2" component="div">
+                            <strong>Status:</strong> ✅ Ready for Processing
+                          </Typography>
+                        </Paper>
+                      </Grid>
+                    </Grid>
+
+                    {/* Action Buttons */}
+                    <Box sx={{ mt: 3, textAlign: 'center' }}>
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        onClick={() => {
+                          if (capturedImageUrl) {
+                            URL.revokeObjectURL(capturedImageUrl);
+                          }
+                          setCapturedFingerprint(null);
+                          setCapturedImageUrl('');
+                          setCaptureTimestamp('');
+                          addLog('🗑️ Cleared captured fingerprint', 'info');
+                        }}
+                        sx={{ mr: 2 }}
+                      >
+                        Clear Image
+                      </Button>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() => {
+                          const link = document.createElement('a');
+                          link.href = capturedImageUrl;
+                          link.download = capturedFingerprint.name;
+                          link.click();
+                          addLog('💾 Downloaded fingerprint image', 'success');
+                        }}
+                      >
+                        Download Image
+                      </Button>
+                    </Box>
+                  </CardContent>
+                </Card>
               )}
             </CardContent>
           </Card>
