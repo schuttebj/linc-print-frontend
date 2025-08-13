@@ -45,7 +45,7 @@ import {
   Refresh as RefreshIcon
 } from '@mui/icons-material';
 
-import bioMiniService from '../../services/bioMiniService';
+import bioMiniService, { BioMiniService } from '../../services/bioMiniService';
 
 interface StoredTemplate {
   id: string;
@@ -217,27 +217,28 @@ const FingerprintTemplateTestPage: React.FC = () => {
     setIsVerifying(true);
     try {
       addLog(`🔍 Starting verification against template: ${template.name}`, 'info');
-      addLog('👆 Please place your finger on the scanner and KEEP IT THERE until verification completes...', 'info');
+      addLog('👆 Please scan your fingerprint...', 'info');
       
-      // Use the new capture-and-verify method that keeps timing tight
-      const result = await bioMiniService.captureAndVerifyTemplate(
-        template.template, 
-        qualityLevel, 
-        template.format // Use the stored template format
-      );
+      // Capture fingerprint and extract template for comparison
+      const result = await bioMiniService.captureAndExtractForMatching(template.format, qualityLevel);
+      
+      addLog(`✅ Fingerprint captured and template extracted (${result.template.length} chars)`, 'success');
+      
+      // Compare templates using client-side matching
+      const comparison = BioMiniService.fuzzyCompareTemplates(result.template, template.template, 0.70);
       
       const verificationResult: VerificationResult = {
-        verified: result.verified,
-        score: result.score,
+        verified: comparison.match,
+        score: Math.round(comparison.similarity * 100),
         templateName: template.name,
         timestamp: new Date().toLocaleTimeString()
       };
       
       setVerificationResults(prev => [verificationResult, ...prev]);
       
-      const status = result.verified ? '✅ MATCH' : '❌ NO MATCH';
-      const scoreText = result.score ? ` (Score: ${result.score})` : '';
-      addLog(`${status}: ${template.name}${scoreText}`, result.verified ? 'success' : 'error');
+      const status = comparison.match ? '✅ MATCH' : '❌ NO MATCH';
+      const scoreText = ` (${(comparison.similarity * 100).toFixed(1)}% similarity)`;
+      addLog(`${status}: ${template.name}${scoreText}`, comparison.match ? 'success' : 'error');
       
       // Update captured image if available
       if (result.imageFile) {
@@ -261,48 +262,64 @@ const FingerprintTemplateTestPage: React.FC = () => {
     setIsVerifying(true);
     try {
       addLog(`🔍 Starting 1:N identification against ${storedTemplates.length} templates...`, 'info');
-      addLog('⚠️ This will require multiple scans - one for each template', 'info');
+      addLog('👆 Please scan your fingerprint ONCE...', 'info');
+      
+      // Capture fingerprint ONCE and extract template
+      const result = await bioMiniService.captureAndExtractForMatching(templateFormat, qualityLevel);
+      
+      addLog(`✅ Fingerprint captured and template extracted (${result.template.length} chars)`, 'success');
+      addLog('🔍 Now comparing against all stored templates...', 'info');
       
       let matchCount = 0;
+      const matches: Array<{name: string, similarity: number}> = [];
       
-      for (let i = 0; i < storedTemplates.length; i++) {
-        const template = storedTemplates[i];
+      // Compare against ALL stored templates
+      for (const template of storedTemplates) {
         try {
-          addLog(`🔍 Scan ${i + 1}/${storedTemplates.length}: Testing against ${template.name}`, 'info');
-          addLog('👆 Please place your finger on the scanner and KEEP IT THERE...', 'info');
+          const comparison = BioMiniService.fuzzyCompareTemplates(result.template, template.template, 0.70);
           
-          const result = await bioMiniService.captureAndVerifyTemplate(
-            template.template, 
-            qualityLevel, 
-            template.format
-          );
+          addLog(`${comparison.match ? '✅' : '❌'} ${template.name}: ${(comparison.similarity * 100).toFixed(1)}% similarity`, 
+                 comparison.match ? 'success' : 'info');
           
-          if (result.verified) {
+          if (comparison.match) {
             matchCount++;
-            const scoreText = result.score ? ` (Score: ${result.score})` : '';
-            addLog(`✅ MATCH: ${template.name}${scoreText}`, 'success');
+            matches.push({
+              name: template.name,
+              similarity: comparison.similarity
+            });
             
-            // Update captured image for the match
-            if (result.imageFile) {
-              const imageUrl = URL.createObjectURL(result.imageFile);
-              setCapturedImageUrl(imageUrl);
-            }
-          } else {
-            addLog(`❌ No match: ${template.name}`, 'info');
-          }
-          
-          // Small delay between scans
-          if (i < storedTemplates.length - 1) {
-            addLog('⏰ Please wait 2 seconds before next scan...', 'info');
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Add to verification results
+            const verificationResult: VerificationResult = {
+              verified: true,
+              score: Math.round(comparison.similarity * 100),
+              templateName: template.name,
+              timestamp: new Date().toLocaleTimeString()
+            };
+            setVerificationResults(prev => [verificationResult, ...prev]);
           }
           
         } catch (error) {
-          addLog(`❌ Verification error for ${template.name}: ${error.message}`, 'error');
+          addLog(`❌ Comparison error for ${template.name}: ${error.message}`, 'error');
         }
       }
       
-      addLog(`🎯 Identification complete: ${matchCount} matches found out of ${storedTemplates.length} templates`, matchCount > 0 ? 'success' : 'info');
+      // Sort matches by similarity
+      matches.sort((a, b) => b.similarity - a.similarity);
+      
+      if (matchCount > 0) {
+        addLog(`🎯 Identification complete: ${matchCount} matches found!`, 'success');
+        matches.forEach((match, index) => {
+          addLog(`  ${index + 1}. ${match.name} (${(match.similarity * 100).toFixed(1)}%)`, 'success');
+        });
+      } else {
+        addLog(`🎯 Identification complete: No matches found (threshold: 70%)`, 'info');
+      }
+      
+      // Update captured image
+      if (result.imageFile) {
+        const imageUrl = URL.createObjectURL(result.imageFile);
+        setCapturedImageUrl(imageUrl);
+      }
       
     } catch (error) {
       addLog(`❌ Identification failed: ${error.message}`, 'error');
@@ -345,8 +362,9 @@ const FingerprintTemplateTestPage: React.FC = () => {
       
       <Alert severity="info" sx={{ mb: 3 }}>
         <Typography variant="body2">
-          <strong>💡 Important:</strong> For verification, keep your finger on the scanner throughout the entire process. 
-          The system captures a fresh fingerprint and immediately verifies it against stored templates.
+          <strong>💡 New Approach:</strong> This system now uses client-side template matching. 
+          Scan your fingerprint once and the system will compare the extracted template against all stored templates using fuzzy matching algorithms.
+          <br/><strong>Threshold:</strong> 70% similarity required for a match.
         </Typography>
       </Alert>
 

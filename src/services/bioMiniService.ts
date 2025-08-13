@@ -674,11 +674,131 @@ class BioMiniService {
   }
 
   /**
-   * Capture fingerprint and immediately verify against template (keeps finger on scanner)
-   * @param templateData Base64 encoded template data to verify against
-   * @param qualityLevel Quality threshold (1-11)
+   * Capture fingerprint and extract template for client-side matching
    * @param templateType Template type (2001=XPERIX, 2002=ISO, 2003=ANSI)
+   * @param qualityLevel Quality threshold (1-11)
    * @param abortSignal Optional abort signal for cancellation
+   */
+  async captureAndExtractForMatching(templateType: number = 2001, qualityLevel: number = 6, abortSignal?: AbortSignal): Promise<{template: string, imageFile?: File}> {
+    if (!this.status.initialized || !this.deviceHandle) {
+      throw new Error('Device not initialized. Call initializeDevice() first.');
+    }
+
+    try {
+      console.log('🔍 Capturing fingerprint for template matching...');
+      console.log(`🔧 Template type: ${templateType}`);
+      
+      // Capture fingerprint using the existing captureFingerprint method
+      const imageFile = await this.captureFingerprint(abortSignal);
+      
+      // Extract template from the captured fingerprint
+      const template = await this.extractTemplate(templateType, qualityLevel);
+      
+      console.log('✅ Fingerprint captured and template extracted for matching');
+      
+      return {
+        template,
+        imageFile
+      };
+
+    } catch (error) {
+      console.error('❌ Capture-and-extract error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Client-side template matching using simple string comparison
+   * Note: This is a basic implementation. For production, consider using
+   * more sophisticated template matching algorithms or the UFMatcher SDK
+   */
+  static compareTemplates(template1: string, template2: string, threshold: number = 0.85): {match: boolean, similarity: number} {
+    if (!template1 || !template2) {
+      return {match: false, similarity: 0};
+    }
+
+    // Simple similarity calculation based on character matching
+    const minLength = Math.min(template1.length, template2.length);
+    const maxLength = Math.max(template1.length, template2.length);
+    
+    if (minLength === 0) {
+      return {match: false, similarity: 0};
+    }
+
+    let matchingChars = 0;
+    for (let i = 0; i < minLength; i++) {
+      if (template1[i] === template2[i]) {
+        matchingChars++;
+      }
+    }
+
+    // Calculate similarity considering length difference
+    const similarity = matchingChars / maxLength;
+    const match = similarity >= threshold;
+
+    console.log(`🔍 Template comparison: ${(similarity * 100).toFixed(1)}% similarity (threshold: ${(threshold * 100).toFixed(1)}%)`);
+    
+    return {match, similarity};
+  }
+
+  /**
+   * Advanced template matching using fuzzy comparison
+   */
+  static fuzzyCompareTemplates(template1: string, template2: string, threshold: number = 0.80): {match: boolean, similarity: number} {
+    if (!template1 || !template2) {
+      return {match: false, similarity: 0};
+    }
+
+    // Convert base64 templates to arrays for better comparison
+    const arr1 = Array.from(template1);
+    const arr2 = Array.from(template2);
+    
+    // Use Levenshtein distance for fuzzy matching
+    const maxLen = Math.max(arr1.length, arr2.length);
+    const distance = this.levenshteinDistance(arr1, arr2);
+    const similarity = 1 - (distance / maxLen);
+    
+    const match = similarity >= threshold;
+
+    console.log(`🧬 Fuzzy template comparison: ${(similarity * 100).toFixed(1)}% similarity (distance: ${distance})`);
+    
+    return {match, similarity};
+  }
+
+  /**
+   * Calculate Levenshtein distance between two arrays
+   */
+  private static levenshteinDistance(arr1: string[], arr2: string[]): number {
+    const matrix: number[][] = [];
+    
+    for (let i = 0; i <= arr2.length; i++) {
+      matrix[i] = [i];
+    }
+    
+    for (let j = 0; j <= arr1.length; j++) {
+      matrix[0][j] = j;
+    }
+    
+    for (let i = 1; i <= arr2.length; i++) {
+      for (let j = 1; j <= arr1.length; j++) {
+        if (arr2[i - 1] === arr1[j - 1]) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1, // substitution
+            matrix[i][j - 1] + 1,     // insertion
+            matrix[i - 1][j] + 1      // deletion
+          );
+        }
+      }
+    }
+    
+    return matrix[arr2.length][arr1.length];
+  }
+
+  /**
+   * DEPRECATED: Old capture-and-verify method
+   * Use captureAndExtractForMatching + client-side comparison instead
    */
   async captureAndVerifyTemplate(templateData: string, qualityLevel: number = 6, templateType: number = 2001, abortSignal?: AbortSignal): Promise<{verified: boolean, score?: number, imageFile?: File}> {
     if (!this.status.initialized || !this.deviceHandle) {
@@ -859,4 +979,5 @@ class BioMiniService {
 
 // Export singleton instance
 export const bioMiniService = new BioMiniService();
+export { BioMiniService };
 export default bioMiniService;
