@@ -64,14 +64,16 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
 
     try {
       await bioMiniService.initializeDevice();
-      const devices = await bioMiniService.getScannerList();
+      // Use getAvailableDevices() instead of getScannerList() (which is not supported)
+      const devices = bioMiniService.getAvailableDevices();
       
       if (devices.length > 0) {
         setScannerStatus('ready');
         setDeviceInfo({
-          model: getDeviceModel(devices[0].ScannerType),
-          serial: devices[0].Serial
+          model: getDeviceModel(devices[0].ScannerType || devices[0].DeviceType || ''),
+          serial: devices[0].ScannerName || devices[0].Serial || String(devices[0].DeviceHandle)
         });
+        console.log('✅ BioMini device initialized:', devices[0]);
       } else {
         throw new Error('No BioMini devices found. Check USB connection.');
       }
@@ -125,9 +127,55 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
     return typeMap[scannerType] || 'BioMini Device';
   };
 
-  // Check BioMini service on component mount
+  // Check BioMini service on component mount and auto-initialize if available  
   useEffect(() => {
-    checkBioMiniService();
+    const initializeIfAvailable = async () => {
+      console.log('🔍 Checking BioMini service availability...');
+      
+      try {
+        const isAvailable = await bioMiniService.checkWebAgentConnection();
+        setBioMiniAvailable(isAvailable);
+        
+        if (isAvailable) {
+          setScannerStatus('not_connected');
+          setErrorMessage('');
+          
+          // Auto-initialize device for better UX
+          console.log('🚀 Service detected, auto-initializing device...');
+          setScannerStatus('initializing');
+          
+          try {
+            await bioMiniService.initializeDevice();
+            const devices = bioMiniService.getAvailableDevices();
+            
+            if (devices.length > 0) {
+              setScannerStatus('ready');
+              setDeviceInfo({
+                model: getDeviceModel(devices[0].ScannerType || devices[0].DeviceType || ''),
+                serial: devices[0].ScannerName || devices[0].Serial || String(devices[0].DeviceHandle)
+              });
+              console.log('✅ Auto-initialization successful:', devices[0]);
+            } else {
+              setScannerStatus('not_connected');
+              setErrorMessage('No BioMini devices found. Check USB connection.');
+            }
+          } catch (initError) {
+            console.error('Auto-initialization failed:', initError);
+            setScannerStatus('not_connected');
+            setErrorMessage('Device initialization failed. Click "Initialize Device" to retry.');
+          }
+        } else {
+          setScannerStatus('service_unavailable');
+          setErrorMessage('BioMini Web Agent not running. Please start BioMiniWebAgent.exe');
+        }
+      } catch (error) {
+        setBioMiniAvailable(false);
+        setScannerStatus('service_unavailable');
+        setErrorMessage('Failed to connect to BioMini service');
+      }
+    };
+    
+    initializeIfAvailable();
   }, []);
 
   const handleTestCapture = () => {
@@ -242,7 +290,7 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
       {bioMiniAvailable && scannerStatus !== 'service_unavailable' && (
         <Alert severity="success" sx={{ mb: 2 }}>
           <Typography variant="body2">
-            ✓ BioMini Web Agent connected (localhost:8084)
+            ✓ BioMini Web Agent connected via proxy
           </Typography>
         </Alert>
       )}
