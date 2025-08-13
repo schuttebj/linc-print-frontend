@@ -63,7 +63,7 @@ import AuditLogViewer from './pages/admin/AuditLogViewer';
 import AnalyticsDashboard from './pages/analytics/AnalyticsDashboard';
 
 // Temporary Test Pages
-import FingerprintTestPage from './pages/temp/FingerprintTestPage';
+import FingerprintTestPage from './pages/admin/FingerprintTestPage';
 
 function App() {
   return (
