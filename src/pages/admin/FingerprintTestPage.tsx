@@ -96,6 +96,7 @@ const FingerprintTestPage: React.FC = () => {
 
   const runDiagnostics = async () => {
     addLog('🔍 Running BioMini diagnostics...', 'info');
+    addLog('ℹ️  Note: getScannerList API is not supported, using initDevice response', 'info');
     
     // First check what endpoints are available
     await checkAvailableEndpoints();
@@ -115,12 +116,15 @@ const FingerprintTestPage: React.FC = () => {
         if (initialized) {
           addLog('✅ Device initialized successfully', 'success');
           
-          // Get device list
-          const devices = await bioMiniService.getScannerList();
+          // Get device list from initialization (getScannerList API is not supported)
+          const devices = bioMiniService.getAvailableDevices();
           addLog(`✅ Found ${devices.length} device(s)`, 'success');
           
           devices.forEach((device, index) => {
-            addLog(`Device ${index}: ${device.ScannerType} (${device.ID})`, 'info');
+            addLog(`Device ${index + 1}: ${device.DeviceType || device.ScannerType} (Handle: ${device.DeviceHandle})`, 'info');
+            if (device.ScannerName) {
+              addLog(`  └── Serial: ${device.ScannerName}`, 'info');
+            }
           });
           
           setServiceStatus({

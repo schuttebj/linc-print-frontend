@@ -146,8 +146,11 @@ class BioMiniService {
 
   /**
    * Get list of connected BioMini scanners
+   * @deprecated This API is not supported by BioMiniWebAgent - use getAvailableDevices() instead
    */
   async getScannerList(): Promise<BioMiniDeviceInfo[]> {
+    console.warn('⚠️  getScannerList() is deprecated - BioMiniWebAgent returns "Unsupported API". Use getAvailableDevices() instead.');
+    
     try {
       // Add dummy parameter like all other API calls
       const url = `${WEB_AGENT_URL}/api/getScannerList?dummy=${this.getDummyParam()}`;
@@ -385,6 +388,14 @@ class BioMiniService {
    */
   isReady(): boolean {
     return this.status.available && this.status.initialized && this.status.devices.length > 0;
+  }
+
+  /**
+   * Get devices discovered during initialization
+   * This replaces getScannerList() which is not supported
+   */
+  getAvailableDevices(): BioMiniDeviceInfo[] {
+    return [...this.status.devices];
   }
 }
 
