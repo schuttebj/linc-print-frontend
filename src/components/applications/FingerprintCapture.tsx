@@ -36,6 +36,8 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
   const [bioMiniAvailable, setBioMiniAvailable] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [deviceInfo, setDeviceInfo] = useState<{model?: string, serial?: string}>({});
+  const [capturedImageUrl, setCapturedImageUrl] = useState<string>('');
+  const [lastCaptureTime, setLastCaptureTime] = useState<string>('');
 
   // Check BioMini Web Agent availability
   const checkBioMiniService = async () => {
@@ -92,11 +94,25 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
     setErrorMessage('');
 
     try {
+      console.log('🔍 Starting fingerprint capture...');
       const fingerprintFile = await bioMiniService.captureFingerprint();
+      
+      // Create URL for image preview
+      const imageUrl = URL.createObjectURL(fingerprintFile);
+      setCapturedImageUrl(imageUrl);
+      setLastCaptureTime(new Date().toLocaleTimeString());
+      
+      console.log('✅ Fingerprint captured successfully:', {
+        name: fingerprintFile.name,
+        size: fingerprintFile.size,
+        type: fingerprintFile.type
+      });
+      
+      // Pass the file to parent component
       onFingerprintCapture(fingerprintFile);
       setScannerStatus('ready');
     } catch (error) {
-      console.error('BioMini capture error:', error);
+      console.error('❌ BioMini capture error:', error);
       setErrorMessage(error instanceof Error ? error.message : 'Fingerprint capture failed');
       setScannerStatus('ready');
     }
@@ -109,6 +125,13 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
       setScannerStatus('not_connected');
       setDeviceInfo({});
       setErrorMessage('');
+      
+      // Clean up image URL to prevent memory leaks
+      if (capturedImageUrl) {
+        URL.revokeObjectURL(capturedImageUrl);
+        setCapturedImageUrl('');
+        setLastCaptureTime('');
+      }
     } catch (error) {
       console.error('Disconnect error:', error);
     }
@@ -177,6 +200,16 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
     
     initializeIfAvailable();
   }, []);
+
+  // Cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      // Clean up image URL to prevent memory leaks
+      if (capturedImageUrl) {
+        URL.revokeObjectURL(capturedImageUrl);
+      }
+    };
+  }, [capturedImageUrl]);
 
   const handleTestCapture = () => {
     // Simulate fingerprint capture for testing
@@ -334,6 +367,71 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
           </Button>
         </Grid>
       </Grid>
+
+      {/* Captured Fingerprint Preview */}
+      {capturedImageUrl && (
+        <Card sx={{ mt: 3 }}>
+          <CardHeader 
+            title="Captured Fingerprint" 
+            subheader={`Captured at ${lastCaptureTime}`}
+            action={
+              <Chip 
+                label="Ready" 
+                color="success" 
+                size="small"
+                icon={<CheckCircleIcon />}
+              />
+            }
+          />
+          <CardContent>
+            <Box sx={{ textAlign: 'center' }}>
+              <Paper 
+                elevation={3}
+                sx={{ 
+                  display: 'inline-block', 
+                  p: 2, 
+                  backgroundColor: '#f5f5f5',
+                  border: '2px solid #4caf50'
+                }}
+              >
+                <img 
+                  src={capturedImageUrl} 
+                  alt="Captured Fingerprint"
+                  style={{
+                    maxWidth: '300px',
+                    maxHeight: '300px',
+                    width: 'auto',
+                    height: 'auto',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px'
+                  }}
+                />
+              </Paper>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                ✅ Fingerprint captured successfully from BioMini Slim 2
+              </Typography>
+              <Typography variant="caption" color="text.secondary" display="block">
+                Image format: BMP | Ready for processing
+              </Typography>
+              <Box sx={{ mt: 2 }}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => {
+                    if (capturedImageUrl) {
+                      URL.revokeObjectURL(capturedImageUrl);
+                      setCapturedImageUrl('');
+                      setLastCaptureTime('');
+                    }
+                  }}
+                >
+                  Clear Image
+                </Button>
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Service Status */}
       <Box sx={{ mt: 2 }}>
