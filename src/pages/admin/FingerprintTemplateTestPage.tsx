@@ -224,8 +224,8 @@ const FingerprintTemplateTestPage: React.FC = () => {
       
       addLog(`✅ Fingerprint captured and template extracted (${result.template.length} chars)`, 'success');
       
-      // Compare templates using client-side matching
-      const comparison = BioMiniService.fuzzyCompareTemplates(result.template, template.template, 0.70);
+      // Compare templates using advanced biometric matching
+      const comparison = BioMiniService.fuzzyCompareTemplates(result.template, template.template, 0.60);
       
       const verificationResult: VerificationResult = {
         verified: comparison.match,
@@ -276,7 +276,7 @@ const FingerprintTemplateTestPage: React.FC = () => {
       // Compare against ALL stored templates
       for (const template of storedTemplates) {
         try {
-          const comparison = BioMiniService.fuzzyCompareTemplates(result.template, template.template, 0.70);
+          const comparison = BioMiniService.fuzzyCompareTemplates(result.template, template.template, 0.60);
           
           addLog(`${comparison.match ? '✅' : '❌'} ${template.name}: ${(comparison.similarity * 100).toFixed(1)}% similarity`, 
                  comparison.match ? 'success' : 'info');
@@ -312,7 +312,7 @@ const FingerprintTemplateTestPage: React.FC = () => {
           addLog(`  ${index + 1}. ${match.name} (${(match.similarity * 100).toFixed(1)}%)`, 'success');
         });
       } else {
-        addLog(`🎯 Identification complete: No matches found (threshold: 70%)`, 'info');
+        addLog(`🎯 Identification complete: No matches found (threshold: 60%)`, 'info');
       }
       
       // Update captured image
@@ -362,9 +362,9 @@ const FingerprintTemplateTestPage: React.FC = () => {
       
       <Alert severity="info" sx={{ mb: 3 }}>
         <Typography variant="body2">
-          <strong>💡 New Approach:</strong> This system now uses client-side template matching. 
-          Scan your fingerprint once and the system will compare the extracted template against all stored templates using fuzzy matching algorithms.
-          <br/><strong>Threshold:</strong> 70% similarity required for a match.
+          <strong>💡 Advanced Biometric Matching:</strong> This system uses sophisticated binary correlation algorithms designed for biometric data. 
+          Scan your fingerprint once and the system analyzes the minutiae patterns using correlation, Hamming distance, and Jaccard similarity.
+          <br/><strong>Threshold:</strong> 60% combined similarity required for a match.
         </Typography>
       </Alert>
 

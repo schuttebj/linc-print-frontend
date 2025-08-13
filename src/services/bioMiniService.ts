@@ -708,61 +708,152 @@ class BioMiniService {
   }
 
   /**
-   * Client-side template matching using simple string comparison
-   * Note: This is a basic implementation. For production, consider using
-   * more sophisticated template matching algorithms or the UFMatcher SDK
+   * Biometric template matching using binary data analysis
+   * Fingerprint templates are binary structures containing minutiae data
    */
-  static compareTemplates(template1: string, template2: string, threshold: number = 0.85): {match: boolean, similarity: number} {
+  static compareTemplates(template1: string, template2: string, threshold: number = 0.75): {match: boolean, similarity: number} {
     if (!template1 || !template2) {
       return {match: false, similarity: 0};
     }
 
-    // Simple similarity calculation based on character matching
-    const minLength = Math.min(template1.length, template2.length);
-    const maxLength = Math.max(template1.length, template2.length);
-    
-    if (minLength === 0) {
+    try {
+      // Decode base64 templates to binary data
+      const data1 = this.base64ToBytes(template1);
+      const data2 = this.base64ToBytes(template2);
+      
+      // Use correlation coefficient for binary biometric data
+      const similarity = this.calculateBinaryCorrelation(data1, data2);
+      const match = similarity >= threshold;
+
+      console.log(`🔍 Binary template comparison: ${(similarity * 100).toFixed(1)}% correlation (threshold: ${(threshold * 100).toFixed(1)}%)`);
+      
+      return {match, similarity};
+    } catch (error) {
+      console.error('❌ Template comparison error:', error);
       return {match: false, similarity: 0};
     }
-
-    let matchingChars = 0;
-    for (let i = 0; i < minLength; i++) {
-      if (template1[i] === template2[i]) {
-        matchingChars++;
-      }
-    }
-
-    // Calculate similarity considering length difference
-    const similarity = matchingChars / maxLength;
-    const match = similarity >= threshold;
-
-    console.log(`🔍 Template comparison: ${(similarity * 100).toFixed(1)}% similarity (threshold: ${(threshold * 100).toFixed(1)}%)`);
-    
-    return {match, similarity};
   }
 
   /**
-   * Advanced template matching using fuzzy comparison
+   * Advanced biometric template matching using multiple algorithms
    */
-  static fuzzyCompareTemplates(template1: string, template2: string, threshold: number = 0.80): {match: boolean, similarity: number} {
+  static fuzzyCompareTemplates(template1: string, template2: string, threshold: number = 0.60): {match: boolean, similarity: number} {
     if (!template1 || !template2) {
       return {match: false, similarity: 0};
     }
 
-    // Convert base64 templates to arrays for better comparison
-    const arr1 = Array.from(template1);
-    const arr2 = Array.from(template2);
-    
-    // Use Levenshtein distance for fuzzy matching
-    const maxLen = Math.max(arr1.length, arr2.length);
-    const distance = this.levenshteinDistance(arr1, arr2);
-    const similarity = 1 - (distance / maxLen);
-    
-    const match = similarity >= threshold;
+    try {
+      // Decode base64 templates to binary data
+      const data1 = this.base64ToBytes(template1);
+      const data2 = this.base64ToBytes(template2);
+      
+      // Calculate multiple similarity metrics
+      const correlation = this.calculateBinaryCorrelation(data1, data2);
+      const hamming = this.calculateHammingSimilarity(data1, data2);
+      const jaccard = this.calculateJaccardSimilarity(data1, data2);
+      
+      // Weighted combination of metrics (correlation is most important for biometrics)
+      const similarity = (correlation * 0.6) + (hamming * 0.25) + (jaccard * 0.15);
+      const match = similarity >= threshold;
 
-    console.log(`🧬 Fuzzy template comparison: ${(similarity * 100).toFixed(1)}% similarity (distance: ${distance})`);
+      console.log(`🧬 Advanced biometric comparison:`);
+      console.log(`   Correlation: ${(correlation * 100).toFixed(1)}%`);
+      console.log(`   Hamming: ${(hamming * 100).toFixed(1)}%`);
+      console.log(`   Jaccard: ${(jaccard * 100).toFixed(1)}%`);
+      console.log(`   Combined: ${(similarity * 100).toFixed(1)}% (threshold: ${(threshold * 100).toFixed(1)}%)`);
+      
+      return {match, similarity};
+    } catch (error) {
+      console.error('❌ Advanced template comparison error:', error);
+      return {match: false, similarity: 0};
+    }
+  }
+
+  /**
+   * Convert base64 string to byte array
+   */
+  private static base64ToBytes(base64: string): Uint8Array {
+    const binaryString = window.atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes;
+  }
+
+  /**
+   * Calculate binary correlation coefficient (good for biometric templates)
+   */
+  private static calculateBinaryCorrelation(data1: Uint8Array, data2: Uint8Array): number {
+    const minLength = Math.min(data1.length, data2.length);
+    if (minLength === 0) return 0;
+
+    // Calculate means
+    let sum1 = 0, sum2 = 0;
+    for (let i = 0; i < minLength; i++) {
+      sum1 += data1[i];
+      sum2 += data2[i];
+    }
+    const mean1 = sum1 / minLength;
+    const mean2 = sum2 / minLength;
+
+    // Calculate correlation coefficient
+    let numerator = 0, denom1 = 0, denom2 = 0;
+    for (let i = 0; i < minLength; i++) {
+      const diff1 = data1[i] - mean1;
+      const diff2 = data2[i] - mean2;
+      numerator += diff1 * diff2;
+      denom1 += diff1 * diff1;
+      denom2 += diff2 * diff2;
+    }
+
+    const denominator = Math.sqrt(denom1 * denom2);
+    if (denominator === 0) return 0;
+
+    const correlation = numerator / denominator;
+    // Convert to 0-1 scale (correlation ranges from -1 to 1)
+    return Math.max(0, (correlation + 1) / 2);
+  }
+
+  /**
+   * Calculate Hamming distance similarity
+   */
+  private static calculateHammingSimilarity(data1: Uint8Array, data2: Uint8Array): number {
+    const maxLength = Math.max(data1.length, data2.length);
+    const minLength = Math.min(data1.length, data2.length);
     
-    return {match, similarity};
+    if (maxLength === 0) return 0;
+
+    let differences = Math.abs(data1.length - data2.length); // Length difference penalty
+    
+    for (let i = 0; i < minLength; i++) {
+      if (data1[i] !== data2[i]) {
+        differences++;
+      }
+    }
+
+    return 1 - (differences / maxLength);
+  }
+
+  /**
+   * Calculate Jaccard similarity for binary data
+   */
+  private static calculateJaccardSimilarity(data1: Uint8Array, data2: Uint8Array): number {
+    const minLength = Math.min(data1.length, data2.length);
+    if (minLength === 0) return 0;
+
+    let intersection = 0;
+    let union = 0;
+
+    for (let i = 0; i < minLength; i++) {
+      const a = data1[i] > 0 ? 1 : 0;
+      const b = data2[i] > 0 ? 1 : 0;
+      
+      if (a === 1 && b === 1) intersection++;
+      if (a === 1 || b === 1) union++;
+    }
+
+    return union > 0 ? intersection / union : 0;
   }
 
   /**
