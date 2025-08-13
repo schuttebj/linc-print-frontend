@@ -31,6 +31,7 @@ import {
 
 import FingerprintCapture from '../../components/applications/FingerprintCapture';
 import bioMiniService from '../../services/bioMiniService';
+import { debugBioMini } from '../../debug/biomini-debug';
 
 const FingerprintTestPage: React.FC = () => {
   const [capturedFingerprint, setCapturedFingerprint] = useState<File | null>(null);
@@ -58,28 +59,37 @@ const FingerprintTestPage: React.FC = () => {
     addLog(`Fingerprint captured: ${fingerprintFile.name} (${fingerprintFile.size} bytes)`, 'success');
   };
 
-  // Check what's actually available on localhost:443
+  // Check what's available via the proxy
   const checkAvailableEndpoints = async () => {
-    addLog('🔍 Checking available endpoints...', 'info');
+    addLog('🔍 Checking proxy endpoints...', 'info');
     
     const endpointsToCheck = [
       '/api/getScannerList',
       '/api/initDevice', 
-      '/getScannerList',
-      '/initDevice',
+      '/api/version',
+      '/api/createSessionID',
       '/',
       '/html/index.html'
     ];
 
     for (const endpoint of endpointsToCheck) {
       try {
-        const response = await fetch(`https://localhost:443${endpoint}`, {
+        // Use proxy URL in development, direct in production
+        const url = `/biomini${endpoint}${endpoint.includes('?') ? '&' : '?'}dummy=${Math.random()}`;
+        addLog(`📡 Testing: ${url}`, 'info');
+        
+        const response = await fetch(url, {
           method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
+          signal: AbortSignal.timeout(3000)
         });
-        addLog(`✅ Found endpoint: ${endpoint} (${response.status})`, 'success');
+        
+        if (response.ok) {
+          addLog(`✅ Working: ${endpoint} (${response.status})`, 'success');
+        } else {
+          addLog(`❌ Failed: ${endpoint} (${response.status} ${response.statusText})`, 'error');
+        }
       } catch (error) {
-        addLog(`❌ Endpoint ${endpoint}: ${error instanceof Error ? error.message : 'failed'}`, 'error');
+        addLog(`❌ Error: ${endpoint} - ${error instanceof Error ? error.message : 'failed'}`, 'error');
       }
     }
   };
@@ -284,6 +294,26 @@ const FingerprintTestPage: React.FC = () => {
                     onClick={runDiagnostics}
                   >
                     Run Diagnostics
+                  </Button>
+                </Grid>
+                <Grid item xs={6}>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    onClick={() => {
+                      // Add debug info to console and logs
+                      const envInfo = {
+                        isDev: import.meta.env.DEV,
+                        mode: import.meta.env.MODE,
+                        url: window.location.href
+                      };
+                      addLog(`🌍 Environment: ${JSON.stringify(envInfo)}`, 'info');
+                      console.log('🔧 Debug Info:', envInfo);
+                      console.log('🔧 BioMini Service:', bioMiniService);
+                    }}
+                    size="small"
+                  >
+                    Debug Info
                   </Button>
                 </Grid>
                 <Grid item xs={6}>

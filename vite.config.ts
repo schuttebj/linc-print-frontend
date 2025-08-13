@@ -21,10 +21,14 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/biomini/, ''),
         configure: (proxy, options) => {
           proxy.on('error', (err, req, res) => {
-            console.log('BioMini proxy error:', err);
+            console.log('🚨 BioMini proxy error:', err.message);
+            console.log('🔗 Failed URL:', req.url);
+          });
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            console.log('📤 BioMini proxy request:', req.method, req.url, '→', proxyReq.path);
           });
           proxy.on('proxyRes', (proxyRes, req, res) => {
-            console.log('BioMini proxy response:', req.url, proxyRes.statusCode);
+            console.log('📥 BioMini proxy response:', req.url, '→', proxyRes.statusCode, proxyRes.statusMessage);
           });
         }
       }
