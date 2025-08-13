@@ -648,7 +648,7 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                   size="small"
                   componentsProps={{
                     popper: {
-                      sx: { zIndex: 1500 } // Higher than chips (1400)
+                      sx: { zIndex: 2000 } // Much higher than chips (1400)
                     }
                   }}
                   renderInput={(params) => (
@@ -713,7 +713,7 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                     size="small"
                     MenuProps={{
                       PaperProps: {
-                        sx: { zIndex: 1500 } // Higher than chips (1400)
+                        sx: { zIndex: 2000 } // Much higher than chips (1400)
                       }
                     }}
                   >
@@ -760,7 +760,7 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                     disabled={disabled}
                     MenuProps={{
                       PaperProps: {
-                        sx: { zIndex: 1500 } // Higher than chips (1400)
+                        sx: { zIndex: 2000 } // Much higher than chips (1400)
                       }
                     }}
                     renderValue={(selected) => (
@@ -819,7 +819,7 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                     disabled={disabled}
                     MenuProps={{
                       PaperProps: {
-                        sx: { zIndex: 1500 } // Higher than chips (1400)
+                        sx: { zIndex: 2000 } // Much higher than chips (1400)
                       }
                     }}
                     renderValue={(selected) => (
