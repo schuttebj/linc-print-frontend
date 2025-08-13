@@ -98,18 +98,20 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
     setLoadingCountries(true);
     try {
       const countryData = await lookupService.getCountries();
-      setCountries(countryData);
+      // Sort countries alphabetically by label
+      const sortedCountries = countryData.sort((a, b) => a.label.localeCompare(b.label));
+      setCountries(sortedCountries);
     } catch (error) {
       console.error('Error loading countries:', error);
-      // Fallback to basic list
+      // Fallback to basic list (also sorted)
       setCountries([
-        { value: 'MG', label: 'Madagascar' },
         { value: 'FR', label: 'France' },
-        { value: 'GB', label: 'United Kingdom' },
-        { value: 'US', label: 'United States' },
+        { value: 'MG', label: 'Madagascar' },
+        { value: 'OTHER', label: 'Other' },
         { value: 'ZA', label: 'South Africa' },
-        { value: 'OTHER', label: 'Other' }
-      ]);
+        { value: 'GB', label: 'United Kingdom' },
+        { value: 'US', label: 'United States' }
+      ].sort((a, b) => a.label.localeCompare(b.label)));
     } finally {
       setLoadingCountries(false);
     }
@@ -648,7 +650,7 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                   size="small"
                   componentsProps={{
                     popper: {
-                      sx: { zIndex: 2000 } // Much higher than chips (1400)
+                      sx: { zIndex: 2500 } // Much higher than chips (1400)
                     }
                   }}
                   renderInput={(params) => (
@@ -713,7 +715,7 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                     size="small"
                     MenuProps={{
                       PaperProps: {
-                        sx: { zIndex: 2000 } // Much higher than chips (1400)
+                        sx: { zIndex: 2500 } // Much higher than chips (1400)
                       }
                     }}
                   >
@@ -760,7 +762,7 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                     disabled={disabled}
                     MenuProps={{
                       PaperProps: {
-                        sx: { zIndex: 2000 } // Much higher than chips (1400)
+                        sx: { zIndex: 2500 } // Much higher than chips (1400)
                       }
                     }}
                     renderValue={(selected) => (
@@ -819,7 +821,7 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                     disabled={disabled}
                     MenuProps={{
                       PaperProps: {
-                        sx: { zIndex: 2000 } // Much higher than chips (1400)
+                        sx: { zIndex: 2500 } // Much higher than chips (1400)
                       }
                     }}
                     renderValue={(selected) => (
