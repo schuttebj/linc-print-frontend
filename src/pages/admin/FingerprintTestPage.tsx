@@ -84,22 +84,53 @@ const FingerprintTestPage: React.FC = () => {
 
   // Check what's available via the proxy
   const checkAvailableEndpoints = async () => {
-    addLog('🔍 Checking proxy endpoints...', 'info');
+    addLog('🔍 Checking BioMini endpoints via proxy...', 'info');
+    
+    // Test proxy health first
+    const proxyUrl = import.meta.env.DEV ? '/biomini' : 'http://127.0.0.1:8891';
+    addLog(`🌐 Using endpoint: ${proxyUrl}`, 'info');
+    
+    // Test proxy health if in production
+    if (!import.meta.env.DEV) {
+      try {
+        const healthResponse = await fetch('http://127.0.0.1:8891/health');
+        if (healthResponse.ok) {
+          const healthData = await healthResponse.json();
+          addLog(`✅ Proxy Health: ${healthData.status} (Port: ${healthData.port})`, 'success');
+        } else {
+          addLog(`❌ Proxy Health Check Failed: ${healthResponse.status}`, 'error');
+        }
+      } catch (error) {
+        addLog(`❌ Proxy Not Available: ${error instanceof Error ? error.message : 'failed'}`, 'error');
+        addLog('💡 Make sure to start the proxy: npm start in biomini-proxy folder', 'info');
+        return;
+      }
+      
+      // Test proxy status (BioMini connectivity)
+      try {
+        const statusResponse = await fetch('http://127.0.0.1:8891/status');
+        if (statusResponse.ok) {
+          const statusData = await statusResponse.json();
+          addLog(`📡 BioMini via Proxy: ${statusData.biomini} (Status: ${statusData.biomini_status || 'unknown'})`, 
+                statusData.biomini === 'available' ? 'success' : 'error');
+        }
+      } catch (error) {
+        addLog(`❌ Status Check Failed: ${error instanceof Error ? error.message : 'failed'}`, 'error');
+      }
+    }
     
     const endpointsToCheck = [
-      '/api/getScannerList',
       '/api/initDevice', 
-      '/api/version',
-      '/api/createSessionID',
-      '/',
-      '/html/index.html'
+      '/api/hello',
+      '/api/captureSingle',
+      '/api/getCaptureEnd',
+      '/img/CaptureImg.bmp'
     ];
 
     for (const endpoint of endpointsToCheck) {
       try {
-        // Use proxy URL in development, direct in production
-        const url = `/biomini${endpoint}${endpoint.includes('?') ? '&' : '?'}dummy=${Math.random()}`;
-        addLog(`📡 Testing: ${url}`, 'info');
+        const url = `${proxyUrl}${endpoint}${endpoint.includes('?') ? '&' : '?'}dummy=${Math.random()}`;
+        addLog(`📡 Testing: ${endpoint}`, 'info');
         
         const response = await fetch(url, {
           method: 'GET',
@@ -186,10 +217,16 @@ const FingerprintTestPage: React.FC = () => {
 
   useEffect(() => {
     addLog('🚀 Fingerprint Test Page loaded', 'info');
-    addLog('🎯 CORRECTED IMPLEMENTATION: Based on BiominiWebAgent.js analysis', 'info');
+    addLog('🎯 UPDATED IMPLEMENTATION: Using LINC BioMini Proxy for production', 'info');
     addLog('📡 API Endpoints: /api/initDevice, /api/captureSingle, /api/getCaptureEnd', 'info');
     addLog('🖼️ Image Endpoint: /img/CaptureImg.bmp with session parameters', 'info');
-    addLog('🌐 Development: Using Vite proxy /biomini → https://localhost', 'info');
+    
+    if (import.meta.env.DEV) {
+      addLog('🟢 Development Mode: Using Vite proxy /biomini → https://localhost', 'info');
+    } else {
+      addLog('🟠 Production Mode: Using LINC BioMini Proxy http://127.0.0.1:8891 → https://localhost', 'info');
+      addLog('💡 Make sure both AgentCtrl_x64.exe and biomini-proxy are running', 'info');
+    }
     
     // Auto-run diagnostics
     setTimeout(() => {
@@ -237,6 +274,60 @@ const FingerprintTestPage: React.FC = () => {
                 onFingerprintCapture={handleFingerprintCapture}
                 disabled={false}
               />
+
+              {/* Production bridge: load SDK page in hidden iframe and use postMessage to get base64 image */}
+              {!import.meta.env.DEV && (
+                <iframe
+                  id="biomini-bridge-iframe"
+                  src="https://localhost/html/biomini-bridge.html"
+                  style={{ width: 0, height: 0, border: 0, position: 'absolute', opacity: 0 }}
+                  title="BioMini Bridge"
+                />
+              )}
+              {!import.meta.env.DEV && (
+                <Box sx={{ mt: 2 }}>
+                  <Button
+                    variant="contained"
+                    onClick={async () => {
+                      addLog('📨 Sending CAPTURE_REQUEST to bridge iframe...', 'info');
+                      const iframe = document.getElementById('biomini-bridge-iframe') as HTMLIFrameElement | null;
+                      if (!iframe || !iframe.contentWindow) {
+                        addLog('❌ Bridge iframe not available', 'error');
+                        return;
+                      }
+                      const targetOrigin = 'https://localhost';
+                      const onMessage = async (evt: MessageEvent) => {
+                        if (evt.origin !== targetOrigin) return;
+                        const data = evt.data || {};
+                        if (data.type === 'CAPTURE_RESULT') {
+                          window.removeEventListener('message', onMessage);
+                          if (data.success && data.imageBase64) {
+                            addLog('✅ Received base64 image from bridge', 'success');
+                            // Convert base64 to blob/file and preview
+                            try {
+                              const base64 = data.imageBase64.replace(/^data:image\/[a-zA-Z]+;base64,/, '');
+                              const binary = atob(base64);
+                              const bytes = new Uint8Array(binary.length);
+                              for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                              const blob = new Blob([bytes], { type: 'image/bmp' });
+                              const file = new File([blob], `fingerprint_${Date.now()}.bmp`, { type: 'image/bmp' });
+                              handleFingerprintCapture(file);
+                            } catch (e) {
+                              addLog(`❌ Failed to process base64 image: ${e instanceof Error ? e.message : 'error'}`, 'error');
+                            }
+                          } else {
+                            addLog(`❌ Bridge error: ${data.error || 'Unknown'}`, 'error');
+                          }
+                        }
+                      };
+                      window.addEventListener('message', onMessage);
+                      iframe.contentWindow.postMessage({ type: 'CAPTURE_REQUEST' }, targetOrigin);
+                    }}
+                  >
+                    Capture via Bridge (Production)
+                  </Button>
+                </Box>
+              )}
               
               {/* Debug info about FingerprintCapture */}
               <Alert severity="info" sx={{ mt: 2 }}>
@@ -438,9 +529,42 @@ const FingerprintTestPage: React.FC = () => {
                     startIcon={<InfoIcon />}
                     onClick={runDiagnostics}
                   >
-                    Run Diagnostics
+                    Run Full Diagnostics
                   </Button>
                 </Grid>
+                {!import.meta.env.DEV && (
+                  <Grid item xs={12}>
+                    <Button
+                      fullWidth
+                      variant="outlined"
+                      color="primary"
+                      onClick={async () => {
+                        addLog('🔍 Testing LINC BioMini Proxy connectivity...', 'info');
+                        try {
+                          const healthResponse = await fetch('http://127.0.0.1:8891/health');
+                          if (healthResponse.ok) {
+                            const healthData = await healthResponse.json();
+                            addLog(`✅ Proxy Health: ${healthData.status} on port ${healthData.port}`, 'success');
+                            
+                            const statusResponse = await fetch('http://127.0.0.1:8891/status');
+                            if (statusResponse.ok) {
+                              const statusData = await statusResponse.json();
+                              addLog(`📡 BioMini via Proxy: ${statusData.biomini} (proxy: ${statusData.proxy})`, 
+                                    statusData.biomini === 'available' ? 'success' : 'error');
+                            }
+                          } else {
+                            addLog(`❌ Proxy Health Check Failed: ${healthResponse.status}`, 'error');
+                          }
+                        } catch (error) {
+                          addLog(`❌ Proxy Connection Failed: ${error instanceof Error ? error.message : 'unknown'}`, 'error');
+                          addLog('💡 Start proxy with: npm start in biomini-proxy folder', 'info');
+                        }
+                      }}
+                    >
+                      Test Proxy Connection
+                    </Button>
+                  </Grid>
+                )}
                 <Grid item xs={6}>
                   <Button
                     fullWidth
@@ -528,10 +652,13 @@ const FingerprintTestPage: React.FC = () => {
             <CardHeader title="Connection Information" />
             <CardContent>
               <Typography variant="body2" sx={{ fontFamily: 'monospace', mb: 1 }}>
-                <strong>Web Agent URL:</strong> /biomini (dev) | https://localhost (prod)
+                <strong>Environment:</strong> {import.meta.env.DEV ? 'Development' : 'Production'}
               </Typography>
               <Typography variant="body2" sx={{ fontFamily: 'monospace', mb: 1 }}>
-                <strong>Service:</strong> BioMiniWebAgent.exe (running on port 443)
+                <strong>Frontend URL:</strong> {import.meta.env.DEV ? '/biomini (Vite proxy)' : 'http://127.0.0.1:8891 (LINC Proxy)'}
+              </Typography>
+              <Typography variant="body2" sx={{ fontFamily: 'monospace', mb: 1 }}>
+                <strong>BioMini Agent:</strong> AgentCtrl_x64.exe (https://localhost:443)
               </Typography>
               <Typography variant="body2" sx={{ fontFamily: 'monospace', mb: 1 }}>
                 <strong>API Pattern:</strong> /api/initDevice, /api/captureSingle, /api/getCaptureEnd
@@ -544,14 +671,34 @@ const FingerprintTestPage: React.FC = () => {
               
               <Alert severity="info">
                 <Typography variant="body2">
+                  <strong>Setup Requirements:</strong>
+                </Typography>
+                <Typography variant="caption" component="div">
+                  {import.meta.env.DEV ? (
+                    <>
+                      🟢 <strong>Development:</strong><br/>
+                      1. Start AgentCtrl_x64.exe (BioMini Web Agent)<br/>
+                      2. Vite proxy handles CORS automatically
+                    </>
+                  ) : (
+                    <>
+                      🟠 <strong>Production:</strong><br/>
+                      1. Start AgentCtrl_x64.exe (C:\Program Files\Xperix\BioMini\bin\x64\)<br/>
+                      2. Start LINC BioMini Proxy (npm start in biomini-proxy folder)<br/>
+                      3. Or use start-both-services.bat for convenience
+                    </>
+                  )}
+                </Typography>
+              </Alert>
+              
+              <Alert severity="warning" sx={{ mt: 2 }}>
+                <Typography variant="body2">
                   <strong>Troubleshooting:</strong>
                 </Typography>
                 <Typography variant="caption" component="div">
-                  1. Ensure BioMiniWebAgent.exe is running<br/>
-                  2. Check device is connected via USB<br/>
-                  3. Verify Web Agent is on port 443<br/>
-                  4. Allow browser to access localhost HTTPS<br/>
-                  5. Check if Web Agent uses different API paths
+                  ❌ If proxy fails: Check http://127.0.0.1:8891/health<br/>
+                  ❌ If BioMini fails: Check https://localhost in browser<br/>
+                  ❌ Device issues: Verify USB connection and x64 agent
                 </Typography>
               </Alert>
             </CardContent>

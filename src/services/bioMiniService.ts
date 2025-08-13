@@ -5,8 +5,9 @@
  * Provides fingerprint capture functionality for React components
  */
 
-// Use Vite proxy in development, direct URL in production
-const WEB_AGENT_URL = import.meta.env.DEV ? '/biomini' : 'https://localhost';
+// Use Vite proxy in development, LINC BioMini Proxy in production
+// In development, use Vite proxy. In production, use our CORS proxy.
+const WEB_AGENT_URL = import.meta.env.DEV ? '/biomini' : 'http://127.0.0.1:8891';
 
 export interface BioMiniDeviceInfo {
   ID?: string;
