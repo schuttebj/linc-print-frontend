@@ -570,6 +570,7 @@ class BioMiniService {
 
     try {
       console.log('🧬 Extracting fingerprint template...');
+      console.log(`🔧 Template type: ${templateType} (${templateType === 2001 ? 'XPERIX' : templateType === 2002 ? 'ISO_19794_2' : 'ANSI378'})`);
       
       const url = `${WEB_AGENT_URL}/api/getTemplateData?dummy=${this.getDummyParam()}`;
       const params = new URLSearchParams({
@@ -578,7 +579,8 @@ class BioMiniService {
         encrypt: encrypt.toString(),
         encryptKey: encryptKey,
         extractEx: 'false', // Use standard extraction
-        qualityLevel: qualityLevel.toString()
+        qualityLevel: qualityLevel.toString(),
+        templateType: templateType.toString() // Add template type parameter
       });
 
       const response = await fetch(`${url}&${params}`, { method: 'GET' });
@@ -613,7 +615,7 @@ class BioMiniService {
    * @param encrypt Whether the template is encrypted
    * @param encryptKey Encryption key (if encrypted)
    */
-  async verifyTemplate(templateData: string, qualityLevel: number = 6, encrypt: boolean = false, encryptKey: string = ''): Promise<{verified: boolean, score?: number}> {
+  async verifyTemplate(templateData: string, qualityLevel: number = 6, templateType: number = 2001, encrypt: boolean = false, encryptKey: string = ''): Promise<{verified: boolean, score?: number}> {
     if (!this.status.initialized || !this.deviceHandle) {
       throw new Error('Device not initialized. Call initializeDevice() first.');
     }
@@ -622,6 +624,7 @@ class BioMiniService {
       console.log('🔍 Verifying template against captured fingerprint...');
       console.log(`📊 Template length: ${templateData.length} characters`);
       console.log(`🎯 Quality level: ${qualityLevel}`);
+      console.log(`🔧 Template type: ${templateType} (${templateType === 2001 ? 'XPERIX' : templateType === 2002 ? 'ISO_19794_2' : 'ANSI378'})`);
       
       const url = `${WEB_AGENT_URL}/db/verifyTemplate?dummy=${this.getDummyParam()}`;
       const params = new URLSearchParams({
@@ -632,7 +635,8 @@ class BioMiniService {
         encrypt: encrypt.toString(),
         encryptKey: encryptKey,
         extractEx: 'false',
-        qualityLevel: qualityLevel.toString()
+        qualityLevel: qualityLevel.toString(),
+        templateType: templateType.toString() // Add template type parameter
       });
 
       console.log(`🌐 Verification URL: ${url}&${params.toString()}`);
@@ -665,6 +669,148 @@ class BioMiniService {
       }
     } catch (error) {
       console.error('❌ Template verification error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Capture fingerprint and immediately verify against template (keeps finger on scanner)
+   * @param templateData Base64 encoded template data to verify against
+   * @param qualityLevel Quality threshold (1-11)
+   * @param templateType Template type (2001=XPERIX, 2002=ISO, 2003=ANSI)
+   * @param abortSignal Optional abort signal for cancellation
+   */
+  async captureAndVerifyTemplate(templateData: string, qualityLevel: number = 6, templateType: number = 2001, abortSignal?: AbortSignal): Promise<{verified: boolean, score?: number, imageFile?: File}> {
+    if (!this.status.initialized || !this.deviceHandle) {
+      throw new Error('Device not initialized. Call initializeDevice() first.');
+    }
+
+    try {
+      console.log('🔍 Starting capture-and-verify workflow...');
+      console.log(`📊 Template length: ${templateData.length} characters`);
+      console.log(`🔧 Template type: ${templateType}`);
+      
+      // Step 1: Start fingerprint capture
+      const captureUrl = `${WEB_AGENT_URL}/api/captureSingle?dummy=${this.getDummyParam()}`;
+      const captureParams = new URLSearchParams({
+        sHandle: this.deviceHandle,
+        id: this.pageId,
+        resetTimer: '30000'
+      });
+
+      console.log('👆 Please place finger on scanner and keep it there...');
+      const captureResponse = await fetch(`${captureUrl}&${captureParams}`, { 
+        method: 'GET',
+        signal: abortSignal 
+      });
+      const captureResult: BioMiniResponse = await captureResponse.json();
+
+      if (!this.isApiSuccess(captureResult.retValue)) {
+        throw new Error(captureResult.retString || 'Capture failed');
+      }
+
+      // Step 2: Poll for capture completion
+      let captureComplete = false;
+      let attempts = 0;
+      const maxAttempts = 300; // 30 seconds with 100ms intervals
+
+      while (!captureComplete && attempts < maxAttempts) {
+        if (abortSignal?.aborted) {
+          throw new Error('Capture aborted');
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        const statusUrl = `${WEB_AGENT_URL}/api/getCaptureEnd?dummy=${this.getDummyParam()}`;
+        const statusParams = new URLSearchParams({
+          sHandle: this.deviceHandle,
+          id: this.pageId
+        });
+
+        const statusResponse = await fetch(`${statusUrl}&${statusParams}`, { 
+          method: 'GET',
+          signal: abortSignal 
+        });
+        const statusResult: BioMiniResponse = await statusResponse.json();
+
+        if (this.isApiSuccess(statusResult.retValue) && statusResult.captureEnd) {
+          captureComplete = true;
+          console.log('✅ Fingerprint captured! Now verifying immediately...');
+          break;
+        }
+        attempts++;
+      }
+
+      if (!captureComplete) {
+        throw new Error('Capture timeout - fingerprint not detected');
+      }
+
+      // Step 3: IMMEDIATELY verify against template (while finger is still on scanner)
+      const verifyUrl = `${WEB_AGENT_URL}/db/verifyTemplate?dummy=${this.getDummyParam()}`;
+      const verifyParams = new URLSearchParams({
+        sHandle: this.deviceHandle,
+        id: this.pageId,
+        tempLen: templateData.length.toString(),
+        tempData: templateData,
+        encrypt: 'false',
+        encryptKey: '',
+        extractEx: 'false',
+        qualityLevel: qualityLevel.toString(),
+        templateType: templateType.toString()
+      });
+
+      const verifyResponse = await fetch(`${verifyUrl}&${verifyParams}`, { 
+        method: 'GET',
+        signal: abortSignal 
+      });
+      const verifyResult: BioMiniResponse = await verifyResponse.json();
+
+      console.log('📥 Verification API response:', {
+        retValue: verifyResult.retValue,
+        retString: verifyResult.retString,
+        retVerify: verifyResult.retVerify,
+        score: verifyResult.score
+      });
+
+      // Step 4: Get the captured image for display
+      let imageFile: File | undefined;
+      try {
+        const imageUrl = `${WEB_AGENT_URL}/img/CaptureImg.bmp?dummy=${this.getDummyParam()}&shandle=${this.deviceHandle}&id=${this.pageId}`;
+        const imageResponse = await fetch(imageUrl, { signal: abortSignal });
+        
+        if (imageResponse.ok) {
+          const imageBlob = await imageResponse.blob();
+          if (imageBlob.size > 34) { // Not the placeholder
+            imageFile = new File([imageBlob], `fingerprint_${Date.now()}.bmp`, { type: 'image/bmp' });
+          }
+        }
+      } catch (imageError) {
+        console.warn('⚠️ Could not retrieve fingerprint image:', imageError);
+      }
+
+      // Step 5: Process verification result
+      if (this.isApiSuccess(verifyResult.retValue)) {
+        const verified = verifyResult.retVerify === true || verifyResult.retVerify === 'true' || verifyResult.retVerify === 'True';
+        console.log(`${verified ? '✅' : '❌'} Verification result: ${verified ? 'MATCH' : 'NO MATCH'}`);
+        
+        if (verifyResult.score !== undefined) {
+          console.log(`📊 Verification score: ${verifyResult.score}`);
+        }
+
+        console.log('✅ You can now remove your finger from the scanner');
+        
+        return {
+          verified,
+          score: verifyResult.score,
+          imageFile
+        };
+      } else {
+        console.error('❌ Verification API failed:', verifyResult.retString);
+        throw new Error(verifyResult.retString || 'Template verification failed');
+      }
+
+    } catch (error) {
+      console.error('❌ Capture-and-verify error:', error);
       throw error;
     }
   }

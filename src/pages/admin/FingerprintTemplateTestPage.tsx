@@ -217,14 +217,14 @@ const FingerprintTemplateTestPage: React.FC = () => {
     setIsVerifying(true);
     try {
       addLog(`🔍 Starting verification against template: ${template.name}`, 'info');
-      addLog('👆 Please place your finger on the scanner...', 'info');
+      addLog('👆 Please place your finger on the scanner and KEEP IT THERE until verification completes...', 'info');
       
-      // First, capture a fresh fingerprint for verification
-      const fingerprintFile = await bioMiniService.captureFingerprint();
-      addLog('✅ Fingerprint captured, now verifying...', 'success');
-      
-      // Now verify the just-captured fingerprint against the stored template
-      const result = await bioMiniService.verifyTemplate(template.template, qualityLevel);
+      // Use the new capture-and-verify method that keeps timing tight
+      const result = await bioMiniService.captureAndVerifyTemplate(
+        template.template, 
+        qualityLevel, 
+        template.format // Use the stored template format
+      );
       
       const verificationResult: VerificationResult = {
         verified: result.verified,
@@ -238,6 +238,12 @@ const FingerprintTemplateTestPage: React.FC = () => {
       const status = result.verified ? '✅ MATCH' : '❌ NO MATCH';
       const scoreText = result.score ? ` (Score: ${result.score})` : '';
       addLog(`${status}: ${template.name}${scoreText}`, result.verified ? 'success' : 'error');
+      
+      // Update captured image if available
+      if (result.imageFile) {
+        const imageUrl = URL.createObjectURL(result.imageFile);
+        setCapturedImageUrl(imageUrl);
+      }
       
     } catch (error) {
       addLog(`❌ Verification failed: ${error.message}`, 'error');
@@ -255,36 +261,48 @@ const FingerprintTemplateTestPage: React.FC = () => {
     setIsVerifying(true);
     try {
       addLog(`🔍 Starting 1:N identification against ${storedTemplates.length} templates...`, 'info');
-      addLog('👆 Please place your finger on the scanner...', 'info');
-      
-      // First, capture a fresh fingerprint for verification
-      const fingerprintFile = await bioMiniService.captureFingerprint();
-      addLog('✅ Fingerprint captured, now running identification...', 'success');
+      addLog('⚠️ This will require multiple scans - one for each template', 'info');
       
       let matchCount = 0;
       
-      for (const template of storedTemplates) {
+      for (let i = 0; i < storedTemplates.length; i++) {
+        const template = storedTemplates[i];
         try {
-          addLog(`🔍 Checking against: ${template.name}`, 'info');
-          const result = await bioMiniService.verifyTemplate(template.template, qualityLevel);
+          addLog(`🔍 Scan ${i + 1}/${storedTemplates.length}: Testing against ${template.name}`, 'info');
+          addLog('👆 Please place your finger on the scanner and KEEP IT THERE...', 'info');
+          
+          const result = await bioMiniService.captureAndVerifyTemplate(
+            template.template, 
+            qualityLevel, 
+            template.format
+          );
           
           if (result.verified) {
             matchCount++;
             const scoreText = result.score ? ` (Score: ${result.score})` : '';
             addLog(`✅ MATCH: ${template.name}${scoreText}`, 'success');
+            
+            // Update captured image for the match
+            if (result.imageFile) {
+              const imageUrl = URL.createObjectURL(result.imageFile);
+              setCapturedImageUrl(imageUrl);
+            }
           } else {
             addLog(`❌ No match: ${template.name}`, 'info');
           }
           
-          // Small delay between verifications to avoid overwhelming the device
-          await new Promise(resolve => setTimeout(resolve, 200));
+          // Small delay between scans
+          if (i < storedTemplates.length - 1) {
+            addLog('⏰ Please wait 2 seconds before next scan...', 'info');
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
           
         } catch (error) {
           addLog(`❌ Verification error for ${template.name}: ${error.message}`, 'error');
         }
       }
       
-      addLog(`🎯 Identification complete: ${matchCount} matches found`, matchCount > 0 ? 'success' : 'info');
+      addLog(`🎯 Identification complete: ${matchCount} matches found out of ${storedTemplates.length} templates`, matchCount > 0 ? 'success' : 'info');
       
     } catch (error) {
       addLog(`❌ Identification failed: ${error.message}`, 'error');
@@ -324,6 +342,13 @@ const FingerprintTemplateTestPage: React.FC = () => {
       <Typography variant="body1" color="text.secondary" paragraph>
         Complete workflow for fingerprint capture, template extraction, and matching
       </Typography>
+      
+      <Alert severity="info" sx={{ mb: 3 }}>
+        <Typography variant="body2">
+          <strong>💡 Important:</strong> For verification, keep your finger on the scanner throughout the entire process. 
+          The system captures a fresh fingerprint and immediately verifies it against stored templates.
+        </Typography>
+      </Alert>
 
       <Grid container spacing={3}>
         {/* Device Status */}
