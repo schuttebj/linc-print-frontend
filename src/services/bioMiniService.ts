@@ -584,12 +584,20 @@ class BioMiniService {
       const response = await fetch(`${url}&${params}`, { method: 'GET' });
       const result: BioMiniResponse = await response.json();
 
+      console.log('📥 Template extraction API response:', {
+        retValue: result.retValue,
+        retString: result.retString,
+        templateBase64Length: result.templateBase64?.length || 0
+      });
+
       if (this.isApiSuccess(result.retValue) && result.templateBase64) {
         console.log('✅ Template extracted successfully');
         console.log(`📊 Template length: ${result.templateBase64.length} characters`);
         console.log(`🔧 Template type: ${templateType === 2001 ? 'XPERIX' : templateType === 2002 ? 'ISO_19794_2' : 'ANSI378'}`);
+        console.log(`🧬 Template preview: ${result.templateBase64.substring(0, 50)}...`);
         return result.templateBase64;
       } else {
+        console.error('❌ Template extraction failed:', result.retString);
         throw new Error(result.retString || 'Template extraction failed');
       }
     } catch (error) {
@@ -612,6 +620,8 @@ class BioMiniService {
 
     try {
       console.log('🔍 Verifying template against captured fingerprint...');
+      console.log(`📊 Template length: ${templateData.length} characters`);
+      console.log(`🎯 Quality level: ${qualityLevel}`);
       
       const url = `${WEB_AGENT_URL}/db/verifyTemplate?dummy=${this.getDummyParam()}`;
       const params = new URLSearchParams({
@@ -625,8 +635,17 @@ class BioMiniService {
         qualityLevel: qualityLevel.toString()
       });
 
+      console.log(`🌐 Verification URL: ${url}&${params.toString()}`);
+
       const response = await fetch(`${url}&${params}`, { method: 'GET' });
       const result: BioMiniResponse = await response.json();
+
+      console.log('📥 Verification API response:', {
+        retValue: result.retValue,
+        retString: result.retString,
+        retVerify: result.retVerify,
+        score: result.score
+      });
 
       if (this.isApiSuccess(result.retValue)) {
         const verified = result.retVerify === true || result.retVerify === 'true' || result.retVerify === 'True';
@@ -641,6 +660,7 @@ class BioMiniService {
           score: result.score
         };
       } else {
+        console.error('❌ Verification API failed:', result.retString);
         throw new Error(result.retString || 'Template verification failed');
       }
     } catch (error) {

@@ -208,11 +208,6 @@ const FingerprintTemplateTestPage: React.FC = () => {
   };
 
   const verifyAgainstTemplate = async (templateId: string) => {
-    if (!capturedTemplate) {
-      addLog('❌ No fingerprint captured for verification', 'error');
-      return;
-    }
-
     const template = storedTemplates.find(t => t.id === templateId);
     if (!template) {
       addLog('❌ Template not found', 'error');
@@ -221,8 +216,14 @@ const FingerprintTemplateTestPage: React.FC = () => {
 
     setIsVerifying(true);
     try {
-      addLog(`🔍 Verifying against template: ${template.name}`, 'info');
+      addLog(`🔍 Starting verification against template: ${template.name}`, 'info');
+      addLog('👆 Please place your finger on the scanner...', 'info');
       
+      // First, capture a fresh fingerprint for verification
+      const fingerprintFile = await bioMiniService.captureFingerprint();
+      addLog('✅ Fingerprint captured, now verifying...', 'success');
+      
+      // Now verify the just-captured fingerprint against the stored template
       const result = await bioMiniService.verifyTemplate(template.template, qualityLevel);
       
       const verificationResult: VerificationResult = {
@@ -246,41 +247,50 @@ const FingerprintTemplateTestPage: React.FC = () => {
   };
 
   const verifyAgainstAll = async () => {
-    if (!capturedTemplate) {
-      addLog('❌ No fingerprint captured for verification', 'error');
-      return;
-    }
-
     if (storedTemplates.length === 0) {
       addLog('❌ No stored templates to verify against', 'error');
       return;
     }
 
     setIsVerifying(true);
-    addLog(`🔍 Verifying against ${storedTemplates.length} templates...`, 'info');
-    
-    let matchCount = 0;
-    
-    for (const template of storedTemplates) {
-      try {
-        const result = await bioMiniService.verifyTemplate(template.template, qualityLevel);
-        
-        if (result.verified) {
-          matchCount++;
-          const scoreText = result.score ? ` (Score: ${result.score})` : '';
-          addLog(`✅ MATCH: ${template.name}${scoreText}`, 'success');
+    try {
+      addLog(`🔍 Starting 1:N identification against ${storedTemplates.length} templates...`, 'info');
+      addLog('👆 Please place your finger on the scanner...', 'info');
+      
+      // First, capture a fresh fingerprint for verification
+      const fingerprintFile = await bioMiniService.captureFingerprint();
+      addLog('✅ Fingerprint captured, now running identification...', 'success');
+      
+      let matchCount = 0;
+      
+      for (const template of storedTemplates) {
+        try {
+          addLog(`🔍 Checking against: ${template.name}`, 'info');
+          const result = await bioMiniService.verifyTemplate(template.template, qualityLevel);
+          
+          if (result.verified) {
+            matchCount++;
+            const scoreText = result.score ? ` (Score: ${result.score})` : '';
+            addLog(`✅ MATCH: ${template.name}${scoreText}`, 'success');
+          } else {
+            addLog(`❌ No match: ${template.name}`, 'info');
+          }
+          
+          // Small delay between verifications to avoid overwhelming the device
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
+        } catch (error) {
+          addLog(`❌ Verification error for ${template.name}: ${error.message}`, 'error');
         }
-        
-        // Small delay between verifications
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-      } catch (error) {
-        addLog(`❌ Verification error for ${template.name}: ${error.message}`, 'error');
       }
+      
+      addLog(`🎯 Identification complete: ${matchCount} matches found`, matchCount > 0 ? 'success' : 'info');
+      
+    } catch (error) {
+      addLog(`❌ Identification failed: ${error.message}`, 'error');
+    } finally {
+      setIsVerifying(false);
     }
-    
-    addLog(`🎯 Verification complete: ${matchCount} matches found`, matchCount > 0 ? 'success' : 'info');
-    setIsVerifying(false);
   };
 
   const loadStoredTemplates = () => {
@@ -466,7 +476,7 @@ const FingerprintTemplateTestPage: React.FC = () => {
                         <IconButton
                           edge="end"
                           onClick={() => verifyAgainstTemplate(template.id)}
-                          disabled={!capturedTemplate || isVerifying}
+                          disabled={!deviceStatus.initialized || isVerifying}
                           size="small"
                         >
                           <CompareIcon />
