@@ -12,6 +12,10 @@ export interface BioMiniDeviceInfo {
   ID: string;
   ScannerType: string;
   Serial: string;
+  DeviceHandle: string;
+  DeviceIndex?: number;
+  Scannername?: string;
+  DeviceType?: string;
 }
 
 export interface BioMiniResponse {
@@ -20,6 +24,10 @@ export interface BioMiniResponse {
   data?: string;
   ScannerInfos?: BioMiniDeviceInfo[];
   quality?: number;
+  captureEnd?: boolean;
+  IsFingerOn?: boolean;
+  lfdScore?: number;
+  ScannerCount?: number;
 }
 
 export interface BioMiniServiceStatus {
