@@ -64,6 +64,7 @@ import AnalyticsDashboard from './pages/analytics/AnalyticsDashboard';
 
 // Temporary Test Pages
 import FingerprintTestPage from './pages/admin/FingerprintTestPage';
+import FingerprintTemplateTestPage from './pages/admin/FingerprintTemplateTestPage';
 
 function App() {
   return (
@@ -442,14 +443,22 @@ function App() {
                 } 
               />
               
-              {/* Temporary Test Route - Remove after testing */}
+                            {/* Temporary Test Routes - Remove after testing */}
               <Route 
                 path="fingerprint-test" 
                 element={
                   <ProtectedRoute requiredPermission="admin.read">
                     <FingerprintTestPage />
                   </ProtectedRoute>
-                } 
+                }
+              />
+              <Route 
+                path="fingerprint-templates" 
+                element={
+                  <ProtectedRoute requiredPermission="admin.read">
+                    <FingerprintTemplateTestPage />
+                  </ProtectedRoute>
+                }
               />
             </Route>
 

@@ -31,6 +31,12 @@ export interface BioMiniResponse {
   ScannerCount?: number;
   sessionId?: string;
   imageBase64?: string;
+  templateBase64?: string; // For template data
+  retVerify?: boolean; // For verify results
+  matchedIndex?: number; // For identify results
+  matchedID?: string; // For identify results
+  verifySucceed?: boolean; // For file verification
+  score?: number; // Verification score
 }
 
 export interface BioMiniServiceStatus {
@@ -218,7 +224,7 @@ class BioMiniService {
    * 2. Poll /api/getCaptureEnd?dummy=X&sHandle=Y&id=Z until captureEnd: true  
    * 3. Get image from /img/CaptureImg.bmp?dummy=X&shandle=Y&id=Z
    */
-  async captureFingerprint(): Promise<File> {
+  async captureFingerprint(abortSignal?: AbortSignal): Promise<File> {
     if (!this.status.initialized || !this.deviceHandle) {
       throw new Error('Device not initialized. Call initializeDevice() first.');
     }
@@ -234,7 +240,10 @@ class BioMiniService {
       const captureUrl = `${WEB_AGENT_URL}/api/captureSingle?dummy=${this.getDummyParam()}&sHandle=${this.deviceHandle}&id=${this.pageId}&resetTimer=30000`;
       console.log('📡 Capture URL:', captureUrl);
 
-      const captureResponse = await fetch(captureUrl, { method: 'GET' });
+      const captureResponse = await fetch(captureUrl, { 
+        method: 'GET',
+        signal: abortSignal
+      });
       const captureResult: BioMiniResponse = await captureResponse.json();
 
       console.log('📥 Capture API response:', captureResult);
@@ -545,6 +554,140 @@ class BioMiniService {
    */
   getAvailableDevices(): BioMiniDeviceInfo[] {
     return [...this.status.devices];
+  }
+
+  /**
+   * Extract template data from the last captured fingerprint
+   * @param templateType Template format (2001: XPERIX, 2002: ISO_19794_2, 2003: ANSI378)
+   * @param qualityLevel Quality threshold (1-11, where 6=40 quality points)
+   * @param encrypt Whether to encrypt the template
+   * @param encryptKey Encryption key (if encrypt is true)
+   */
+  async extractTemplate(templateType: number = 2001, qualityLevel: number = 6, encrypt: boolean = false, encryptKey: string = ''): Promise<string> {
+    if (!this.status.initialized || !this.deviceHandle) {
+      throw new Error('Device not initialized. Call initializeDevice() first.');
+    }
+
+    try {
+      console.log('🧬 Extracting fingerprint template...');
+      
+      const url = `${WEB_AGENT_URL}/api/getTemplateData?dummy=${this.getDummyParam()}`;
+      const params = new URLSearchParams({
+        sHandle: this.deviceHandle,
+        id: this.pageId,
+        encrypt: encrypt.toString(),
+        encryptKey: encryptKey,
+        extractEx: 'false', // Use standard extraction
+        qualityLevel: qualityLevel.toString()
+      });
+
+      const response = await fetch(`${url}&${params}`, { method: 'GET' });
+      const result: BioMiniResponse = await response.json();
+
+      if (this.isApiSuccess(result.retValue) && result.templateBase64) {
+        console.log('✅ Template extracted successfully');
+        console.log(`📊 Template length: ${result.templateBase64.length} characters`);
+        console.log(`🔧 Template type: ${templateType === 2001 ? 'XPERIX' : templateType === 2002 ? 'ISO_19794_2' : 'ANSI378'}`);
+        return result.templateBase64;
+      } else {
+        throw new Error(result.retString || 'Template extraction failed');
+      }
+    } catch (error) {
+      console.error('❌ Template extraction error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Verify a template against the currently captured fingerprint
+   * @param templateData Base64 encoded template data
+   * @param qualityLevel Quality threshold (1-11)
+   * @param encrypt Whether the template is encrypted
+   * @param encryptKey Encryption key (if encrypted)
+   */
+  async verifyTemplate(templateData: string, qualityLevel: number = 6, encrypt: boolean = false, encryptKey: string = ''): Promise<{verified: boolean, score?: number}> {
+    if (!this.status.initialized || !this.deviceHandle) {
+      throw new Error('Device not initialized. Call initializeDevice() first.');
+    }
+
+    try {
+      console.log('🔍 Verifying template against captured fingerprint...');
+      
+      const url = `${WEB_AGENT_URL}/db/verifyTemplate?dummy=${this.getDummyParam()}`;
+      const params = new URLSearchParams({
+        sHandle: this.deviceHandle,
+        id: this.pageId,
+        tempLen: templateData.length.toString(),
+        tempData: templateData,
+        encrypt: encrypt.toString(),
+        encryptKey: encryptKey,
+        extractEx: 'false',
+        qualityLevel: qualityLevel.toString()
+      });
+
+      const response = await fetch(`${url}&${params}`, { method: 'GET' });
+      const result: BioMiniResponse = await response.json();
+
+      if (this.isApiSuccess(result.retValue)) {
+        const verified = result.retVerify === true || result.retVerify === 'true';
+        console.log(`${verified ? '✅' : '❌'} Template verification: ${verified ? 'MATCH' : 'NO MATCH'}`);
+        
+        if (result.score !== undefined) {
+          console.log(`📊 Verification score: ${result.score}`);
+        }
+        
+        return {
+          verified,
+          score: result.score
+        };
+      } else {
+        throw new Error(result.retString || 'Template verification failed');
+      }
+    } catch (error) {
+      console.error('❌ Template verification error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get image data in different formats
+   * @param fileType 1=BMP, 2=19794_4, 3=WSQ
+   * @param compressionRatio Compression ratio (0.1-1.0)
+   * @param width Image width (default: 288)
+   * @param height Image height (default: 340)
+   */
+  async getImageData(fileType: number = 1, compressionRatio: number = 1.0, width: number = 288, height: number = 340): Promise<string> {
+    if (!this.status.initialized || !this.deviceHandle) {
+      throw new Error('Device not initialized. Call initializeDevice() first.');
+    }
+
+    try {
+      console.log(`🖼️ Getting image data (format: ${fileType === 1 ? 'BMP' : fileType === 2 ? '19794_4' : 'WSQ'})...`);
+      
+      const url = `${WEB_AGENT_URL}/api/getImageData?dummy=${this.getDummyParam()}`;
+      const params = new URLSearchParams({
+        sHandle: this.deviceHandle,
+        id: this.pageId,
+        fileType: fileType.toString(),
+        width: width.toString(),
+        height: height.toString(),
+        compressionRatio: compressionRatio.toString()
+      });
+
+      const response = await fetch(`${url}&${params}`, { method: 'GET' });
+      const result: BioMiniResponse = await response.json();
+
+      if (this.isApiSuccess(result.retValue) && result.imageBase64) {
+        console.log('✅ Image data retrieved successfully');
+        console.log(`📊 Image data length: ${result.imageBase64.length} characters`);
+        return result.imageBase64;
+      } else {
+        throw new Error(result.retString || 'Image data retrieval failed');
+      }
+    } catch (error) {
+      console.error('❌ Image data retrieval error:', error);
+      throw error;
+    }
   }
 }
 

@@ -38,6 +38,8 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
   const [deviceInfo, setDeviceInfo] = useState<{model?: string, serial?: string}>({});
   const [capturedImageUrl, setCapturedImageUrl] = useState<string>('');
   const [lastCaptureTime, setLastCaptureTime] = useState<string>('');
+  const [captureTimeoutId, setCaptureTimeoutId] = useState<number | null>(null);
+  const [captureAbortController, setCaptureAbortController] = useState<AbortController | null>(null);
 
   // Check BioMini Web Agent availability
   const checkBioMiniService = async () => {
@@ -86,6 +88,26 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
     }
   };
 
+  // Stop current scanning operation
+  const stopScanning = () => {
+    console.log('🛑 Stopping fingerprint capture...');
+    
+    // Clear timeout if set
+    if (captureTimeoutId) {
+      clearTimeout(captureTimeoutId);
+      setCaptureTimeoutId(null);
+    }
+    
+    // Abort any ongoing request
+    if (captureAbortController) {
+      captureAbortController.abort();
+      setCaptureAbortController(null);
+    }
+    
+    setScannerStatus('ready');
+    setErrorMessage('Scan cancelled. Please try again.');
+  };
+
   // Capture fingerprint using BioMini
   const handleBioMiniCapture = async () => {
     if (scannerStatus !== 'ready') return;
@@ -93,9 +115,30 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
     setScannerStatus('scanning');
     setErrorMessage('');
 
+    // Create abort controller for this capture attempt
+    const abortController = new AbortController();
+    setCaptureAbortController(abortController);
+
+    // Set timeout for capture (30 seconds)
+    const timeoutId = window.setTimeout(() => {
+      console.log('⏰ Fingerprint capture timeout');
+      stopScanning();
+      setErrorMessage('Scan timeout. Please place finger firmly on scanner and try again.');
+    }, 30000);
+    setCaptureTimeoutId(timeoutId);
+
     try {
       console.log('🔍 Starting fingerprint capture...');
+      
+      // Pass abort signal to the service (will need to update service to support this)
       const fingerprintFile = await bioMiniService.captureFingerprint();
+      
+      // Clear timeout and abort controller on success
+      if (captureTimeoutId) {
+        clearTimeout(captureTimeoutId);
+        setCaptureTimeoutId(null);
+      }
+      setCaptureAbortController(null);
       
       // Create URL for image preview
       const imageUrl = URL.createObjectURL(fingerprintFile);
@@ -112,8 +155,18 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
       onFingerprintCapture(fingerprintFile);
       setScannerStatus('ready');
     } catch (error) {
-      console.error('❌ BioMini capture error:', error);
-      setErrorMessage(error instanceof Error ? error.message : 'Fingerprint capture failed');
+      // Clear timeout and abort controller on error
+      if (captureTimeoutId) {
+        clearTimeout(captureTimeoutId);
+        setCaptureTimeoutId(null);
+      }
+      setCaptureAbortController(null);
+      
+      // Don't show error if it was cancelled
+      if (!abortController.signal.aborted) {
+        console.error('❌ BioMini capture error:', error);
+        setErrorMessage(error instanceof Error ? error.message : 'Fingerprint capture failed');
+      }
       setScannerStatus('ready');
     }
   };
@@ -121,6 +174,11 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
   // Disconnect device
   const disconnectDevice = async () => {
     try {
+      // Stop any active scanning first
+      if (scannerStatus === 'scanning') {
+        stopScanning();
+      }
+      
       await bioMiniService.uninitializeDevice();
       setScannerStatus('not_connected');
       setDeviceInfo({});
@@ -208,8 +266,18 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
       if (capturedImageUrl) {
         URL.revokeObjectURL(capturedImageUrl);
       }
+      
+      // Clear any active timeout
+      if (captureTimeoutId) {
+        clearTimeout(captureTimeoutId);
+      }
+      
+      // Abort any ongoing request
+      if (captureAbortController) {
+        captureAbortController.abort();
+      }
     };
-  }, [capturedImageUrl]);
+  }, [capturedImageUrl, captureTimeoutId, captureAbortController]);
 
   const handleTestCapture = () => {
     // Simulate fingerprint capture for testing
@@ -303,7 +371,7 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
             {scannerStatus === 'not_connected' && 'Click "Initialize Device" to connect your BioMini scanner'}
             {scannerStatus === 'initializing' && 'Connecting to device and checking hardware...'}
             {scannerStatus === 'ready' && 'Place finger firmly on the scanner surface'}
-            {scannerStatus === 'scanning' && 'Keep finger steady - do not move until complete'}
+            {scannerStatus === 'scanning' && 'Keep finger steady - do not move until complete (30s timeout)'}
           </Typography>
         </Paper>
       </Box>
@@ -355,16 +423,30 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
           </Button>
         </Grid>
         <Grid item xs={12} sm={4}>
-          <Button
-            fullWidth
-            size="small"
-            variant="contained"
-            startIcon={scannerStatus === 'scanning' ? <CircularProgress size={20} /> : <FingerprintIcon />}
-            disabled={disabled || scannerStatus !== 'ready'}
-            onClick={bioMiniAvailable ? handleBioMiniCapture : handleTestCapture}
-          >
-            {scannerStatus === 'scanning' ? 'Scanning...' : 'Capture'}
-          </Button>
+          {scannerStatus === 'scanning' ? (
+            <Button
+              fullWidth
+              size="small"
+              variant="contained"
+              color="error"
+              startIcon={<ErrorIcon />}
+              disabled={disabled}
+              onClick={stopScanning}
+            >
+              Stop Scan
+            </Button>
+          ) : (
+            <Button
+              fullWidth
+              size="small"
+              variant="contained"
+              startIcon={<FingerprintIcon />}
+              disabled={disabled || scannerStatus !== 'ready'}
+              onClick={bioMiniAvailable ? handleBioMiniCapture : handleTestCapture}
+            >
+              Capture
+            </Button>
+          )}
         </Grid>
       </Grid>
 
