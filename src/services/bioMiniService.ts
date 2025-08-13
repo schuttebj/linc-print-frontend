@@ -246,11 +246,61 @@ class BioMiniService {
       // NOTE: Uses 'shandle' (not 'sHandle') in image URL
       const imageUrl = `${WEB_AGENT_URL}/img/CaptureImg.bmp?dummy=${this.getDummyParam()}&shandle=${this.deviceHandle}&id=${this.pageId}`;
       console.log('🖼️ Image URL:', imageUrl);
+      console.log('🌐 Full image URL for proxy:', imageUrl);
       
-      const imageResponse = await fetch(imageUrl, { method: 'GET' });
+      let imageResponse: Response;
       
-      if (!imageResponse.ok) {
-        throw new Error(`Failed to retrieve fingerprint image: ${imageResponse.status} ${imageResponse.statusText}`);
+      try {
+        imageResponse = await fetch(imageUrl, { 
+          method: 'GET',
+          headers: {
+            'Accept': 'image/bmp,image/*,*/*',
+          }
+        });
+        
+        console.log('📥 Image response status:', imageResponse.status, imageResponse.statusText);
+        console.log('📊 Image response headers:', Object.fromEntries(imageResponse.headers.entries()));
+        
+        if (!imageResponse.ok) {
+          throw new Error(`Failed to retrieve fingerprint image: ${imageResponse.status} ${imageResponse.statusText}`);
+        }
+      } catch (imageError) {
+        console.error('❌ Image fetch failed with error:', imageError);
+        console.log('🔄 Attempting alternative approach: direct HTTPS call...');
+        
+        // Fallback: Try direct HTTPS call (bypassing proxy)
+        try {
+          const directImageUrl = `https://localhost/img/CaptureImg.bmp?dummy=${this.getDummyParam()}&shandle=${this.deviceHandle}&id=${this.pageId}`;
+          console.log('🔄 Direct image URL:', directImageUrl);
+          
+          imageResponse = await fetch(directImageUrl, { 
+            method: 'GET',
+            headers: {
+              'Accept': 'image/bmp,image/*,*/*',
+            }
+          });
+          
+          console.log('📥 Direct image response status:', imageResponse.status, imageResponse.statusText);
+          
+          if (!imageResponse.ok) {
+            throw new Error(`Direct image fetch failed: ${imageResponse.status} ${imageResponse.statusText}`);
+          }
+          
+          console.log('✅ Direct image fetch succeeded!');
+        } catch (directError) {
+          console.error('❌ Direct image fetch also failed:', directError);
+          console.log('🔄 Final attempt: Using img element approach like BiominiWebAgent.js...');
+          
+          // Final fallback: Use img element approach (like BiominiWebAgent.js line 605)
+          try {
+            const imgElementUrl = `https://localhost/img/CaptureImg.bmp?dummy=${this.getDummyParam()}&shandle=${this.deviceHandle}&id=${this.pageId}`;
+            imageResponse = await this.loadImageViaElement(imgElementUrl);
+            console.log('✅ Image element approach succeeded!');
+          } catch (imgError) {
+            console.error('❌ Image element approach also failed:', imgError);
+            throw new Error(`All image fetch methods failed. Proxy: ${imageError.message}, Direct: ${directError.message}, ImgElement: ${imgError.message}`);
+          }
+        }
       }
 
       // Convert response to blob, then to File
@@ -273,6 +323,59 @@ class BioMiniService {
       console.error('❌ Fingerprint capture failed:', error);
       throw error;
     }
+  }
+
+  /**
+   * Load image via img element (like BiominiWebAgent.js) - fallback for CORS issues
+   */
+  private async loadImageViaElement(imageUrl: string): Promise<Response> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous'; // Try to handle CORS
+      
+      img.onload = () => {
+        try {
+          // Create canvas and draw image
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          if (!ctx) {
+            reject(new Error('Canvas context not available'));
+            return;
+          }
+          
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+          
+          // Convert canvas to blob
+          canvas.toBlob((blob) => {
+            if (blob) {
+              // Create a mock Response object from the blob
+              const response = new Response(blob, {
+                status: 200,
+                statusText: 'OK',
+                headers: {
+                  'Content-Type': 'image/bmp'
+                }
+              });
+              resolve(response);
+            } else {
+              reject(new Error('Failed to create blob from canvas'));
+            }
+          }, 'image/bmp');
+        } catch (canvasError) {
+          reject(new Error(`Canvas processing failed: ${canvasError.message}`));
+        }
+      };
+      
+      img.onerror = () => {
+        reject(new Error(`Image failed to load: ${imageUrl}`));
+      };
+      
+      // Set src to trigger loading
+      img.src = imageUrl;
+    });
   }
 
   /**
