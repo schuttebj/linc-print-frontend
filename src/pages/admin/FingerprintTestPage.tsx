@@ -276,58 +276,94 @@ const FingerprintTestPage: React.FC = () => {
               />
 
               {/* Production bridge: load SDK page in hidden iframe and use postMessage to get base64 image */}
-              {!import.meta.env.DEV && (
-                <iframe
-                  id="biomini-bridge-iframe"
-                  src="https://localhost/html/biomini-bridge.html"
-                  style={{ width: 0, height: 0, border: 0, position: 'absolute', opacity: 0 }}
-                  title="BioMini Bridge"
-                />
-              )}
-              {!import.meta.env.DEV && (
-                <Box sx={{ mt: 2 }}>
-                  <Button
-                    variant="contained"
-                    onClick={async () => {
-                      addLog('📨 Sending CAPTURE_REQUEST to bridge iframe...', 'info');
-                      const iframe = document.getElementById('biomini-bridge-iframe') as HTMLIFrameElement | null;
-                      if (!iframe || !iframe.contentWindow) {
-                        addLog('❌ Bridge iframe not available', 'error');
-                        return;
-                      }
-                      const targetOrigin = 'https://localhost';
-                      const onMessage = async (evt: MessageEvent) => {
-                        if (evt.origin !== targetOrigin) return;
-                        const data = evt.data || {};
-                        if (data.type === 'CAPTURE_RESULT') {
-                          window.removeEventListener('message', onMessage);
-                          if (data.success && data.imageBase64) {
-                            addLog('✅ Received base64 image from bridge', 'success');
-                            // Convert base64 to blob/file and preview
-                            try {
-                              const base64 = data.imageBase64.replace(/^data:image\/[a-zA-Z]+;base64,/, '');
-                              const binary = atob(base64);
-                              const bytes = new Uint8Array(binary.length);
-                              for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-                              const blob = new Blob([bytes], { type: 'image/bmp' });
-                              const file = new File([blob], `fingerprint_${Date.now()}.bmp`, { type: 'image/bmp' });
-                              handleFingerprintCapture(file);
-                            } catch (e) {
-                              addLog(`❌ Failed to process base64 image: ${e instanceof Error ? e.message : 'error'}`, 'error');
+              <Box sx={{ mt: 2 }}>
+                <Button
+                  fullWidth
+                  variant="contained"
+                  color="secondary"
+                  onClick={async () => {
+                    addLog('🌉 Starting Bridge Capture (Production Method)...', 'info');
+                    
+                    // Create hidden iframe to biomini-bridge.html
+                    const iframe = document.createElement('iframe');
+                    iframe.style.display = 'none';
+                    iframe.src = 'https://localhost/html/biomini-bridge.html';
+                    document.body.appendChild(iframe);
+                    
+                    const targetOrigin = 'https://localhost';
+                    let timeoutId: number;
+                    
+                    const cleanup = () => {
+                      iframe.remove();
+                      if (timeoutId) clearTimeout(timeoutId);
+                    };
+                    
+                    const onMessage = (evt: MessageEvent) => {
+                      if (evt.origin !== targetOrigin) return;
+                      const data = evt.data || {};
+                      
+                      if (data.type === 'CAPTURE_RESULT') {
+                        window.removeEventListener('message', onMessage);
+                        cleanup();
+                        
+                        if (data.success && data.imageBase64) {
+                          addLog('✅ Fingerprint received from bridge!', 'success');
+                          addLog(`📊 Base64 image length: ${data.imageBase64.length}`, 'info');
+                          
+                          // Convert base64 to blob/file and preview
+                          try {
+                            // Remove data URL prefix if present
+                            const base64 = data.imageBase64.replace(/^data:image\/[a-zA-Z]+;base64,/, '');
+                            const binary = atob(base64);
+                            const bytes = new Uint8Array(binary.length);
+                            for (let i = 0; i < binary.length; i++) {
+                              bytes[i] = binary.charCodeAt(i);
                             }
-                          } else {
-                            addLog(`❌ Bridge error: ${data.error || 'Unknown'}`, 'error');
+                            const blob = new Blob([bytes], { type: 'image/bmp' });
+                            const file = new File([blob], `bridge_fingerprint_${Date.now()}.bmp`, { type: 'image/bmp' });
+                            
+                            addLog(`📁 Created file: ${file.size} bytes`, 'success');
+                            handleFingerprintCapture(file);
+                          } catch (e) {
+                            addLog(`❌ Failed to process base64 image: ${e instanceof Error ? e.message : 'error'}`, 'error');
                           }
+                        } else {
+                          addLog(`❌ Bridge error: ${data.error || 'Unknown error'}`, 'error');
                         }
-                      };
-                      window.addEventListener('message', onMessage);
-                      iframe.contentWindow.postMessage({ type: 'CAPTURE_REQUEST' }, targetOrigin);
-                    }}
-                  >
-                    Capture via Bridge (Production)
-                  </Button>
-                </Box>
-              )}
+                      }
+                    };
+                    
+                    // Set up message listener
+                    window.addEventListener('message', onMessage);
+                    
+                    // Set timeout for bridge response
+                    timeoutId = window.setTimeout(() => {
+                      window.removeEventListener('message', onMessage);
+                      cleanup();
+                      addLog('❌ Bridge capture timeout after 30 seconds', 'error');
+                    }, 30000);
+                    
+                    // Wait for iframe to load, then send capture request
+                    iframe.onload = () => {
+                      addLog('📡 Bridge iframe loaded, sending capture request...', 'info');
+                      if (iframe.contentWindow) {
+                        iframe.contentWindow.postMessage({ type: 'CAPTURE_REQUEST' }, targetOrigin);
+                      } else {
+                        addLog('❌ Bridge iframe contentWindow not available', 'error');
+                        cleanup();
+                      }
+                    };
+                    
+                    iframe.onerror = () => {
+                      addLog('❌ Bridge iframe failed to load', 'error');
+                      cleanup();
+                    };
+                  }}
+                  disabled={disabled}
+                >
+                  🌉 Capture via Bridge (Production)
+                </Button>
+              </Box>
               
               {/* Debug info about FingerprintCapture */}
               <Alert severity="info" sx={{ mt: 2 }}>

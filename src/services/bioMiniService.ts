@@ -47,10 +47,42 @@ class BioMiniService {
   private sessionId: string = '';
   private pageId: string = '';
   private deviceHandle: string = '';
+  private sessionInitialized: boolean = false;
 
   constructor() {
     // Generate unique page ID for session management
     this.pageId = '0'; // Sample UI uses '0'
+  }
+
+  /**
+   * Initialize session like the working BiominiWebAgent.js
+   */
+  private async initializeSession(): Promise<void> {
+    if (this.sessionInitialized) return;
+
+    try {
+      console.log('🔄 Initializing BioMini session...');
+      
+      // Create session ID like BiominiWebAgent.js line 775
+      const sessionUrl = `${WEB_AGENT_URL}/api/createSessionID?dummy=${this.getDummyParam()}`;
+      const sessionResponse = await fetch(sessionUrl, { method: 'GET' });
+      const sessionResult: BioMiniResponse = await sessionResponse.json();
+      
+      if (sessionResult.sessionId) {
+        this.sessionId = sessionResult.sessionId;
+        console.log('✅ Session created:', this.sessionId);
+        
+        // Set cookie like the working sample
+        const expires = new Date();
+        expires.setTime(Date.now() + 1000 * 60 * 60); // 1 hour
+        document.cookie = `username=${this.sessionId}; expires=${expires.toUTCString()}`;
+      }
+      
+      this.sessionInitialized = true;
+    } catch (error) {
+      console.warn('⚠️ Session initialization failed, continuing without session:', error);
+      this.sessionInitialized = true; // Continue anyway
+    }
   }
 
   /**
@@ -106,6 +138,9 @@ class BioMiniService {
     }
 
     try {
+      // Initialize session first like the working sample
+      await this.initializeSession();
+      
       // Use CORRECT endpoint pattern from BiominiWebAgent.js
       const url = `${WEB_AGENT_URL}/api/initDevice?dummy=${this.getDummyParam()}`;
       const response = await fetch(url, {
@@ -190,6 +225,8 @@ class BioMiniService {
       console.log('🔄 Starting fingerprint capture...');
       console.log('📱 Device handle:', this.deviceHandle);
       console.log('🆔 Page ID:', this.pageId);
+      console.log('🔐 Session ID:', this.sessionId);
+      console.log('🍪 Current cookies:', document.cookie);
 
       // Step 1: Start capture - EXACT URL like BiominiWebAgent.js line 500
       const captureUrl = `${WEB_AGENT_URL}/api/captureSingle?dummy=${this.getDummyParam()}&sHandle=${this.deviceHandle}&id=${this.pageId}&resetTimer=30000`;
@@ -274,69 +311,35 @@ class BioMiniService {
         console.log('❌ Immediate fetch failed:', immediateError.message);
       }
 
-      // Step 3B: Fallback methods if immediate fetch failed
-      console.log('🔄 Immediate fetch failed, trying fallback methods...');
-      
-      // Get image - EXACT URL like BiominiWebAgent.js line 604 
-      // NOTE: Uses 'shandle' (not 'sHandle') in image URL
-      const imageUrl = `${WEB_AGENT_URL}/img/CaptureImg.bmp?dummy=${this.getDummyParam()}&shandle=${this.deviceHandle}&id=${this.pageId}`;
-      console.log('🖼️ Fallback image URL:', imageUrl);
-      console.log('🌐 Full image URL for proxy:', imageUrl);
-      
-      let imageResponse: Response;
-      
-      try {
-        imageResponse = await fetch(imageUrl, { 
-          method: 'GET',
-          headers: {
-            'Accept': 'image/bmp,image/*,*/*',
-          }
-        });
-        
-        console.log('📥 Image response status:', imageResponse.status, imageResponse.statusText);
-        console.log('📊 Image response headers:', Object.fromEntries(imageResponse.headers.entries()));
-        
-        if (!imageResponse.ok) {
-          throw new Error(`Failed to retrieve fingerprint image: ${imageResponse.status} ${imageResponse.statusText}`);
+          // Step 3B: Fallback methods if immediate fetch failed
+    console.log('🔄 Immediate fetch failed, trying fallback methods...');
+    
+    // Get image - EXACT URL like BiominiWebAgent.js line 604 
+    // NOTE: Uses 'shandle' (not 'sHandle') in image URL
+    const imageUrl = `${WEB_AGENT_URL}/img/CaptureImg.bmp?dummy=${this.getDummyParam()}&shandle=${this.deviceHandle}&id=${this.pageId}`;
+    console.log('🖼️ Fallback image URL:', imageUrl);
+    console.log('🌐 Full image URL for proxy:', imageUrl);
+    
+    let imageResponse: Response;
+    
+    try {
+      imageResponse = await fetch(imageUrl, { 
+        method: 'GET',
+        headers: {
+          'Accept': 'image/bmp,image/*,*/*',
         }
-      } catch (imageError) {
-        console.error('❌ Image fetch failed with error:', imageError);
-        console.log('🔄 Attempting alternative approach: direct HTTPS call...');
-        
-        // Fallback: Try direct HTTPS call (bypassing proxy)
-        try {
-          const directImageUrl = `https://localhost/img/CaptureImg.bmp?dummy=${this.getDummyParam()}&shandle=${this.deviceHandle}&id=${this.pageId}`;
-          console.log('🔄 Direct image URL:', directImageUrl);
-          
-          imageResponse = await fetch(directImageUrl, { 
-            method: 'GET',
-            headers: {
-              'Accept': 'image/bmp,image/*,*/*',
-            }
-          });
-          
-          console.log('📥 Direct image response status:', imageResponse.status, imageResponse.statusText);
-          
-          if (!imageResponse.ok) {
-            throw new Error(`Direct image fetch failed: ${imageResponse.status} ${imageResponse.statusText}`);
-          }
-          
-          console.log('✅ Direct image fetch succeeded!');
-        } catch (directError) {
-          console.error('❌ Direct image fetch also failed:', directError);
-          console.log('🔄 Final attempt: Using img element approach like BiominiWebAgent.js...');
-          
-          // Final fallback: Use img element approach (like BiominiWebAgent.js line 605)
-          try {
-            const imgElementUrl = `https://localhost/img/CaptureImg.bmp?dummy=${this.getDummyParam()}&shandle=${this.deviceHandle}&id=${this.pageId}`;
-            imageResponse = await this.loadImageViaElement(imgElementUrl);
-            console.log('✅ Image element approach succeeded!');
-          } catch (imgError) {
-            console.error('❌ Image element approach also failed:', imgError);
-            throw new Error(`All image fetch methods failed. Proxy: ${imageError.message}, Direct: ${directError.message}, ImgElement: ${imgError.message}`);
-          }
-        }
+      });
+      
+      console.log('📥 Image response status:', imageResponse.status, imageResponse.statusText);
+      console.log('📊 Image response headers:', Object.fromEntries(imageResponse.headers.entries()));
+      
+      if (!imageResponse.ok) {
+        throw new Error(`Failed to retrieve fingerprint image: ${imageResponse.status} ${imageResponse.statusText}`);
       }
+    } catch (imageError) {
+      console.error('❌ Proxy image fetch failed with error:', imageError);
+      throw new Error(`Proxy image fetch failed: ${imageError.message}. Check that both AgentCtrl_x64.exe and biomini-proxy are running.`);
+    }
 
       // Convert response to blob, then to File
       const imageBlob = await imageResponse.blob();
