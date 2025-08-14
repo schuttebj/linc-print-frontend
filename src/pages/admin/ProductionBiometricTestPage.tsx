@@ -190,11 +190,16 @@ const ProductionBiometricTestPage: React.FC = () => {
   };
 
   const handleIdentification = async () => {
+    console.log('🚀 === UI BUTTON CLICKED: Starting identification ===');
+    console.log('🚀 Button click registered at:', new Date().toISOString());
+    
     try {
-      console.log('🔍 Starting UFMatcher identification against database...');
+      console.log('🔍 About to call biometricApiService.identifyPersonUFMatcher...');
+      console.log('🔍 Service instance:', biometricApiService);
       
       const identificationResult = await biometricApiService.identifyPersonUFMatcher(4, 5);
       
+      console.log('🔍 Received identification result:', identificationResult);
       console.log(`🎯 Identification complete: ${identificationResult.matches_found} matches found`);
       console.log(`📊 Candidates checked: ${identificationResult.candidates_checked}`);
       
@@ -210,7 +215,9 @@ const ProductionBiometricTestPage: React.FC = () => {
       }
       
     } catch (error) {
-      console.error('❌ Identification failed:', error);
+      console.error('❌ UI ERROR: Identification failed:', error);
+      console.error('❌ UI ERROR details:', error.message);
+      console.error('❌ UI ERROR stack:', error.stack);
       alert(`❌ Identification failed: ${error.message}`);
     }
   };

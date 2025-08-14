@@ -283,42 +283,54 @@ This uses the ACTUAL WebAgent UFMatcher instead of server-side simulation.
    * @returns Identification results with match scores
    */
   async identifyPersonUFMatcher(securityLevel: number = 4, maxResults: number = 10): Promise<any> {
-    console.log('🔍 Starting UFMatcher-based 1:N identification against database...');
-
-    // Step 1: Ensure BioMini device is initialized
-    if (!this.bioMiniService.getStatus().initialized) {
-      await this.bioMiniService.initializeDevice();
-    }
-
-    // Step 2: Configure UFMatcher for identification - START WITH MOST PERMISSIVE SETTING
-    const debugSecurityLevel = 1; // Most permissive for debugging
-    await this.bioMiniService.setMatcherParameters(debugSecurityLevel, 2002, false); // ISO 19794-2
-    console.log(`🔧 UFMatcher configured for identification: Security Level ${debugSecurityLevel} (DEBUG: Most permissive)`);
-    console.log(`📊 Original requested level: ${securityLevel}, Using debug level: ${debugSecurityLevel}`);
-
-    // Step 3: Get all database templates first
-    const databaseTemplates = await this.getTemplatesForMatching(100);
-    console.log(`📊 Retrieved ${databaseTemplates.length} templates from database`);
-
-    if (databaseTemplates.length === 0) {
-      return {
-        matches_found: 0,
-        matches: [],
-        candidates_checked: 0,
-        message: 'No templates found in database'
-      };
-    }
-
-    // Step 4: Test with just the first template to debug the workflow
-    console.log('🧪 DEBUG MODE: Testing with first template only to debug verification workflow...');
+    console.log('🔍 === STARTING UFMatcher identification DEBUG ===');
+    console.log('🔍 Method called with:', { securityLevel, maxResults });
     
-    if (databaseTemplates.length > 0) {
-      const testTemplate = databaseTemplates[0];
-      console.log(`🧬 Testing with template: Person ${testTemplate.person_id.slice(0, 8)}... Finger ${testTemplate.finger_position}`);
-      console.log(`📊 Template format: ${testTemplate.template_format}, Size: ${testTemplate.template_data?.length || 0} chars`);
-      console.log(`🧬 Template data preview: ${testTemplate.template_data?.substring(0, 100)}...`);
+    try {
+      console.log('🔍 Step 1: Checking device initialization...');
       
-      try {
+      // Step 1: Ensure BioMini device is initialized
+      if (!this.bioMiniService.getStatus().initialized) {
+        console.log('🔍 Device not initialized, initializing now...');
+        await this.bioMiniService.initializeDevice();
+      } else {
+        console.log('🔍 Device already initialized ✅');
+      }
+
+      console.log('🔍 Step 2: Setting UFMatcher parameters...');
+      
+      // Step 2: Configure UFMatcher for identification - START WITH MOST PERMISSIVE SETTING
+      const debugSecurityLevel = 1; // Most permissive for debugging
+      await this.bioMiniService.setMatcherParameters(debugSecurityLevel, 2002, false); // ISO 19794-2
+      console.log(`🔧 UFMatcher configured for identification: Security Level ${debugSecurityLevel} (DEBUG: Most permissive)`);
+      console.log(`📊 Original requested level: ${securityLevel}, Using debug level: ${debugSecurityLevel}`);
+
+      console.log('🔍 Step 3: Fetching database templates...');
+      
+      // Step 3: Get all database templates first
+      const databaseTemplates = await this.getTemplatesForMatching(100);
+      console.log(`📊 Retrieved ${databaseTemplates.length} templates from database`);
+      console.log('📊 Templates data:', databaseTemplates);
+
+      if (databaseTemplates.length === 0) {
+        console.log('❌ No templates found in database');
+        return {
+          matches_found: 0,
+          matches: [],
+          candidates_checked: 0,
+          message: 'No templates found in database'
+        };
+      }
+
+      // Step 4: Test with just the first template to debug the workflow
+      console.log('🧪 DEBUG MODE: Testing with first template only to debug verification workflow...');
+      
+      if (databaseTemplates.length > 0) {
+        const testTemplate = databaseTemplates[0];
+        console.log(`🧬 Testing with template: Person ${testTemplate.person_id.slice(0, 8)}... Finger ${testTemplate.finger_position}`);
+        console.log(`📊 Template format: ${testTemplate.template_format}, Size: ${testTemplate.template_data?.length || 0} chars`);
+        console.log(`🧬 Template data preview: ${testTemplate.template_data?.substring(0, 100)}...`);
+        
         console.log('👆 About to call verifyTemplateSDKWorkflow - please scan your fingerprint...');
         
         // Use a LOWER quality level for debugging (more permissive)
@@ -367,24 +379,25 @@ This uses the ACTUAL WebAgent UFMatcher instead of server-side simulation.
             message: `DEBUG: Single template verification failed with score ${result.score}`
           };
         }
-        
-      } catch (error) {
-        console.error('❌ DEBUG ERROR in identifyPersonUFMatcher:', error);
-        console.error('❌ Error details:', error.message);
-        alert(`❌ ERROR: ${error.message}`);
-        throw error;
       }
-    }
 
-    // If we get here, no templates were found
-    return {
-      matches_found: 0,
-      matches: [],
-      candidates_checked: 0,
-      security_level: securityLevel,
-      matcher_engine: 'webagent_ufmatcher_debug',
-      message: 'No templates available for testing'
-    };
+      // If we get here, no templates were found
+      console.log('❌ No templates available for testing');
+      return {
+        matches_found: 0,
+        matches: [],
+        candidates_checked: 0,
+        security_level: securityLevel,
+        matcher_engine: 'webagent_ufmatcher_debug',
+        message: 'No templates available for testing'
+      };
+
+    } catch (error) {
+      console.error('❌ MAJOR ERROR in identifyPersonUFMatcher:', error);
+      console.error('❌ Error stack:', error.stack);
+      alert(`❌ CRITICAL ERROR: ${error.message}`);
+      throw error;
+    }
   }
 
   /**
