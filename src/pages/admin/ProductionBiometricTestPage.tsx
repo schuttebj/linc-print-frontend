@@ -223,7 +223,26 @@ const ProductionBiometricTestPage: React.FC = () => {
 
   const handleVerificationComplete = (result: { success: boolean; templateId: string; score?: number }) => {
     console.log('Verification completed:', result);
-    // Could show a success/failure dialog here
+    
+    // Show notification based on result
+    if (result.success) {
+      console.log('✅ Verification successful!');
+      console.log(`📊 Template ID: ${result.templateId}`);
+      if (result.score !== undefined) {
+        console.log(`📊 Match Score: ${result.score}`);
+      }
+    } else {
+      console.log('❌ Verification failed');
+      console.log(`📊 Template ID: ${result.templateId}`);
+      if (result.score !== undefined) {
+        console.log(`📊 Match Score: ${result.score}`);
+      }
+    }
+    
+    // Refresh templates to update any verification status
+    if (testPersonId) {
+      loadPersonTemplates();
+    }
   };
 
   const handleIdentification = async () => {

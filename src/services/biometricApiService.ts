@@ -228,8 +228,7 @@ export class BiometricApiService {
   }
 
   /**
-   * Verify a live fingerprint against a stored template
-   * This method bypasses the backend and uses WebAgent UFMatcher directly
+   * Verify a live fingerprint against a stored template using WebAgent UFMatcher
    * @param templateId ID of stored template to verify against  
    * @param securityLevel Security level 1-7 (default: 4)
    * @param applicationId Optional application ID for audit
@@ -240,21 +239,62 @@ export class BiometricApiService {
     securityLevel: number = 4,
     applicationId?: string
   ): Promise<FingerprintVerifyResponse> {
-    throw new Error(`
-🚫 VERIFICATION DISABLED - Use Frontend UFMatcher Instead
+    console.log('🔍 Starting production fingerprint verification...');
+    console.log(`🎯 Template ID: ${templateId}`);
+    console.log(`🔒 Security Level: ${securityLevel}`);
 
-The current verification approach has inconsistent template handling.
-Please use the FingerprintTemplateTestPage for accurate UFMatcher verification:
+    try {
+      // Step 1: Ensure BioMini device is initialized
+      if (!this.bioMiniService.getStatus().initialized) {
+        console.log('🔧 Initializing BioMini device...');
+        await this.bioMiniService.initializeDevice();
+      }
 
-1. Go to: /dashboard/admin/fingerprint-templates
-2. Capture & extract template with consistent settings:
-   - Template Type: ISO 19794-2 (2002)
-   - Quality Level: 60+ (reject poor captures)
-   - Security Level: ${securityLevel}
-3. Use "Verify Against Template" which calls bioMiniService.verifyTemplateSDKWorkflow()
+      // Step 2: Get the stored template from backend
+      console.log('📋 Fetching stored template from database...');
+      const templates = await this.getTemplatesForMatching(1000);
+      const targetTemplate = templates.find(t => t.template_id === templateId);
+      
+      if (!targetTemplate) {
+        throw new Error(`Template ${templateId} not found in database`);
+      }
 
-This uses the ACTUAL WebAgent UFMatcher instead of server-side simulation.
-    `);
+      console.log(`✅ Found template: Person ${targetTemplate.person_id.slice(0, 8)}... Finger ${targetTemplate.finger_position}`);
+
+      // Step 3: Configure UFMatcher for verification (ISO 19794-2 format)
+      await this.bioMiniService.setMatcherParameters(securityLevel, 2002, false);
+      console.log(`🔧 UFMatcher configured: Security Level ${securityLevel}, Template Type ISO 19794-2`);
+
+      // Step 4: Use the WebAgent UFMatcher workflow for verification
+      console.log('👆 Please scan your fingerprint when prompted...');
+      const verificationResult = await this.bioMiniService.verifyTemplateSDKWorkflow(
+        targetTemplate.template_data,
+        6 // Quality level (6 = ~40 quality points minimum)
+      );
+
+      console.log(`${verificationResult.verified ? '✅' : '❌'} Verification result: ${verificationResult.verified ? 'MATCH' : 'NO MATCH'}`);
+      
+      if (verificationResult.score !== undefined) {
+        console.log(`📊 Match score: ${verificationResult.score}`);
+      }
+
+      // Step 5: Return result in expected format
+      return {
+        template_id: templateId,
+        person_id: targetTemplate.person_id,
+        finger_position: targetTemplate.finger_position,
+        match_found: verificationResult.verified,
+        match_score: verificationResult.score,
+        security_level: securityLevel,
+        matcher_engine: 'webagent_ufmatcher',
+        verification_time_ms: 0, // Would need timing if required
+        message: verificationResult.verified ? 'Verification successful - fingerprint matches stored template' : 'Verification failed - fingerprint does not match stored template'
+      };
+
+    } catch (error) {
+      console.error('❌ Verification failed:', error);
+      throw new Error(`Verification failed: ${error.message}`);
+    }
   }
 
   /**

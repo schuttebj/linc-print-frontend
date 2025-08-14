@@ -101,6 +101,7 @@ const ProductionFingerprintCapture: React.FC<ProductionFingerprintCaptureProps> 
   const [existingTemplates, setExistingTemplates] = useState<FingerprintTemplateInfo[]>([]);
   const [showLogs, setShowLogs] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [verificationResult, setVerificationResult] = useState<{success: boolean; templateId: string; score?: number; message?: string} | null>(null);
 
   const addLog = (message: string, level: LogEntry['level'] = 'info') => {
     setLogs(prev => [...prev, { timestamp: new Date(), level, message }]);
@@ -198,9 +199,20 @@ const ProductionFingerprintCapture: React.FC<ProductionFingerprintCaptureProps> 
       const success = result.match_found;
       addLog(`${success ? '✅' : '❌'} Verification ${success ? 'SUCCESSFUL' : 'FAILED'}`, success ? 'success' : 'error');
       
-      if (result.match_score) {
-        addLog(`📊 Match score: ${result.match_score}/100`, 'info');
+      if (result.match_score !== undefined) {
+        addLog(`📊 Match score: ${result.match_score}`, 'info');
       }
+      
+      addLog(`🔒 Security Level: ${result.security_level} (${result.matcher_engine})`, 'info');
+      addLog(`📋 Message: ${result.message}`, 'info');
+      
+      // Store verification result for UI display
+      setVerificationResult({
+        success,
+        templateId,
+        score: result.match_score,
+        message: result.message
+      });
       
       if (onVerificationComplete) {
         onVerificationComplete({
@@ -399,12 +411,40 @@ const ProductionFingerprintCapture: React.FC<ProductionFingerprintCaptureProps> 
       <Step>
         <StepLabel>Verification Complete</StepLabel>
         <StepContent>
-          <Alert severity="success">
-            <Typography variant="h6">✅ Verification Complete!</Typography>
-            <Typography variant="body2">
-              Identity confirmed using professional biometric matching.
-            </Typography>
-          </Alert>
+          {verificationResult ? (
+            <Alert severity={verificationResult.success ? "success" : "error"} sx={{ mb: 2 }}>
+              <Typography variant="h6">
+                {verificationResult.success ? '✅ Verification Successful!' : '❌ Verification Failed'}
+              </Typography>
+              <Typography variant="body2">
+                {verificationResult.message || (verificationResult.success ? 'Identity confirmed using professional biometric matching.' : 'Fingerprint does not match the stored template.')}
+              </Typography>
+              {verificationResult.score !== undefined && (
+                <Typography variant="body2" sx={{ mt: 1 }}>
+                  <strong>Match Score:</strong> {verificationResult.score}
+                </Typography>
+              )}
+            </Alert>
+          ) : (
+            <Alert severity="success">
+              <Typography variant="h6">✅ Verification Complete!</Typography>
+              <Typography variant="body2">
+                Identity confirmed using professional biometric matching.
+              </Typography>
+            </Alert>
+          )}
+          
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setCurrentStep(0);
+              setVerificationResult(null);
+              setLogs([]);
+            }}
+            sx={{ mt: 2 }}
+          >
+            Verify Another Fingerprint
+          </Button>
         </StepContent>
       </Step>
     </Stepper>
