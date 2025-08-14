@@ -73,11 +73,13 @@ function TabPanel(props: TabPanelProps) {
 
 interface Person {
   id: string;
-  primary_alias: {
-    first_name: string;
-    last_name: string;
-    id_number?: string;
-  };
+  first_name: string;
+  surname: string;
+  aliases: Array<{
+    document_number: string;
+    document_type: string;
+    is_primary: boolean;
+  }>;
 }
 
 const ProductionBiometricTestPage: React.FC = () => {
@@ -146,10 +148,10 @@ const ProductionBiometricTestPage: React.FC = () => {
     setIsSearchingPersons(true);
     try {
       const response = await personService.searchPersons({
-        search_query: query,
+        search_text: query,
         limit: 10
       });
-      setPersons(response.data);
+      setPersons(response.persons);
     } catch (error) {
       console.error('Failed to search persons:', error);
       setPersons([]);
@@ -169,7 +171,7 @@ const ProductionBiometricTestPage: React.FC = () => {
 
   const selectPerson = (person: Person) => {
     setSelectedPerson(person);
-    setPersonSearchQuery(`${person.primary_alias.first_name} ${person.primary_alias.last_name}`);
+    setPersonSearchQuery(`${person.first_name} ${person.surname}`);
     setPersons([]);
   };
 
@@ -191,13 +193,57 @@ const ProductionBiometricTestPage: React.FC = () => {
         <Card>
           <CardHeader title="📋 Enrollment Configuration" />
           <CardContent>
+            {/* Person Selector */}
+            <Autocomplete
+              fullWidth
+              options={persons}
+              getOptionLabel={(option) => `${option.first_name} ${option.surname} (${option.id.slice(0, 8)}...)`}
+              value={selectedPerson}
+              onChange={(_, newValue) => {
+                if (newValue) {
+                  selectPerson(newValue);
+                }
+              }}
+              inputValue={personSearchQuery}
+              onInputChange={(_, newInputValue) => {
+                handlePersonSearch(newInputValue);
+              }}
+              loading={isSearchingPersons}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="🔍 Search for Person"
+                  helperText={selectedPerson ? `Selected: ${selectedPerson.first_name} ${selectedPerson.surname}` : "Type to search for a person"}
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {isSearchingPersons ? <CircularProgress color="inherit" size={20} /> : null}
+                        {params.InputProps.endAdornment}
+                      </>
+                    ),
+                  }}
+                />
+              )}
+              renderOption={(props, option) => (
+                <ListItem {...props}>
+                  <ListItemText
+                    primary={`${option.first_name} ${option.surname}`}
+                    secondary={`ID: ${option.id.slice(0, 8)}... ${option.aliases.length > 0 ? `| Doc: ${option.aliases[0].document_number}` : ''}`}
+                  />
+                </ListItem>
+              )}
+              sx={{ mb: 2 }}
+            />
+            
             <TextField
               fullWidth
               label="Person ID (UUID)"
               value={testPersonId}
               onChange={(e) => setTestPersonId(e.target.value)}
               sx={{ mb: 2 }}
-              helperText="UUID of the person to enroll"
+              helperText="UUID of the person to enroll (auto-filled from search)"
+              disabled={!!selectedPerson}
             />
             
             <TextField
