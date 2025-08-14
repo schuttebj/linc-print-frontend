@@ -653,8 +653,12 @@ class BioMiniService {
       });
 
       if (this.isApiSuccess(result.retValue)) {
-        const verified = result.retVerify === true || result.retVerify === 'true' || result.retVerify === 'True';
+        const verified = result.retVerify === true || 
+                        result.retVerify === 'true' || 
+                        result.retVerify === 'True' ||
+                        result.retVerify === 'Success'; // CRITICAL FIX: WebAgent returns 'Success' for match
         console.log(`${verified ? '✅' : '❌'} Template verification: ${verified ? 'MATCH' : 'NO MATCH'}`);
+        console.log(`🔍 Raw retVerify value: "${result.retVerify}" (type: ${typeof result.retVerify})`);
         
         if (result.score !== undefined) {
           console.log(`📊 Verification score: ${result.score}`);
@@ -804,8 +808,12 @@ class BioMiniService {
       }
 
       if (this.isApiSuccess(verifyResult.retValue)) {
-        const verified = verifyResult.retVerify === true || verifyResult.retVerify === 'true' || verifyResult.retVerify === 'True';
+        const verified = verifyResult.retVerify === true || 
+                        verifyResult.retVerify === 'true' || 
+                        verifyResult.retVerify === 'True' ||
+                        verifyResult.retVerify === 'Success'; // CRITICAL FIX: WebAgent returns 'Success' for match
         console.log(`${verified ? '✅' : '❌'} UFMatcher result: ${verified ? 'MATCH' : 'NO MATCH'}`);
+        console.log(`🔍 Raw retVerify value: "${verifyResult.retVerify}" (type: ${typeof verifyResult.retVerify})`);
         
         return {
           verified,
@@ -873,8 +881,12 @@ class BioMiniService {
       });
 
       if (this.isApiSuccess(result.retValue)) {
-        const verified = result.retVerify === true || result.retVerify === 'true' || result.retVerify === 'True';
+        const verified = result.retVerify === true || 
+                        result.retVerify === 'true' || 
+                        result.retVerify === 'True' ||
+                        result.retVerify === 'Success'; // CRITICAL FIX: WebAgent returns 'Success' for match
         console.log(`${verified ? '✅' : '❌'} SDK VerifyTemplate result: ${verified ? 'MATCH' : 'NO MATCH'}`);
+        console.log(`🔍 Raw retVerify value: "${result.retVerify}" (type: ${typeof result.retVerify})`);
         
         return {
           verified,
@@ -1217,8 +1229,12 @@ class BioMiniService {
 
       // Step 5: Process verification result
       if (this.isApiSuccess(verifyResult.retValue)) {
-        const verified = verifyResult.retVerify === true || verifyResult.retVerify === 'true' || verifyResult.retVerify === 'True';
+        const verified = verifyResult.retVerify === true || 
+                        verifyResult.retVerify === 'true' || 
+                        verifyResult.retVerify === 'True' ||
+                        verifyResult.retVerify === 'Success'; // CRITICAL FIX: WebAgent returns 'Success' for match
         console.log(`${verified ? '✅' : '❌'} Verification result: ${verified ? 'MATCH' : 'NO MATCH'}`);
+        console.log(`🔍 Raw retVerify value: "${verifyResult.retVerify}" (type: ${typeof verifyResult.retVerify})`);
         
         if (verifyResult.score !== undefined) {
           console.log(`📊 Verification score: ${verifyResult.score}`);

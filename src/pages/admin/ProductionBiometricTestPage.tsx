@@ -195,7 +195,6 @@ const ProductionBiometricTestPage: React.FC = () => {
   const handleIdentification = async () => {
     console.log('🚀 === UI BUTTON CLICKED: Starting identification ===');
     console.log('🚀 Button click registered at:', new Date().toISOString());
-    alert('BUTTON CLICKED - Check console for logs!');
     
     try {
       console.log('🔍 About to call biometricApiService.identifyPersonUFMatcher...');
@@ -502,11 +501,7 @@ const ProductionBiometricTestPage: React.FC = () => {
               variant="contained"
               size="large"
               startIcon={<Fingerprint />}
-              onClick={() => {
-                console.log('🔥 DIRECT BUTTON CLICK DETECTED!');
-                alert('Direct button click alert!');
-                handleIdentification();
-              }}
+              onClick={handleIdentification}
               sx={{ mb: 2 }}
             >
               🔍 Start Identification
