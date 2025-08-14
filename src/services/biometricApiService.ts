@@ -290,9 +290,11 @@ This uses the ACTUAL WebAgent UFMatcher instead of server-side simulation.
       await this.bioMiniService.initializeDevice();
     }
 
-    // Step 2: Configure UFMatcher for identification
-    await this.bioMiniService.setMatcherParameters(securityLevel, 2002, false); // ISO 19794-2
-    console.log(`🔧 UFMatcher configured for identification: Security Level ${securityLevel}`);
+    // Step 2: Configure UFMatcher for identification - START WITH MOST PERMISSIVE SETTING
+    const debugSecurityLevel = 1; // Most permissive for debugging
+    await this.bioMiniService.setMatcherParameters(debugSecurityLevel, 2002, false); // ISO 19794-2
+    console.log(`🔧 UFMatcher configured for identification: Security Level ${debugSecurityLevel} (DEBUG: Most permissive)`);
+    console.log(`📊 Original requested level: ${securityLevel}, Using debug level: ${debugSecurityLevel}`);
 
     // Step 3: Get all database templates first
     const databaseTemplates = await this.getTemplatesForMatching(100);
@@ -314,23 +316,29 @@ This uses the ACTUAL WebAgent UFMatcher instead of server-side simulation.
       const testTemplate = databaseTemplates[0];
       console.log(`🧬 Testing with template: Person ${testTemplate.person_id.slice(0, 8)}... Finger ${testTemplate.finger_position}`);
       console.log(`📊 Template format: ${testTemplate.template_format}, Size: ${testTemplate.template_data?.length || 0} chars`);
+      console.log(`🧬 Template data preview: ${testTemplate.template_data?.substring(0, 100)}...`);
       
       try {
-        console.log('👆 Please scan your fingerprint now to test verification...');
+        console.log('👆 About to call verifyTemplateSDKWorkflow - please scan your fingerprint...');
+        
+        // Use a LOWER quality level for debugging (more permissive)
+        const debugQualityLevel = 1; // Most permissive quality level
+        console.log('🔧 Using debug quality level:', debugQualityLevel, '(original:', testTemplate.quality_level || 6, ')');
         
         // Use the exact SDK workflow
         const result = await this.bioMiniService.verifyTemplateSDKWorkflow(
           testTemplate.template_data,
-          testTemplate.quality_level || 6
+          debugQualityLevel
         );
         
-        console.log('📥 Verification result:', {
+        console.log('📥 Verification result received:', {
           verified: result.verified,
           score: result.score
         });
         
         if (result.verified) {
           console.log(`✅ SUCCESS: Template verification WORKED!`);
+          alert(`🎉 VERIFICATION SUCCESS!\nScore: ${result.score}`);
           return {
             matches_found: 1,
             matches: [{
@@ -349,6 +357,7 @@ This uses the ACTUAL WebAgent UFMatcher instead of server-side simulation.
           };
         } else {
           console.log(`❌ FAILED: Template verification did not match. Score: ${result.score}`);
+          alert(`❌ VERIFICATION FAILED\nScore: ${result.score}\nPlease try again with the same finger used for enrollment.`);
           return {
             matches_found: 0,
             matches: [],
@@ -360,7 +369,9 @@ This uses the ACTUAL WebAgent UFMatcher instead of server-side simulation.
         }
         
       } catch (error) {
-        console.error('❌ DEBUG ERROR:', error);
+        console.error('❌ DEBUG ERROR in identifyPersonUFMatcher:', error);
+        console.error('❌ Error details:', error.message);
+        alert(`❌ ERROR: ${error.message}`);
         throw error;
       }
     }

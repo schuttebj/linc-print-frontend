@@ -853,6 +853,7 @@ class BioMiniService {
         encryptKey: '',           // txt_EncryptKey
         extractEx: 'false',       // cb_ExtractExMode
         qualityLevel: qualityLevel.toString()
+        // Note: templateType is NOT sent here - it's set via setParameters first
       });
 
       console.log('🧬 Calling SDK verifyTemplate API (will prompt for fingerprint scan)...');
