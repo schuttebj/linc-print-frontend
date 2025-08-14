@@ -3,13 +3,82 @@
  * Communicates with the backend G-SDK integration for server-side fingerprint matching
  */
 
-import { getApiBaseUrl } from '../config/api';
+import { API_BASE_URL } from '../config/api';
+
+// G-SDK API Response Interfaces
+interface GSdkStatus {
+  connected: boolean;
+  device_id: string | null;
+  device_info: string | null;
+  templates_stored: number;
+  gateway_ip: string;
+  gateway_port: number;
+  gsdk_available: boolean;
+}
+
+interface GSdkStatusResponse {
+  success: boolean;
+  status: GSdkStatus;
+  message: string;
+}
+
+interface GSdkTemplate {
+  template_id: string;
+  person_id: string;
+  finger_position: number;
+  template_format: string;
+  quality_score: number;
+  enrolled_at: string;
+  template_data?: string;
+}
+
+interface GSdkTemplatesResponse {
+  success: boolean;
+  templates: GSdkTemplate[];
+  total_count: number;
+  message: string;
+}
+
+interface GSdkSystemComparison {
+  webagent_system: {
+    name: string;
+    templates_stored: number;
+    storage: string;
+    matching: string;
+    scalability: string;
+    cost: string;
+    pros: string[];
+    cons: string[];
+  };
+  gsdk_system: {
+    name: string;
+    templates_stored: number;
+    storage: string;
+    matching: string;
+    scalability: string;
+    cost: string;
+    device_connected: boolean;
+    pros: string[];
+    cons: string[];
+  };
+  recommendation: {
+    current_scale: string;
+    large_scale: string;
+    hybrid_approach: string;
+  };
+}
+
+interface GSdkComparisonResponse {
+  success: boolean;
+  comparison: GSdkSystemComparison;
+  message: string;
+}
 
 class GSdkBiometricService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = getApiBaseUrl();
+    this.baseUrl = API_BASE_URL;
   }
 
   private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -44,8 +113,8 @@ class GSdkBiometricService {
   /**
    * Get G-SDK system status
    */
-  async getStatus() {
-    return this.makeRequest('/status');
+  async getStatus(): Promise<GSdkStatusResponse> {
+    return this.makeRequest<GSdkStatusResponse>('/status');
   }
 
   /**
@@ -143,8 +212,8 @@ class GSdkBiometricService {
   /**
    * Get all templates stored in G-SDK system
    */
-  async getTemplates() {
-    return this.makeRequest('/templates');
+  async getTemplates(): Promise<GSdkTemplatesResponse> {
+    return this.makeRequest<GSdkTemplatesResponse>('/templates');
   }
 
   /**
@@ -168,8 +237,8 @@ class GSdkBiometricService {
   /**
    * Compare WebAgent vs G-SDK system performance
    */
-  async compareSystemsj() {
-    return this.makeRequest('/compare/systems');
+  async compareSystems(): Promise<GSdkComparisonResponse> {
+    return this.makeRequest<GSdkComparisonResponse>('/compare/systems');
   }
 
   /**

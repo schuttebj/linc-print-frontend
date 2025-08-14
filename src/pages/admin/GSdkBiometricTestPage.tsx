@@ -290,12 +290,12 @@ const GSdkBiometricTestPage: React.FC = () => {
     }
   };
 
-  const handleCompareSystemsj = async () => {
+  const handleCompareSystems = async () => {
     setIsProcessing(true);
     try {
       console.log('📊 Comparing biometric systems...');
       
-      const response = await gSdkBiometricService.compareSystemsj();
+      const response = await gSdkBiometricService.compareSystems();
       console.log('✅ Comparison result:', response);
       
       setSystemComparison(response.comparison);
@@ -695,7 +695,7 @@ const GSdkBiometricTestPage: React.FC = () => {
           <CardHeader 
             title="⚖️ System Comparison"
             action={
-              <Button startIcon={<Compare />} onClick={handleCompareSystemsj}>
+              <Button startIcon={<Compare />} onClick={handleCompareSystems}>
                 Refresh Comparison
               </Button>
             }
