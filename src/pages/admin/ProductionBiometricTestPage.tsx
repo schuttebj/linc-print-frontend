@@ -189,6 +189,32 @@ const ProductionBiometricTestPage: React.FC = () => {
     // Could show a success/failure dialog here
   };
 
+  const handleIdentification = async () => {
+    try {
+      console.log('🔍 Starting UFMatcher identification against database...');
+      
+      const identificationResult = await biometricApiService.identifyPersonUFMatcher(4, 5);
+      
+      console.log(`🎯 Identification complete: ${identificationResult.matches_found} matches found`);
+      console.log(`📊 Candidates checked: ${identificationResult.candidates_checked}`);
+      
+      if (identificationResult.matches_found > 0) {
+        identificationResult.matches.forEach((match: any, index: number) => {
+          console.log(`${index + 1}. Person: ${match.person_id.slice(0, 8)}... | Finger: ${match.finger_position} | Score: ${match.match_score}`);
+        });
+
+        // Update the UI with identification results
+        alert(`🎯 Found ${identificationResult.matches_found} matches!\n\nTop match:\nPerson: ${identificationResult.matches[0].person_id}\nScore: ${identificationResult.matches[0].match_score}`);
+      } else {
+        alert('❌ No matches found in database');
+      }
+      
+    } catch (error) {
+      console.error('❌ Identification failed:', error);
+      alert(`❌ Identification failed: ${error.message}`);
+    }
+  };
+
   const renderEnrollmentTab = () => (
     <Grid container spacing={3}>
       {/* Configuration */}
@@ -437,6 +463,49 @@ const ProductionBiometricTestPage: React.FC = () => {
     </Grid>
   );
 
+  const renderIdentificationTab = () => (
+    <Grid container spacing={3}>
+      <Grid item xs={12}>
+        <Card>
+          <CardHeader 
+            title="🔍 UFMatcher Database Identification" 
+            subheader="1:N identification using real UFMatcher against database templates"
+          />
+          <CardContent>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              This performs 1:N identification using the actual WebAgent UFMatcher engine against all templates stored in the database.
+              It will scan your fingerprint and compare it to all enrolled templates to find matches.
+            </Typography>
+
+            <Alert severity="info" sx={{ mb: 3 }}>
+              <Typography variant="body2">
+                <strong>🎯 How it works:</strong><br/>
+                1. Captures your fingerprint using WebAgent<br/>
+                2. Gets all templates from database<br/>
+                3. Uses UFMatcher to compare against each template<br/>
+                4. Returns ranked matches above security threshold
+              </Typography>
+            </Alert>
+
+            <Button
+              variant="contained"
+              size="large"
+              startIcon={<Fingerprint />}
+              onClick={handleIdentification}
+              sx={{ mb: 2 }}
+            >
+              🔍 Start Identification
+            </Button>
+
+            <Typography variant="body2" color="text.secondary">
+              Check the console (F12) for detailed identification results and matching scores.
+            </Typography>
+          </CardContent>
+        </Card>
+      </Grid>
+    </Grid>
+  );
+
   const renderAnalyticsTab = () => (
     <Grid container spacing={3}>
       {/* System Statistics */}
@@ -537,6 +606,7 @@ const ProductionBiometricTestPage: React.FC = () => {
         <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
           <Tab icon={<Person />} label="Enrollment" />
           <Tab icon={<Security />} label="Verification" />
+          <Tab icon={<Fingerprint />} label="Identification" />
           <Tab icon={<Analytics />} label="Analytics" />
         </Tabs>
 
@@ -549,6 +619,10 @@ const ProductionBiometricTestPage: React.FC = () => {
         </TabPanel>
 
         <TabPanel value={activeTab} index={2}>
+          {renderIdentificationTab()}
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={3}>
           {renderAnalyticsTab()}
         </TabPanel>
       </Card>

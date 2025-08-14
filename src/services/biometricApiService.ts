@@ -267,6 +267,107 @@ This uses the ACTUAL WebAgent UFMatcher instead of server-side simulation.
   }
 
   /**
+   * Get all templates from database for UFMatcher identification
+   * @param limit Maximum number of templates to retrieve
+   * @returns Array of templates with Base64 data for UFMatcher
+   */
+  async getTemplatesForMatching(limit: number = 100): Promise<any[]> {
+    return this.makeRequest<any[]>(`/fingerprint/templates-for-matching?limit=${limit}`);
+  }
+
+  /**
+   * Identify a person using UFMatcher against database templates
+   * This is the REAL 1:N identification using actual UFMatcher
+   * @param securityLevel Security level 1-7 (default: 4)
+   * @param maxResults Maximum number of results to return
+   * @returns Identification results with match scores
+   */
+  async identifyPersonUFMatcher(securityLevel: number = 4, maxResults: number = 10): Promise<any> {
+    console.log('🔍 Starting UFMatcher-based 1:N identification against database...');
+
+    // Step 1: Ensure BioMini device is initialized
+    if (!this.bioMiniService.getStatus().initialized) {
+      await this.bioMiniService.initializeDevice();
+    }
+
+    // Step 2: Configure UFMatcher for identification
+    await this.bioMiniService.setMatcherParameters(securityLevel, 2002, false); // ISO 19794-2
+    console.log(`🔧 UFMatcher configured for identification: Security Level ${securityLevel}`);
+
+    // Step 3: Capture and extract probe template
+    console.log('👆 Please scan your fingerprint for identification...');
+    const imageFile = await this.bioMiniService.captureFingerprint();
+    const probeTemplate = await this.bioMiniService.extractTemplate(2002, 60); // Quality gate 60
+    console.log(`🧬 Probe template extracted: ${probeTemplate.length} characters`);
+
+    // Step 4: Get all database templates
+    const databaseTemplates = await this.getTemplatesForMatching(100);
+    console.log(`📊 Retrieved ${databaseTemplates.length} templates from database`);
+
+    if (databaseTemplates.length === 0) {
+      return {
+        matches_found: 0,
+        matches: [],
+        candidates_checked: 0,
+        message: 'No templates found in database'
+      };
+    }
+
+    // Step 5: Use UFMatcher to compare against each template
+    const matches = [];
+    let candidatesChecked = 0;
+
+    console.log('🔄 Starting UFMatcher comparison against database templates...');
+    
+    for (const dbTemplate of databaseTemplates) {
+      try {
+        candidatesChecked++;
+        console.log(`🔍 Checking template ${candidatesChecked}/${databaseTemplates.length}: Person ${dbTemplate.person_id.slice(0, 8)}... Finger ${dbTemplate.finger_position}`);
+
+        // Use UFMatcher SDK workflow for verification
+        const result = await this.bioMiniService.verifyTemplateSDKWorkflow(
+          dbTemplate.template_data,
+          dbTemplate.quality_level || 6
+        );
+
+        if (result.verified) {
+          const match = {
+            template_id: dbTemplate.template_id,
+            person_id: dbTemplate.person_id,
+            finger_position: dbTemplate.finger_position,
+            match_score: result.score || 100,
+            template_format: dbTemplate.template_format,
+            quality_score: dbTemplate.quality_score,
+            enrolled_at: dbTemplate.enrolled_at
+          };
+
+          matches.push(match);
+          console.log(`✅ MATCH FOUND: Person ${dbTemplate.person_id.slice(0, 8)}... Score: ${result.score}`);
+        } else {
+          console.log(`❌ No match: Person ${dbTemplate.person_id.slice(0, 8)}... Score: ${result.score || 0}`);
+        }
+
+      } catch (error) {
+        console.error(`⚠️ Error comparing template ${candidatesChecked}:`, error.message);
+      }
+    }
+
+    // Step 6: Sort matches by score (highest first)
+    matches.sort((a, b) => (b.match_score || 0) - (a.match_score || 0));
+
+    console.log(`🎯 Identification complete: ${matches.length} matches found out of ${candidatesChecked} candidates`);
+
+    return {
+      matches_found: matches.length,
+      matches: matches.slice(0, maxResults),
+      candidates_checked: candidatesChecked,
+      security_level: securityLevel,
+      matcher_engine: 'webagent_ufmatcher',
+      message: `UFMatcher identification completed: ${matches.length} matches found`
+    };
+  }
+
+  /**
    * Get biometric system statistics
    * @returns System statistics
    */
