@@ -69,6 +69,7 @@ const FingerprintTemplateTestPage: React.FC = () => {
   const [capturedTemplate, setCapturedTemplate] = useState<string>('');
   const [templateFormat, setTemplateFormat] = useState<number>(2001); // XPERIX
   const [qualityLevel, setQualityLevel] = useState<number>(6); // 40 quality points
+  const [securityLevel, setSecurityLevel] = useState<number>(4); // FAR 1/100,000
   
   // Storage state
   const [storedTemplates, setStoredTemplates] = useState<StoredTemplate[]>([]);
@@ -216,29 +217,31 @@ const FingerprintTemplateTestPage: React.FC = () => {
 
     setIsVerifying(true);
     try {
-      addLog(`🔍 Starting verification against template: ${template.name}`, 'info');
+      addLog(`🔍 Starting UFMatcher verification against template: ${template.name}`, 'info');
+      
+      // Set UFMatcher parameters
+      const farValue = Math.pow(10, securityLevel + 1);
+      addLog(`🔧 Setting UFMatcher security level ${securityLevel} (FAR 1/${farValue.toLocaleString()})...`, 'info');
+      await bioMiniService.setMatcherParameters(securityLevel, template.format, false);
+      
       addLog('👆 Please scan your fingerprint...', 'info');
       
-      // Capture fingerprint and extract template for comparison
-      const result = await bioMiniService.captureAndExtractForMatching(template.format, qualityLevel);
-      
-      addLog(`✅ Fingerprint captured and template extracted (${result.template.length} chars)`, 'success');
-      
-      // Compare templates using advanced biometric matching
-      const comparison = BioMiniService.fuzzyCompareTemplates(result.template, template.template, 0.60);
+      // Use UFMatcher for professional biometric verification
+      const result = await bioMiniService.captureAndVerifyWithUFMatcher(template.template, qualityLevel);
       
       const verificationResult: VerificationResult = {
-        verified: comparison.match,
-        score: Math.round(comparison.similarity * 100),
+        verified: result.verified,
+        score: result.score || (result.verified ? 100 : 0),
         templateName: template.name,
         timestamp: new Date().toLocaleTimeString()
       };
       
       setVerificationResults(prev => [verificationResult, ...prev]);
       
-      const status = comparison.match ? '✅ MATCH' : '❌ NO MATCH';
-      const scoreText = ` (${(comparison.similarity * 100).toFixed(1)}% similarity)`;
-      addLog(`${status}: ${template.name}${scoreText}`, comparison.match ? 'success' : 'error');
+      const status = result.verified ? '✅ MATCH' : '❌ NO MATCH';
+      const scoreText = result.score ? ` (Score: ${result.score})` : '';
+      addLog(`${status}: ${template.name}${scoreText}`, result.verified ? 'success' : 'error');
+      addLog('🧬 Result from professional UFMatcher biometric engine', 'info');
       
       // Update captured image if available
       if (result.imageFile) {
@@ -261,63 +264,78 @@ const FingerprintTemplateTestPage: React.FC = () => {
 
     setIsVerifying(true);
     try {
-      addLog(`🔍 Starting 1:N identification against ${storedTemplates.length} templates...`, 'info');
-      addLog('👆 Please scan your fingerprint ONCE...', 'info');
+      addLog(`🔍 Starting UFMatcher 1:N identification against ${storedTemplates.length} templates...`, 'info');
       
-      // Capture fingerprint ONCE and extract template
-      const result = await bioMiniService.captureAndExtractForMatching(templateFormat, qualityLevel);
-      
-      addLog(`✅ Fingerprint captured and template extracted (${result.template.length} chars)`, 'success');
-      addLog('🔍 Now comparing against all stored templates...', 'info');
+      // Set UFMatcher parameters once
+      const farValue = Math.pow(10, securityLevel + 1);
+      addLog(`🔧 Setting UFMatcher security level ${securityLevel} (FAR 1/${farValue.toLocaleString()})...`, 'info');
+      await bioMiniService.setMatcherParameters(securityLevel, templateFormat, false);
       
       let matchCount = 0;
-      const matches: Array<{name: string, similarity: number}> = [];
+      const matches: Array<{name: string, score: number}> = [];
+      let capturedImageFile: File | undefined;
       
-      // Compare against ALL stored templates
-      for (const template of storedTemplates) {
+      // Test each template using UFMatcher (requires separate captures)
+      for (let i = 0; i < storedTemplates.length; i++) {
+        const template = storedTemplates[i];
         try {
-          const comparison = BioMiniService.fuzzyCompareTemplates(result.template, template.template, 0.60);
+          addLog(`👆 Scan ${i + 1}/${storedTemplates.length}: Testing against ${template.name}...`, 'info');
           
-          addLog(`${comparison.match ? '✅' : '❌'} ${template.name}: ${(comparison.similarity * 100).toFixed(1)}% similarity`, 
-                 comparison.match ? 'success' : 'info');
+          const result = await bioMiniService.captureAndVerifyWithUFMatcher(template.template, qualityLevel);
           
-          if (comparison.match) {
+          // Store the first captured image
+          if (!capturedImageFile && result.imageFile) {
+            capturedImageFile = result.imageFile;
+          }
+          
+          if (result.verified) {
             matchCount++;
             matches.push({
               name: template.name,
-              similarity: comparison.similarity
+              score: result.score || 100
             });
+            
+            addLog(`✅ MATCH: ${template.name} (Score: ${result.score || 100})`, 'success');
             
             // Add to verification results
             const verificationResult: VerificationResult = {
               verified: true,
-              score: Math.round(comparison.similarity * 100),
+              score: result.score || 100,
               templateName: template.name,
               timestamp: new Date().toLocaleTimeString()
             };
             setVerificationResults(prev => [verificationResult, ...prev]);
+          } else {
+            addLog(`❌ No match: ${template.name}`, 'info');
+          }
+          
+          // Small delay between scans
+          if (i < storedTemplates.length - 1) {
+            addLog('⏰ Please wait 2 seconds before next scan...', 'info');
+            await new Promise(resolve => setTimeout(resolve, 2000));
           }
           
         } catch (error) {
-          addLog(`❌ Comparison error for ${template.name}: ${error.message}`, 'error');
+          addLog(`❌ UFMatcher error for ${template.name}: ${error.message}`, 'error');
         }
       }
       
-      // Sort matches by similarity
-      matches.sort((a, b) => b.similarity - a.similarity);
+      // Sort matches by score
+      matches.sort((a, b) => b.score - a.score);
       
       if (matchCount > 0) {
-        addLog(`🎯 Identification complete: ${matchCount} matches found!`, 'success');
+        addLog(`🎯 UFMatcher identification complete: ${matchCount} matches found!`, 'success');
         matches.forEach((match, index) => {
-          addLog(`  ${index + 1}. ${match.name} (${(match.similarity * 100).toFixed(1)}%)`, 'success');
+          addLog(`  ${index + 1}. ${match.name} (Score: ${match.score})`, 'success');
         });
       } else {
-        addLog(`🎯 Identification complete: No matches found (threshold: 60%)`, 'info');
+        addLog(`🎯 UFMatcher identification complete: No matches found`, 'info');
       }
+      addLog('🧬 Results from professional UFMatcher biometric engine', 'info');
       
       // Update captured image
-      if (result.imageFile) {
-        const imageUrl = URL.createObjectURL(result.imageFile);
+      if (capturedImageFile) {
+        const imageUrl = URL.createObjectURL(capturedImageFile);
         setCapturedImageUrl(imageUrl);
       }
       
@@ -362,9 +380,9 @@ const FingerprintTemplateTestPage: React.FC = () => {
       
       <Alert severity="info" sx={{ mb: 3 }}>
         <Typography variant="body2">
-          <strong>💡 Advanced Biometric Matching:</strong> This system uses sophisticated binary correlation algorithms designed for biometric data. 
-          Scan your fingerprint once and the system analyzes the minutiae patterns using correlation, Hamming distance, and Jaccard similarity.
-          <br/><strong>Threshold:</strong> 60% combined similarity required for a match.
+          <strong>🧬 UFMatcher Professional Biometric Engine:</strong> This system now uses the industry-standard UFMatcher SDK with configurable security levels. 
+          Security Level 4 provides FAR (False Accept Rate) of 1/100,000 - the same engine used in commercial biometric systems.
+          <br/><strong>Engine:</strong> Suprema UFMatcher with professional minutiae analysis and template matching.
         </Typography>
       </Alert>
 
@@ -411,7 +429,7 @@ const FingerprintTemplateTestPage: React.FC = () => {
             <CardContent>
               <Box sx={{ mb: 2 }}>
                 <Grid container spacing={2}>
-                  <Grid item xs={6}>
+                  <Grid item xs={4}>
                     <FormControl fullWidth size="small">
                       <InputLabel>Template Format</InputLabel>
                       <Select
@@ -425,7 +443,7 @@ const FingerprintTemplateTestPage: React.FC = () => {
                       </Select>
                     </FormControl>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid item xs={4}>
                     <FormControl fullWidth size="small">
                       <InputLabel>Quality Level</InputLabel>
                       <Select
@@ -438,6 +456,24 @@ const FingerprintTemplateTestPage: React.FC = () => {
                         <MenuItem value={8}>60</MenuItem>
                         <MenuItem value={10}>80</MenuItem>
                         <MenuItem value={11}>90</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={4}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Security Level</InputLabel>
+                      <Select
+                        value={securityLevel}
+                        onChange={(e) => setSecurityLevel(Number(e.target.value))}
+                        label="Security Level"
+                      >
+                        <MenuItem value={1}>1 (FAR 1/100)</MenuItem>
+                        <MenuItem value={2}>2 (FAR 1/1,000)</MenuItem>
+                        <MenuItem value={3}>3 (FAR 1/10,000)</MenuItem>
+                        <MenuItem value={4}>4 (FAR 1/100,000) ⭐</MenuItem>
+                        <MenuItem value={5}>5 (FAR 1/1,000,000)</MenuItem>
+                        <MenuItem value={6}>6 (FAR 1/10,000,000)</MenuItem>
+                        <MenuItem value={7}>7 (FAR 1/100,000,000)</MenuItem>
                       </Select>
                     </FormControl>
                   </Grid>

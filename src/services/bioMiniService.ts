@@ -37,6 +37,7 @@ export interface BioMiniResponse {
   matchedID?: string; // For identify results
   verifySucceed?: boolean; // For file verification
   score?: number; // Verification score
+  unsupportedVariables?: string; // For setParameters response
 }
 
 export interface BioMiniServiceStatus {
@@ -674,10 +675,123 @@ class BioMiniService {
   }
 
   /**
-   * Capture fingerprint and extract template for client-side matching
+   * Set BioMini UFMatcher parameters including security level
+   * @param securityLevel Security level 1-7 (1=FAR 1/100, 4=1/100,000, 7=1/100,000,000)
    * @param templateType Template type (2001=XPERIX, 2002=ISO, 2003=ANSI)
+   * @param fastMode Enable fast mode for quicker matching
+   */
+  async setMatcherParameters(securityLevel: number = 4, templateType: number = 2001, fastMode: boolean = false): Promise<boolean> {
+    if (!this.status.initialized || !this.deviceHandle) {
+      throw new Error('Device not initialized. Call initializeDevice() first.');
+    }
+
+    try {
+      console.log('🔧 Setting UFMatcher parameters...');
+      console.log(`📊 Security Level: ${securityLevel} (FAR: 1/${Math.pow(10, securityLevel + 1)})`);
+      console.log(`🧬 Template Type: ${templateType}`);
+      console.log(`⚡ Fast Mode: ${fastMode}`);
+
+      const url = `${WEB_AGENT_URL}/api/setParameters?dummy=${this.getDummyParam()}`;
+      const params = new URLSearchParams({
+        sHandle: this.deviceHandle,
+        securitylevel: securityLevel.toString(),
+        templateType: templateType.toString(),
+        fastmode: fastMode ? '1' : '0',
+        brightness: '-1', // Use default
+        sensitivity: '-1', // Use default  
+        timeout: '-1', // Use default
+        fakeLevel: '0', // Use default
+        detectFakeAdvancedMode: '0' // Use default
+      });
+
+      const response = await fetch(`${url}&${params}`, { method: 'GET' });
+      const result: BioMiniResponse = await response.json();
+
+      if (this.isApiSuccess(result.retValue)) {
+        console.log('✅ UFMatcher parameters set successfully');
+        if (result.unsupportedVariables) {
+          console.warn('⚠️ Some parameters not supported:', result.unsupportedVariables);
+        }
+        return true;
+      } else {
+        console.error('❌ Failed to set UFMatcher parameters:', result.retString);
+        throw new Error(result.retString || 'Failed to set matcher parameters');
+      }
+
+    } catch (error) {
+      console.error('❌ Set matcher parameters error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Capture fingerprint and use UFMatcher for template verification
+   * @param templateData Base64 encoded template to verify against
    * @param qualityLevel Quality threshold (1-11)
    * @param abortSignal Optional abort signal for cancellation
+   */
+  async captureAndVerifyWithUFMatcher(templateData: string, qualityLevel: number = 6, abortSignal?: AbortSignal): Promise<{verified: boolean, score?: number, imageFile?: File}> {
+    if (!this.status.initialized || !this.deviceHandle) {
+      throw new Error('Device not initialized. Call initializeDevice() first.');
+    }
+
+    try {
+      console.log('🔍 Starting UFMatcher-based verification...');
+      
+      // Step 1: Capture fingerprint
+      const imageFile = await this.captureFingerprint(abortSignal);
+      console.log('✅ Fingerprint captured, now using UFMatcher for verification...');
+      
+      // Step 2: Use UFMatcher verification endpoint
+      const url = `${WEB_AGENT_URL}/db/verifyTemplate?dummy=${this.getDummyParam()}`;
+      const params = new URLSearchParams({
+        sHandle: this.deviceHandle,
+        id: this.pageId,
+        tempLen: templateData.length.toString(),
+        tempData: templateData,
+        encrypt: 'false',
+        encryptKey: '',
+        extractEx: 'false',
+        qualityLevel: qualityLevel.toString()
+      });
+
+      console.log('🧬 Calling UFMatcher verifyTemplate API...');
+      const response = await fetch(`${url}&${params}`, { 
+        method: 'GET',
+        signal: abortSignal 
+      });
+      const result: BioMiniResponse = await response.json();
+
+      console.log('📥 UFMatcher verification response:', {
+        retValue: result.retValue,
+        retString: result.retString,
+        retVerify: result.retVerify,
+        score: result.score
+      });
+
+      if (this.isApiSuccess(result.retValue)) {
+        const verified = result.retVerify === true || result.retVerify === 'true' || result.retVerify === 'True';
+        console.log(`${verified ? '✅' : '❌'} UFMatcher result: ${verified ? 'MATCH' : 'NO MATCH'}`);
+        
+        return {
+          verified,
+          score: result.score,
+          imageFile
+        };
+      } else {
+        console.error('❌ UFMatcher verification failed:', result.retString);
+        throw new Error(result.retString || 'UFMatcher verification failed');
+      }
+
+    } catch (error) {
+      console.error('❌ UFMatcher verification error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * DEPRECATED: Use captureAndVerifyWithUFMatcher instead
+   * Capture fingerprint and extract template for client-side matching
    */
   async captureAndExtractForMatching(templateType: number = 2001, qualityLevel: number = 6, abortSignal?: AbortSignal): Promise<{template: string, imageFile?: File}> {
     if (!this.status.initialized || !this.deviceHandle) {
