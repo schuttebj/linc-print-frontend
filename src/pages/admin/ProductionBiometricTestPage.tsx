@@ -32,7 +32,11 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper
+  Paper,
+  Autocomplete,
+  CircularProgress,
+  ListItem,
+  ListItemText
 } from '@mui/material';
 import {
   Person,
@@ -44,6 +48,7 @@ import {
 
 import ProductionFingerprintCapture from '../../components/biometric/ProductionFingerprintCapture';
 import { biometricApiService, FingerprintEnrollResponse, FingerprintTemplateInfo, BiometricSystemStats } from '../../services/biometricApiService';
+import { personService } from '../../services/personService';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -66,15 +71,30 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
+interface Person {
+  id: string;
+  primary_alias: {
+    first_name: string;
+    last_name: string;
+    id_number?: string;
+  };
+}
+
 const ProductionBiometricTestPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
-  const [testPersonId, setTestPersonId] = useState('123e4567-e89b-12d3-a456-426614174000');
+  const [testPersonId, setTestPersonId] = useState('');
   const [testApplicationId, setTestApplicationId] = useState('');
   const [selectedFingers, setSelectedFingers] = useState<number[]>([2, 7]); // Right Index, Left Index
   const [enrollmentResults, setEnrollmentResults] = useState<FingerprintEnrollResponse[]>([]);
   const [personTemplates, setPersonTemplates] = useState<FingerprintTemplateInfo[]>([]);
   const [systemStats, setSystemStats] = useState<BiometricSystemStats | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  
+  // Person search state
+  const [persons, setPersons] = useState<Person[]>([]);
+  const [personSearchQuery, setPersonSearchQuery] = useState('');
+  const [isSearchingPersons, setIsSearchingPersons] = useState(false);
+  const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
 
   const FINGER_NAMES = {
     1: 'Right Thumb', 2: 'Right Index', 3: 'Right Middle', 4: 'Right Ring', 5: 'Right Little',
@@ -90,6 +110,13 @@ const ProductionBiometricTestPage: React.FC = () => {
       loadPersonTemplates();
     }
   }, [testPersonId]);
+
+  // Update testPersonId when selectedPerson changes
+  useEffect(() => {
+    if (selectedPerson) {
+      setTestPersonId(selectedPerson.id);
+    }
+  }, [selectedPerson]);
 
   const loadSystemStats = async () => {
     try {
@@ -108,6 +135,42 @@ const ProductionBiometricTestPage: React.FC = () => {
       console.error('Failed to load person templates:', error);
       setPersonTemplates([]);
     }
+  };
+
+  const searchPersons = async (query: string) => {
+    if (!query.trim()) {
+      setPersons([]);
+      return;
+    }
+
+    setIsSearchingPersons(true);
+    try {
+      const response = await personService.searchPersons({
+        search_query: query,
+        limit: 10
+      });
+      setPersons(response.data);
+    } catch (error) {
+      console.error('Failed to search persons:', error);
+      setPersons([]);
+    } finally {
+      setIsSearchingPersons(false);
+    }
+  };
+
+  const handlePersonSearch = (query: string) => {
+    setPersonSearchQuery(query);
+    if (query.length >= 2) {
+      searchPersons(query);
+    } else {
+      setPersons([]);
+    }
+  };
+
+  const selectPerson = (person: Person) => {
+    setSelectedPerson(person);
+    setPersonSearchQuery(`${person.primary_alias.first_name} ${person.primary_alias.last_name}`);
+    setPersons([]);
   };
 
   const handleEnrollmentComplete = (results: FingerprintEnrollResponse[]) => {
