@@ -57,7 +57,10 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
   // Check for existing templates when personId is provided
   useEffect(() => {
     const checkExistingTemplates = async () => {
+      console.log(`🔧 Initializing biometric component - PersonID: ${personId}, DemoMode: ${demoMode}`);
+      
       if (!personId || demoMode) {
+        console.log('⚠️ No person ID or demo mode - defaulting to enrollment mode');
         setOperationMode('enroll'); // Demo mode or no person ID - just enroll
         return;
       }
@@ -158,12 +161,19 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
       return;
     }
 
+    if (!personId) {
+      console.error('❌ Person ID is missing - cannot proceed with biometric workflow');
+      setErrorMessage('Person ID is required for biometric verification/enrollment. Please ensure a person is selected.');
+      return;
+    }
+
     setIsProcessingBiometric(true);
     setErrorMessage('');
     setVerificationResult(null);
 
     try {
       console.log(`🚀 Starting ${operationMode} workflow for person: ${personId}`);
+      console.log(`🔧 Operation mode: ${operationMode}, Existing templates: ${existingTemplates.length}`);
       
       if (operationMode === 'verify') {
         await handleVerificationWorkflow();
@@ -228,6 +238,10 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
   const handleEnrollmentWorkflow = async () => {
     console.log('📝 Starting enrollment workflow...');
     
+    if (!personId) {
+      throw new Error('Person ID is required for enrollment');
+    }
+    
     try {
       // Delete any existing templates first (as requested for retakes)
       if (existingTemplates.length > 0) {
@@ -237,7 +251,7 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
       
       // Enroll new fingerprint
       const results = await biometricApiService.enrollFingerprints(
-        personId!,
+        personId,
         [2], // Right Index finger
         undefined // No application ID needed here
       );
@@ -488,10 +502,10 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
       return (
     <Box>
       {/* Operation Mode and Demo Toggle */}
-      {personId && (
-        <Box sx={{ mb: 2 }}>
-          <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} sm={6}>
+      <Box sx={{ mb: 2 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} sm={6}>
+            {personId ? (
               <Alert severity={operationMode === 'verify' ? 'success' : 'info'} sx={{ height: '100%' }}>
                 <Typography variant="body2">
                   <strong>{operationMode === 'verify' ? '🔍 Verification Mode' : '📝 Enrollment Mode'}</strong><br/>
@@ -501,33 +515,40 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
                   }
                 </Typography>
               </Alert>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Alert severity={demoMode ? 'warning' : 'success'}>
+            ) : (
+              <Alert severity="warning" sx={{ height: '100%' }}>
                 <Typography variant="body2">
-                  <strong>{demoMode ? '🎭 Demo Mode' : '🔒 Production Mode'}</strong><br/>
-                  {demoMode 
-                    ? 'Biometric verification bypassed for demonstration'
-                    : 'Real biometric verification enabled'
-                  }
+                  <strong>⚠️ No Person Selected</strong><br/>
+                  Person ID required for biometric verification/enrollment
                 </Typography>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  sx={{ mt: 1 }}
-                  onClick={() => {
-                    const newDemoMode = !demoMode;
-                    localStorage.setItem('biometric_demo_mode', newDemoMode.toString());
-                    window.location.reload(); // Simple way to re-initialize
-                  }}
-                >
-                  Switch to {demoMode ? 'Production' : 'Demo'} Mode
-                </Button>
               </Alert>
-            </Grid>
+            )}
           </Grid>
-        </Box>
-      )}
+          <Grid item xs={12} sm={6}>
+            <Alert severity={demoMode ? 'warning' : 'success'}>
+              <Typography variant="body2">
+                <strong>{demoMode ? '🎭 Demo Mode' : '🔒 Production Mode'}</strong><br/>
+                {demoMode 
+                  ? 'Biometric verification bypassed for demonstration'
+                  : 'Real biometric verification enabled'
+                }
+              </Typography>
+              <Button
+                size="small"
+                variant="outlined"
+                sx={{ mt: 1 }}
+                onClick={() => {
+                  const newDemoMode = !demoMode;
+                  localStorage.setItem('biometric_demo_mode', newDemoMode.toString());
+                  window.location.reload(); // Simple way to re-initialize
+                }}
+              >
+                Switch to {demoMode ? 'Production' : 'Demo'} Mode
+              </Button>
+            </Alert>
+          </Grid>
+        </Grid>
+      </Box>
 
       {/* Scanner Status */}
       <Box sx={{ mb: 2 }}>

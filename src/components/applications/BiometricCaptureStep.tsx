@@ -72,6 +72,9 @@ interface BiometricCaptureStepProps {
   onContinueToReview?: () => void;
   onCancel?: () => void;
   showHeader?: boolean;
+  // New props for enhanced biometric integration
+  personId?: string;
+  demoMode?: boolean;
 }
 
 const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
@@ -83,7 +86,9 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
   onBiometricStepChange,
   onContinueToReview,
   onCancel,
-  showHeader = true
+  showHeader = true,
+  personId,
+  demoMode = false
 }) => {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState('');
@@ -525,6 +530,8 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
                 <FingerprintCapture
                   onFingerprintCapture={handleFingerprintCapture}
                   disabled={saving || disabled}
+                  personId={personId}
+                  demoMode={demoMode}
                 />
               </Box>
             </Grid>
