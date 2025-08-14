@@ -161,12 +161,20 @@ export class BiometricApiService {
       try {
         console.log(`\n📸 Capturing finger position ${fingerPosition}...`);
         
+        // Step 0: Configure UFMatcher for consistent enrollment (following WebAgent best practices)
+        console.log('🔧 Setting UFMatcher parameters for enrollment...');
+        await this.bioMiniService.setMatcherParameters(
+          4,     // Security Level 4 (FAR 1/100,000)
+          2002,  // ISO 19794-2 template format (CRITICAL: must match verification)
+          false  // Fast mode off for accuracy
+        );
+        
         // Step 1: Capture fingerprint via WebAgent
         const imageFile = await this.bioMiniService.captureFingerprint();
         console.log('✅ Fingerprint captured successfully');
 
-        // Step 2: Extract ISO 19794-2 template
-        const templateBase64 = await this.bioMiniService.extractTemplate(2002, 6); // ISO format, quality 6
+        // Step 2: Extract ISO 19794-2 template with QUALITY GATE (following WebAgent best practices)
+        const templateBase64 = await this.bioMiniService.extractTemplate(2002, 60); // ISO format, quality 60 (reject poor captures)
         console.log(`🧬 Template extracted: ${templateBase64.length} characters`);
 
         // Step 3: Get quality score if available
@@ -221,7 +229,8 @@ export class BiometricApiService {
 
   /**
    * Verify a live fingerprint against a stored template
-   * @param templateId ID of stored template to verify against
+   * This method bypasses the backend and uses WebAgent UFMatcher directly
+   * @param templateId ID of stored template to verify against  
    * @param securityLevel Security level 1-7 (default: 4)
    * @param applicationId Optional application ID for audit
    * @returns Verification result
@@ -231,47 +240,21 @@ export class BiometricApiService {
     securityLevel: number = 4,
     applicationId?: string
   ): Promise<FingerprintVerifyResponse> {
-    console.log('🔍 Starting production fingerprint verification...');
-    console.log(`🆔 Template ID: ${templateId}`);
+    throw new Error(`
+🚫 VERIFICATION DISABLED - Use Frontend UFMatcher Instead
 
-    // Ensure BioMini device is initialized
-    if (!this.bioMiniService.getStatus().initialized) {
-      await this.bioMiniService.initializeDevice();
-    }
+The current verification approach has inconsistent template handling.
+Please use the FingerprintTemplateTestPage for accurate UFMatcher verification:
 
-    // Set security parameters
-    await this.bioMiniService.setMatcherParameters(securityLevel, 2002, false);
-    console.log(`🔧 Security level set to ${securityLevel}`);
+1. Go to: /dashboard/admin/fingerprint-templates
+2. Capture & extract template with consistent settings:
+   - Template Type: ISO 19794-2 (2002)
+   - Quality Level: 60+ (reject poor captures)
+   - Security Level: ${securityLevel}
+3. Use "Verify Against Template" which calls bioMiniService.verifyTemplateSDKWorkflow()
 
-    // Capture and extract probe template
-    console.log('👆 Please scan your fingerprint...');
-    const imageFile = await this.bioMiniService.captureFingerprint();
-    const probeTemplate = await this.bioMiniService.extractTemplate(2002, 6);
-    console.log(`🧬 Probe template extracted: ${probeTemplate.length} characters`);
-
-    // Send to backend for verification
-    const verifyRequest: FingerprintVerifyRequest = {
-      template_id: templateId,
-      probe_template_base64: probeTemplate,
-      application_id: applicationId,
-      security_level: securityLevel,
-      use_webagent_matching: true // Use WebAgent for now, can switch to server-side later
-    };
-
-    const verifyResponse = await this.makeRequest<FingerprintVerifyResponse>(
-      '/fingerprint/verify',
-      {
-        method: 'POST',
-        body: JSON.stringify(verifyRequest)
-      }
-    );
-
-    console.log(`${verifyResponse.match_found ? '✅' : '❌'} Verification result: ${verifyResponse.match_found ? 'MATCH' : 'NO MATCH'}`);
-    if (verifyResponse.match_score) {
-      console.log(`📊 Match score: ${verifyResponse.match_score}`);
-    }
-
-    return verifyResponse;
+This uses the ACTUAL WebAgent UFMatcher instead of server-side simulation.
+    `);
   }
 
   /**
