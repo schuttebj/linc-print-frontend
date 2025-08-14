@@ -10,6 +10,7 @@
  */
 
 import { BioMiniService } from './bioMiniService';
+import { API_BASE_URL } from '../config/api';
 
 interface BiometricApiConfig {
   baseUrl: string;
@@ -98,21 +99,35 @@ export class BiometricApiService {
       ...((options.headers as Record<string, string>) || {})
     };
 
-    if (this.config.apiKey) {
+    // Use the same authentication approach as other services
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    } else if (this.config.apiKey) {
       headers['Authorization'] = `Bearer ${this.config.apiKey}`;
     }
+
+    // Debug logging
+    console.log(`🌐 Biometric API Request: ${options.method || 'GET'} ${url}`);
+    console.log(`🔧 Base URL: ${this.config.baseUrl}`);
+    console.log(`🔑 Auth Token: ${token ? 'Present' : 'Missing'}`);
 
     const response = await fetch(url, {
       ...options,
       headers
     });
 
+    console.log(`📥 Response Status: ${response.status} ${response.statusText}`);
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+      console.error(`❌ API Error:`, errorData);
       throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
     }
 
-    return response.json();
+    const result = await response.json();
+    console.log(`✅ API Success:`, result);
+    return result;
   }
 
   /**
@@ -300,9 +315,7 @@ export class BiometricApiService {
 
 // Create singleton instance for the app
 export const biometricApiService = new BiometricApiService({
-  baseUrl: process.env.NODE_ENV === 'production' 
-    ? 'https://your-backend-domain.com' 
-    : 'http://localhost:8000'
+  baseUrl: API_BASE_URL // Use the same API base URL as other services
 });
 
 // Export types for use in components
