@@ -725,7 +725,8 @@ class BioMiniService {
   }
 
   /**
-   * Capture fingerprint and use UFMatcher for template verification
+   * Capture fingerprint using captureSingle and IMMEDIATELY verify with UFMatcher
+   * This ensures the captured fingerprint is in the buffer when verification runs
    * @param templateData Base64 encoded template to verify against
    * @param qualityLevel Quality threshold (1-11)
    * @param abortSignal Optional abort signal for cancellation
@@ -736,15 +737,32 @@ class BioMiniService {
     }
 
     try {
-      console.log('🔍 Starting UFMatcher-based verification...');
+      console.log('🔍 Starting UFMatcher-based verification with proper workflow...');
       
-      // Step 1: Capture fingerprint
-      const imageFile = await this.captureFingerprint(abortSignal);
-      console.log('✅ Fingerprint captured, now using UFMatcher for verification...');
-      
-      // Step 2: Use UFMatcher verification endpoint
-      const url = `${WEB_AGENT_URL}/db/verifyTemplate?dummy=${this.getDummyParam()}`;
-      const params = new URLSearchParams({
+      // Step 1: Capture fingerprint using captureSingle API (this puts fingerprint in capture buffer)
+      console.log('👆 Calling captureSingle to capture fingerprint into buffer...');
+      const captureUrl = `${WEB_AGENT_URL}/api/captureSingle?dummy=${this.getDummyParam()}`;
+      const captureParams = new URLSearchParams({
+        sHandle: this.deviceHandle,
+        id: this.pageId,
+        resetTimer: '30000' // Keep fingerprint in buffer for 30 seconds
+      });
+
+      const captureResponse = await fetch(`${captureUrl}&${captureParams}`, { 
+        method: 'GET',
+        signal: abortSignal 
+      });
+      const captureResult: BioMiniResponse = await captureResponse.json();
+
+      if (!this.isApiSuccess(captureResult.retValue)) {
+        throw new Error(captureResult.retString || 'Fingerprint capture failed');
+      }
+      console.log('✅ Fingerprint captured and stored in device buffer');
+
+      // Step 2: IMMEDIATELY call verifyTemplate while fingerprint is in buffer
+      console.log('🧬 Immediately calling UFMatcher verifyTemplate while fingerprint is in buffer...');
+      const verifyUrl = `${WEB_AGENT_URL}/db/verifyTemplate?dummy=${this.getDummyParam()}`;
+      const verifyParams = new URLSearchParams({
         sHandle: this.deviceHandle,
         id: this.pageId,
         tempLen: templateData.length.toString(),
@@ -755,14 +773,98 @@ class BioMiniService {
         qualityLevel: qualityLevel.toString()
       });
 
-      console.log('🧬 Calling UFMatcher verifyTemplate API...');
+      const verifyResponse = await fetch(`${verifyUrl}&${verifyParams}`, { 
+        method: 'GET',
+        signal: abortSignal 
+      });
+      const verifyResult: BioMiniResponse = await verifyResponse.json();
+
+      console.log('📥 UFMatcher verification response:', {
+        retValue: verifyResult.retValue,
+        retString: verifyResult.retString,
+        retVerify: verifyResult.retVerify,
+        score: verifyResult.score
+      });
+
+      // Step 3: Get the captured image from buffer
+      console.log('📸 Getting captured image from buffer...');
+      const imageUrl = `${WEB_AGENT_URL}/img/CaptureImg.bmp?dummy=${this.getDummyParam()}&sHandle=${this.deviceHandle}&id=${this.pageId}`;
+      let imageFile: File | undefined;
+      
+      try {
+        const imageResponse = await fetch(imageUrl, { signal: abortSignal });
+        if (imageResponse.ok) {
+          const imageBlob = await imageResponse.blob();
+          if (imageBlob.size > 100) { // Only if we got a real image, not placeholder
+            imageFile = new File([imageBlob], 'fingerprint.bmp', { type: 'image/bmp' });
+          }
+        }
+      } catch (imageError) {
+        console.warn('⚠️ Could not retrieve captured image:', imageError);
+      }
+
+      if (this.isApiSuccess(verifyResult.retValue)) {
+        const verified = verifyResult.retVerify === true || verifyResult.retVerify === 'true' || verifyResult.retVerify === 'True';
+        console.log(`${verified ? '✅' : '❌'} UFMatcher result: ${verified ? 'MATCH' : 'NO MATCH'}`);
+        
+        return {
+          verified,
+          score: verifyResult.score,
+          imageFile
+        };
+      } else {
+        console.error('❌ UFMatcher verification failed:', verifyResult.retString);
+        throw new Error(verifyResult.retString || 'UFMatcher verification failed');
+      }
+
+    } catch (error) {
+      console.error('❌ UFMatcher verification error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Use the EXACT workflow from the SDK documentation - just like the sample VerifyWithTemplate() function
+   * This calls captureSingle then immediately verifyTemplate while fingerprint is in device buffer
+   * @param templateData Base64 encoded template to verify against
+   * @param qualityLevel Quality threshold (1-11)
+   * @param abortSignal Optional abort signal for cancellation
+   */
+  async verifyTemplateSDKWorkflow(templateData: string, qualityLevel: number = 6, abortSignal?: AbortSignal): Promise<{verified: boolean, score?: number}> {
+    if (!this.status.initialized || !this.deviceHandle) {
+      throw new Error('Device not initialized. Call initializeDevice() first.');
+    }
+
+    try {
+      console.log('🔍 Using EXACT SDK workflow: VerifyWithTemplate...');
+      console.log('📋 Template data length:', templateData.length);
+      
+      // This is the EXACT workflow from BiominiWebAgent.js VerifyWithTemplate() function:
+      // 1. Call verifyTemplate API directly (assumes user will scan when prompted)
+      // 2. The API internally handles the capture and verification
+      
+      const url = `${WEB_AGENT_URL}/db/verifyTemplate?dummy=${this.getDummyParam()}`;
+      const params = new URLSearchParams({
+        sHandle: this.deviceHandle,
+        id: this.pageId,
+        tempLen: templateData.length.toString(),
+        tempData: templateData,
+        encrypt: 'false',         // cb_EncryptOpt
+        encryptKey: '',           // txt_EncryptKey
+        extractEx: 'false',       // cb_ExtractExMode
+        qualityLevel: qualityLevel.toString()
+      });
+
+      console.log('🧬 Calling SDK verifyTemplate API (will prompt for fingerprint scan)...');
+      console.log('👆 Please place your finger on the scanner when prompted...');
+      
       const response = await fetch(`${url}&${params}`, { 
         method: 'GET',
         signal: abortSignal 
       });
       const result: BioMiniResponse = await response.json();
 
-      console.log('📥 UFMatcher verification response:', {
+      console.log('📥 SDK verifyTemplate response:', {
         retValue: result.retValue,
         retString: result.retString,
         retVerify: result.retVerify,
@@ -771,20 +873,19 @@ class BioMiniService {
 
       if (this.isApiSuccess(result.retValue)) {
         const verified = result.retVerify === true || result.retVerify === 'true' || result.retVerify === 'True';
-        console.log(`${verified ? '✅' : '❌'} UFMatcher result: ${verified ? 'MATCH' : 'NO MATCH'}`);
+        console.log(`${verified ? '✅' : '❌'} SDK VerifyTemplate result: ${verified ? 'MATCH' : 'NO MATCH'}`);
         
         return {
           verified,
-          score: result.score,
-          imageFile
+          score: result.score
         };
       } else {
-        console.error('❌ UFMatcher verification failed:', result.retString);
-        throw new Error(result.retString || 'UFMatcher verification failed');
+        console.error('❌ SDK verifyTemplate failed:', result.retString);
+        throw new Error(result.retString || 'SDK template verification failed');
       }
 
     } catch (error) {
-      console.error('❌ UFMatcher verification error:', error);
+      console.error('❌ SDK verifyTemplate error:', error);
       throw error;
     }
   }

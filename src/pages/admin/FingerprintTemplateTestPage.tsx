@@ -226,8 +226,9 @@ const FingerprintTemplateTestPage: React.FC = () => {
       
       addLog('👆 Please scan your fingerprint...', 'info');
       
-      // Use UFMatcher for professional biometric verification
-      const result = await bioMiniService.captureAndVerifyWithUFMatcher(template.template, qualityLevel);
+      // Try the EXACT SDK workflow first (direct verifyTemplate call)
+      addLog('🧬 Using SDK workflow: Direct verifyTemplate call...', 'info');
+      const result = await bioMiniService.verifyTemplateSDKWorkflow(template.template, qualityLevel);
       
       const verificationResult: VerificationResult = {
         verified: result.verified,
@@ -243,10 +244,16 @@ const FingerprintTemplateTestPage: React.FC = () => {
       addLog(`${status}: ${template.name}${scoreText}`, result.verified ? 'success' : 'error');
       addLog('🧬 Result from professional UFMatcher biometric engine', 'info');
       
-      // Update captured image if available
-      if (result.imageFile) {
-        const imageUrl = URL.createObjectURL(result.imageFile);
-        setCapturedImageUrl(imageUrl);
+      // Try to get the captured image from the buffer (if available)
+      try {
+        const imageData = await bioMiniService.getImageData(1, 1.0, 288, 340);
+        if (imageData) {
+          const imageUrl = `data:image/bmp;base64,${imageData}`;
+          setCapturedImageUrl(imageUrl);
+          addLog('📸 Captured image retrieved from buffer', 'info');
+        }
+      } catch (imageError) {
+        addLog('⚠️ Could not retrieve captured image (this is normal)', 'info');
       }
       
     } catch (error) {
@@ -273,7 +280,6 @@ const FingerprintTemplateTestPage: React.FC = () => {
       
       let matchCount = 0;
       const matches: Array<{name: string, score: number}> = [];
-      let capturedImageFile: File | undefined;
       
       // Test each template using UFMatcher (requires separate captures)
       for (let i = 0; i < storedTemplates.length; i++) {
@@ -281,12 +287,7 @@ const FingerprintTemplateTestPage: React.FC = () => {
         try {
           addLog(`👆 Scan ${i + 1}/${storedTemplates.length}: Testing against ${template.name}...`, 'info');
           
-          const result = await bioMiniService.captureAndVerifyWithUFMatcher(template.template, qualityLevel);
-          
-          // Store the first captured image
-          if (!capturedImageFile && result.imageFile) {
-            capturedImageFile = result.imageFile;
-          }
+          const result = await bioMiniService.verifyTemplateSDKWorkflow(template.template, qualityLevel);
           
           if (result.verified) {
             matchCount++;
@@ -333,10 +334,16 @@ const FingerprintTemplateTestPage: React.FC = () => {
       }
       addLog('🧬 Results from professional UFMatcher biometric engine', 'info');
       
-      // Update captured image
-      if (capturedImageFile) {
-        const imageUrl = URL.createObjectURL(capturedImageFile);
-        setCapturedImageUrl(imageUrl);
+      // Try to get the last captured image from buffer
+      try {
+        const imageData = await bioMiniService.getImageData(1, 1.0, 288, 340);
+        if (imageData) {
+          const imageUrl = `data:image/bmp;base64,${imageData}`;
+          setCapturedImageUrl(imageUrl);
+          addLog('📸 Last captured image retrieved from buffer', 'info');
+        }
+      } catch (imageError) {
+        addLog('⚠️ Could not retrieve captured image (this is normal)', 'info');
       }
       
     } catch (error) {
