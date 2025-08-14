@@ -75,10 +75,10 @@ interface Person {
   id: string;
   first_name: string;
   surname: string;
-  aliases: Array<{
-    document_number: string;
-    document_type: string;
-    is_primary: boolean;
+  aliases?: Array<{
+    document_number?: string;
+    document_type?: string;
+    is_primary?: boolean;
   }>;
 }
 
@@ -147,13 +147,15 @@ const ProductionBiometricTestPage: React.FC = () => {
 
     setIsSearchingPersons(true);
     try {
+      console.log('🔍 Searching for persons with query:', query);
       const response = await personService.searchPersons({
         search_text: query,
         limit: 10
       });
-      setPersons(response.persons);
+      console.log('📥 Person search response:', response);
+      setPersons(response.persons || []);
     } catch (error) {
-      console.error('Failed to search persons:', error);
+      console.error('❌ Failed to search persons:', error);
       setPersons([]);
     } finally {
       setIsSearchingPersons(false);
@@ -170,8 +172,9 @@ const ProductionBiometricTestPage: React.FC = () => {
   };
 
   const selectPerson = (person: Person) => {
+    console.log('👤 Selected person:', person);
     setSelectedPerson(person);
-    setPersonSearchQuery(`${person.first_name} ${person.surname}`);
+    setPersonSearchQuery(`${person.first_name || ''} ${person.surname || ''}`);
     setPersons([]);
   };
 
@@ -197,7 +200,7 @@ const ProductionBiometricTestPage: React.FC = () => {
             <Autocomplete
               fullWidth
               options={persons}
-              getOptionLabel={(option) => `${option.first_name} ${option.surname} (${option.id.slice(0, 8)}...)`}
+              getOptionLabel={(option) => `${option.first_name || ''} ${option.surname || ''} (${option.id?.slice(0, 8) || 'Unknown'}...)`}
               value={selectedPerson}
               onChange={(_, newValue) => {
                 if (newValue) {
@@ -228,8 +231,8 @@ const ProductionBiometricTestPage: React.FC = () => {
               renderOption={(props, option) => (
                 <ListItem {...props}>
                   <ListItemText
-                    primary={`${option.first_name} ${option.surname}`}
-                    secondary={`ID: ${option.id.slice(0, 8)}... ${option.aliases.length > 0 ? `| Doc: ${option.aliases[0].document_number}` : ''}`}
+                    primary={`${option.first_name || ''} ${option.surname || ''}`}
+                    secondary={`ID: ${option.id?.slice(0, 8) || 'Unknown'}... ${option.aliases && option.aliases.length > 0 && option.aliases[0].document_number ? `| Doc: ${option.aliases[0].document_number}` : ''}`}
                   />
                 </ListItem>
               )}
