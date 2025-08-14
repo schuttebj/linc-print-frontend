@@ -1984,6 +1984,8 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                 <FingerprintCapture
                   onFingerprintCapture={handleFingerprintCapture}
                   disabled={saving}
+                  personId={formData.person?.id}
+                  demoMode={import.meta.env.DEV || localStorage.getItem('biometric_demo_mode') === 'true'}
                 />
                 {formData.biometric_data.fingerprint && (
                   <Alert severity="success" sx={{ mt: 2 }}>

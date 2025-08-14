@@ -22,15 +22,20 @@ import {
 } from '@mui/icons-material';
 
 import bioMiniService from '../../services/bioMiniService';
+import { biometricApiService } from '../../services/biometricApiService';
 
 interface FingerprintCaptureProps {
   onFingerprintCapture: (fingerprintFile: File) => void;
   disabled?: boolean;
+  personId?: string; // New: Person ID for verification/enrollment
+  demoMode?: boolean; // New: Demo mode to skip verification
 }
 
 const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
   onFingerprintCapture,
-  disabled = false
+  disabled = false,
+  personId,
+  demoMode = false
 }) => {
   const [scannerStatus, setScannerStatus] = useState<'not_connected' | 'initializing' | 'ready' | 'scanning' | 'service_unavailable'>('not_connected');
   const [bioMiniAvailable, setBioMiniAvailable] = useState<boolean>(false);
@@ -40,6 +45,43 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
   const [lastCaptureTime, setLastCaptureTime] = useState<string>('');
   const [captureTimeoutId, setCaptureTimeoutId] = useState<number | null>(null);
   const [captureAbortController, setCaptureAbortController] = useState<AbortController | null>(null);
+  
+  // New state for verification/enrollment
+  const [operationMode, setOperationMode] = useState<'determine' | 'enroll' | 'verify'>('determine');
+  const [existingTemplates, setExistingTemplates] = useState<any[]>([]);
+  const [verificationResult, setVerificationResult] = useState<{success: boolean; score?: number; message?: string} | null>(null);
+  const [capturedTemplate, setCapturedTemplate] = useState<string>('');
+  const [qualityScore, setQualityScore] = useState<number | null>(null);
+  const [isProcessingBiometric, setIsProcessingBiometric] = useState(false);
+
+  // Check for existing templates when personId is provided
+  useEffect(() => {
+    const checkExistingTemplates = async () => {
+      if (!personId || demoMode) {
+        setOperationMode('enroll'); // Demo mode or no person ID - just enroll
+        return;
+      }
+
+      try {
+        console.log('🔍 Checking for existing fingerprint templates for person:', personId);
+        const templates = await biometricApiService.getPersonTemplates(personId);
+        setExistingTemplates(templates);
+        
+        if (templates.length > 0) {
+          console.log(`✅ Found ${templates.length} existing templates - entering verification mode`);
+          setOperationMode('verify');
+        } else {
+          console.log('📝 No existing templates found - entering enrollment mode');
+          setOperationMode('enroll');
+        }
+      } catch (error) {
+        console.error('❌ Error checking existing templates:', error);
+        setOperationMode('enroll'); // Default to enrollment on error
+      }
+    };
+
+    checkExistingTemplates();
+  }, [personId, demoMode]);
 
   // Check BioMini Web Agent availability
   const checkBioMiniService = async () => {
@@ -106,6 +148,126 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
     
     setScannerStatus('ready');
     setErrorMessage('Scan cancelled. Please try again.');
+  };
+
+  // Enhanced biometric capture that handles verification/enrollment
+  const handleEnhancedBiometricCapture = async () => {
+    if (demoMode) {
+      console.log('🎭 Demo mode - auto-generating success');
+      handleTestCapture();
+      return;
+    }
+
+    setIsProcessingBiometric(true);
+    setErrorMessage('');
+    setVerificationResult(null);
+
+    try {
+      console.log(`🚀 Starting ${operationMode} workflow for person: ${personId}`);
+      
+      if (operationMode === 'verify') {
+        await handleVerificationWorkflow();
+      } else {
+        await handleEnrollmentWorkflow();
+      }
+    } catch (error) {
+      console.error(`❌ ${operationMode} failed:`, error);
+      setErrorMessage(`${operationMode === 'verify' ? 'Verification' : 'Enrollment'} failed: ${error.message}`);
+    } finally {
+      setIsProcessingBiometric(false);
+    }
+  };
+
+  // Handle verification workflow
+  const handleVerificationWorkflow = async () => {
+    console.log('🔍 Starting verification against existing templates...');
+    
+    // Try to verify against all existing templates
+    for (const template of existingTemplates) {
+      try {
+        console.log(`🧬 Verifying against template: ${template.template_id} (${template.finger_position})`);
+        
+        const result = await biometricApiService.verifyFingerprint(
+          template.template_id,
+          4 // Security level 4
+        );
+        
+        if (result.match_found) {
+          console.log('✅ Verification successful!');
+          setVerificationResult({
+            success: true,
+            score: result.match_score,
+            message: `Identity verified using ${template.finger_position === 2 ? 'Right Index' : 'finger'} template`
+          });
+          
+          // Get the captured image for display
+          const imageFile = await bioMiniService.captureFingerprint();
+          const imageUrl = URL.createObjectURL(imageFile);
+          setCapturedImageUrl(imageUrl);
+          setLastCaptureTime(new Date().toLocaleString());
+          
+          // Call the original callback
+          onFingerprintCapture(imageFile);
+          return;
+        }
+      } catch (error) {
+        console.warn(`⚠️ Verification failed for template ${template.template_id}:`, error);
+      }
+    }
+    
+    // If we get here, verification failed
+    console.log('❌ Verification failed against all templates');
+    setVerificationResult({
+      success: false,
+      message: 'Fingerprint does not match any enrolled templates'
+    });
+    throw new Error('Verification failed - no matching templates found');
+  };
+
+  // Handle enrollment workflow
+  const handleEnrollmentWorkflow = async () => {
+    console.log('📝 Starting enrollment workflow...');
+    
+    try {
+      // Delete any existing templates first (as requested for retakes)
+      if (existingTemplates.length > 0) {
+        console.log('🗑️ Deleting existing templates for retake...');
+        // Note: We'd need a delete endpoint for this
+      }
+      
+      // Enroll new fingerprint
+      const results = await biometricApiService.enrollFingerprints(
+        personId!,
+        [2], // Right Index finger
+        undefined // No application ID needed here
+      );
+      
+      if (results.length > 0) {
+        console.log('✅ Enrollment successful!');
+        const result = results[0];
+        
+        setVerificationResult({
+          success: true,
+          message: `Fingerprint enrolled successfully for ${result.finger_position === 2 ? 'Right Index' : 'finger'}`
+        });
+        
+        // Get the captured image for display  
+        const imageFile = await bioMiniService.captureFingerprint();
+        const imageUrl = URL.createObjectURL(imageFile);
+        setCapturedImageUrl(imageUrl);
+        setLastCaptureTime(new Date().toLocaleString());
+        
+        // Call the original callback
+        onFingerprintCapture(imageFile);
+        
+        // Update operation mode and templates
+        setOperationMode('verify');
+        setExistingTemplates([result]);
+      }
+    } catch (error) {
+      console.error('❌ Enrollment failed:', error);
+      throw error;
+    }
   };
 
   // Capture fingerprint using BioMini
@@ -325,6 +487,48 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
 
       return (
     <Box>
+      {/* Operation Mode and Demo Toggle */}
+      {personId && (
+        <Box sx={{ mb: 2 }}>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} sm={6}>
+              <Alert severity={operationMode === 'verify' ? 'success' : 'info'} sx={{ height: '100%' }}>
+                <Typography variant="body2">
+                  <strong>{operationMode === 'verify' ? '🔍 Verification Mode' : '📝 Enrollment Mode'}</strong><br/>
+                  {operationMode === 'verify' 
+                    ? `Found ${existingTemplates.length} existing template(s) - will verify identity`
+                    : 'No existing templates - will enroll new fingerprint'
+                  }
+                </Typography>
+              </Alert>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Alert severity={demoMode ? 'warning' : 'success'}>
+                <Typography variant="body2">
+                  <strong>{demoMode ? '🎭 Demo Mode' : '🔒 Production Mode'}</strong><br/>
+                  {demoMode 
+                    ? 'Biometric verification bypassed for demonstration'
+                    : 'Real biometric verification enabled'
+                  }
+                </Typography>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  sx={{ mt: 1 }}
+                  onClick={() => {
+                    const newDemoMode = !demoMode;
+                    localStorage.setItem('biometric_demo_mode', newDemoMode.toString());
+                    window.location.reload(); // Simple way to re-initialize
+                  }}
+                >
+                  Switch to {demoMode ? 'Production' : 'Demo'} Mode
+                </Button>
+              </Alert>
+            </Grid>
+          </Grid>
+        </Box>
+      )}
+
       {/* Scanner Status */}
       <Box sx={{ mb: 2 }}>
         <Paper
@@ -363,7 +567,10 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
             {scannerStatus === 'not_connected' && 'BioMini Device Not Connected'}
             {scannerStatus === 'initializing' && 'Initializing BioMini Device...'}
             {scannerStatus === 'ready' && `BioMini Ready ${deviceInfo.model ? `(${deviceInfo.model})` : ''}`}
-            {scannerStatus === 'scanning' && 'Scanning Fingerprint...'}
+            {scannerStatus === 'scanning' && (isProcessingBiometric ? 
+              `${operationMode === 'verify' ? 'Verifying' : 'Enrolling'} Fingerprint...` : 
+              'Scanning Fingerprint...'
+            )}
           </Typography>
           
           <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.9rem' }}>
@@ -442,13 +649,32 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
               variant="contained"
               startIcon={<FingerprintIcon />}
               disabled={disabled || scannerStatus !== 'ready'}
-              onClick={bioMiniAvailable ? handleBioMiniCapture : handleTestCapture}
+              onClick={bioMiniAvailable ? handleEnhancedBiometricCapture : handleTestCapture}
             >
-              Capture
+              {demoMode ? 'Demo Skip' : 
+               operationMode === 'verify' ? 'Verify Identity' : 
+               'Enroll Fingerprint'}
             </Button>
           )}
         </Grid>
       </Grid>
+
+      {/* Verification/Enrollment Results */}
+      {verificationResult && (
+        <Alert severity={verificationResult.success ? 'success' : 'error'} sx={{ mt: 2, mb: 2 }}>
+          <Typography variant="body2">
+            <strong>{verificationResult.success ? '✅ Success!' : '❌ Failed'}</strong>
+          </Typography>
+          <Typography variant="body2">
+            {verificationResult.message}
+          </Typography>
+          {verificationResult.score !== undefined && (
+            <Typography variant="body2" sx={{ mt: 1 }}>
+              <strong>Match Score:</strong> {verificationResult.score}
+            </Typography>
+          )}
+        </Alert>
+      )}
 
       {/* Captured Fingerprint Preview */}
       {capturedImageUrl && (
