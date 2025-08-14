@@ -294,13 +294,7 @@ This uses the ACTUAL WebAgent UFMatcher instead of server-side simulation.
     await this.bioMiniService.setMatcherParameters(securityLevel, 2002, false); // ISO 19794-2
     console.log(`🔧 UFMatcher configured for identification: Security Level ${securityLevel}`);
 
-    // Step 3: Capture and extract probe template
-    console.log('👆 Please scan your fingerprint for identification...');
-    const imageFile = await this.bioMiniService.captureFingerprint();
-    const probeTemplate = await this.bioMiniService.extractTemplate(2002, 60); // Quality gate 60
-    console.log(`🧬 Probe template extracted: ${probeTemplate.length} characters`);
-
-    // Step 4: Get all database templates
+    // Step 3: Get all database templates first
     const databaseTemplates = await this.getTemplatesForMatching(100);
     console.log(`📊 Retrieved ${databaseTemplates.length} templates from database`);
 
@@ -313,57 +307,72 @@ This uses the ACTUAL WebAgent UFMatcher instead of server-side simulation.
       };
     }
 
-    // Step 5: Use UFMatcher to compare against each template
-    const matches = [];
-    let candidatesChecked = 0;
-
-    console.log('🔄 Starting UFMatcher comparison against database templates...');
+    // Step 4: Test with just the first template to debug the workflow
+    console.log('🧪 DEBUG MODE: Testing with first template only to debug verification workflow...');
     
-    for (const dbTemplate of databaseTemplates) {
+    if (databaseTemplates.length > 0) {
+      const testTemplate = databaseTemplates[0];
+      console.log(`🧬 Testing with template: Person ${testTemplate.person_id.slice(0, 8)}... Finger ${testTemplate.finger_position}`);
+      console.log(`📊 Template format: ${testTemplate.template_format}, Size: ${testTemplate.template_data?.length || 0} chars`);
+      
       try {
-        candidatesChecked++;
-        console.log(`🔍 Checking template ${candidatesChecked}/${databaseTemplates.length}: Person ${dbTemplate.person_id.slice(0, 8)}... Finger ${dbTemplate.finger_position}`);
-
-        // Use UFMatcher SDK workflow for verification
+        console.log('👆 Please scan your fingerprint now to test verification...');
+        
+        // Use the exact SDK workflow
         const result = await this.bioMiniService.verifyTemplateSDKWorkflow(
-          dbTemplate.template_data,
-          dbTemplate.quality_level || 6
+          testTemplate.template_data,
+          testTemplate.quality_level || 6
         );
-
+        
+        console.log('📥 Verification result:', {
+          verified: result.verified,
+          score: result.score
+        });
+        
         if (result.verified) {
-          const match = {
-            template_id: dbTemplate.template_id,
-            person_id: dbTemplate.person_id,
-            finger_position: dbTemplate.finger_position,
-            match_score: result.score || 100,
-            template_format: dbTemplate.template_format,
-            quality_score: dbTemplate.quality_score,
-            enrolled_at: dbTemplate.enrolled_at
+          console.log(`✅ SUCCESS: Template verification WORKED!`);
+          return {
+            matches_found: 1,
+            matches: [{
+              template_id: testTemplate.template_id,
+              person_id: testTemplate.person_id,
+              finger_position: testTemplate.finger_position,
+              match_score: result.score || 100,
+              template_format: testTemplate.template_format,
+              quality_score: testTemplate.quality_score,
+              enrolled_at: testTemplate.enrolled_at
+            }],
+            candidates_checked: 1,
+            security_level: securityLevel,
+            matcher_engine: 'webagent_ufmatcher_debug',
+            message: `DEBUG: Single template verification succeeded`
           };
-
-          matches.push(match);
-          console.log(`✅ MATCH FOUND: Person ${dbTemplate.person_id.slice(0, 8)}... Score: ${result.score}`);
         } else {
-          console.log(`❌ No match: Person ${dbTemplate.person_id.slice(0, 8)}... Score: ${result.score || 0}`);
+          console.log(`❌ FAILED: Template verification did not match. Score: ${result.score}`);
+          return {
+            matches_found: 0,
+            matches: [],
+            candidates_checked: 1,
+            security_level: securityLevel,
+            matcher_engine: 'webagent_ufmatcher_debug',
+            message: `DEBUG: Single template verification failed with score ${result.score}`
+          };
         }
-
+        
       } catch (error) {
-        console.error(`⚠️ Error comparing template ${candidatesChecked}:`, error.message);
+        console.error('❌ DEBUG ERROR:', error);
+        throw error;
       }
     }
 
-    // Step 6: Sort matches by score (highest first)
-    matches.sort((a, b) => (b.match_score || 0) - (a.match_score || 0));
-
-    console.log(`🎯 Identification complete: ${matches.length} matches found out of ${candidatesChecked} candidates`);
-
+    // If we get here, no templates were found
     return {
-      matches_found: matches.length,
-      matches: matches.slice(0, maxResults),
-      candidates_checked: candidatesChecked,
+      matches_found: 0,
+      matches: [],
+      candidates_checked: 0,
       security_level: securityLevel,
-      matcher_engine: 'webagent_ufmatcher',
-      message: `UFMatcher identification completed: ${matches.length} matches found`
+      matcher_engine: 'webagent_ufmatcher_debug',
+      message: 'No templates available for testing'
     };
   }
 
