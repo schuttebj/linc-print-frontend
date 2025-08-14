@@ -65,6 +65,7 @@ import AnalyticsDashboard from './pages/analytics/AnalyticsDashboard';
 // Temporary Test Pages
 import FingerprintTestPage from './pages/admin/FingerprintTestPage';
 import FingerprintTemplateTestPage from './pages/admin/FingerprintTemplateTestPage';
+import ProductionBiometricTestPage from './pages/admin/ProductionBiometricTestPage';
 
 function App() {
   return (
@@ -457,6 +458,14 @@ function App() {
                 element={
                   <ProtectedRoute requiredPermission="admin.read">
                     <FingerprintTemplateTestPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route 
+                path="production-biometric" 
+                element={
+                  <ProtectedRoute requiredPermission="admin.read">
+                    <ProductionBiometricTestPage />
                   </ProtectedRoute>
                 }
               />
