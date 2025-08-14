@@ -66,7 +66,7 @@ import AnalyticsDashboard from './pages/analytics/AnalyticsDashboard';
 import FingerprintTestPage from './pages/admin/FingerprintTestPage';
 import FingerprintTemplateTestPage from './pages/admin/FingerprintTemplateTestPage';
 import ProductionBiometricTestPage from './pages/admin/ProductionBiometricTestPage';
-import GSdkBiometricTestPage from './pages/admin/GSdkBiometricTestPage';
+
 
 function App() {
   return (
@@ -470,14 +470,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route 
-                path="gsdk-biometric" 
-                element={
-                  <ProtectedRoute requiredPermission="admin.read">
-                    <GSdkBiometricTestPage />
-                  </ProtectedRoute>
-                }
-              />
+
             </Route>
 
             {/* Analytics Dashboard - requires analytics permissions */}
