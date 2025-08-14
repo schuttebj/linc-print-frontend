@@ -100,6 +100,10 @@ const ProductionBiometricTestPage: React.FC = () => {
   const [personSearchQuery, setPersonSearchQuery] = useState('');
   const [isSearchingPersons, setIsSearchingPersons] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
+  
+  // Identification results state
+  const [identificationResult, setIdentificationResult] = useState<any>(null);
+  const [identifiedPerson, setIdentifiedPerson] = useState<any>(null);
 
   const FINGER_NAMES = {
     1: 'Right Thumb', 2: 'Right Index', 3: 'Right Middle', 4: 'Right Ring', 5: 'Right Little',
@@ -181,6 +185,36 @@ const ProductionBiometricTestPage: React.FC = () => {
     setPersons([]);
   };
 
+  const handleIdentificationSuccess = async (result: any) => {
+    try {
+      console.log('🎯 Processing identification success:', result);
+      setIdentificationResult(result);
+      
+      // Fetch detailed person information for the top match
+      const topMatch = result.matches[0];
+      console.log('👤 Fetching details for person:', topMatch.person_id);
+      
+      // Search for the person by ID (using search since we don't have a direct get by ID endpoint)
+      const searchResponse = await personService.searchPersons({
+        search_text: topMatch.person_id,
+        limit: 1
+      });
+      
+      if (searchResponse.persons && searchResponse.persons.length > 0) {
+        const personDetails = searchResponse.persons[0];
+        console.log('👤 Person details found:', personDetails);
+        setIdentifiedPerson(personDetails);
+      } else {
+        console.warn('⚠️ Could not fetch person details for:', topMatch.person_id);
+        setIdentifiedPerson(null);
+      }
+      
+    } catch (error) {
+      console.error('❌ Failed to fetch person details:', error);
+      setIdentifiedPerson(null);
+    }
+  };
+
   const handleEnrollmentComplete = (results: FingerprintEnrollResponse[]) => {
     setEnrollmentResults(results);
     loadPersonTemplates(); // Refresh templates list
@@ -211,10 +245,15 @@ const ProductionBiometricTestPage: React.FC = () => {
           console.log(`${index + 1}. Person: ${match.person_id.slice(0, 8)}... | Finger: ${match.finger_position} | Score: ${match.match_score}`);
         });
 
-        // Update the UI with identification results
-        alert(`🎯 Found ${identificationResult.matches_found} matches!\n\nTop match:\nPerson: ${identificationResult.matches[0].person_id}\nScore: ${identificationResult.matches[0].match_score}`);
+        // Fetch person details for the top match
+        await handleIdentificationSuccess(identificationResult);
       } else {
-        alert('❌ No matches found in database');
+        console.log('❌ No matches found in database');
+        setIdentificationResult({
+          matches_found: 0,
+          matches: [],
+          message: 'No fingerprint matches found in the database'
+        });
       }
       
     } catch (error) {
@@ -513,6 +552,88 @@ const ProductionBiometricTestPage: React.FC = () => {
           </CardContent>
         </Card>
       </Grid>
+      
+      {/* Identification Results */}
+      {identificationResult && (
+        <Grid item xs={12}>
+          <Card>
+            <CardHeader 
+              title={identificationResult.matches_found > 0 ? "🎯 Identification Results" : "❌ No Matches Found"}
+              subheader={`Checked ${identificationResult.candidates_checked} templates`}
+            />
+            <CardContent>
+              {identificationResult.matches_found > 0 ? (
+                <>
+                  {/* Person Information */}
+                  {identifiedPerson && (
+                    <Card sx={{ mb: 3, bgcolor: 'success.light', color: 'success.contrastText' }}>
+                      <CardContent>
+                        <Typography variant="h6" gutterBottom>
+                          👤 Identified Person
+                        </Typography>
+                        <Grid container spacing={2}>
+                          <Grid item xs={12} md={6}>
+                            <Typography><strong>Name:</strong> {identifiedPerson.first_name} {identifiedPerson.surname}</Typography>
+                            <Typography><strong>Person ID:</strong> {identifiedPerson.id}</Typography>
+                            {identifiedPerson.aliases && identifiedPerson.aliases.length > 0 && (
+                              <Typography><strong>Document:</strong> {identifiedPerson.aliases[0].document_number}</Typography>
+                            )}
+                          </Grid>
+                          <Grid item xs={12} md={6}>
+                            <Typography><strong>Match Score:</strong> {identificationResult.matches[0].match_score || 'N/A'}</Typography>
+                            <Typography><strong>Finger:</strong> {FINGER_NAMES[identificationResult.matches[0].finger_position]}</Typography>
+                            <Typography><strong>Template Format:</strong> {identificationResult.matches[0].template_format}</Typography>
+                          </Grid>
+                        </Grid>
+                      </CardContent>
+                    </Card>
+                  )}
+                  
+                  {/* All Match Results */}
+                  <Typography variant="h6" gutterBottom>
+                    🔍 Match Details
+                  </Typography>
+                  {identificationResult.matches.map((match: any, index: number) => (
+                    <Card key={match.template_id} sx={{ mb: 2, bgcolor: index === 0 ? 'primary.light' : 'grey.100' }}>
+                      <CardContent>
+                        <Grid container spacing={2}>
+                          <Grid item xs={12} sm={6}>
+                            <Typography><strong>Rank:</strong> #{index + 1}</Typography>
+                            <Typography><strong>Person ID:</strong> {match.person_id.slice(0, 8)}...</Typography>
+                            <Typography><strong>Template ID:</strong> {match.template_id.slice(0, 8)}...</Typography>
+                          </Grid>
+                          <Grid item xs={12} sm={6}>
+                            <Typography><strong>Match Score:</strong> {match.match_score || 'N/A'}</Typography>
+                            <Typography><strong>Finger:</strong> {FINGER_NAMES[match.finger_position]}</Typography>
+                            <Typography><strong>Quality:</strong> {match.quality_score || 'N/A'}</Typography>
+                          </Grid>
+                        </Grid>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </>
+              ) : (
+                <Alert severity="warning">
+                  <Typography>
+                    No fingerprint matches found in the database. This could mean:
+                  </Typography>
+                  <ul>
+                    <li>The scanned finger is not enrolled in the system</li>
+                    <li>The finger quality is too low for matching</li>
+                    <li>The security level is too strict</li>
+                  </ul>
+                </Alert>
+              )}
+              
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                <strong>Search Details:</strong> Security Level {identificationResult.security_level} | 
+                Engine: {identificationResult.matcher_engine} | 
+                Checked: {identificationResult.candidates_checked} templates
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      )}
     </Grid>
   );
 

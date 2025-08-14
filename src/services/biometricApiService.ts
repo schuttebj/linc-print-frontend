@@ -350,7 +350,6 @@ This uses the ACTUAL WebAgent UFMatcher instead of server-side simulation.
         
         if (result.verified) {
           console.log(`✅ SUCCESS: Template verification WORKED!`);
-          alert(`🎉 VERIFICATION SUCCESS!\nScore: ${result.score}`);
           return {
             matches_found: 1,
             matches: [{
@@ -369,7 +368,6 @@ This uses the ACTUAL WebAgent UFMatcher instead of server-side simulation.
           };
         } else {
           console.log(`❌ FAILED: Template verification did not match. Score: ${result.score}`);
-          alert(`❌ VERIFICATION FAILED\nScore: ${result.score}\nPlease try again with the same finger used for enrollment.`);
           return {
             matches_found: 0,
             matches: [],
