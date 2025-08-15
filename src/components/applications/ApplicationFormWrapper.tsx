@@ -179,6 +179,29 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
   const [activeStep, setActiveStep] = useState(0);
   const [stepValidation, setStepValidation] = useState<boolean[]>([false, false, false, false, false]);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  // Demo mode state for biometric components
+  const [biometricDemoMode, setBiometricDemoMode] = useState<boolean>(
+    import.meta.env.DEV || localStorage.getItem('biometric_demo_mode') === 'true'
+  );
+
+  // Listen for localStorage changes to sync demo mode state
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const newDemoMode = import.meta.env.DEV || localStorage.getItem('biometric_demo_mode') === 'true';
+      setBiometricDemoMode(newDemoMode);
+    };
+
+    // Listen for storage events (when localStorage changes)
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Also periodically check for changes (in case changes happen in same tab)
+    const interval = setInterval(handleStorageChange, 1000);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, []);
 
   // License validation states
   const [validationResult, setValidationResult] = useState<LicenseValidationResult | null>(null);
@@ -1985,7 +2008,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
                   onFingerprintCapture={handleFingerprintCapture}
                   disabled={saving}
                   personId={formData.person?.id}
-                  demoMode={import.meta.env.DEV || localStorage.getItem('biometric_demo_mode') === 'true'}
+                  demoMode={biometricDemoMode}
                 />
                 {formData.biometric_data.fingerprint && (
                   <Alert severity="success" sx={{ mt: 2 }}>

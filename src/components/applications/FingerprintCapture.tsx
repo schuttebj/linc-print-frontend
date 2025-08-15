@@ -10,7 +10,9 @@ import {
   Chip,
   Grid,
   Paper,
-  CircularProgress
+  CircularProgress,
+  Switch,
+  FormControlLabel
 } from '@mui/material';
 import {
   Fingerprint as FingerprintIcon,
@@ -63,6 +65,7 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
   useEffect(() => {
     const checkExistingTemplates = async () => {
       console.log(`🔧 Initializing biometric component - PersonID: ${personId}, DemoMode: ${internalDemoMode}`);
+      console.log(`🔧 PersonId type: ${typeof personId}, PersonId value: "${personId}"`);
       
       if (!personId || internalDemoMode) {
         console.log('⚠️ No person ID or demo mode - defaulting to enrollment mode');
@@ -524,7 +527,7 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
     handleDemoCapture();
   };
 
-      return (
+  return (
     <Box>
       {/* Operation Mode and Demo Toggle */}
       <Box sx={{ mb: 2 }}>
@@ -558,28 +561,35 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
                   : 'Real biometric verification enabled'
                 }
               </Typography>
-              <Button
-                size="small"
-                variant="outlined"
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={internalDemoMode}
+                    onChange={(e) => {
+                      const newDemoMode = e.target.checked;
+                      setInternalDemoMode(newDemoMode);
+                      localStorage.setItem('biometric_demo_mode', newDemoMode.toString());
+                      
+                      // Clear any existing results when switching modes
+                      setVerificationResult(null);
+                      if (capturedImageUrl) {
+                        URL.revokeObjectURL(capturedImageUrl);
+                        setCapturedImageUrl('');
+                        setLastCaptureTime('');
+                      }
+                      
+                      console.log(`🔄 Switched to ${newDemoMode ? 'Demo' : 'Production'} mode`);
+                    }}
+                    size="small"
+                  />
+                }
+                label={
+                  <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                    {internalDemoMode ? 'Demo Mode' : 'Production Mode'}
+                  </Typography>
+                }
                 sx={{ mt: 1 }}
-                onClick={() => {
-                  const newDemoMode = !internalDemoMode;
-                  setInternalDemoMode(newDemoMode);
-                  localStorage.setItem('biometric_demo_mode', newDemoMode.toString());
-                  
-                  // Clear any existing results when switching modes
-                  setVerificationResult(null);
-                  if (capturedImageUrl) {
-                    URL.revokeObjectURL(capturedImageUrl);
-                    setCapturedImageUrl('');
-                    setLastCaptureTime('');
-                  }
-                  
-                  console.log(`🔄 Switched to ${newDemoMode ? 'Demo' : 'Production'} mode`);
-                }}
-              >
-                Switch to {internalDemoMode ? 'Production' : 'Demo'} Mode
-              </Button>
+              />
             </Alert>
           </Grid>
         </Grid>
@@ -606,16 +616,16 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
           {scannerStatus === 'initializing' || scannerStatus === 'scanning' ? (
             <CircularProgress size={60} sx={{ mb: 1 }} />
           ) : (
-            <FingerprintIcon 
-              sx={{ 
-                fontSize: 60, 
-                mb: 1,
-                color: 
+          <FingerprintIcon 
+            sx={{ 
+              fontSize: 60, 
+              mb: 1,
+              color: 
                   scannerStatus === 'not_connected' || scannerStatus === 'service_unavailable' ? '#ff9800' :
-                  scannerStatus === 'ready' ? '#4caf50' :
-                  '#2196f3'
-              }} 
-            />
+                scannerStatus === 'ready' ? '#4caf50' :
+                '#2196f3'
+            }} 
+          />
           )}
           
           <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
