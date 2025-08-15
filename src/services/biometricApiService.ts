@@ -169,12 +169,11 @@ export class BiometricApiService {
           false  // Fast mode off for accuracy
         );
         
-        // Step 1: Capture fingerprint via WebAgent
-        const imageFile = await this.bioMiniService.captureFingerprint();
-        console.log('✅ Fingerprint captured successfully');
-
-        // Step 2: Extract ISO 19794-2 template with QUALITY GATE (following WebAgent best practices)
-        const templateBase64 = await this.bioMiniService.extractTemplate(2002, 60); // ISO format, quality 60 (reject poor captures)
+        // Step 1: Capture fingerprint and extract template in one step (prevents double scanning)
+        const captureResult = await this.bioMiniService.captureAndExtractForMatching(2002, 60); // ISO format, quality 60
+        const templateBase64 = captureResult.template;
+        const imageFile = captureResult.imageFile;
+        console.log('✅ Fingerprint captured and template extracted in single operation');
         console.log(`🧬 Template extracted: ${templateBase64.length} characters`);
 
         // Step 3: Get quality score if available

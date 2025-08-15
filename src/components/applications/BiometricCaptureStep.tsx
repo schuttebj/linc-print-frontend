@@ -547,10 +547,10 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
               }}>
                 <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>Preview</Typography>
                 <Box sx={{
-                  width: '120px',
-                  height: '120px',
+                  width: '160px',
+                  height: '200px',
                   border: value.fingerprint ? '3px solid #4caf50' : '2px dashed #ccc',
-                  borderRadius: '50%',
+                  borderRadius: '8px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -574,7 +574,14 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
                     }
                   }
                 }}>
-                  {value.fingerprint ? (
+                  {saving ? (
+                    <Box sx={{ textAlign: 'center', color: '#1976d2' }}>
+                      <CircularProgress size={60} sx={{ mb: 2 }} />
+                      <Typography variant="caption" display="block" sx={{ fontSize: '0.75rem' }}>
+                        Processing...
+                      </Typography>
+                    </Box>
+                  ) : value.fingerprint ? (
                     <img 
                       src={typeof value.fingerprint === 'string' ? value.fingerprint : 
                            (value.fingerprint instanceof File ? URL.createObjectURL(value.fingerprint) : value.fingerprint.processed_url)}
@@ -583,13 +590,15 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
                         width: '100%', 
                         height: '100%', 
                         objectFit: 'cover',
-                        borderRadius: '50%'
+                        borderRadius: '4px'
                       }}
                     />
                   ) : (
                     <Box sx={{ textAlign: 'center', color: '#999' }}>
                       <FingerprintIcon sx={{ fontSize: 40, mb: 1 }} />
-                      <Typography variant="caption">No fingerprint captured</Typography>
+                      <Typography variant="caption" display="block" sx={{ fontSize: '0.75rem' }}>
+                        No fingerprint captured
+                      </Typography>
                     </Box>
                   )}
                 </Box>

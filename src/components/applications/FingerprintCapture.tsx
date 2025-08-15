@@ -78,9 +78,15 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
         const templates = await biometricApiService.getPersonTemplates(personId);
         setExistingTemplates(templates);
         
-        // Always use enrollment mode - users can retake/re-enroll
-        console.log(`📝 Setting enrollment mode (${templates.length} existing templates will be replaced)`);
-        setOperationMode('enroll');
+        if (templates.length > 0) {
+          console.log(`✅ Found ${templates.length} existing templates - entering verification mode`);
+          setOperationMode('verify');
+          // Note: Existing fingerprint images are not stored, only templates
+          console.log(`📋 Existing template info:`, templates[0]);
+        } else {
+          console.log('📝 No existing templates found - entering enrollment mode');
+          setOperationMode('enroll');
+        }
       } catch (error) {
         console.error('❌ Error checking existing templates:', error);
         setOperationMode('enroll'); // Default to enrollment on error
@@ -176,13 +182,17 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
     setVerificationResult(null);
 
     try {
-      console.log(`🚀 Starting enrollment workflow for person: ${personId}`);
-      console.log(`🔧 Existing templates: ${existingTemplates.length} (will be replaced)`);
+      console.log(`🚀 Starting ${operationMode} workflow for person: ${personId}`);
+      console.log(`🔧 Operation mode: ${operationMode}, Existing templates: ${existingTemplates.length}`);
       
-      await handleEnrollmentWorkflow();
+      if (operationMode === 'verify') {
+        await handleVerificationWorkflow();
+      } else {
+        await handleEnrollmentWorkflow();
+      }
     } catch (error) {
-      console.error(`❌ Enrollment failed:`, error);
-      setErrorMessage(`Enrollment failed: ${error.message}`);
+      console.error(`❌ ${operationMode} failed:`, error);
+      setErrorMessage(`${operationMode === 'verify' ? 'Verification' : 'Enrollment'} failed: ${error.message}`);
     } finally {
       setIsProcessingBiometric(false);
     }
@@ -243,14 +253,11 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
     }
     
     try {
-      // Delete any existing templates first (retake functionality)
-      if (existingTemplates.length > 0) {
-        console.log(`🗑️ Replacing ${existingTemplates.length} existing templates...`);
-        // TODO: Add delete endpoint call here when available
-        // await biometricApiService.deletePersonTemplates(personId);
-      }
+      setScannerStatus('scanning');
       
-      // Enroll new fingerprint (this will replace existing ones in the backend)
+      // Enroll new fingerprint directly without deleting existing ones
+      // The backend should handle replacing existing templates
+      console.log('🔍 Starting single fingerprint enrollment...');
       const results = await biometricApiService.enrollFingerprints(
         personId,
         [2], // Right Index finger
@@ -524,18 +531,19 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
     <Box>
       {/* Operation Mode */}
       {personId ? (
-        <Alert severity="info" sx={{ mb: 2, py: 1 }}>
+        <Alert severity={operationMode === 'verify' ? 'success' : 'info'} sx={{ mb: 2, py: 1 }}>
           <Typography variant="body2" sx={{ fontSize: '0.9rem' }}>
-            <strong>📝 Enrollment Mode</strong> - {existingTemplates.length > 0 
-              ? `Will replace ${existingTemplates.length} existing template(s) with new fingerprint`
-              : 'Will enroll new fingerprint'
+            <strong>{operationMode === 'verify' ? '🔍 Verification Mode' : '📝 Enrollment Mode'}</strong> - {
+              operationMode === 'verify' 
+                ? `Found ${existingTemplates.length} existing template(s) - will verify identity`
+                : 'Will enroll new fingerprint'
             }
           </Typography>
         </Alert>
       ) : (
         <Alert severity="warning" sx={{ mb: 2, py: 1 }}>
           <Typography variant="body2" sx={{ fontSize: '0.9rem' }}>
-            <strong>⚠️ No Person Selected</strong> - Person ID required for biometric enrollment
+            <strong>⚠️ No Person Selected</strong> - Person ID required for biometric verification/enrollment
           </Typography>
         </Alert>
       )}
@@ -653,14 +661,40 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
               onClick={internalDemoMode ? handleDemoCapture : (bioMiniAvailable ? handleEnhancedBiometricCapture : handleTestCapture)}
             >
               {internalDemoMode ? 'Generate Demo Data' : 
-               existingTemplates.length > 0 ? 'Retake Fingerprint' : 
+               operationMode === 'verify' ? 'Verify Identity' : 
                'Enroll Fingerprint'}
             </Button>
           )}
         </Grid>
+        
+        {/* Retake Button - Only show during enrollment mode after successful capture */}
+        {operationMode === 'enroll' && verificationResult?.success && !internalDemoMode && (
+          <Grid item xs={12} sm={4}>
+            <Button
+              fullWidth
+              size="small"
+              variant="outlined"
+              color="warning"
+              startIcon={<FingerprintIcon />}
+              disabled={disabled}
+              onClick={() => {
+                // Clear previous results before retaking
+                setVerificationResult(null);
+                if (capturedImageUrl) {
+                  URL.revokeObjectURL(capturedImageUrl);
+                  setCapturedImageUrl('');
+                  setLastCaptureTime('');
+                }
+                handleEnhancedBiometricCapture();
+              }}
+            >
+              Retake Fingerprint
+            </Button>
+          </Grid>
+        )}
       </Grid>
 
-      {/* Enrollment Results */}
+      {/* Verification/Enrollment Results */}
       {verificationResult && (
         <Alert severity={verificationResult.success ? 'success' : 'error'} sx={{ mt: 2, mb: 2 }}>
           <Typography variant="body2">
@@ -669,6 +703,11 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
           <Typography variant="body2">
             {verificationResult.message}
           </Typography>
+          {verificationResult.score !== undefined && (
+            <Typography variant="body2" sx={{ mt: 1 }}>
+              <strong>Match Score:</strong> {verificationResult.score}
+            </Typography>
+          )}
         </Alert>
       )}
 
