@@ -83,6 +83,40 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
           setOperationMode('verify');
           // Note: Existing fingerprint images are not stored, only templates
           console.log(`📋 Existing template info:`, templates[0]);
+          
+          // Create a preview image showing existing template information
+          const canvas = document.createElement('canvas');
+          canvas.width = 400;
+          canvas.height = 400;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            // Create a template info display
+            ctx.fillStyle = '#f5f5f5';
+            ctx.fillRect(0, 0, 400, 400);
+            ctx.strokeStyle = '#2196f3';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.strokeRect(20, 20, 360, 360);
+            
+            ctx.font = '16px Arial';
+            ctx.fillStyle = '#1976d2';
+            ctx.textAlign = 'center';
+            ctx.fillText('EXISTING TEMPLATE', 200, 180);
+            ctx.font = '14px Arial';
+            ctx.fillStyle = '#424242';
+            ctx.fillText(`Finger: ${templates[0].finger_position === 2 ? 'Right Index' : `Position ${templates[0].finger_position}`}`, 200, 210);
+            ctx.fillText(`Enrolled: ${new Date(templates[0].enrolled_at).toLocaleDateString()}`, 200, 230);
+            ctx.fillText(`Quality: ${templates[0].quality_score || 'N/A'}`, 200, 250);
+            ctx.fillText('Click "Verify Identity" to scan', 200, 280);
+          }
+          
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const templateFile = new File([blob], 'existing_template.png', { type: 'image/png' });
+              const imageUrl = URL.createObjectURL(templateFile);
+              setCapturedImageUrl(imageUrl);
+            }
+          }, 'image/png');
         } else {
           console.log('📝 No existing templates found - entering enrollment mode');
           setOperationMode('enroll');
@@ -201,47 +235,107 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
   // Handle verification workflow
   const handleVerificationWorkflow = async () => {
     console.log('🔍 Starting verification against existing templates...');
+    setScannerStatus('scanning');
     
-    // Try to verify against all existing templates
-    for (const template of existingTemplates) {
-      try {
-        console.log(`🧬 Verifying against template: ${template.template_id} (${template.finger_position})`);
-        
-        const result = await biometricApiService.verifyFingerprint(
-          template.template_id,
-          4 // Security level 4
-        );
-        
-        if (result.match_found) {
-          console.log('✅ Verification successful!');
-          setVerificationResult({
-            success: true,
-            score: result.match_score,
-            message: `Identity verified using ${template.finger_position === 2 ? 'Right Index' : 'finger'} template`
-          });
-          
-          // Get the captured image for display
-          const imageFile = await bioMiniService.captureFingerprint();
-          const imageUrl = URL.createObjectURL(imageFile);
-          setCapturedImageUrl(imageUrl);
-          setLastCaptureTime(new Date().toLocaleString());
-          
-          // Call the original callback
-          onFingerprintCapture(imageFile);
-          return;
-        }
-      } catch (error) {
-        console.warn(`⚠️ Verification failed for template ${template.template_id}:`, error);
-      }
+    // Use just the first template for verification (can be enhanced later for multiple templates)
+    const template = existingTemplates[0];
+    if (!template) {
+      throw new Error('No existing templates found for verification');
     }
     
-    // If we get here, verification failed
-    console.log('❌ Verification failed against all templates');
-    setVerificationResult({
-      success: false,
-      message: 'Fingerprint does not match any enrolled templates'
-    });
-    throw new Error('Verification failed - no matching templates found');
+    try {
+      console.log(`🧬 Verifying against template: ${template.template_id} (finger position ${template.finger_position})`);
+      
+      const result = await biometricApiService.verifyFingerprint(
+        template.template_id,
+        4 // Security level 4
+      );
+      
+      setScannerStatus('ready');
+      setLastCaptureTime(new Date().toLocaleString());
+      
+      if (result.match_found) {
+        console.log('✅ Verification successful!');
+        setVerificationResult({
+          success: true,
+          score: result.match_score,
+          message: `Identity verified using ${template.finger_position === 2 ? 'Right Index' : 'finger'} template`
+        });
+        
+        // Create a placeholder verification file for the callback
+        const canvas = document.createElement('canvas');
+        canvas.width = 400;
+        canvas.height = 400;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.fillStyle = '#e8f5e8';
+          ctx.fillRect(0, 0, 400, 400);
+          ctx.strokeStyle = '#4caf50';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(10, 10, 380, 380);
+          ctx.font = '16px Arial';
+          ctx.fillStyle = '#2e7d32';
+          ctx.textAlign = 'center';
+          ctx.fillText('VERIFIED', 200, 200);
+          ctx.fillText(`Score: ${result.match_score || 'N/A'}`, 200, 220);
+        }
+        
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const verificationFile = new File([blob], 'verified_fingerprint.png', { type: 'image/png' });
+            const imageUrl = URL.createObjectURL(verificationFile);
+            setCapturedImageUrl(imageUrl);
+            onFingerprintCapture(verificationFile);
+          }
+        }, 'image/png');
+        
+        return;
+      } else {
+        console.log('❌ Verification failed');
+        setVerificationResult({
+          success: false,
+          score: result.match_score,
+          message: 'Fingerprint does not match enrolled template'
+        });
+        
+        // Create a placeholder failure file for visual feedback
+        const canvas = document.createElement('canvas');
+        canvas.width = 400;
+        canvas.height = 400;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.fillStyle = '#ffebee';
+          ctx.fillRect(0, 0, 400, 400);
+          ctx.strokeStyle = '#f44336';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(10, 10, 380, 380);
+          ctx.font = '16px Arial';
+          ctx.fillStyle = '#c62828';
+          ctx.textAlign = 'center';
+          ctx.fillText('NOT VERIFIED', 200, 200);
+          ctx.fillText(`Score: ${result.match_score || 'N/A'}`, 200, 220);
+        }
+        
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const failureFile = new File([blob], 'verification_failed.png', { type: 'image/png' });
+            const imageUrl = URL.createObjectURL(failureFile);
+            setCapturedImageUrl(imageUrl);
+            onFingerprintCapture(failureFile);
+          }
+        }, 'image/png');
+        
+        throw new Error('Verification failed - fingerprint does not match');
+      }
+    } catch (error) {
+      setScannerStatus('ready');
+      console.error(`❌ Verification error:`, error);
+      setVerificationResult({
+        success: false,
+        message: error.message || 'Verification failed due to technical error'
+      });
+      throw error;
+    }
   };
 
   // Handle enrollment workflow

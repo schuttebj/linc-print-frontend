@@ -549,28 +549,82 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
                 <Box sx={{
                   width: '160px',
                   height: '200px',
-                  border: value.fingerprint ? '3px solid #4caf50' : '2px dashed #ccc',
+                  border: (() => {
+                    if (!value.fingerprint) return '2px dashed #ccc';
+                    
+                    const fingerprint = value.fingerprint;
+                    if (fingerprint instanceof File) {
+                      if (fingerprint.name.includes('verified_fingerprint')) return '3px solid #4caf50';
+                      if (fingerprint.name.includes('verification_failed')) return '3px solid #f44336';
+                      return '3px solid #4caf50';
+                    }
+                    
+                    // For object type
+                    if (typeof fingerprint === 'object' && 'processed_url' in fingerprint) {
+                      const url = fingerprint.processed_url || '';
+                      if (url.includes('verified')) return '3px solid #4caf50';
+                      if (url.includes('verification_failed')) return '3px solid #f44336';
+                    }
+                    
+                    return '3px solid #4caf50';
+                  })(),
                   borderRadius: '8px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  bgcolor: value.fingerprint ? '#e8f5e8' : '#f9f9f9',
+                  bgcolor: (() => {
+                    if (!value.fingerprint) return '#f9f9f9';
+                    
+                    const fingerprint = value.fingerprint;
+                    if (fingerprint instanceof File) {
+                      if (fingerprint.name.includes('verified_fingerprint')) return '#e8f5e8';
+                      if (fingerprint.name.includes('verification_failed')) return '#ffebee';
+                      return '#e8f5e8';
+                    }
+                    
+                    // For object type
+                    if (typeof fingerprint === 'object' && 'processed_url' in fingerprint) {
+                      const url = fingerprint.processed_url || '';
+                      if (url.includes('verified')) return '#e8f5e8';
+                      if (url.includes('verification_failed')) return '#ffebee';
+                    }
+                    
+                    return '#e8f5e8';
+                  })(),
                   overflow: 'hidden',
                   transition: 'all 0.3s ease-in-out',
-                  boxShadow: value.fingerprint ? '0 0 10px rgba(76, 175, 80, 0.3)' : 'none',
+                  boxShadow: (() => {
+                    if (!value.fingerprint) return 'none';
+                    
+                    const fingerprint = value.fingerprint;
+                    if (fingerprint instanceof File) {
+                      if (fingerprint.name.includes('verified_fingerprint')) return '0 0 10px rgba(76, 175, 80, 0.3)';
+                      if (fingerprint.name.includes('verification_failed')) return '0 0 10px rgba(244, 67, 54, 0.3)';
+                      return '0 0 10px rgba(76, 175, 80, 0.3)';
+                    }
+                    
+                    // For object type
+                    if (typeof fingerprint === 'object' && 'processed_url' in fingerprint) {
+                      const url = fingerprint.processed_url || '';
+                      if (url.includes('verified')) return '0 0 10px rgba(76, 175, 80, 0.3)';
+                      if (url.includes('verification_failed')) return '0 0 10px rgba(244, 67, 54, 0.3)';
+                    }
+                    
+                    return '0 0 10px rgba(76, 175, 80, 0.3)';
+                  })(),
                   animation: saving ? 'pulse 1.5s ease-in-out infinite' : 'none',
                   '@keyframes pulse': {
                     '0%': {
-                      boxShadow: '0 0 10px rgba(76, 175, 80, 0.3)',
-                      borderColor: '#4caf50'
+                      boxShadow: '0 0 10px rgba(33, 150, 243, 0.3)',
+                      borderColor: '#2196f3'
                     },
                     '50%': {
-                      boxShadow: '0 0 20px rgba(76, 175, 80, 0.6)',
-                      borderColor: '#66bb6a'
+                      boxShadow: '0 0 20px rgba(33, 150, 243, 0.6)',
+                      borderColor: '#42a5f5'
                     },
                     '100%': {
-                      boxShadow: '0 0 10px rgba(76, 175, 80, 0.3)',
-                      borderColor: '#4caf50'
+                      boxShadow: '0 0 10px rgba(33, 150, 243, 0.3)',
+                      borderColor: '#2196f3'
                     }
                   }
                 }}>
