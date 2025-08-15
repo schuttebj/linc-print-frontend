@@ -53,13 +53,18 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
   const [capturedTemplate, setCapturedTemplate] = useState<string>('');
   const [qualityScore, setQualityScore] = useState<number | null>(null);
   const [isProcessingBiometric, setIsProcessingBiometric] = useState(false);
+  
+  // Internal demo mode state (not prop-based)
+  const [internalDemoMode, setInternalDemoMode] = useState<boolean>(
+    demoMode || localStorage.getItem('biometric_demo_mode') === 'true'
+  );
 
   // Check for existing templates when personId is provided
   useEffect(() => {
     const checkExistingTemplates = async () => {
-      console.log(`🔧 Initializing biometric component - PersonID: ${personId}, DemoMode: ${demoMode}`);
+      console.log(`🔧 Initializing biometric component - PersonID: ${personId}, DemoMode: ${internalDemoMode}`);
       
-      if (!personId || demoMode) {
+      if (!personId || internalDemoMode) {
         console.log('⚠️ No person ID or demo mode - defaulting to enrollment mode');
         setOperationMode('enroll'); // Demo mode or no person ID - just enroll
         return;
@@ -84,7 +89,7 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
     };
 
     checkExistingTemplates();
-  }, [personId, demoMode]);
+  }, [personId, internalDemoMode]);
 
   // Check BioMini Web Agent availability
   const checkBioMiniService = async () => {
@@ -155,9 +160,9 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
 
   // Enhanced biometric capture that handles verification/enrollment
   const handleEnhancedBiometricCapture = async () => {
-    if (demoMode) {
+    if (internalDemoMode) {
       console.log('🎭 Demo mode - auto-generating success');
-      handleTestCapture();
+      handleDemoCapture();
       return;
     }
 
@@ -455,10 +460,11 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
     };
   }, [capturedImageUrl, captureTimeoutId, captureAbortController]);
 
-  const handleTestCapture = () => {
-    // Simulate fingerprint capture for testing
-    // In real implementation, this would interface with fingerprint scanner hardware
+  // Demo capture function for testing without real hardware
+  const handleDemoCapture = () => {
+    console.log('🎭 Demo mode - generating placeholder fingerprint data');
     setScannerStatus('scanning');
+    setIsProcessingBiometric(true);
     
     setTimeout(() => {
       // Create a placeholder File for testing
@@ -485,18 +491,37 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
         ctx.font = '16px Arial';
         ctx.fillStyle = '#666';
         ctx.textAlign = 'center';
-        ctx.fillText('PLACEHOLDER FINGERPRINT', 200, 350);
-        ctx.fillText('(Hardware Integration Pending)', 200, 370);
+        ctx.fillText('DEMO FINGERPRINT', 200, 350);
+        ctx.fillText('(Demo Mode - No Real Capture)', 200, 370);
       }
       
       canvas.toBlob((blob) => {
         if (blob) {
-          const fingerprintFile = new File([blob], 'fingerprint_placeholder.png', { type: 'image/png' });
+          const fingerprintFile = new File([blob], 'demo_fingerprint.png', { type: 'image/png' });
+          
+          // Create URL for preview
+          const imageUrl = URL.createObjectURL(fingerprintFile);
+          setCapturedImageUrl(imageUrl);
+          setLastCaptureTime(new Date().toLocaleTimeString());
+          
+          // Set success result for demo
+          setVerificationResult({
+            success: true,
+            message: `Demo ${operationMode === 'verify' ? 'verification' : 'enrollment'} completed successfully`
+          });
+          
+          // Call the original callback to satisfy parent component
           onFingerprintCapture(fingerprintFile);
           setScannerStatus('ready');
+          setIsProcessingBiometric(false);
         }
       }, 'image/png');
-    }, 2000);
+    }, 1500); // Shorter delay for demo
+  };
+
+  const handleTestCapture = () => {
+    // Legacy test function - now redirects to demo capture
+    handleDemoCapture();
   };
 
       return (
@@ -525,10 +550,10 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
             )}
           </Grid>
           <Grid item xs={12} sm={6}>
-            <Alert severity={demoMode ? 'warning' : 'success'}>
+            <Alert severity={internalDemoMode ? 'warning' : 'success'}>
               <Typography variant="body2">
-                <strong>{demoMode ? '🎭 Demo Mode' : '🔒 Production Mode'}</strong><br/>
-                {demoMode 
+                <strong>{internalDemoMode ? '🎭 Demo Mode' : '🔒 Production Mode'}</strong><br/>
+                {internalDemoMode 
                   ? 'Biometric verification bypassed for demonstration'
                   : 'Real biometric verification enabled'
                 }
@@ -538,12 +563,22 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
                 variant="outlined"
                 sx={{ mt: 1 }}
                 onClick={() => {
-                  const newDemoMode = !demoMode;
+                  const newDemoMode = !internalDemoMode;
+                  setInternalDemoMode(newDemoMode);
                   localStorage.setItem('biometric_demo_mode', newDemoMode.toString());
-                  window.location.reload(); // Simple way to re-initialize
+                  
+                  // Clear any existing results when switching modes
+                  setVerificationResult(null);
+                  if (capturedImageUrl) {
+                    URL.revokeObjectURL(capturedImageUrl);
+                    setCapturedImageUrl('');
+                    setLastCaptureTime('');
+                  }
+                  
+                  console.log(`🔄 Switched to ${newDemoMode ? 'Demo' : 'Production'} mode`);
                 }}
               >
-                Switch to {demoMode ? 'Production' : 'Demo'} Mode
+                Switch to {internalDemoMode ? 'Production' : 'Demo'} Mode
               </Button>
             </Alert>
           </Grid>
@@ -669,10 +704,10 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
               size="small"
               variant="contained"
               startIcon={<FingerprintIcon />}
-              disabled={disabled || scannerStatus !== 'ready'}
-              onClick={bioMiniAvailable ? handleEnhancedBiometricCapture : handleTestCapture}
+              disabled={disabled || (scannerStatus !== 'ready' && !internalDemoMode)}
+              onClick={internalDemoMode ? handleDemoCapture : (bioMiniAvailable ? handleEnhancedBiometricCapture : handleTestCapture)}
             >
-              {demoMode ? 'Demo Skip' : 
+              {internalDemoMode ? 'Generate Demo Data' : 
                operationMode === 'verify' ? 'Verify Identity' : 
                'Enroll Fingerprint'}
             </Button>
