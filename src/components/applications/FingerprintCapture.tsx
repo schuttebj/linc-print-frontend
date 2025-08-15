@@ -78,13 +78,9 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
         const templates = await biometricApiService.getPersonTemplates(personId);
         setExistingTemplates(templates);
         
-        if (templates.length > 0) {
-          console.log(`✅ Found ${templates.length} existing templates - entering verification mode`);
-          setOperationMode('verify');
-        } else {
-          console.log('📝 No existing templates found - entering enrollment mode');
-          setOperationMode('enroll');
-        }
+        // Always use enrollment mode - users can retake/re-enroll
+        console.log(`📝 Setting enrollment mode (${templates.length} existing templates will be replaced)`);
+        setOperationMode('enroll');
       } catch (error) {
         console.error('❌ Error checking existing templates:', error);
         setOperationMode('enroll'); // Default to enrollment on error
@@ -180,17 +176,13 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
     setVerificationResult(null);
 
     try {
-      console.log(`🚀 Starting ${operationMode} workflow for person: ${personId}`);
-      console.log(`🔧 Operation mode: ${operationMode}, Existing templates: ${existingTemplates.length}`);
+      console.log(`🚀 Starting enrollment workflow for person: ${personId}`);
+      console.log(`🔧 Existing templates: ${existingTemplates.length} (will be replaced)`);
       
-      if (operationMode === 'verify') {
-        await handleVerificationWorkflow();
-      } else {
-        await handleEnrollmentWorkflow();
-      }
+      await handleEnrollmentWorkflow();
     } catch (error) {
-      console.error(`❌ ${operationMode} failed:`, error);
-      setErrorMessage(`${operationMode === 'verify' ? 'Verification' : 'Enrollment'} failed: ${error.message}`);
+      console.error(`❌ Enrollment failed:`, error);
+      setErrorMessage(`Enrollment failed: ${error.message}`);
     } finally {
       setIsProcessingBiometric(false);
     }
@@ -251,13 +243,14 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
     }
     
     try {
-      // Delete any existing templates first (as requested for retakes)
+      // Delete any existing templates first (retake functionality)
       if (existingTemplates.length > 0) {
-        console.log('🗑️ Deleting existing templates for retake...');
-        // Note: We'd need a delete endpoint for this
+        console.log(`🗑️ Replacing ${existingTemplates.length} existing templates...`);
+        // TODO: Add delete endpoint call here when available
+        // await biometricApiService.deletePersonTemplates(personId);
       }
       
-      // Enroll new fingerprint
+      // Enroll new fingerprint (this will replace existing ones in the backend)
       const results = await biometricApiService.enrollFingerprints(
         personId,
         [2], // Right Index finger
@@ -510,7 +503,7 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
           // Set success result for demo
           setVerificationResult({
             success: true,
-            message: `Demo ${operationMode === 'verify' ? 'verification' : 'enrollment'} completed successfully`
+            message: `Demo enrollment completed successfully`
           });
           
           // Call the original callback to satisfy parent component
@@ -529,125 +522,73 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
 
   return (
     <Box>
-      {/* Operation Mode and Demo Toggle */}
-      <Box sx={{ mb: 2 }}>
-        <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} sm={6}>
-            {personId ? (
-              <Alert severity={operationMode === 'verify' ? 'success' : 'info'} sx={{ height: '100%' }}>
-                <Typography variant="body2">
-                  <strong>{operationMode === 'verify' ? '🔍 Verification Mode' : '📝 Enrollment Mode'}</strong><br/>
-                  {operationMode === 'verify' 
-                    ? `Found ${existingTemplates.length} existing template(s) - will verify identity`
-                    : 'No existing templates - will enroll new fingerprint'
-                  }
-                </Typography>
-              </Alert>
-            ) : (
-              <Alert severity="warning" sx={{ height: '100%' }}>
-                <Typography variant="body2">
-                  <strong>⚠️ No Person Selected</strong><br/>
-                  Person ID required for biometric verification/enrollment
-                </Typography>
-              </Alert>
-            )}
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <Alert severity={internalDemoMode ? 'warning' : 'success'}>
-              <Typography variant="body2">
-                <strong>{internalDemoMode ? '🎭 Demo Mode' : '🔒 Production Mode'}</strong><br/>
-                {internalDemoMode 
-                  ? 'Biometric verification bypassed for demonstration'
-                  : 'Real biometric verification enabled'
-                }
-              </Typography>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={internalDemoMode}
-                    onChange={(e) => {
-                      const newDemoMode = e.target.checked;
-                      setInternalDemoMode(newDemoMode);
-                      localStorage.setItem('biometric_demo_mode', newDemoMode.toString());
-                      
-                      // Clear any existing results when switching modes
-                      setVerificationResult(null);
-                      if (capturedImageUrl) {
-                        URL.revokeObjectURL(capturedImageUrl);
-                        setCapturedImageUrl('');
-                        setLastCaptureTime('');
-                      }
-                      
-                      console.log(`🔄 Switched to ${newDemoMode ? 'Demo' : 'Production'} mode`);
-                    }}
-                    size="small"
-                  />
-                }
-                label={
-                  <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                    {internalDemoMode ? 'Demo Mode' : 'Production Mode'}
-                  </Typography>
-                }
-                sx={{ mt: 1 }}
-              />
-            </Alert>
-          </Grid>
-        </Grid>
-      </Box>
+      {/* Operation Mode */}
+      {personId ? (
+        <Alert severity="info" sx={{ mb: 2, py: 1 }}>
+          <Typography variant="body2" sx={{ fontSize: '0.9rem' }}>
+            <strong>📝 Enrollment Mode</strong> - {existingTemplates.length > 0 
+              ? `Will replace ${existingTemplates.length} existing template(s) with new fingerprint`
+              : 'Will enroll new fingerprint'
+            }
+          </Typography>
+        </Alert>
+      ) : (
+        <Alert severity="warning" sx={{ mb: 2, py: 1 }}>
+          <Typography variant="body2" sx={{ fontSize: '0.9rem' }}>
+            <strong>⚠️ No Person Selected</strong> - Person ID required for biometric enrollment
+          </Typography>
+        </Alert>
+      )}
 
-      {/* Scanner Status */}
-      <Box sx={{ mb: 2 }}>
-        <Paper
-          elevation={1}
+      {/* Demo/Production Mode Toggle */}
+      <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={internalDemoMode}
+              onChange={(e) => {
+                const newDemoMode = e.target.checked;
+                setInternalDemoMode(newDemoMode);
+                localStorage.setItem('biometric_demo_mode', newDemoMode.toString());
+                
+                // Clear any existing results when switching modes
+                setVerificationResult(null);
+                if (capturedImageUrl) {
+                  URL.revokeObjectURL(capturedImageUrl);
+                  setCapturedImageUrl('');
+                  setLastCaptureTime('');
+                }
+                
+                console.log(`🔄 Switched to ${newDemoMode ? 'Demo' : 'Production'} mode`);
+              }}
+              size="small"
+            />
+          }
+          label={
+            <Typography variant="body2" sx={{ fontSize: '0.9rem', fontWeight: 600 }}>
+              Mode
+            </Typography>
+          }
+        />
+        <Box
           sx={{
-            p: 2,
-            textAlign: 'center',
-            backgroundColor: 
-              scannerStatus === 'not_connected' || scannerStatus === 'service_unavailable' ? '#fff3e0' :
-              scannerStatus === 'ready' ? '#e8f5e8' :
-              '#e3f2fd',
-            border: '2px dashed',
-            borderColor:
-              scannerStatus === 'not_connected' || scannerStatus === 'service_unavailable' ? '#ff9800' :
-              scannerStatus === 'ready' ? '#4caf50' :
-              '#2196f3'
+            px: 1.5,
+            py: 0.5,
+            borderRadius: 1,
+            backgroundColor: internalDemoMode ? '#ff9800' : '#4caf50',
+            color: 'white',
+            fontSize: '0.75rem',
+            fontWeight: 600,
+            textTransform: 'uppercase',
+            minWidth: '80px',
+            textAlign: 'center'
           }}
         >
-          {scannerStatus === 'initializing' || scannerStatus === 'scanning' ? (
-            <CircularProgress size={60} sx={{ mb: 1 }} />
-          ) : (
-          <FingerprintIcon 
-            sx={{ 
-              fontSize: 60, 
-              mb: 1,
-              color: 
-                  scannerStatus === 'not_connected' || scannerStatus === 'service_unavailable' ? '#ff9800' :
-                scannerStatus === 'ready' ? '#4caf50' :
-                '#2196f3'
-            }} 
-          />
-          )}
-          
-          <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
-            {scannerStatus === 'service_unavailable' && 'BioMini Service Unavailable'}
-            {scannerStatus === 'not_connected' && 'BioMini Device Not Connected'}
-            {scannerStatus === 'initializing' && 'Initializing BioMini Device...'}
-            {scannerStatus === 'ready' && `BioMini Ready ${deviceInfo.model ? `(${deviceInfo.model})` : ''}`}
-            {scannerStatus === 'scanning' && (isProcessingBiometric ? 
-              `${operationMode === 'verify' ? 'Verifying' : 'Enrolling'} Fingerprint...` : 
-              'Scanning Fingerprint...'
-            )}
-          </Typography>
-          
-          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.9rem' }}>
-            {scannerStatus === 'service_unavailable' && 'Start BioMiniWebAgent.exe to enable fingerprint capture'}
-            {scannerStatus === 'not_connected' && 'Click "Initialize Device" to connect your BioMini scanner'}
-            {scannerStatus === 'initializing' && 'Connecting to device and checking hardware...'}
-            {scannerStatus === 'ready' && 'Place finger firmly on the scanner surface'}
-            {scannerStatus === 'scanning' && 'Keep finger steady - do not move until complete (30s timeout)'}
-          </Typography>
-        </Paper>
+          {internalDemoMode ? 'Demo' : 'Production'}
+        </Box>
       </Box>
+
+      
 
       {/* Error/Status Alerts */}
       {errorMessage && (
@@ -661,13 +602,7 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
         </Alert>
       )}
 
-      {bioMiniAvailable && scannerStatus !== 'service_unavailable' && (
-        <Alert severity="success" sx={{ mb: 2 }}>
-          <Typography variant="body2">
-            ✓ BioMini Web Agent connected via proxy
-          </Typography>
-        </Alert>
-      )}
+
 
       {/* Control Buttons */}
       <Grid container spacing={1}>
@@ -718,14 +653,14 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
               onClick={internalDemoMode ? handleDemoCapture : (bioMiniAvailable ? handleEnhancedBiometricCapture : handleTestCapture)}
             >
               {internalDemoMode ? 'Generate Demo Data' : 
-               operationMode === 'verify' ? 'Verify Identity' : 
+               existingTemplates.length > 0 ? 'Retake Fingerprint' : 
                'Enroll Fingerprint'}
             </Button>
           )}
         </Grid>
       </Grid>
 
-      {/* Verification/Enrollment Results */}
+      {/* Enrollment Results */}
       {verificationResult && (
         <Alert severity={verificationResult.success ? 'success' : 'error'} sx={{ mt: 2, mb: 2 }}>
           <Typography variant="body2">
@@ -734,78 +669,10 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
           <Typography variant="body2">
             {verificationResult.message}
           </Typography>
-          {verificationResult.score !== undefined && (
-            <Typography variant="body2" sx={{ mt: 1 }}>
-              <strong>Match Score:</strong> {verificationResult.score}
-            </Typography>
-          )}
         </Alert>
       )}
 
-      {/* Captured Fingerprint Preview */}
-      {capturedImageUrl && (
-        <Card sx={{ mt: 3 }}>
-          <CardHeader 
-            title="Captured Fingerprint" 
-            subheader={`Captured at ${lastCaptureTime}`}
-            action={
-              <Chip 
-                label="Ready" 
-                color="success" 
-                size="small"
-                icon={<CheckCircleIcon />}
-              />
-            }
-          />
-          <CardContent>
-            <Box sx={{ textAlign: 'center' }}>
-              <Paper 
-                elevation={3}
-                sx={{ 
-                  display: 'inline-block', 
-                  p: 2, 
-                  backgroundColor: '#f5f5f5',
-                  border: '2px solid #4caf50'
-                }}
-              >
-                <img 
-                  src={capturedImageUrl} 
-                  alt="Captured Fingerprint"
-                  style={{
-                    maxWidth: '300px',
-                    maxHeight: '300px',
-                    width: 'auto',
-                    height: 'auto',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px'
-                  }}
-                />
-              </Paper>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                ✅ Fingerprint captured successfully from BioMini Slim 2
-              </Typography>
-              <Typography variant="caption" color="text.secondary" display="block">
-                Image format: BMP | Ready for processing
-              </Typography>
-              <Box sx={{ mt: 2 }}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => {
-                    if (capturedImageUrl) {
-                      URL.revokeObjectURL(capturedImageUrl);
-                      setCapturedImageUrl('');
-                      setLastCaptureTime('');
-                    }
-                  }}
-                >
-                  Clear Image
-                </Button>
-              </Box>
-            </Box>
-          </CardContent>
-        </Card>
-      )}
+
 
       {/* Service Status */}
       <Box sx={{ mt: 2 }}>

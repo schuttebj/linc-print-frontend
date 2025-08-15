@@ -549,13 +549,30 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
                 <Box sx={{
                   width: '120px',
                   height: '120px',
-                  border: '2px dashed #ccc',
+                  border: value.fingerprint ? '3px solid #4caf50' : '2px dashed #ccc',
                   borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  bgcolor: '#f9f9f9',
-                  overflow: 'hidden'
+                  bgcolor: value.fingerprint ? '#e8f5e8' : '#f9f9f9',
+                  overflow: 'hidden',
+                  transition: 'all 0.3s ease-in-out',
+                  boxShadow: value.fingerprint ? '0 0 10px rgba(76, 175, 80, 0.3)' : 'none',
+                  animation: saving ? 'pulse 1.5s ease-in-out infinite' : 'none',
+                  '@keyframes pulse': {
+                    '0%': {
+                      boxShadow: '0 0 10px rgba(76, 175, 80, 0.3)',
+                      borderColor: '#4caf50'
+                    },
+                    '50%': {
+                      boxShadow: '0 0 20px rgba(76, 175, 80, 0.6)',
+                      borderColor: '#66bb6a'
+                    },
+                    '100%': {
+                      boxShadow: '0 0 10px rgba(76, 175, 80, 0.3)',
+                      borderColor: '#4caf50'
+                    }
+                  }
                 }}>
                   {value.fingerprint ? (
                     <img 
