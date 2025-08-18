@@ -306,6 +306,17 @@ export class BiometricApiService {
   }
 
   /**
+   * Delete all fingerprint templates for a person
+   * @param personId UUID of the person
+   * @returns Success message
+   */
+  async deletePersonTemplates(personId: string): Promise<{message: string}> {
+    return this.makeRequest<{message: string}>(`/fingerprint/templates/${personId}`, {
+      method: 'DELETE'
+    });
+  }
+
+  /**
    * Get all templates from database for UFMatcher identification
    * @param limit Maximum number of templates to retrieve
    * @returns Array of templates with Base64 data for UFMatcher
