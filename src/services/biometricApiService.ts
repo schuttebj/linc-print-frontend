@@ -40,6 +40,7 @@ interface FingerprintEnrollResponse {
   template_hash: string;
   enrolled_at: string;
   message: string;
+  captured_image?: File; // Add the captured image file
 }
 
 interface FingerprintVerifyRequest {
@@ -208,6 +209,10 @@ export class BiometricApiService {
         );
 
         console.log(`✅ Template stored successfully: ${enrollResponse.template_id}`);
+        
+        // Add the captured image to the response
+        enrollResponse.captured_image = imageFile;
+        
         results.push(enrollResponse);
 
         // Small delay between captures for user experience

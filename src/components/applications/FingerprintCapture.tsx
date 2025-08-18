@@ -372,37 +372,47 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
         setLastCaptureTime(new Date().toLocaleString());
         setScannerStatus('ready');
         
-        // Note: The biometricApiService.enrollFingerprints already captures and processes the fingerprint
-        // We just need to create a success placeholder for the UI callback
-        const canvas = document.createElement('canvas');
-        canvas.width = 400;
-        canvas.height = 400;
-        const ctx = canvas.getContext('2d');
-        
-        if (ctx) {
-          ctx.fillStyle = '#e8f5e8';
-          ctx.fillRect(0, 0, 400, 400);
-          ctx.strokeStyle = '#4caf50';
-          ctx.lineWidth = 3;
-          ctx.strokeRect(10, 10, 380, 380);
-          ctx.font = '16px Arial';
-          ctx.fillStyle = '#2e7d32';
-          ctx.textAlign = 'center';
-          ctx.fillText('ENROLLED', 200, 180);
-          ctx.fillText(`${FINGER_NAMES[result.finger_position]}`, 200, 200);
-          ctx.fillText('Template Stored', 200, 220);
-          ctx.font = '12px Arial';
-          ctx.fillText(`Template ID: ${result.template_id.substring(0, 8)}...`, 200, 250);
-        }
-        
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const enrollmentFile = new File([blob], 'enrolled_fingerprint.png', { type: 'image/png' });
-            const imageUrl = URL.createObjectURL(enrollmentFile);
-            setCapturedImageUrl(imageUrl);
-            onFingerprintCapture(enrollmentFile);
+        // Use the actual captured fingerprint image from the enrollment result
+        if (result.captured_image) {
+          console.log('📸 Using actual captured fingerprint image from enrollment');
+          const imageUrl = URL.createObjectURL(result.captured_image);
+          setCapturedImageUrl(imageUrl);
+          onFingerprintCapture(result.captured_image);
+          console.log('✅ Actual fingerprint image displayed');
+        } else {
+          console.warn('⚠️ No captured image available in enrollment result, creating placeholder');
+          
+          // Fallback: Create a success placeholder for the UI callback
+          const canvas = document.createElement('canvas');
+          canvas.width = 400;
+          canvas.height = 400;
+          const ctx = canvas.getContext('2d');
+          
+          if (ctx) {
+            ctx.fillStyle = '#e8f5e8';
+            ctx.fillRect(0, 0, 400, 400);
+            ctx.strokeStyle = '#4caf50';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(10, 10, 380, 380);
+            ctx.font = '16px Arial';
+            ctx.fillStyle = '#2e7d32';
+            ctx.textAlign = 'center';
+            ctx.fillText('ENROLLED', 200, 180);
+            ctx.fillText(`${FINGER_NAMES[result.finger_position]}`, 200, 200);
+            ctx.fillText('Template Stored', 200, 220);
+            ctx.font = '12px Arial';
+            ctx.fillText(`Template ID: ${result.template_id.substring(0, 8)}...`, 200, 250);
           }
-        }, 'image/png');
+          
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const enrollmentFile = new File([blob], 'enrolled_fingerprint.png', { type: 'image/png' });
+              const imageUrl = URL.createObjectURL(enrollmentFile);
+              setCapturedImageUrl(imageUrl);
+              onFingerprintCapture(enrollmentFile);
+            }
+          }, 'image/png');
+        }
       }
     } catch (error) {
       console.error('❌ Enrollment failed:', error);
@@ -595,25 +605,38 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
       const ctx = canvas.getContext('2d');
       
       if (ctx) {
-        // Draw a simple placeholder fingerprint pattern
-        ctx.fillStyle = '#f0f0f0';
+        // Draw a more realistic demo fingerprint pattern
+        ctx.fillStyle = '#f8f8f8';
         ctx.fillRect(0, 0, 400, 400);
         
+        // Create fingerprint ridges
         ctx.strokeStyle = '#333';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 1.5;
         
-        // Draw some fingerprint-like curves
-        for (let i = 0; i < 10; i++) {
+        // Draw concentric oval patterns to simulate fingerprint ridges
+        for (let i = 0; i < 15; i++) {
           ctx.beginPath();
-          ctx.arc(200, 200, 50 + i * 15, 0, Math.PI * 2);
+          ctx.ellipse(200, 200, 40 + i * 8, 60 + i * 6, 0, 0, Math.PI * 2);
           ctx.stroke();
         }
         
-        ctx.font = '16px Arial';
-        ctx.fillStyle = '#666';
+        // Add some ridge breaks for realism
+        ctx.strokeStyle = '#f8f8f8';
+        ctx.lineWidth = 4;
+        for (let i = 0; i < 8; i++) {
+          const angle = (i * Math.PI * 2) / 8;
+          const x = 200 + Math.cos(angle) * (60 + Math.random() * 40);
+          const y = 200 + Math.sin(angle) * (40 + Math.random() * 30);
+          ctx.beginPath();
+          ctx.arc(x, y, 3, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        
+        // Add demo text at bottom
+        ctx.font = '12px Arial';
+        ctx.fillStyle = '#999';
         ctx.textAlign = 'center';
-        ctx.fillText('DEMO FINGERPRINT', 200, 350);
-        ctx.fillText('(Demo Mode - No Real Capture)', 200, 370);
+        ctx.fillText('DEMO MODE', 200, 380);
       }
       
       canvas.toBlob((blob) => {
@@ -852,25 +875,8 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
             >
               Stop Scan
             </Button>
-          ) : (
-            <Button
-              fullWidth
-              size="small"
-              variant="contained"
-              startIcon={<FingerprintIcon />}
-              disabled={disabled || (scannerStatus !== 'ready' && !internalDemoMode) || enrollmentCompleted}
-              onClick={internalDemoMode ? handleDemoCapture : (bioMiniAvailable ? handleEnhancedBiometricCapture : handleTestCapture)}
-            >
-              {internalDemoMode ? 'Generate Demo Data' : 
-               enrollmentCompleted ? 'Enrollment Complete' :
-               'Enroll Fingerprint'}
-            </Button>
-          )}
-        </Grid>
-        
-        {/* Retake Button - Only show during enrollment mode after successful capture */}
-        {operationMode === 'enroll' && enrollmentCompleted && (
-          <Grid item xs={12} sm={4}>
+          ) : enrollmentCompleted ? (
+            /* Show Retake Button in place of main capture button after enrollment */
             <Button
               fullWidth
               size="small"
@@ -908,8 +914,20 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
             >
               {isProcessingBiometric ? 'Preparing...' : 'Retake Fingerprint'}
             </Button>
-          </Grid>
-        )}
+          ) : (
+            /* Show main capture button when not enrolled */
+            <Button
+              fullWidth
+              size="small"
+              variant="contained"
+              startIcon={<FingerprintIcon />}
+              disabled={disabled || (scannerStatus !== 'ready' && !internalDemoMode)}
+              onClick={internalDemoMode ? handleDemoCapture : (bioMiniAvailable ? handleEnhancedBiometricCapture : handleTestCapture)}
+            >
+              {internalDemoMode ? 'Generate Demo Data' : 'Enroll Fingerprint'}
+            </Button>
+          )}
+        </Grid>
       </Grid>
 
       {/* Verification/Enrollment Results */}
@@ -929,46 +947,7 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
         </Alert>
       )}
 
-      {/* Fingerprint Preview */}
-      {capturedImageUrl && (
-        <Card sx={{ mt: 2, mb: 2 }}>
-          <CardHeader 
-            title="Captured Fingerprint"
-            titleTypographyProps={{ variant: 'subtitle1' }}
-          />
-          <CardContent>
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <Box
-                component="img"
-                src={capturedImageUrl}
-                alt="Captured fingerprint"
-                sx={{
-                  width: 200,
-                  height: 200,
-                  objectFit: 'contain',
-                  border: verificationResult?.success ? '3px solid #4caf50' : '1px solid #ddd',
-                  borderRadius: 1,
-                  backgroundColor: '#f5f5f5'
-                }}
-              />
-              {lastCaptureTime && (
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-                  Captured: {lastCaptureTime}
-                </Typography>
-              )}
-              {operationMode === 'enroll' && enrollmentCompleted && (
-                <Chip 
-                  label={`${FINGER_NAMES[selectedFinger]} Enrolled`}
-                  color="success" 
-                  size="small" 
-                  sx={{ mt: 1 }}
-                  icon={<CheckCircleIcon />}
-                />
-              )}
-            </Box>
-          </CardContent>
-        </Card>
-      )}
+
 
 
 
