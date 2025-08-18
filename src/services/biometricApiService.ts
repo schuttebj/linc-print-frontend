@@ -311,14 +311,14 @@ export class BiometricApiService {
   }
 
   /**
-   * Delete all fingerprint templates for a person
+   * Note: Backend doesn't have delete endpoint yet
+   * For retakes, we'll just re-enroll which should replace existing templates
    * @param personId UUID of the person
-   * @returns Success message
+   * @returns Promise that resolves immediately
    */
   async deletePersonTemplates(personId: string): Promise<{message: string}> {
-    return this.makeRequest<{message: string}>(`/fingerprint/templates/${personId}`, {
-      method: 'DELETE'
-    });
+    console.log(`⚠️ Delete endpoint not available. Re-enrollment will replace existing templates for person: ${personId}`);
+    return Promise.resolve({message: "Re-enrollment will replace existing templates"});
   }
 
   /**

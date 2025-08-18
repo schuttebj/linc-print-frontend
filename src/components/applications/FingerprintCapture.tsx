@@ -95,6 +95,23 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
     'Temporary injury'
   ];
 
+  // Helper function to check if a finger has an enrolled template
+  const getTemplateForFinger = (fingerPosition: number) => {
+    return existingTemplates.find(template => template.finger_position === fingerPosition);
+  };
+
+  // Helper function to update operation mode based on selected finger
+  const updateOperationModeForFinger = (fingerPosition: number) => {
+    const template = getTemplateForFinger(fingerPosition);
+    if (template) {
+      console.log(`🔍 Selected finger ${FINGER_NAMES[fingerPosition]} has existing template - switching to verify mode`);
+      setOperationMode('verify');
+    } else {
+      console.log(`📝 Selected finger ${FINGER_NAMES[fingerPosition]} has no template - switching to enroll mode`);
+      setOperationMode('enroll');
+    }
+  };
+
   // Check for existing templates when personId is provided
   useEffect(() => {
     const checkExistingTemplates = async () => {
@@ -112,12 +129,15 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
         const templates = await biometricApiService.getPersonTemplates(personId);
         setExistingTemplates(templates);
         
-        // Always start in enrollment mode within an application session
-        // Verification should only happen in subsequent applications/logins
+        // If templates exist, start in verification mode for subsequent applications
         if (templates.length > 0) {
-          console.log(`📋 Found ${templates.length} existing templates, but starting new application in enrollment mode`);
-          console.log(`📋 Previous template: ${FINGER_NAMES[templates[0].finger_position]} enrolled on ${new Date(templates[0].enrolled_at).toLocaleDateString()}`);
-          setOperationMode('enroll');
+          console.log(`✅ Found ${templates.length} existing template(s) - entering verification mode`);
+          console.log(`📋 Available templates:`, templates.map(t => `${FINGER_NAMES[t.finger_position]} (${new Date(t.enrolled_at).toLocaleDateString()})`).join(', '));
+          setOperationMode('verify');
+          
+          // Set default finger to first enrolled finger for verification
+          setSelectedFinger(templates[0].finger_position);
+          setUseDifferentFinger(templates[0].finger_position !== 2); // Mark as different if not right index
         } else {
           console.log('📝 No existing templates found - entering enrollment mode');
           setOperationMode('enroll');
@@ -130,6 +150,13 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
 
     checkExistingTemplates();
   }, [personId, internalDemoMode]);
+
+  // Update operation mode when selected finger changes
+  useEffect(() => {
+    if (existingTemplates.length > 0 && selectedFinger) {
+      updateOperationModeForFinger(selectedFinger);
+    }
+  }, [selectedFinger, existingTemplates]);
 
   // Check BioMini Web Agent availability
   const checkBioMiniService = async () => {
@@ -235,13 +262,13 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
 
   // Handle verification workflow
   const handleVerificationWorkflow = async () => {
-    console.log('🔍 Starting verification against existing templates...');
+    console.log(`🔍 Starting verification for ${FINGER_NAMES[selectedFinger]} finger...`);
     setScannerStatus('scanning');
     
-    // Use just the first template for verification (can be enhanced later for multiple templates)
-    const template = existingTemplates[0];
+    // Use the template for the selected finger
+    const template = getTemplateForFinger(selectedFinger);
     if (!template) {
-      throw new Error('No existing templates found for verification');
+      throw new Error(`No enrolled template found for ${FINGER_NAMES[selectedFinger]} finger. Please enroll this finger first.`);
     }
     
     try {
@@ -260,7 +287,7 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
         setVerificationResult({
           success: true,
           score: result.match_score,
-          message: `Identity verified using ${template.finger_position === 2 ? 'Right Index' : 'finger'} template`
+          message: `Identity verified using ${FINGER_NAMES[template.finger_position]} finger`
         });
         
         // Create a placeholder verification file for the callback
@@ -674,19 +701,29 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
     <Box>
       {/* Operation Mode */}
       {personId ? (
-        <Alert severity="info" sx={{ mb: 2, py: 1 }}>
+        <Alert severity={operationMode === 'verify' ? 'success' : 'info'} sx={{ mb: 2, py: 1 }}>
           <Typography variant="body2" sx={{ fontSize: '0.9rem' }}>
-            <strong>📝 Enrollment Mode</strong> - {
-              existingTemplates.length > 0 
-                ? `Will replace existing fingerprint template (${FINGER_NAMES[existingTemplates[0]?.finger_position] || 'Previous finger'})`
-                : 'Will enroll new fingerprint template'
-            }
+            {operationMode === 'verify' ? (
+              <>
+                <strong>🔍 Verification Mode</strong> - Will verify {FINGER_NAMES[selectedFinger]} finger
+                {getTemplateForFinger(selectedFinger) && (
+                  <span> (enrolled on {new Date(getTemplateForFinger(selectedFinger).enrolled_at).toLocaleDateString()})</span>
+                )}
+              </>
+            ) : (
+              <>
+                <strong>📝 Enrollment Mode</strong> - Will enroll {FINGER_NAMES[selectedFinger]} finger
+                {existingTemplates.length > 0 && (
+                  <span> ({existingTemplates.length} other finger(s) already enrolled)</span>
+                )}
+              </>
+            )}
           </Typography>
         </Alert>
       ) : (
         <Alert severity="warning" sx={{ mb: 2, py: 1 }}>
           <Typography variant="body2" sx={{ fontSize: '0.9rem' }}>
-            <strong>⚠️ No Person Selected</strong> - Person ID required for biometric enrollment
+            <strong>⚠️ No Person Selected</strong> - Person ID required for biometric verification/enrollment
           </Typography>
         </Alert>
       )}
@@ -740,17 +777,25 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
       </Box>
 
       {/* Finger Selection */}
-      {operationMode === 'enroll' && !enrollmentCompleted && (
+      {!enrollmentCompleted && (
         <Card sx={{ mb: 2 }}>
           <CardContent sx={{ py: 2 }}>
             <Typography variant="subtitle2" gutterBottom>
               Finger Selection
             </Typography>
             
-            {/* Default finger display */}
+            {/* Current finger display */}
             <Box sx={{ mb: 2 }}>
               <Typography variant="body2" color="text.secondary">
-                Default finger: <strong>{FINGER_NAMES[2]}</strong>
+                {operationMode === 'verify' ? 'Selected for verification' : 'Selected for enrollment'}: <strong>{FINGER_NAMES[selectedFinger]}</strong>
+                {getTemplateForFinger(selectedFinger) && (
+                  <Chip 
+                    label="Enrolled" 
+                    size="small" 
+                    color="success" 
+                    sx={{ ml: 1, fontSize: '0.7rem', height: '18px' }}
+                  />
+                )}
               </Typography>
             </Box>
             
@@ -762,7 +807,12 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
                   onChange={(e) => {
                     setUseDifferentFinger(e.target.checked);
                     if (!e.target.checked) {
-                      setSelectedFinger(2); // Reset to Right Index
+                      // Reset based on mode
+                      if (operationMode === 'verify' && existingTemplates.length > 0) {
+                        setSelectedFinger(existingTemplates[0].finger_position); // Reset to first enrolled finger
+                      } else {
+                        setSelectedFinger(2); // Reset to Right Index for enrollment
+                      }
                       setFingerChangeReason('');
                     }
                   }}
@@ -784,13 +834,32 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
                   <Select
                     value={selectedFinger}
                     label="Select Finger"
-                    onChange={(e) => setSelectedFinger(Number(e.target.value))}
+                    onChange={(e) => {
+                      const newFinger = Number(e.target.value);
+                      setSelectedFinger(newFinger);
+                      updateOperationModeForFinger(newFinger);
+                    }}
                   >
-                    {Object.entries(FINGER_NAMES).map(([position, name]) => (
-                      <MenuItem key={position} value={Number(position)}>
-                        {name}
-                      </MenuItem>
-                    ))}
+                    {Object.entries(FINGER_NAMES).map(([position, name]) => {
+                      const fingerPos = Number(position);
+                      const template = getTemplateForFinger(fingerPos);
+                      const isEnrolled = !!template;
+                      return (
+                        <MenuItem key={position} value={fingerPos}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                            <Typography variant="body2">{name}</Typography>
+                            {isEnrolled && (
+                              <Chip 
+                                label="Enrolled" 
+                                size="small" 
+                                color="success" 
+                                sx={{ fontSize: '0.7rem', height: '16px' }}
+                              />
+                            )}
+                          </Box>
+                        </MenuItem>
+                      );
+                    })}
                   </Select>
                 </FormControl>
                 
@@ -888,13 +957,7 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
                 try {
                   setIsProcessingBiometric(true);
                   
-                  // Delete previous enrollment if exists
-                  if (personId) {
-                    console.log(`🗑️ Deleting previous fingerprint templates for person: ${personId}`);
-                    await biometricApiService.deletePersonTemplates(personId);
-                  }
-                  
-                  // Clear previous results before retaking
+                  // Clear previous results before retaking (re-enrollment will replace existing template)
                   setVerificationResult(null);
                   setEnrollmentCompleted(false);
                   if (capturedImageUrl) {
@@ -903,10 +966,10 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
                     setLastCaptureTime('');
                   }
                   
-                  console.log('🔄 Retaking fingerprint enrollment...');
+                  console.log('🔄 Ready for fingerprint retake (re-enrollment will replace existing template)...');
                 } catch (error) {
                   console.error('❌ Error preparing for retake:', error);
-                  setErrorMessage('Failed to clear previous enrollment. Please try again.');
+                  setErrorMessage('Failed to prepare for retake. Please try again.');
                 } finally {
                   setIsProcessingBiometric(false);
                 }
@@ -924,7 +987,8 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
               disabled={disabled || (scannerStatus !== 'ready' && !internalDemoMode)}
               onClick={internalDemoMode ? handleDemoCapture : (bioMiniAvailable ? handleEnhancedBiometricCapture : handleTestCapture)}
             >
-              {internalDemoMode ? 'Generate Demo Data' : 'Enroll Fingerprint'}
+              {internalDemoMode ? 'Generate Demo Data' : 
+               operationMode === 'verify' ? 'Verify Fingerprint' : 'Enroll Fingerprint'}
             </Button>
           )}
         </Grid>
