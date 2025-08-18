@@ -192,10 +192,16 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
     
     canvas.toBlob((blob) => {
       if (blob) {
-        const imageUrl = URL.createObjectURL(blob);
+        const fingerprintFile = new File([blob], `stored_fingerprint_${template.finger_position}.png`, { type: 'image/png' });
+        const imageUrl = URL.createObjectURL(fingerprintFile);
         setStoredFingerprintImage(imageUrl);
         setCapturedImageUrl(imageUrl); // Also set as captured for display
-        console.log('✅ Stored fingerprint visualization generated');
+        setLastCaptureTime(new Date(template.enrolled_at).toLocaleString());
+        
+        // Call the callback to update the parent component
+        onFingerprintCapture(fingerprintFile);
+        
+        console.log('✅ Stored fingerprint visualization generated and displayed');
       }
     }, 'image/png');
   };
