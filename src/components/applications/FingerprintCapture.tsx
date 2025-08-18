@@ -50,6 +50,7 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
   const [deviceInfo, setDeviceInfo] = useState<{model?: string, serial?: string}>({});
   const [capturedImageUrl, setCapturedImageUrl] = useState<string>('');
   const [lastCaptureTime, setLastCaptureTime] = useState<string>('');
+  const [storedFingerprintImage, setStoredFingerprintImage] = useState<string>(''); // For showing enrolled fingerprint during verification
   const [captureTimeoutId, setCaptureTimeoutId] = useState<number | null>(null);
   const [captureAbortController, setCaptureAbortController] = useState<AbortController | null>(null);
   
@@ -106,10 +107,97 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
     if (template) {
       console.log(`🔍 Selected finger ${FINGER_NAMES[fingerPosition]} has existing template - switching to verify mode`);
       setOperationMode('verify');
+      // Generate stored fingerprint visualization for verification
+      generateStoredFingerprintVisualization(template);
     } else {
       console.log(`📝 Selected finger ${FINGER_NAMES[fingerPosition]} has no template - switching to enroll mode`);
       setOperationMode('enroll');
+      setStoredFingerprintImage(''); // Clear stored image
     }
+  };
+
+  // Generate a fingerprint visualization for stored templates
+  const generateStoredFingerprintVisualization = (template: any) => {
+    console.log('🎨 Generating stored fingerprint visualization...');
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = 400;
+    canvas.height = 400;
+    const ctx = canvas.getContext('2d');
+    
+    if (ctx) {
+      // Background
+      ctx.fillStyle = '#f8f8f8';
+      ctx.fillRect(0, 0, 400, 400);
+      
+      // Create a realistic fingerprint pattern based on template metadata
+      ctx.strokeStyle = '#2c2c2c';
+      ctx.lineWidth = 1.5;
+      
+      // Generate fingerprint ridges based on template hash for consistency
+      const hash = template.template_hash || template.template_id;
+      let seedValue = hash ? parseInt(hash.substring(0, 8), 16) : Date.now();
+      const random = () => {
+        // Simple seeded random number generator for consistent patterns
+        const x = Math.sin(seedValue++) * 10000;
+        return x - Math.floor(x);
+      };
+      
+      // Draw concentric oval patterns with variations based on template
+      const centerX = 200 + (random() - 0.5) * 20;
+      const centerY = 200 + (random() - 0.5) * 20;
+      
+      for (let i = 0; i < 20; i++) {
+        ctx.beginPath();
+        const radiusX = 30 + i * 6 + random() * 10;
+        const radiusY = 45 + i * 5 + random() * 8;
+        const rotation = random() * 0.3;
+        
+        ctx.ellipse(centerX, centerY, radiusX, radiusY, rotation, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Add some ridge breaks for realism
+        if (i % 3 === 0) {
+          ctx.strokeStyle = '#f8f8f8';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          const breakX = centerX + (random() - 0.5) * radiusX * 1.5;
+          const breakY = centerY + (random() - 0.5) * radiusY * 1.5;
+          ctx.arc(breakX, breakY, 2, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.strokeStyle = '#2c2c2c';
+          ctx.lineWidth = 1.5;
+        }
+      }
+      
+      // Add some minutiae points
+      ctx.fillStyle = '#1976d2';
+      for (let i = 0; i < 8; i++) {
+        const x = centerX + (random() - 0.5) * 120;
+        const y = centerY + (random() - 0.5) * 140;
+        ctx.beginPath();
+        ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
+      // Add template info overlay
+      ctx.font = '11px Arial';
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.fillText(`${FINGER_NAMES[template.finger_position]}`, 10, 20);
+      ctx.fillText(`Enrolled: ${new Date(template.enrolled_at).toLocaleDateString()}`, 10, 35);
+      if (template.quality_score) {
+        ctx.fillText(`Quality: ${template.quality_score}`, 10, 50);
+      }
+    }
+    
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const imageUrl = URL.createObjectURL(blob);
+        setStoredFingerprintImage(imageUrl);
+        setCapturedImageUrl(imageUrl); // Also set as captured for display
+        console.log('✅ Stored fingerprint visualization generated');
+      }
+    }, 'image/png');
   };
 
   // Check for existing templates when personId is provided
@@ -138,6 +226,9 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
           // Set default finger to first enrolled finger for verification
           setSelectedFinger(templates[0].finger_position);
           setUseDifferentFinger(templates[0].finger_position !== 2); // Mark as different if not right index
+          
+          // Generate stored fingerprint visualization for the default finger
+          generateStoredFingerprintVisualization(templates[0]);
         } else {
           console.log('📝 No existing templates found - entering enrollment mode');
           setOperationMode('enroll');
@@ -290,32 +381,13 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
           message: `Identity verified using ${FINGER_NAMES[template.finger_position]} finger`
         });
         
-        // Create a placeholder verification file for the callback
-        const canvas = document.createElement('canvas');
-        canvas.width = 400;
-        canvas.height = 400;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.fillStyle = '#e8f5e8';
-          ctx.fillRect(0, 0, 400, 400);
-          ctx.strokeStyle = '#4caf50';
-          ctx.lineWidth = 3;
-          ctx.strokeRect(10, 10, 380, 380);
-          ctx.font = '16px Arial';
-          ctx.fillStyle = '#2e7d32';
-          ctx.textAlign = 'center';
-          ctx.fillText('VERIFIED', 200, 200);
-          ctx.fillText(`Score: ${result.match_score || 'N/A'}`, 200, 220);
-        }
+        // Keep showing the stored fingerprint - don't replace with placeholder
+        // The success will be indicated through the border color and success message
+        console.log('🎨 Keeping stored fingerprint visualization with success indicators');
         
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const verificationFile = new File([blob], 'verified_fingerprint.png', { type: 'image/png' });
-            const imageUrl = URL.createObjectURL(verificationFile);
-            setCapturedImageUrl(imageUrl);
-            onFingerprintCapture(verificationFile);
-          }
-        }, 'image/png');
+        // Create a minimal file for the callback if needed
+        const successFile = new File(['verification_success'], 'verified_fingerprint.png', { type: 'image/png' });
+        onFingerprintCapture(successFile);
         
         return;
       } else {
@@ -326,32 +398,12 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
           message: 'Fingerprint does not match enrolled template'
         });
         
-        // Create a placeholder failure file for visual feedback
-        const canvas = document.createElement('canvas');
-        canvas.width = 400;
-        canvas.height = 400;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.fillStyle = '#ffebee';
-          ctx.fillRect(0, 0, 400, 400);
-          ctx.strokeStyle = '#f44336';
-          ctx.lineWidth = 3;
-          ctx.strokeRect(10, 10, 380, 380);
-          ctx.font = '16px Arial';
-          ctx.fillStyle = '#c62828';
-          ctx.textAlign = 'center';
-          ctx.fillText('NOT VERIFIED', 200, 200);
-          ctx.fillText(`Score: ${result.match_score || 'N/A'}`, 200, 220);
-        }
+        // Keep showing the stored fingerprint - failure will be indicated through border and message
+        console.log('🎨 Keeping stored fingerprint visualization with failure indicators');
         
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const failureFile = new File([blob], 'verification_failed.png', { type: 'image/png' });
-            const imageUrl = URL.createObjectURL(failureFile);
-            setCapturedImageUrl(imageUrl);
-            onFingerprintCapture(failureFile);
-          }
-        }, 'image/png');
+        // Create a minimal file for the callback if needed
+        const failureFile = new File(['verification_failed'], 'verification_failed.png', { type: 'image/png' });
+        onFingerprintCapture(failureFile);
         
         throw new Error('Verification failed - fingerprint does not match');
       }
@@ -601,9 +653,12 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
   // Cleanup on component unmount
   useEffect(() => {
     return () => {
-      // Clean up image URL to prevent memory leaks
+      // Clean up image URLs to prevent memory leaks
       if (capturedImageUrl) {
         URL.revokeObjectURL(capturedImageUrl);
+      }
+      if (storedFingerprintImage) {
+        URL.revokeObjectURL(storedFingerprintImage);
       }
       
       // Clear any active timeout
@@ -616,7 +671,7 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
         captureAbortController.abort();
       }
     };
-  }, [capturedImageUrl, captureTimeoutId, captureAbortController]);
+  }, [capturedImageUrl, storedFingerprintImage, captureTimeoutId, captureAbortController]);
 
   // Demo capture function for testing without real hardware
   const handleDemoCapture = () => {
@@ -745,6 +800,10 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
                   URL.revokeObjectURL(capturedImageUrl);
                   setCapturedImageUrl('');
                   setLastCaptureTime('');
+                }
+                if (storedFingerprintImage) {
+                  URL.revokeObjectURL(storedFingerprintImage);
+                  setStoredFingerprintImage('');
                 }
                 
                 console.log(`🔄 Switched to ${newDemoMode ? 'Demo' : 'Production'} mode`);
@@ -964,6 +1023,10 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
                     URL.revokeObjectURL(capturedImageUrl);
                     setCapturedImageUrl('');
                     setLastCaptureTime('');
+                  }
+                  if (storedFingerprintImage) {
+                    URL.revokeObjectURL(storedFingerprintImage);
+                    setStoredFingerprintImage('');
                   }
                   
                   console.log('🔄 Ready for fingerprint retake (re-enrollment will replace existing template)...');
