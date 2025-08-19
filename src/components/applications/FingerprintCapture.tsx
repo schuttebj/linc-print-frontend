@@ -108,7 +108,7 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
       console.log(`🔍 Selected finger ${FINGER_NAMES[fingerPosition]} has existing template - switching to verify mode`);
       setOperationMode('verify');
       // Generate stored fingerprint visualization for verification
-      generateStoredFingerprintVisualization(template);
+      loadStoredFingerprintImage(template);
     } else {
       console.log(`📝 Selected finger ${FINGER_NAMES[fingerPosition]} has no template - switching to enroll mode`);
       setOperationMode('enroll');
@@ -116,9 +116,77 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
     }
   };
 
-  // Generate a fingerprint visualization for stored templates
-  const generateStoredFingerprintVisualization = (template: any) => {
-    console.log('🎨 Generating stored fingerprint visualization...');
+  // Load stored fingerprint image or generate fallback
+  const loadStoredFingerprintImage = (template: any) => {
+    console.log('🖼️ Loading stored fingerprint image...');
+    
+    // Check if template has stored image URL
+    if (template.image_url) {
+      console.log(`📷 Using stored fingerprint image: ${template.image_url}`);
+      console.log(`📸 Template ID: ${template.template_id}`);
+      console.log(`👤 Person ID: ${template.person_id}`);
+      console.log(`🖐️  Finger: ${template.finger_position}`);
+      setStoredFingerprintImage(template.image_url);
+      setCapturedImageUrl(template.image_url);
+      setLastCaptureTime(new Date(template.enrolled_at).toLocaleString());
+      
+      // Create a File object from the URL for the parent component
+      fetch(template.image_url)
+        .then(response => response.blob())
+        .then(blob => {
+          const filename = `stored_fingerprint_${template.finger_position}.png`;
+          const imageFile = new File([blob], filename, { type: 'image/png' });
+          onFingerprintCapture(imageFile);
+          console.log('✅ Stored fingerprint image loaded and displayed');
+        })
+        .catch(error => {
+          console.warn('⚠️ Failed to load stored fingerprint image, falling back to visualization:', error);
+          // Fallback to visualization if image fails to load
+          generateFallbackVisualization(template);
+        });
+    } else {
+      console.log('📷 No stored image found, generating fallback visualization');
+      generateFallbackVisualization(template);
+    }
+  };
+
+  // Create enrollment fallback image
+  const createEnrollmentFallback = (result: any) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 400;
+    canvas.height = 400;
+    const ctx = canvas.getContext('2d');
+    
+    if (ctx) {
+      ctx.fillStyle = '#e8f5e8';
+      ctx.fillRect(0, 0, 400, 400);
+      ctx.strokeStyle = '#4caf50';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(10, 10, 380, 380);
+      ctx.font = '16px Arial';
+      ctx.fillStyle = '#2e7d32';
+      ctx.textAlign = 'center';
+      ctx.fillText('ENROLLED', 200, 180);
+      ctx.fillText(`${FINGER_NAMES[result.finger_position]}`, 200, 200);
+      ctx.fillText('Template Stored', 200, 220);
+      ctx.font = '12px Arial';
+      ctx.fillText(`Template ID: ${result.template_id.substring(0, 8)}...`, 200, 250);
+    }
+    
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const enrollmentFile = new File([blob], 'enrolled_fingerprint.png', { type: 'image/png' });
+        const imageUrl = URL.createObjectURL(enrollmentFile);
+        setCapturedImageUrl(imageUrl);
+        onFingerprintCapture(enrollmentFile);
+        console.log('✅ Enrollment fallback image created');
+      }
+    }, 'image/png');
+  };
+
+  // Generate fallback visualization when no stored image is available
+  const generateFallbackVisualization = (template: any) => {
+    console.log('🎨 Generating fallback fingerprint visualization...');
     
     const canvas = document.createElement('canvas');
     canvas.width = 400;
@@ -127,81 +195,55 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
     
     if (ctx) {
       // Background
-      ctx.fillStyle = '#f8f8f8';
+      ctx.fillStyle = '#f0f0f0';
       ctx.fillRect(0, 0, 400, 400);
       
-      // Create a realistic fingerprint pattern based on template metadata
-      ctx.strokeStyle = '#2c2c2c';
-      ctx.lineWidth = 1.5;
+      // Draw a placeholder fingerprint pattern
+      ctx.strokeStyle = '#999';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
       
-      // Generate fingerprint ridges based on template hash for consistency
-      const hash = template.template_hash || template.template_id;
-      let seedValue = hash ? parseInt(hash.substring(0, 8), 16) : Date.now();
-      const random = () => {
-        // Simple seeded random number generator for consistent patterns
-        const x = Math.sin(seedValue++) * 10000;
-        return x - Math.floor(x);
-      };
+      // Draw concentric ovals for simple fingerprint representation
+      const centerX = 200;
+      const centerY = 200;
       
-      // Draw concentric oval patterns with variations based on template
-      const centerX = 200 + (random() - 0.5) * 20;
-      const centerY = 200 + (random() - 0.5) * 20;
-      
-      for (let i = 0; i < 20; i++) {
-        ctx.beginPath();
-        const radiusX = 30 + i * 6 + random() * 10;
-        const radiusY = 45 + i * 5 + random() * 8;
-        const rotation = random() * 0.3;
-        
-        ctx.ellipse(centerX, centerY, radiusX, radiusY, rotation, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // Add some ridge breaks for realism
-        if (i % 3 === 0) {
-          ctx.strokeStyle = '#f8f8f8';
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          const breakX = centerX + (random() - 0.5) * radiusX * 1.5;
-          const breakY = centerY + (random() - 0.5) * radiusY * 1.5;
-          ctx.arc(breakX, breakY, 2, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.strokeStyle = '#2c2c2c';
-          ctx.lineWidth = 1.5;
-        }
-      }
-      
-      // Add some minutiae points
-      ctx.fillStyle = '#1976d2';
       for (let i = 0; i < 8; i++) {
-        const x = centerX + (random() - 0.5) * 120;
-        const y = centerY + (random() - 0.5) * 140;
-        ctx.beginPath();
-        ctx.arc(x, y, 1.5, 0, Math.PI * 2);
-        ctx.fill();
+        const radiusX = 30 + i * 15;
+        const radiusY = 40 + i * 18;
+        ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, Math.PI * 2);
+        ctx.stroke();
       }
       
-      // Add template info overlay
-      ctx.font = '11px Arial';
-      ctx.fillStyle = 'rgba(0,0,0,0.6)';
-      ctx.fillText(`${FINGER_NAMES[template.finger_position]}`, 10, 20);
-      ctx.fillText(`Enrolled: ${new Date(template.enrolled_at).toLocaleDateString()}`, 10, 35);
+      // Add template info overlay with better styling
+      ctx.font = 'bold 16px Arial';
+      ctx.fillStyle = '#333';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${FINGER_NAMES[template.finger_position]}`, 200, 50);
+      
+      ctx.font = '14px Arial';
+      ctx.fillStyle = '#666';
+      ctx.fillText(`Enrolled: ${new Date(template.enrolled_at).toLocaleDateString()}`, 200, 350);
+      
       if (template.quality_score) {
-        ctx.fillText(`Quality: ${template.quality_score}`, 10, 50);
+        ctx.fillText(`Quality: ${template.quality_score}%`, 200, 370);
       }
+      
+      // Add "stored template" indicator
+      ctx.font = '12px Arial';
+      ctx.fillStyle = '#888';
+      ctx.fillText('(Stored Template Preview)', 200, 390);
     }
     
     canvas.toBlob((blob) => {
       if (blob) {
-        const fingerprintFile = new File([blob], `stored_fingerprint_${template.finger_position}.png`, { type: 'image/png' });
+        const fingerprintFile = new File([blob], `fallback_fingerprint_${template.finger_position}.png`, { type: 'image/png' });
         const imageUrl = URL.createObjectURL(fingerprintFile);
         setStoredFingerprintImage(imageUrl);
-        setCapturedImageUrl(imageUrl); // Also set as captured for display
+        setCapturedImageUrl(imageUrl);
         setLastCaptureTime(new Date(template.enrolled_at).toLocaleString());
         
-        // Call the callback to update the parent component
         onFingerprintCapture(fingerprintFile);
-        
-        console.log('✅ Stored fingerprint visualization generated and displayed');
+        console.log('✅ Fallback fingerprint visualization generated');
       }
     }, 'image/png');
   };
@@ -234,7 +276,7 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
           setUseDifferentFinger(templates[0].finger_position !== 2); // Mark as different if not right index
           
           // Generate stored fingerprint visualization for the default finger
-          generateStoredFingerprintVisualization(templates[0]);
+          loadStoredFingerprintImage(templates[0]);
         } else {
           console.log('📝 No existing templates found - entering enrollment mode');
           setOperationMode('enroll');
@@ -457,46 +499,37 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
         setLastCaptureTime(new Date().toLocaleString());
         setScannerStatus('ready');
         
-        // Use the actual captured fingerprint image from the enrollment result
-        if (result.captured_image) {
-          console.log('📸 Using actual captured fingerprint image from enrollment');
+        // Use the stored fingerprint image URL if available, otherwise fallback to captured image
+        if (result.image_url) {
+          console.log('📸 Using stored fingerprint image from backend');
+          console.log(`🖼️ Image URL: ${result.image_url}`);
+          console.log(`📸 Template ID: ${result.template_id}`);
+          console.log(`👤 Person ID: ${result.person_id}`);
+          console.log(`🖐️  Finger: ${result.finger_position}`);
+          setCapturedImageUrl(result.image_url);
+          
+          // Convert URL to File for callback
+          fetch(result.image_url)
+            .then(response => response.blob())
+            .then(blob => {
+              const imageFile = new File([blob], `enrolled_fingerprint_${result.finger_position}.png`, { type: 'image/png' });
+              onFingerprintCapture(imageFile);
+              console.log('✅ Stored fingerprint image displayed');
+            })
+            .catch(() => {
+              console.warn('⚠️ Failed to load stored image, using fallback');
+              // Create fallback if stored image fails
+              createEnrollmentFallback(result);
+            });
+        } else if (result.captured_image) {
+          console.log('📸 Using legacy captured fingerprint image from enrollment');
           const imageUrl = URL.createObjectURL(result.captured_image);
           setCapturedImageUrl(imageUrl);
           onFingerprintCapture(result.captured_image);
-          console.log('✅ Actual fingerprint image displayed');
+          console.log('✅ Legacy fingerprint image displayed');
         } else {
           console.warn('⚠️ No captured image available in enrollment result, creating placeholder');
-          
-          // Fallback: Create a success placeholder for the UI callback
-          const canvas = document.createElement('canvas');
-          canvas.width = 400;
-          canvas.height = 400;
-          const ctx = canvas.getContext('2d');
-          
-          if (ctx) {
-            ctx.fillStyle = '#e8f5e8';
-            ctx.fillRect(0, 0, 400, 400);
-            ctx.strokeStyle = '#4caf50';
-            ctx.lineWidth = 3;
-            ctx.strokeRect(10, 10, 380, 380);
-            ctx.font = '16px Arial';
-            ctx.fillStyle = '#2e7d32';
-            ctx.textAlign = 'center';
-            ctx.fillText('ENROLLED', 200, 180);
-            ctx.fillText(`${FINGER_NAMES[result.finger_position]}`, 200, 200);
-            ctx.fillText('Template Stored', 200, 220);
-            ctx.font = '12px Arial';
-            ctx.fillText(`Template ID: ${result.template_id.substring(0, 8)}...`, 200, 250);
-          }
-          
-          canvas.toBlob((blob) => {
-            if (blob) {
-              const enrollmentFile = new File([blob], 'enrolled_fingerprint.png', { type: 'image/png' });
-              const imageUrl = URL.createObjectURL(enrollmentFile);
-              setCapturedImageUrl(imageUrl);
-              onFingerprintCapture(enrollmentFile);
-            }
-          }, 'image/png');
+          createEnrollmentFallback(result);
         }
       }
     } catch (error) {

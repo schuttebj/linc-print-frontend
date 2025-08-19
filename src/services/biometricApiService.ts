@@ -28,6 +28,7 @@ interface FingerprintEnrollRequest {
   capture_device?: string;
   capture_software?: string;
   scanner_serial?: string;
+  captured_image_base64?: string; // NEW: Base64 encoded captured image
 }
 
 interface FingerprintEnrollResponse {
@@ -40,7 +41,9 @@ interface FingerprintEnrollResponse {
   template_hash: string;
   enrolled_at: string;
   message: string;
-  captured_image?: File; // Add the captured image file
+  image_url?: string;
+  // Legacy field - will be replaced by image_url
+  captured_image?: File;
 }
 
 interface FingerprintVerifyRequest {
@@ -73,6 +76,7 @@ interface FingerprintTemplateInfo {
   is_verified: boolean;
   enrolled_at: string;
   captured_by?: string;
+  image_url?: string;
 }
 
 interface BiometricSystemStats {
@@ -186,7 +190,18 @@ export class BiometricApiService {
           console.warn('⚠️ Could not retrieve quality score');
         }
 
-        // Step 4: Send to backend for storage
+        // Step 4: Convert captured image to Base64
+        let capturedImageBase64: string | undefined;
+        if (imageFile) {
+          try {
+            capturedImageBase64 = await this.fileToBase64(imageFile);
+            console.log(`📷 Captured image converted to Base64: ${capturedImageBase64.length} characters`);
+          } catch (e) {
+            console.warn('⚠️ Failed to convert captured image to Base64:', e);
+          }
+        }
+
+        // Step 5: Send to backend for storage
         const enrollRequest: FingerprintEnrollRequest = {
           person_id: personId,
           application_id: applicationId,
@@ -197,7 +212,8 @@ export class BiometricApiService {
           quality_score: qualityScore,
           capture_device: 'BioMini Slim 2',
           capture_software: 'WebAgent',
-          scanner_serial: undefined // Could be retrieved from device info
+          scanner_serial: undefined, // Could be retrieved from device info
+          captured_image_base64: capturedImageBase64
         };
 
         const enrollResponse = await this.makeRequest<FingerprintEnrollResponse>(
@@ -210,8 +226,16 @@ export class BiometricApiService {
 
         console.log(`✅ Template stored successfully: ${enrollResponse.template_id}`);
         
-        // Add the captured image to the response
-        enrollResponse.captured_image = imageFile;
+        // If backend returned image URL, use that; otherwise fallback to local image
+        if (enrollResponse.image_url) {
+          console.log(`🖼️ Stored fingerprint image available at: ${enrollResponse.image_url}`);
+          console.log(`📸 Template ID: ${enrollResponse.template_id}`);
+          console.log(`👤 Person ID: ${enrollResponse.person_id}`);
+          console.log(`🖐️  Finger: ${enrollResponse.finger_position}`);
+        } else {
+          // Add the captured image to the response for backward compatibility
+          enrollResponse.captured_image = imageFile;
+        }
         
         results.push(enrollResponse);
 
@@ -480,6 +504,28 @@ export class BiometricApiService {
    */
   setConfig(config: Partial<BiometricApiConfig>): void {
     this.config = { ...this.config, ...config };
+  }
+
+  /**
+   * Convert File to Base64 string
+   * @param file File object to convert
+   * @returns Promise<string> Base64 encoded string
+   */
+  private fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          // Remove data URL prefix (e.g., "data:image/bmp;base64,")
+          const base64 = reader.result.split(',')[1];
+          resolve(base64);
+        } else {
+          reject(new Error('Failed to convert file to Base64'));
+        }
+      };
+      reader.onerror = () => reject(new Error('FileReader error'));
+      reader.readAsDataURL(file);
+    });
   }
 }
 
