@@ -163,42 +163,37 @@ const ApplicationsDashboard: React.FC = () => {
         </Typography>
       </Box>
 
-      {/* Quick Actions */}
-      <Paper 
-        elevation={0}
-        sx={{ 
-          p: 1.5, 
-          mb: 1.5, 
-          flexGrow: 1,
-          overflow: 'auto',
-          bgcolor: '#f8f9fa',
-          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-          borderRadius: 2
-        }}
-      >
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-          <Typography variant="subtitle1" component="h2" sx={{ fontSize: '1rem', fontWeight: 600 }}>
-            Quick Actions
-          </Typography>
-          <Button
-            variant="outlined"
-            onClick={handleViewAllApplications}
-            startIcon={<Assessment />}
-            size="small"
-            sx={{ fontSize: '0.8rem' }}
-          >
-            View All Applications
-          </Button>
-        </Stack>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontSize: '0.8rem' }}>
+      {/* Header Actions */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
           Start a new application by selecting from the categories below
         </Typography>
+        <Button
+          variant="outlined"
+          onClick={handleViewAllApplications}
+          startIcon={<Assessment />}
+          size="small"
+        >
+          View All Applications
+        </Button>
+      </Box>
 
-        {/* Application Categories */}
-        <Stack spacing={2}>
+      {/* Application Categories */}
+      <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
+        <Stack spacing={1.5}>
           {applicationCategories.map((category, index) => (
-            <Box key={category.title}>
-              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+            <Paper 
+              key={category.title}
+              elevation={0}
+              sx={{ 
+                p: 1.5,
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2
+              }}
+            >
+              {/* Category Header */}
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
                 <Chip
                   label={category.title}
                   color={category.color as any}
@@ -208,6 +203,7 @@ const ApplicationsDashboard: React.FC = () => {
                 />
               </Stack>
               
+              {/* Category Applications */}
               <Grid container spacing={1}>
                 {category.applications.map((app) => {
                   // Check permissions
@@ -297,12 +293,10 @@ const ApplicationsDashboard: React.FC = () => {
                   );
                 })}
               </Grid>
-              
-              {index < applicationCategories.length - 1 && <Divider sx={{ mt: 1.5, mb: 0.5 }} />}
-            </Box>
+            </Paper>
           ))}
         </Stack>
-      </Paper>
+      </Box>
     </Container>
   );
 };
