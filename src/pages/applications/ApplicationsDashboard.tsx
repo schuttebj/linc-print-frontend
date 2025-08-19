@@ -187,7 +187,7 @@ const ApplicationsDashboard: React.FC = () => {
               elevation={0}
               sx={{ 
                 p: 1.5,
-                bgcolor: 'white',
+                bgcolor: '#f8f9fa',
                 boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
                 borderRadius: 2
               }}
