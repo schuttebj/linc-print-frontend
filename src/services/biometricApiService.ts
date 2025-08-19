@@ -500,6 +500,44 @@ export class BiometricApiService {
   }
 
   /**
+   * Delete fingerprint template for re-enrollment
+   * @param personId UUID of the person
+   * @param fingerPosition Finger position (1-10)
+   * @returns Promise<{deleted: boolean, message: string}>
+   */
+  async deletePersonFingerprint(personId: string, fingerPosition: number): Promise<{deleted: boolean, message: string, template_id?: string}> {
+    console.log(`🗑️ Deleting fingerprint template for person ${personId}, finger ${fingerPosition}...`);
+    
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    };
+
+    // Use the same authentication approach as other services
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    } else if (this.config.apiKey) {
+      headers['Authorization'] = `Bearer ${this.config.apiKey}`;
+    }
+    
+    const response = await fetch(
+      `${this.config.baseUrl}/api/v1/biometric/fingerprint/templates/${personId}/${fingerPosition}`,
+      {
+        method: 'DELETE',
+        headers,
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to delete fingerprint template: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    console.log(`✅ Template deletion result:`, result);
+    return result;
+  }
+
+  /**
    * Set API configuration
    */
   setConfig(config: Partial<BiometricApiConfig>): void {

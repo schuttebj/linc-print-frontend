@@ -394,7 +394,19 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
       }
     } catch (error) {
       console.error(`❌ ${operationMode} failed:`, error);
-      setErrorMessage(`${operationMode === 'verify' ? 'Verification' : 'Enrollment'} failed: ${error.message}`);
+      
+      // For verification failures, preserve the stored fingerprint image and show specific error
+      if (operationMode === 'verify') {
+        console.log('🖼️ Preserving stored fingerprint image after verification failure');
+        setVerificationResult({
+          success: false,
+          message: error.message || 'Verification failed due to technical error'
+        });
+        // Don't set general errorMessage for verification failures - use verificationResult instead
+      } else {
+        // For enrollment failures, use general error message
+        setErrorMessage(`Enrollment failed: ${error.message}`);
+      }
     } finally {
       setIsProcessingBiometric(false);
     }
@@ -1002,6 +1014,23 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
         </Alert>
       )}
 
+      {/* Verification/Enrollment Results */}
+      {verificationResult && (
+        <Alert severity={verificationResult.success ? 'success' : 'error'} sx={{ mb: 2 }}>
+          <Typography variant="body2">
+            <strong>{verificationResult.success ? '✅ Success!' : '❌ Failed'}</strong>
+          </Typography>
+          <Typography variant="body2">
+            {verificationResult.message}
+          </Typography>
+          {verificationResult.score !== undefined && (
+            <Typography variant="body2" sx={{ mt: 1 }}>
+              <strong>Match Score:</strong> {verificationResult.score}
+            </Typography>
+          )}
+        </Alert>
+      )}
+
 
 
       {/* Control Buttons */}
@@ -1055,8 +1084,23 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
               onClick={async () => {
                 try {
                   setIsProcessingBiometric(true);
+                  setErrorMessage(''); // Clear any previous errors
                   
-                  // Clear previous results before retaking (re-enrollment will replace existing template)
+                  // Delete existing template and image before retaking
+                  console.log('🗑️ Deleting previous fingerprint template for retake...');
+                  try {
+                    const deleteResult = await biometricApiService.deletePersonFingerprint(personId, selectedFinger);
+                    if (deleteResult.deleted) {
+                      console.log(`✅ Previous template ${deleteResult.template_id} deleted successfully`);
+                    } else {
+                      console.log('ℹ️ No existing template found to delete');
+                    }
+                  } catch (deleteError) {
+                    console.warn('⚠️ Failed to delete previous template, but proceeding with retake:', deleteError);
+                    // Don't fail the retake if deletion fails - new enrollment will overwrite
+                  }
+                  
+                  // Clear previous results and UI state
                   setVerificationResult(null);
                   setEnrollmentCompleted(false);
                   if (capturedImageUrl) {
@@ -1069,7 +1113,7 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
                     setStoredFingerprintImage('');
                   }
                   
-                  console.log('🔄 Ready for fingerprint retake (re-enrollment will replace existing template)...');
+                  console.log('🔄 Ready for fingerprint retake - previous template deleted...');
                 } catch (error) {
                   console.error('❌ Error preparing for retake:', error);
                   setErrorMessage('Failed to prepare for retake. Please try again.');
@@ -1097,22 +1141,7 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
         </Grid>
       </Grid>
 
-      {/* Verification/Enrollment Results */}
-      {verificationResult && (
-        <Alert severity={verificationResult.success ? 'success' : 'error'} sx={{ mt: 2, mb: 2 }}>
-          <Typography variant="body2">
-            <strong>{verificationResult.success ? '✅ Success!' : '❌ Failed'}</strong>
-          </Typography>
-          <Typography variant="body2">
-            {verificationResult.message}
-          </Typography>
-          {verificationResult.score !== undefined && (
-            <Typography variant="body2" sx={{ mt: 1 }}>
-              <strong>Match Score:</strong> {verificationResult.score}
-            </Typography>
-          )}
-        </Alert>
-      )}
+
 
 
 
