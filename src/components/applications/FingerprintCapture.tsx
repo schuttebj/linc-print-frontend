@@ -123,6 +123,7 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
     // Check if template has stored image URL
     if (template.image_url) {
       console.log(`📷 Using stored fingerprint image: ${template.image_url}`);
+      console.log(`🖼️ Full Verification URL: ${template.image_url}`);
       console.log(`📸 Template ID: ${template.template_id}`);
       console.log(`👤 Person ID: ${template.person_id}`);
       console.log(`🖐️  Finger: ${template.finger_position}`);
@@ -502,7 +503,7 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
         // Use the stored fingerprint image URL if available, otherwise fallback to captured image
         if (result.image_url) {
           console.log('📸 Using stored fingerprint image from backend');
-          console.log(`🖼️ Image URL: ${result.image_url}`);
+          console.log(`🖼️ Full Image URL: ${result.image_url}`);
           console.log(`📸 Template ID: ${result.template_id}`);
           console.log(`👤 Person ID: ${result.person_id}`);
           console.log(`🖐️  Finger: ${result.finger_position}`);
