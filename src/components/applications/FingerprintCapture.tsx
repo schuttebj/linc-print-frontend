@@ -137,8 +137,14 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
         .then(blob => {
           const filename = `stored_fingerprint_${template.finger_position}.png`;
           const imageFile = new File([blob], filename, { type: 'image/png' });
-          onFingerprintCapture(imageFile);
-          console.log('✅ Stored fingerprint image loaded and displayed');
+          
+          // Only call onFingerprintCapture during initial load, not during verification operations
+          if (operationMode === 'determine' || operationMode === 'enroll') {
+            onFingerprintCapture(imageFile);
+            console.log('✅ Stored fingerprint image loaded and displayed');
+          } else {
+            console.log('✅ Stored fingerprint image loaded for verification (preview preserved)');
+          }
         })
         .catch(error => {
           console.warn('⚠️ Failed to load stored fingerprint image, falling back to visualization:', error);
@@ -446,9 +452,20 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
         // The success will be indicated through the border color and success message
         console.log('🎨 Keeping stored fingerprint visualization with success indicators');
         
-        // Create a minimal file for the callback if needed
-        const successFile = new File(['verification_success'], 'verified_fingerprint.png', { type: 'image/png' });
-        onFingerprintCapture(successFile);
+        // Create a verification success file using the stored fingerprint image with success filename
+        if (storedFingerprintImage) {
+          try {
+            const response = await fetch(storedFingerprintImage);
+            const blob = await response.blob();
+            const verificationSuccessFile = new File([blob], 'verified_fingerprint.png', { type: 'image/png' });
+            onFingerprintCapture(verificationSuccessFile);
+            console.log('🎨 Updated preview with verification success indicators');
+          } catch (error) {
+            console.warn('⚠️ Failed to create verification success file, using placeholder');
+            const placeholderFile = new File(['verification_success'], 'verified_fingerprint.png', { type: 'image/png' });
+            onFingerprintCapture(placeholderFile);
+          }
+        }
         
         return;
       } else {
@@ -462,9 +479,20 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
         // Keep showing the stored fingerprint - failure will be indicated through border and message
         console.log('🎨 Keeping stored fingerprint visualization with failure indicators');
         
-        // Create a minimal file for the callback if needed
-        const failureFile = new File(['verification_failed'], 'verification_failed.png', { type: 'image/png' });
-        onFingerprintCapture(failureFile);
+        // Create a verification failure file using the stored fingerprint image with failure filename
+        if (storedFingerprintImage) {
+          try {
+            const response = await fetch(storedFingerprintImage);
+            const blob = await response.blob();
+            const verificationFailureFile = new File([blob], 'verification_failed.png', { type: 'image/png' });
+            onFingerprintCapture(verificationFailureFile);
+            console.log('🎨 Updated preview with verification failure indicators');
+          } catch (error) {
+            console.warn('⚠️ Failed to create verification failure file, using placeholder');
+            const placeholderFile = new File(['verification_failed'], 'verification_failed.png', { type: 'image/png' });
+            onFingerprintCapture(placeholderFile);
+          }
+        }
         
         throw new Error('Verification failed - fingerprint does not match');
       }
@@ -490,14 +518,35 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
     try {
       setScannerStatus('scanning');
       
-      // Enroll new fingerprint directly without deleting existing ones
-      // The backend should handle replacing existing templates
+      // Enroll new fingerprint
       console.log(`🔍 Starting single fingerprint enrollment for finger: ${selectedFinger}...`);
-      const results = await biometricApiService.enrollFingerprints(
-        personId,
-        [selectedFinger], // Use selected finger
-        undefined // No application ID needed here
-      );
+      console.log(`🔧 Scanner status: ${scannerStatus}, BioMini available: ${bioMiniAvailable}`);
+      
+      let results;
+      try {
+        results = await biometricApiService.enrollFingerprints(
+          personId,
+          [selectedFinger], // Use selected finger
+          undefined // No application ID needed here
+        );
+      } catch (enrollError) {
+        console.error('❌ Enrollment error details:', enrollError);
+        
+        // Handle specific extraction failures
+        if (enrollError.message.includes('Extraction failed')) {
+          console.log('🔧 Template extraction failed, possibly due to scanner state. Checking connection...');
+          try {
+            await checkBioMiniService();
+            console.log('⚡ Scanner reconnected, please try again');
+            throw new Error('Template extraction failed. Scanner connection reset - please try again.');
+          } catch (reconnectError) {
+            console.error('❌ Scanner reconnection failed:', reconnectError);
+            throw new Error('Template extraction failed. Please check scanner connection and try again.');
+          }
+        }
+        
+        throw enrollError; // Re-throw original error if not extraction-related
+      }
       
       if (results.length > 0) {
         console.log('✅ Enrollment successful!');
@@ -1103,6 +1152,10 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
                   // Clear previous results and UI state
                   setVerificationResult(null);
                   setEnrollmentCompleted(false);
+                  setScannerStatus('ready'); // Reset scanner status
+                  setIsProcessingBiometric(false); // Reset processing state
+                  setErrorMessage(''); // Clear any error messages
+                  
                   if (capturedImageUrl) {
                     URL.revokeObjectURL(capturedImageUrl);
                     setCapturedImageUrl('');
@@ -1113,7 +1166,20 @@ const FingerprintCapture: React.FC<FingerprintCaptureProps> = ({
                     setStoredFingerprintImage('');
                   }
                   
-                  console.log('🔄 Ready for fingerprint retake - previous template deleted...');
+                  // Small delay to ensure scanner is ready and state is clean
+                  await new Promise(resolve => setTimeout(resolve, 100));
+                  
+                  // Reset scanner state if available
+                  try {
+                    if (bioMiniAvailable) {
+                      console.log('🔧 Checking scanner connection after retake preparation...');
+                      await checkBioMiniService();
+                    }
+                  } catch (scannerError) {
+                    console.warn('⚠️ Scanner check failed, but proceeding with retake:', scannerError);
+                  }
+                  
+                  console.log('🔄 Ready for fingerprint retake - previous template deleted and state cleaned...');
                 } catch (error) {
                   console.error('❌ Error preparing for retake:', error);
                   setErrorMessage('Failed to prepare for retake. Please try again.');
