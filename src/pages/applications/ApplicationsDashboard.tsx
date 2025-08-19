@@ -171,7 +171,7 @@ const ApplicationsDashboard: React.FC = () => {
           mb: 1.5, 
           flexGrow: 1,
           overflow: 'auto',
-          bgcolor: 'white',
+          bgcolor: '#f8f9fa',
           boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
           borderRadius: 2
         }}
