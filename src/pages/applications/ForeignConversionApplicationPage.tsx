@@ -818,22 +818,37 @@ const ForeignConversionApplicationPage: React.FC = () => {
               </Collapse>
             </Card>
 
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
-                Foreign License Conversion
-                            </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Provide details for each foreign license you want to convert to a Madagascar license
-                            </Typography>
-                          </Box>
-
-            <ForeignLicenseCaptureForm
-              value={foreignLicenseCaptureData}
-              onChange={handleForeignLicenseCaptureChange}
-              disabled={loading}
-              personBirthDate={selectedPerson?.birth_date}
-              personId={selectedPerson?.id}
-            />
+            {/* Foreign License Conversion Details */}
+            <Card 
+              elevation={0}
+              sx={{ 
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2
+              }}
+            >
+              <CardHeader 
+                sx={{ p: 1.5 }}
+                title={
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <LanguageIcon color="primary" fontSize="small" />
+                    <Typography variant="subtitle1" sx={{ fontSize: '1rem', fontWeight: 600 }}>
+                      Foreign License Conversion
+                    </Typography>
+                  </Box>
+                }
+                subheader="Provide details for each foreign license you want to convert to a Madagascar license"
+              />
+              <CardContent sx={{ p: 1.5, pt: 0 }}>
+                <ForeignLicenseCaptureForm
+                  value={foreignLicenseCaptureData}
+                  onChange={handleForeignLicenseCaptureChange}
+                  disabled={loading}
+                  personBirthDate={selectedPerson?.birth_date}
+                  personId={selectedPerson?.id}
+                />
+              </CardContent>
+            </Card>
 
 
           </Box>

@@ -26,13 +26,6 @@ import {
   Divider,
   FormControlLabel,
   Checkbox,
-  Table,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
-  Collapse,
-  Stack,
   Autocomplete
 } from '@mui/material';
 import {
@@ -44,13 +37,10 @@ import {
   Flag as FlagIcon,
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon,
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
   VerifiedUser as VerifiedIcon
 } from '@mui/icons-material';
 import { LicenseCategory } from '../../types';
 import { useDebounceValidation } from '../../hooks/useDebounceValidation';
-import { applicationService } from '../../services/applicationService';
 import { lookupService, Country } from '../../services/lookupService';
 
 export interface ForeignLicense {
@@ -87,9 +77,6 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
 }) => {
   const [captureData, setCaptureData] = useState<ForeignLicenseCaptureData>(value || { foreign_licenses: [] });
   const [fieldStates, setFieldStates] = useState<{ [key: string]: 'valid' | 'invalid' | 'required' | 'default' }>({});
-  const [existingLicenses, setExistingLicenses] = useState<any[]>([]);
-  const [loadingExisting, setLoadingExisting] = useState(false);
-  const [showExisting, setShowExisting] = useState(false);
   const [countries, setCountries] = useState<Country[]>([]);
   const [loadingCountries, setLoadingCountries] = useState(false);
 
@@ -405,30 +392,7 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
     });
   };
 
-  // Load existing licenses when person changes
-  const loadExistingLicenses = async (personId: string) => {
-    setLoadingExisting(true);
-    try {
-      console.log('Loading existing licenses for person:', personId);
-      const response = await applicationService.getPersonLicenses(personId);
-      console.log('Existing licenses response:', response);
-      const licenses = response.system_licenses || [];
-      setExistingLicenses(licenses);
-      
-      // Keep existing licenses collapsed by default
-    } catch (error) {
-      console.error('Error loading existing licenses:', error);
-      setExistingLicenses([]);
-    } finally {
-      setLoadingExisting(false);
-    }
-  };
 
-  useEffect(() => {
-    if (personId) {
-      loadExistingLicenses(personId);
-    }
-  }, [personId]);
 
   // Load countries on component mount
   useEffect(() => {
@@ -474,117 +438,6 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
       }}
     >
       <CardContent sx={{ p: 2 }}>
-        {/* Existing Licenses Section */}
-        <Card 
-          elevation={0}
-          sx={{ 
-            mb: 2, 
-            bgcolor: 'grey.50',
-            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-            borderRadius: 2
-          }}
-        >
-          <CardHeader
-            sx={{ p: 1.5 }}
-            title={
-              <Box display="flex" alignItems="center" gap={1}>
-                <CheckCircleIcon color={existingLicenses.length > 0 ? "success" : "disabled"} />
-                <Typography variant="subtitle1" sx={{ fontSize: '1rem' }}>
-                  Existing Licenses ({existingLicenses.length})
-                </Typography>
-                {existingLicenses.length > 0 && (
-                  <Chip 
-                    label="Found" 
-                    size="small" 
-                    color="success" 
-                    variant="outlined"
-                    sx={{ fontSize: '0.65rem', height: '20px' }}
-                  />
-                )}
-                <IconButton 
-                  size="small" 
-                  onClick={() => setShowExisting(!showExisting)}
-                  disabled={loadingExisting}
-                >
-                  {showExisting ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                </IconButton>
-              </Box>
-            }
-            subheader={
-              <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>
-                Current licenses in the system - cannot convert duplicates
-              </Typography>
-            }
-          />
-          <Collapse in={showExisting}>
-            <CardContent sx={{ p: 1.5 }}>
-              {loadingExisting ? (
-                <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>Loading existing licenses...</Typography>
-              ) : existingLicenses.length === 0 ? (
-                <Alert severity="info" sx={{ py: 1 }}>
-                  <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
-                    No existing licenses found. All categories are available for conversion.
-                  </Typography>
-                </Alert>
-              ) : (
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>License ID</TableCell>
-                      <TableCell>Categories</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell>Issue Date</TableCell>
-                      <TableCell>Location</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {existingLicenses.map((license) => (
-                      <TableRow key={license.id}>
-                        <TableCell>
-                          <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>
-                            {license.license_number}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Stack direction="row" spacing={0.5}>
-                            {license.categories.map((cat: string) => (
-                              <Chip 
-                                key={cat} 
-                                label={cat} 
-                                size="small" 
-                                color="primary"
-                                sx={{ fontSize: '0.65rem', height: '20px' }}
-                              />
-                            ))}
-                          </Stack>
-                        </TableCell>
-                        <TableCell>
-                          <Chip 
-                            label={license.status}
-                            size="small"
-                            color={license.is_active ? 'success' : 'default'}
-                            sx={{ fontSize: '0.65rem', height: '20px' }}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                            {license.issue_date}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                            {license.issuing_location}
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Collapse>
-        </Card>
-
         {captureData.foreign_licenses.length === 0 ? (
           <Alert severity="info" sx={{ mb: 2, py: 1 }}>
             <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
