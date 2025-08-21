@@ -613,6 +613,7 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                           display: 'flex', 
                           flexWrap: 'wrap', 
                           gap: 0.5,
+                          zIndex: 1500, // Above the Select input but below dropdown options (9999)
                           position: 'relative' // Ensure z-index takes effect
                         }}
                         onClick={(e) => e.stopPropagation()} // Prevent Select from opening when clicking on the Box
@@ -626,6 +627,7 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                             sx={{ 
                               fontSize: '0.65rem', 
                               height: '20px',
+                              zIndex: 1500, // Above the Select input but below dropdown options (9999)
                               position: 'relative' // Ensure z-index takes effect
                             }}
                             onClick={(e) => {
@@ -670,6 +672,7 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                           display: 'flex', 
                           flexWrap: 'wrap', 
                           gap: 0.5,
+                          zIndex: 1500, // Above the Select input but below dropdown options (9999)
                           position: 'relative' // Ensure z-index takes effect
                         }}
                         onClick={(e) => e.stopPropagation()} // Prevent Select from opening when clicking on the Box
@@ -683,6 +686,7 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                             sx={{ 
                               fontSize: '0.65rem', 
                               height: '20px',
+                              zIndex: 1500, // Above the Select input but below dropdown options (9999)
                               position: 'relative' // Ensure z-index takes effect
                             }}
                             onClick={(e) => {
