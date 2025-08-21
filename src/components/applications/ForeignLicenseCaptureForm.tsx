@@ -7,9 +7,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box,
-  Card,
-  CardContent,
-  CardHeader,
   Typography,
   TextField,
   FormControl,
@@ -429,22 +426,14 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
   }, []);
 
   return (
-    <Card 
-      elevation={0}
-      sx={{ 
-        bgcolor: 'white',
-        boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-        borderRadius: 2
-      }}
-    >
-      <CardContent sx={{ p: 2 }}>
-        {captureData.foreign_licenses.length === 0 ? (
-          <Alert severity="info" sx={{ mb: 2, py: 1 }}>
-            <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
-              No foreign licenses added yet. Click "Add Foreign License" to get started.
-            </Typography>
-          </Alert>
-        ) : null}
+    <>
+      {captureData.foreign_licenses.length === 0 ? (
+        <Alert severity="info" sx={{ mb: 2, py: 1 }}>
+          <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+            No foreign licenses added yet. Click "Add Foreign License" to get started.
+          </Typography>
+        </Alert>
+      ) : null}
 
         {/* Foreign License List */}
         {captureData.foreign_licenses.map((license, index) => (
@@ -748,18 +737,17 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
         ))}
 
         {/* Add License Button */}
-        <Button
-          variant="outlined"
-          size="small"
-          onClick={addForeignLicense}
-          startIcon={<AddIcon />}
-          disabled={disabled}
-          sx={{ mt: 2 }}
-        >
-          Add Foreign License
-        </Button>
-      </CardContent>
-    </Card>
+      <Button
+        variant="outlined"
+        size="small"
+        onClick={addForeignLicense}
+        startIcon={<AddIcon />}
+        disabled={disabled}
+        sx={{ mt: 2 }}
+      >
+        Add Foreign License
+      </Button>
+    </>
   );
 };
 
