@@ -557,7 +557,7 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                     size="small"
                     MenuProps={{
                       PaperProps: {
-                        sx: { zIndex: 2500 } // Much higher than chips (1400)
+                        sx: { zIndex: 9999 } // Ensure dropdown appears above all other elements
                       }
                     }}
                   >
@@ -604,7 +604,7 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                     disabled={disabled}
                     MenuProps={{
                       PaperProps: {
-                        sx: { zIndex: 2500 } // Much higher than chips (1400)
+                        sx: { zIndex: 9999 } // Ensure dropdown appears above all other elements
                       }
                     }}
                     renderValue={(selected) => (
