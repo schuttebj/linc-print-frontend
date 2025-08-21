@@ -493,6 +493,9 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                   componentsProps={{
                     popper: {
                       sx: { zIndex: 9999 } // Ensure dropdown appears above all other elements
+                    },
+                    paper: {
+                      sx: { zIndex: 9999 } // Additional z-index for the paper container
                     }
                   }}
                   renderInput={(params) => (
@@ -558,6 +561,10 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                     MenuProps={{
                       PaperProps: {
                         sx: { zIndex: 9999 } // Ensure dropdown appears above all other elements
+                      },
+                      sx: { zIndex: 9999 }, // Additional z-index for the menu container
+                      MenuListProps: {
+                        sx: { zIndex: 9999 } // Z-index for the menu list itself
                       }
                     }}
                   >
@@ -605,6 +612,10 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                     MenuProps={{
                       PaperProps: {
                         sx: { zIndex: 9999 } // Ensure dropdown appears above all other elements
+                      },
+                      sx: { zIndex: 9999 }, // Additional z-index for the menu container
+                      MenuListProps: {
+                        sx: { zIndex: 9999 } // Z-index for the menu list itself
                       }
                     }}
                     renderValue={(selected) => (
@@ -664,6 +675,10 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                     MenuProps={{
                       PaperProps: {
                         sx: { zIndex: 9999 } // Ensure dropdown appears above all other elements
+                      },
+                      sx: { zIndex: 9999 }, // Additional z-index for the menu container
+                      MenuListProps: {
+                        sx: { zIndex: 9999 } // Z-index for the menu list itself
                       }
                     }}
                     renderValue={(selected) => (
