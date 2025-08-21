@@ -22,6 +22,14 @@ import {
   FormControlLabel,
   Checkbox,
   TextField,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+  Stack,
+  Collapse,
+  IconButton,
   CircularProgress,
   Backdrop,
   Snackbar
@@ -38,7 +46,9 @@ import {
   Language as LanguageIcon,
   ArrowForward as ArrowForwardIcon,
   ArrowBack as ArrowBackIcon,
-  CheckCircle as CheckCircleIcon
+  CheckCircle as CheckCircleIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon
 } from '@mui/icons-material';
 
 import PersonFormWrapper from '../../components/PersonFormWrapper';
@@ -107,6 +117,9 @@ const ForeignConversionApplicationPage: React.FC = () => {
   const [foreignLicenseCaptureData, setForeignLicenseCaptureData] = useState<ForeignLicenseCaptureData | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [availableLocations, setAvailableLocations] = useState<Location[]>([]);
+  const [existingLicenses, setExistingLicenses] = useState<any[]>([]);
+  const [loadingExisting, setLoadingExisting] = useState(false);
+  const [showExisting, setShowExisting] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
@@ -299,6 +312,30 @@ const ForeignConversionApplicationPage: React.FC = () => {
     };
     loadLocations();
   }, [user]);
+
+  // Load existing licenses when person is selected
+  const loadExistingLicenses = async (personId: string) => {
+    setLoadingExisting(true);
+    try {
+      console.log('Loading existing licenses for person:', personId);
+      const response = await applicationService.getPersonLicenses(personId);
+      console.log('Existing licenses response:', response);
+      const licenses = response.system_licenses || [];
+      setExistingLicenses(licenses);
+    } catch (error) {
+      console.error('Error loading existing licenses:', error);
+      setExistingLicenses([]);
+    } finally {
+      setLoadingExisting(false);
+    }
+  };
+
+  // Load existing licenses when person changes
+  useEffect(() => {
+    if (selectedPerson?.id) {
+      loadExistingLicenses(selectedPerson.id);
+    }
+  }, [selectedPerson?.id]);
 
   // Tab label renderer with completion indicators
   const renderTabLabel = (step: any, index: number) => {
@@ -669,6 +706,117 @@ const ForeignConversionApplicationPage: React.FC = () => {
                 </CardContent>
               </Card>
             )}
+
+            {/* Existing Licenses */}
+            <Card 
+              elevation={0}
+              sx={{ 
+                mb: 2,
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2
+              }}
+            >
+              <CardHeader
+                sx={{ p: 1.5 }}
+                title={
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <CheckCircleIcon color={existingLicenses.length > 0 ? "success" : "disabled"} fontSize="small" />
+                    <Typography variant="subtitle1" sx={{ fontSize: '1rem', fontWeight: 600 }}>
+                      Existing Licenses ({existingLicenses.length})
+                    </Typography>
+                    {existingLicenses.length > 0 && (
+                      <Chip 
+                        label="Found" 
+                        size="small" 
+                        color="success" 
+                        variant="outlined"
+                        sx={{ fontSize: '0.65rem', height: '20px' }}
+                      />
+                    )}
+                    <IconButton 
+                      size="small" 
+                      onClick={() => setShowExisting(!showExisting)}
+                      disabled={loadingExisting}
+                    >
+                      {showExisting ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                    </IconButton>
+                  </Box>
+                }
+                subheader={
+                  <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>
+                    Current licenses in the system - for foreign license conversion reference
+                  </Typography>
+                }
+              />
+              <Collapse in={showExisting}>
+                <CardContent sx={{ p: 1.5 }}>
+                  {loadingExisting ? (
+                    <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>Loading existing licenses...</Typography>
+                  ) : existingLicenses.length === 0 ? (
+                    <Alert severity="info" sx={{ py: 1 }}>
+                      <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+                        No existing licenses found. This is a new license conversion application.
+                      </Typography>
+                    </Alert>
+                  ) : (
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>License ID</TableCell>
+                          <TableCell>Categories</TableCell>
+                          <TableCell>Status</TableCell>
+                          <TableCell>Issue Date</TableCell>
+                          <TableCell>Location</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {existingLicenses.map((license) => (
+                          <TableRow key={license.id}>
+                            <TableCell>
+                              <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>
+                                {license.license_number}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Stack direction="row" spacing={0.5}>
+                                {license.categories?.map((cat: string) => (
+                                  <Chip 
+                                    key={cat} 
+                                    label={cat} 
+                                    size="small" 
+                                    color="primary"
+                                    sx={{ fontSize: '0.65rem', height: '20px' }}
+                                  />
+                                ))}
+                              </Stack>
+                            </TableCell>
+                            <TableCell>
+                              <Chip 
+                                label={license.status}
+                                size="small"
+                                color={license.is_active ? 'success' : 'default'}
+                                sx={{ fontSize: '0.65rem', height: '20px' }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                {license.issue_date}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                {license.issuing_location}
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Collapse>
+            </Card>
 
             <Box sx={{ mb: 2 }}>
               <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
