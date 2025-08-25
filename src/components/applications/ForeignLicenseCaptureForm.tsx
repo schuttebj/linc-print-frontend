@@ -602,28 +602,30 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                     label="Driver Restrictions"
                     onChange={(e) => updateRestrictions(index, 'driver_restrictions', Array.isArray(e.target.value) ? e.target.value : [])}
                     disabled={disabled}
+                    onMouseDown={(e) => {
+                      // Prevent dropdown from opening if clicking on chip area
+                      const target = e.target as HTMLElement;
+                      if (target.closest('[data-chip-container="true"]') || target.closest('.MuiChip-root')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }
+                    }}
                     sx={{
-                      zIndex: 100, // Below chips (1100) so delete buttons work
                       position: 'relative'
                     }}
                     MenuProps={{
                       PaperProps: {
-                        sx: { zIndex: 1200 } // Above chips (1100) when dropdown is open
+                        sx: { zIndex: 1200 }
                       }
                     }}
                     renderValue={(selected) => (
                       <Box 
+                        data-chip-container="true"
                         sx={{ 
                           display: 'flex', 
                           flexWrap: 'wrap', 
-                          gap: 0.5,
-                          zIndex: 1100, // Above Select inputs (~1000) but below dropdowns (1200)
-                          position: 'relative' // Ensure z-index takes effect
+                          gap: 0.5
                         }}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                        }} // Prevent Select from opening when clicking on the Box
                       >
                         {(selected as string[]).map((value) => (
                           <Chip 
@@ -633,19 +635,9 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                             color="primary"
                             sx={{ 
                               fontSize: '0.65rem', 
-                              height: '20px',
-                              zIndex: 1100, // Above Select inputs (~1000) but below dropdowns (1200)
-                              position: 'relative' // Ensure z-index takes effect
+                              height: '20px'
                             }}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                            }}
-                            onDelete={value !== '00' || selected.length > 1 ? (e) => {
-                              if (e) {
-                                e.preventDefault();
-                                e.stopPropagation();
-                              }
+                            onDelete={value !== '00' || selected.length > 1 ? () => {
                               const newValues = selected.filter(v => v !== value);
                               updateRestrictions(index, 'driver_restrictions', newValues);
                             } : undefined}
@@ -672,28 +664,30 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                     label="Vehicle Restrictions"
                     onChange={(e) => updateRestrictions(index, 'vehicle_restrictions', Array.isArray(e.target.value) ? e.target.value : [])}
                     disabled={disabled}
+                    onMouseDown={(e) => {
+                      // Prevent dropdown from opening if clicking on chip area
+                      const target = e.target as HTMLElement;
+                      if (target.closest('[data-chip-container="true"]') || target.closest('.MuiChip-root')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }
+                    }}
                     sx={{
-                      zIndex: 100, // Below chips (1100) so delete buttons work
                       position: 'relative'
                     }}
                     MenuProps={{
                       PaperProps: {
-                        sx: { zIndex: 1200 } // Above chips (1100) when dropdown is open
+                        sx: { zIndex: 1200 }
                       }
                     }}
                     renderValue={(selected) => (
                       <Box 
+                        data-chip-container="true"
                         sx={{ 
                           display: 'flex', 
                           flexWrap: 'wrap', 
-                          gap: 0.5,
-                          zIndex: 1100, // Above Select inputs (~1000) but below dropdowns (1200)
-                          position: 'relative' // Ensure z-index takes effect
+                          gap: 0.5
                         }}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                        }} // Prevent Select from opening when clicking on the Box
                       >
                         {(selected as string[]).map((value) => (
                           <Chip 
@@ -703,19 +697,9 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                             color="secondary"
                             sx={{ 
                               fontSize: '0.65rem', 
-                              height: '20px',
-                              zIndex: 1100, // Above Select inputs (~1000) but below dropdowns (1200)
-                              position: 'relative' // Ensure z-index takes effect
+                              height: '20px'
                             }}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                            }}
-                            onDelete={value !== '00' || selected.length > 1 ? (e) => {
-                              if (e) {
-                                e.preventDefault();
-                                e.stopPropagation();
-                              }
+                            onDelete={value !== '00' || selected.length > 1 ? () => {
                               const newValues = selected.filter(v => v !== value);
                               updateRestrictions(index, 'vehicle_restrictions', newValues);
                             } : undefined}
