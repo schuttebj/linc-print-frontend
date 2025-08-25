@@ -492,7 +492,7 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                   size="small"
                   componentsProps={{
                     popper: {
-                      sx: { zIndex: 1200 } // Above chips (200) but below modals (1300+)
+                      sx: { zIndex: 1200 } // Above chips (1100) but below modals (1300+)
                     }
                   }}
                   renderInput={(params) => (
@@ -557,7 +557,7 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                     size="small"
                     MenuProps={{
                       PaperProps: {
-                        sx: { zIndex: 1200 } // Above chips (200) but below modals (1300+)
+                        sx: { zIndex: 1200 } // Above chips (1100) but below modals (1300+)
                       }
                     }}
                   >
@@ -602,9 +602,13 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                     label="Driver Restrictions"
                     onChange={(e) => updateRestrictions(index, 'driver_restrictions', Array.isArray(e.target.value) ? e.target.value : [])}
                     disabled={disabled}
+                    sx={{
+                      zIndex: 100, // Below chips (1100) so delete buttons work
+                      position: 'relative'
+                    }}
                     MenuProps={{
                       PaperProps: {
-                        sx: { zIndex: 1200 } // Above chips (200) but below modals (1300+)
+                        sx: { zIndex: 1200 } // Above chips (1100) when dropdown is open
                       }
                     }}
                     renderValue={(selected) => (
@@ -668,9 +672,13 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                     label="Vehicle Restrictions"
                     onChange={(e) => updateRestrictions(index, 'vehicle_restrictions', Array.isArray(e.target.value) ? e.target.value : [])}
                     disabled={disabled}
+                    sx={{
+                      zIndex: 100, // Below chips (1100) so delete buttons work
+                      position: 'relative'
+                    }}
                     MenuProps={{
                       PaperProps: {
-                        sx: { zIndex: 1200 } // Above chips (200) but below modals (1300+)
+                        sx: { zIndex: 1200 } // Above chips (1100) when dropdown is open
                       }
                     }}
                     renderValue={(selected) => (
