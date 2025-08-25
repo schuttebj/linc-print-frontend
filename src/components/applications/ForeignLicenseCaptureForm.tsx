@@ -613,15 +613,12 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                           display: 'flex', 
                           flexWrap: 'wrap', 
                           gap: 0.5,
-                          zIndex: 200, // Above the Select input but below dropdown (1200) and modals (1300+)
+                          zIndex: 1100, // Above Select inputs (~1000) but below dropdowns (1200)
                           position: 'relative' // Ensure z-index takes effect
                         }}
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          if ('stopImmediatePropagation' in e) {
-                            (e as any).stopImmediatePropagation();
-                          }
                         }} // Prevent Select from opening when clicking on the Box
                       >
                         {(selected as string[]).map((value) => (
@@ -633,21 +630,17 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                             sx={{ 
                               fontSize: '0.65rem', 
                               height: '20px',
-                              zIndex: 200, // Above the Select input but below dropdown (1200) and modals (1300+)
+                              zIndex: 1100, // Above Select inputs (~1000) but below dropdowns (1200)
                               position: 'relative' // Ensure z-index takes effect
                             }}
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              if ('stopImmediatePropagation' in e) {
-                                (e as any).stopImmediatePropagation();
-                              } // Prevent Select from opening when clicking chip
                             }}
                             onDelete={value !== '00' || selected.length > 1 ? (e) => {
-                              e?.preventDefault?.(); // Prevent default behavior
-                              e?.stopPropagation?.(); // Prevent Select from opening
-                              if (e && 'stopImmediatePropagation' in e) {
-                                (e as any).stopImmediatePropagation();
+                              if (e) {
+                                e.preventDefault();
+                                e.stopPropagation();
                               }
                               const newValues = selected.filter(v => v !== value);
                               updateRestrictions(index, 'driver_restrictions', newValues);
@@ -686,15 +679,12 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                           display: 'flex', 
                           flexWrap: 'wrap', 
                           gap: 0.5,
-                          zIndex: 200, // Above the Select input but below dropdown (1200) and modals (1300+)
+                          zIndex: 1100, // Above Select inputs (~1000) but below dropdowns (1200)
                           position: 'relative' // Ensure z-index takes effect
                         }}
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          if ('stopImmediatePropagation' in e) {
-                            (e as any).stopImmediatePropagation();
-                          }
                         }} // Prevent Select from opening when clicking on the Box
                       >
                         {(selected as string[]).map((value) => (
@@ -706,21 +696,17 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                             sx={{ 
                               fontSize: '0.65rem', 
                               height: '20px',
-                              zIndex: 200, // Above the Select input but below dropdown (1200) and modals (1300+)
+                              zIndex: 1100, // Above Select inputs (~1000) but below dropdowns (1200)
                               position: 'relative' // Ensure z-index takes effect
                             }}
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              if ('stopImmediatePropagation' in e) {
-                                (e as any).stopImmediatePropagation();
-                              } // Prevent Select from opening when clicking chip
                             }}
                             onDelete={value !== '00' || selected.length > 1 ? (e) => {
-                              e?.preventDefault?.(); // Prevent default behavior
-                              e?.stopPropagation?.(); // Prevent Select from opening
-                              if (e && 'stopImmediatePropagation' in e) {
-                                (e as any).stopImmediatePropagation();
+                              if (e) {
+                                e.preventDefault();
+                                e.stopPropagation();
                               }
                               const newValues = selected.filter(v => v !== value);
                               updateRestrictions(index, 'vehicle_restrictions', newValues);
