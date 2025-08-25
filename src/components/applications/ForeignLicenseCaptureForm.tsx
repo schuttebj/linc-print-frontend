@@ -602,16 +602,22 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                     label="Driver Restrictions"
                     onChange={(e) => updateRestrictions(index, 'driver_restrictions', Array.isArray(e.target.value) ? e.target.value : [])}
                     disabled={disabled}
-                    onMouseDown={(e) => {
-                      // Prevent dropdown from opening if clicking on chip area
-                      const target = e.target as HTMLElement;
-                      if (target.closest('[data-chip-container="true"]') || target.closest('.MuiChip-root')) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                      }
-                    }}
                     sx={{
-                      position: 'relative'
+                      position: 'relative',
+                      // Override MUI's default event handling for chip area
+                      '& .MuiSelect-select': {
+                        pointerEvents: 'auto'
+                      },
+                      '& .chip-container': {
+                        pointerEvents: 'auto'
+                      },
+                      '& .chip-container .MuiChip-root': {
+                        pointerEvents: 'auto'
+                      },
+                      '& .chip-container .MuiChip-deleteIcon': {
+                        pointerEvents: 'auto',
+                        zIndex: 10000
+                      }
                     }}
                     MenuProps={{
                       PaperProps: {
@@ -620,11 +626,16 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                     }}
                     renderValue={(selected) => (
                       <Box 
+                        className="chip-container"
                         data-chip-container="true"
                         sx={{ 
                           display: 'flex', 
                           flexWrap: 'wrap', 
-                          gap: 0.5
+                          gap: 0.5,
+                          pointerEvents: 'auto'
+                        }}
+                        onMouseDown={(e) => {
+                          e.stopPropagation();
                         }}
                       >
                         {(selected as string[]).map((value) => (
@@ -635,12 +646,35 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                             color="primary"
                             sx={{ 
                               fontSize: '0.65rem', 
-                              height: '20px'
+                              height: '20px',
+                              pointerEvents: 'auto',
+                              '& .MuiChip-deleteIcon': {
+                                pointerEvents: 'auto',
+                                zIndex: 10000
+                              }
                             }}
-                            onDelete={value !== '00' || selected.length > 1 ? () => {
+                            onDelete={value !== '00' || selected.length > 1 ? (e) => {
+                              console.log('Delete clicked for:', value);
+                              if (e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }
                               const newValues = selected.filter(v => v !== value);
                               updateRestrictions(index, 'driver_restrictions', newValues);
                             } : undefined}
+                            onMouseUp={(e) => {
+                              // Alternative handler to ensure clicks are registered
+                              const target = e.target as HTMLElement;
+                              if (target.classList.contains('MuiChip-deleteIcon') || target.closest('.MuiChip-deleteIcon')) {
+                                console.log('MouseUp on delete icon:', value);
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (value !== '00' || selected.length > 1) {
+                                  const newValues = selected.filter(v => v !== value);
+                                  updateRestrictions(index, 'driver_restrictions', newValues);
+                                }
+                              }
+                            }}
                           />
                         ))}
                       </Box>
@@ -664,16 +698,22 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                     label="Vehicle Restrictions"
                     onChange={(e) => updateRestrictions(index, 'vehicle_restrictions', Array.isArray(e.target.value) ? e.target.value : [])}
                     disabled={disabled}
-                    onMouseDown={(e) => {
-                      // Prevent dropdown from opening if clicking on chip area
-                      const target = e.target as HTMLElement;
-                      if (target.closest('[data-chip-container="true"]') || target.closest('.MuiChip-root')) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                      }
-                    }}
                     sx={{
-                      position: 'relative'
+                      position: 'relative',
+                      // Override MUI's default event handling for chip area
+                      '& .MuiSelect-select': {
+                        pointerEvents: 'auto'
+                      },
+                      '& .chip-container': {
+                        pointerEvents: 'auto'
+                      },
+                      '& .chip-container .MuiChip-root': {
+                        pointerEvents: 'auto'
+                      },
+                      '& .chip-container .MuiChip-deleteIcon': {
+                        pointerEvents: 'auto',
+                        zIndex: 10000
+                      }
                     }}
                     MenuProps={{
                       PaperProps: {
@@ -682,11 +722,16 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                     }}
                     renderValue={(selected) => (
                       <Box 
+                        className="chip-container"
                         data-chip-container="true"
                         sx={{ 
                           display: 'flex', 
                           flexWrap: 'wrap', 
-                          gap: 0.5
+                          gap: 0.5,
+                          pointerEvents: 'auto'
+                        }}
+                        onMouseDown={(e) => {
+                          e.stopPropagation();
                         }}
                       >
                         {(selected as string[]).map((value) => (
@@ -697,12 +742,35 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                             color="secondary"
                             sx={{ 
                               fontSize: '0.65rem', 
-                              height: '20px'
+                              height: '20px',
+                              pointerEvents: 'auto',
+                              '& .MuiChip-deleteIcon': {
+                                pointerEvents: 'auto',
+                                zIndex: 10000
+                              }
                             }}
-                            onDelete={value !== '00' || selected.length > 1 ? () => {
+                            onDelete={value !== '00' || selected.length > 1 ? (e) => {
+                              console.log('Delete clicked for:', value);
+                              if (e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }
                               const newValues = selected.filter(v => v !== value);
                               updateRestrictions(index, 'vehicle_restrictions', newValues);
                             } : undefined}
+                            onMouseUp={(e) => {
+                              // Alternative handler to ensure clicks are registered
+                              const target = e.target as HTMLElement;
+                              if (target.classList.contains('MuiChip-deleteIcon') || target.closest('.MuiChip-deleteIcon')) {
+                                console.log('MouseUp on delete icon:', value);
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (value !== '00' || selected.length > 1) {
+                                  const newValues = selected.filter(v => v !== value);
+                                  updateRestrictions(index, 'vehicle_restrictions', newValues);
+                                }
+                              }
+                            }}
                           />
                         ))}
                       </Box>
