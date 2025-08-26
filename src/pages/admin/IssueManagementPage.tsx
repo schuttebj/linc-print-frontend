@@ -150,7 +150,7 @@ const IssueManagementPage: React.FC = () => {
   const [screenshotData, setScreenshotData] = useState<string | null>(null);
   const [consoleLogsData, setConsoleLogsData] = useState<string | null>(null);
   const [loadingFiles, setLoadingFiles] = useState(false);
-  const [optimisticUpdates, setOptimisticUpdates] = useState<{[issueId: string]: Partial<Issue>}>({});
+
   const [filters, setFilters] = useState({
     status: [] as string[],
     category: [] as string[],
@@ -161,13 +161,7 @@ const IssueManagementPage: React.FC = () => {
 
   const queryClient = useQueryClient();
 
-  // Get issues with optimistic updates applied
-  const getIssuesWithOptimisticUpdates = (): Issue[] => {
-    return issues.map(issue => ({
-      ...issue,
-      ...optimisticUpdates[issue.id]
-    }));
-  };
+
 
   // Fetch issues
   const { data: issues = [], isLoading, refetch } = useQuery({
@@ -212,42 +206,37 @@ const IssueManagementPage: React.FC = () => {
       });
     },
     onMutate: async ({ issueId, newStatus }) => {
-      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['issues'] });
       
-      // Apply optimistic update immediately - card stays where dragged
-      setOptimisticUpdates(prev => ({
-        ...prev,
-        [issueId]: { status: newStatus as any }
-      }));
-    },
-    onSuccess: (data, { issueId }) => {
-      // API call successful - clear optimistic update but DON'T refresh to prevent jump
-      setOptimisticUpdates(prev => {
-        const newUpdates = { ...prev };
-        delete newUpdates[issueId];
-        return newUpdates;
-      });
-      // Only refresh stats to update counters immediately
-      queryClient.invalidateQueries({ queryKey: ['issue-stats'] });
+      // Snapshot the previous value
+      const previousIssues = queryClient.getQueryData(['issues', filters]);
       
-      // Delayed refresh of issues to get any other updates (after 2 seconds)
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['issues'] });
-      }, 2000);
-    },
-    onError: (error, { issueId }) => {
-      // API call failed - revert optimistic update (card goes back)
-      setOptimisticUpdates(prev => {
-        const newUpdates = { ...prev };
-        delete newUpdates[issueId];
-        return newUpdates;
+      // Optimistically update to the new value using react-query's cache
+      queryClient.setQueryData(['issues', filters], (old: Issue[] | undefined) => {
+        if (!old) return [];
+        return old.map(issue =>
+          issue.id === issueId 
+            ? { ...issue, status: newStatus as any }
+            : issue
+        );
       });
-      console.error('Failed to update issue status:', error);
-      // Refresh queries on error to ensure data consistency
+      
+      // Return a context object with the snapshotted value
+      return { previousIssues };
+    },
+    onError: (err, variables, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousIssues) {
+        queryClient.setQueryData(['issues', filters], context.previousIssues);
+      }
+      console.error('Failed to update issue status:', err);
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure we have the latest data
       queryClient.invalidateQueries({ queryKey: ['issues'] });
       queryClient.invalidateQueries({ queryKey: ['issue-stats'] });
-    }
+    },
   });
 
   // Assign issue mutation
@@ -277,15 +266,14 @@ const IssueManagementPage: React.FC = () => {
     }
   });
 
-  // Group issues by status for Kanban (with optimistic updates)
+  // Group issues by status for Kanban
   const issuesByStatus = React.useMemo(() => {
     const grouped: Record<string, Issue[]> = {};
-    const issuesWithUpdates = getIssuesWithOptimisticUpdates();
     STATUS_COLUMNS.forEach(column => {
-      grouped[column.id] = issuesWithUpdates.filter(issue => issue.status === column.id);
+      grouped[column.id] = issues.filter(issue => issue.status === column.id);
     });
     return grouped;
-  }, [issues, optimisticUpdates]);
+  }, [issues]);
 
   // Delete handlers
   const handleDeleteClick = (issue: Issue, event: React.MouseEvent) => {
@@ -351,8 +339,8 @@ const IssueManagementPage: React.FC = () => {
       return;
     }
 
-    // Find the issue being dragged (using current data with optimistic updates)
-    const issue = getIssuesWithOptimisticUpdates().find(issue => issue.id === draggableId);
+    // Find the issue being dragged
+    const issue = issues.find(issue => issue.id === draggableId);
     if (!issue) {
       return;
     }
@@ -747,7 +735,7 @@ const IssueManagementPage: React.FC = () => {
   const renderListView = () => (
     <Paper sx={{ p: 2 }}>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-        {getIssuesWithOptimisticUpdates().map(issue => (
+        {issues.map(issue => (
           <Paper
             key={issue.id}
             variant="outlined"
