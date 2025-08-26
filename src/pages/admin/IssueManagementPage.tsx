@@ -212,14 +212,17 @@ const IssueManagementPage: React.FC = () => {
       });
     },
     onMutate: async ({ issueId, newStatus }) => {
-      // Apply optimistic update
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: ['issues'] });
+      
+      // Apply optimistic update immediately - card stays where dragged
       setOptimisticUpdates(prev => ({
         ...prev,
         [issueId]: { status: newStatus as any }
       }));
     },
     onSuccess: (data, { issueId }) => {
-      // Clear optimistic update and refresh data
+      // API call successful - clear optimistic update and refresh data
       setOptimisticUpdates(prev => {
         const newUpdates = { ...prev };
         delete newUpdates[issueId];
@@ -229,7 +232,7 @@ const IssueManagementPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['issue-stats'] });
     },
     onError: (error, { issueId }) => {
-      // Revert optimistic update on error
+      // API call failed - revert optimistic update (card goes back)
       setOptimisticUpdates(prev => {
         const newUpdates = { ...prev };
         delete newUpdates[issueId];
@@ -340,7 +343,7 @@ const IssueManagementPage: React.FC = () => {
       return;
     }
 
-    // Find the issue being dragged (using current issues data)
+    // Find the issue being dragged (using current data with optimistic updates)
     const issue = getIssuesWithOptimisticUpdates().find(issue => issue.id === draggableId);
     if (!issue) {
       return;

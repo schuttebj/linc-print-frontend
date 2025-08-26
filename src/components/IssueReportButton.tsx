@@ -16,7 +16,8 @@ import {
   Typography,
   Chip,
   Stack,
-  Alert
+  CircularProgress,
+  Backdrop
 } from '@mui/material';
 import { BugReport } from '@mui/icons-material';
 import html2canvas from 'html2canvas';
@@ -40,6 +41,7 @@ const ISSUE_CATEGORIES = [
 const IssueReportButton: React.FC<IssueReportButtonProps> = () => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [formData, setFormData] = useState({
     title: '',
@@ -51,6 +53,7 @@ const IssueReportButton: React.FC<IssueReportButtonProps> = () => {
   const handleOpen = () => setOpen(true);
   const handleClose = () => {
     setOpen(false);
+    setSubmitted(false);
     setErrors({});
     setFormData({
       title: '',
@@ -163,9 +166,6 @@ const IssueReportButton: React.FC<IssueReportButtonProps> = () => {
       // Capture screenshot
       const screenshot = await captureScreenshot();
       
-      // Show modal again
-      setOpen(true);
-      
       // Get current page URL
       const currentUrl = window.location.href;
       
@@ -201,14 +201,18 @@ const IssueReportButton: React.FC<IssueReportButtonProps> = () => {
       });
 
       if (response.status === 201) {
-        alert('Issue reported successfully! Thank you for helping us improve the system.');
-        handleClose();
+        setSubmitted(true);
+        // Don't close the modal - keep it open showing success state
       } else {
         throw new Error('Failed to submit issue');
       }
       
     } catch (error) {
       console.error('Failed to submit issue:', error);
+      
+      // Show modal again on error
+      setOpen(true);
+      
       if (axios.isAxiosError(error)) {
         const errorDetail = error.response?.data?.detail;
         
@@ -258,116 +262,159 @@ const IssueReportButton: React.FC<IssueReportButtonProps> = () => {
 
       <Dialog 
         open={open} 
-        onClose={handleClose}
+        onClose={submitted ? handleClose : undefined}
         maxWidth="md"
         fullWidth
       >
         <DialogTitle>
           <Stack direction="row" alignItems="center" spacing={1}>
             <BugReport color="secondary" />
-            <Typography variant="h6">Report an Issue</Typography>
+            <Typography variant="h6">
+              {submitted ? 'Issue Reported Successfully!' : 'Report an Issue'}
+            </Typography>
           </Stack>
         </DialogTitle>
         
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            <Alert severity="info" sx={{ mb: 2 }}>
-              We'll automatically capture a screenshot, current page URL, and console logs to help us debug the issue.
-            </Alert>
-
-            <TextField
-              label="Issue Title"
-              fullWidth
-              required
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="Brief description of the issue"
-              error={!!errors.title}
-              helperText={errors.title || 'At least 3 characters required'}
-            />
-
-            <FormControl fullWidth required error={!!errors.category}>
-              <InputLabel>Category</InputLabel>
-              <Select
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                label="Category"
-              >
-                {ISSUE_CATEGORIES.map((category) => (
-                  <MenuItem key={category.value} value={category.value}>
-                    <Stack direction="row" alignItems="center" spacing={1}>
-                      <Chip 
-                        label={category.label} 
-                        color={category.color} 
-                        size="small" 
-                      />
-                    </Stack>
-                  </MenuItem>
-                ))}
-              </Select>
-              {errors.category && (
-                <Typography variant="caption" color="error" sx={{ mt: 0.5, mx: 1.5 }}>
-                  {errors.category}
+            {submitted && (
+              <Box sx={{ textAlign: 'center', py: 3 }}>
+                <Typography variant="h6" gutterBottom color="success.main">
+                  Thank you for helping us improve the system!
                 </Typography>
-              )}
-            </FormControl>
+                <Typography variant="body2" color="text.secondary">
+                  Your issue has been successfully reported and our team will review it shortly.
+                </Typography>
+              </Box>
+            )}
 
-            <TextField
-              label="Description"
-              fullWidth
-              required
-              multiline
-              rows={4}
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Detailed description of the issue, what you expected to happen, and what actually happened"
-              error={!!errors.description}
-              helperText={errors.description || 'At least 5 characters required'}
-            />
+            {!submitted && (
+              <>
+                <TextField
+                  label="Issue Title"
+                  fullWidth
+                  required
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="Brief description of the issue"
+                  error={!!errors.title}
+                  helperText={errors.title || 'At least 3 characters required'}
+                  disabled={loading}
+                />
 
-            <TextField
-              label="Steps to Reproduce (Optional)"
-              fullWidth
-              multiline
-              rows={3}
-              value={formData.steps_to_reproduce}
-              onChange={(e) => setFormData({ ...formData, steps_to_reproduce: e.target.value })}
-              placeholder="1. Go to... &#10;2. Click on... &#10;3. See error..."
-            />
+                <FormControl fullWidth required error={!!errors.category} disabled={loading}>
+                  <InputLabel>Category</InputLabel>
+                  <Select
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    label="Category"
+                  >
+                    {ISSUE_CATEGORIES.map((category) => (
+                      <MenuItem key={category.value} value={category.value}>
+                        <Stack direction="row" alignItems="center" spacing={1}>
+                          <Chip 
+                            label={category.label} 
+                            color={category.color} 
+                            size="small" 
+                          />
+                        </Stack>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {errors.category && (
+                    <Typography variant="caption" color="error" sx={{ mt: 0.5, mx: 1.5 }}>
+                      {errors.category}
+                    </Typography>
+                  )}
+                </FormControl>
 
-            <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-              <Typography variant="body2" color="text.secondary">
-                <strong>Automatically captured:</strong>
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                • Full page screenshot
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                • Current page URL: {window.location.href}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                • Recent console logs (last 100 entries)
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                • Browser information
-              </Typography>
-            </Box>
+                <TextField
+                  label="Description"
+                  fullWidth
+                  required
+                  multiline
+                  rows={4}
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Detailed description of the issue, what you expected to happen, and what actually happened"
+                  error={!!errors.description}
+                  helperText={errors.description || 'At least 5 characters required'}
+                  disabled={loading}
+                />
+
+                <TextField
+                  label="Steps to Reproduce (Optional)"
+                  fullWidth
+                  multiline
+                  rows={3}
+                  value={formData.steps_to_reproduce}
+                  onChange={(e) => setFormData({ ...formData, steps_to_reproduce: e.target.value })}
+                  placeholder="1. Go to... &#10;2. Click on... &#10;3. See error..."
+                  disabled={loading}
+                />
+
+                <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    <strong>Automatically captured:</strong>
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    • Full page screenshot
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    • Current page URL: {window.location.href}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    • Recent console logs (last 100 entries)
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    • Browser information
+                  </Typography>
+                </Box>
+              </>
+            )}
           </Box>
         </DialogContent>
 
         <DialogActions>
-          <Button onClick={handleClose} disabled={loading}>
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleSubmit} 
-            variant="contained" 
-            disabled={loading || !formData.title || !formData.description || !formData.category}
-          >
-            {loading ? 'Submitting...' : 'Report Issue'}
-          </Button>
+          {submitted ? (
+            <Button onClick={handleClose} variant="contained">
+              Close
+            </Button>
+          ) : (
+            <>
+              <Button onClick={handleClose} disabled={loading}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSubmit} 
+                variant="contained" 
+                disabled={loading || !formData.title || !formData.description || !formData.category}
+              >
+                {loading ? 'Submitting...' : 'Report Issue'}
+              </Button>
+            </>
+          )}
         </DialogActions>
       </Dialog>
+
+      {/* Loading Backdrop */}
+      <Backdrop
+        sx={{ 
+          color: '#fff', 
+          zIndex: (theme) => theme.zIndex.drawer + 1,
+          flexDirection: 'column',
+          gap: 2
+        }}
+        open={loading}
+      >
+        <CircularProgress color="inherit" size={60} />
+        <Typography variant="h6" color="inherit">
+          Submitting issue report...
+        </Typography>
+        <Typography variant="body2" color="inherit" sx={{ opacity: 0.8 }}>
+          Capturing screenshot and collecting logs
+        </Typography>
+      </Backdrop>
     </>
   );
 };
