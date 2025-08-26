@@ -162,6 +162,17 @@ export const API_ENDPOINTS = {
   cardOrders: `${API_BASE_URL}/api/${API_VERSION}/transactions/card-orders`,
   feeStructures: `${API_BASE_URL}/api/${API_VERSION}/transactions/fee-structures`,
   dailyTransactionSummary: `${API_BASE_URL}/api/${API_VERSION}/transactions/reports/daily-summary`,
+
+  // Issue tracking endpoints
+  issues: `${API_BASE_URL}/api/${API_VERSION}/issues`,
+  issuesAutoReport: `${API_BASE_URL}/api/${API_VERSION}/issues/auto-report`,
+  issueById: (id: string) => `${API_BASE_URL}/api/${API_VERSION}/issues/${id}`,
+  issueAssign: (id: string) => `${API_BASE_URL}/api/${API_VERSION}/issues/${id}/assign`,
+  issueStatus: (id: string) => `${API_BASE_URL}/api/${API_VERSION}/issues/${id}/status`,
+  issueComments: (id: string) => `${API_BASE_URL}/api/${API_VERSION}/issues/${id}/comments`,
+  issueFiles: (id: string, fileType: string) => `${API_BASE_URL}/api/${API_VERSION}/issues/${id}/files/${fileType}`,
+  issueStats: `${API_BASE_URL}/api/${API_VERSION}/issues/stats/overview`,
+  myIssues: `${API_BASE_URL}/api/${API_VERSION}/issues/my-issues`,
 } as const;
 
 /**

@@ -7,6 +7,7 @@
 
 import axios from 'axios';
 import { consoleLogCapture } from './consoleLogCapture';
+import { API_BASE_URL } from '../config/api';
 
 interface ErrorReport {
   title: string;
@@ -325,9 +326,10 @@ class AutoErrorReporter {
 
   private async sendErrorReport(report: ErrorReport): Promise<void> {
     try {
-      await axios.post('/api/v1/issues/auto-report', report, {
+      await axios.post(`${API_BASE_URL}/api/v1/issues/auto-report`, report, {
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
         },
         timeout: 5000, // Don't block the app
       });

@@ -62,6 +62,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { format } from 'date-fns';
+import { API_BASE_URL } from '../../config/api';
 
 // Types
 interface Issue {
@@ -144,7 +145,9 @@ const IssueManagementPage: React.FC = () => {
       if (filters.report_type.length) params.append('report_type', filters.report_type.join(','));
       if (filters.search) params.append('search', filters.search);
       
-      const response = await axios.get(`/api/v1/issues/?${params.toString()}`);
+      const response = await axios.get(`${API_BASE_URL}/api/v1/issues/?${params.toString()}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+      });
       return response.data.items;
     }
   });
@@ -153,7 +156,9 @@ const IssueManagementPage: React.FC = () => {
   const { data: stats } = useQuery<IssueStats>({
     queryKey: ['issue-stats'],
     queryFn: async () => {
-      const response = await axios.get('/api/v1/issues/stats/overview');
+      const response = await axios.get(`${API_BASE_URL}/api/v1/issues/stats/overview`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+      });
       return response.data;
     }
   });
@@ -161,7 +166,9 @@ const IssueManagementPage: React.FC = () => {
   // Update issue status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ issueId, newStatus }: { issueId: string; newStatus: string }) => {
-      await axios.patch(`/api/v1/issues/${issueId}/status`, { new_status: newStatus });
+      await axios.patch(`${API_BASE_URL}/api/v1/issues/${issueId}/status`, { new_status: newStatus }, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['issues'] });
@@ -172,7 +179,9 @@ const IssueManagementPage: React.FC = () => {
   // Assign issue mutation
   const assignIssueMutation = useMutation({
     mutationFn: async ({ issueId, assignedTo }: { issueId: string; assignedTo: string }) => {
-      await axios.patch(`/api/v1/issues/${issueId}/assign`, { assigned_to: assignedTo });
+      await axios.patch(`${API_BASE_URL}/api/v1/issues/${issueId}/assign`, { assigned_to: assignedTo }, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['issues'] });
@@ -551,7 +560,7 @@ const IssueManagementPage: React.FC = () => {
                       variant="outlined"
                       size="small"
                       startIcon={<OpenInNew />}
-                      onClick={() => window.open(`/api/v1/issues/${selectedIssue.id}/files/screenshot`, '_blank')}
+                      onClick={() => window.open(`${API_BASE_URL}/api/v1/issues/${selectedIssue.id}/files/screenshot`, '_blank')}
                     >
                       View Screenshot
                     </Button>
@@ -561,7 +570,7 @@ const IssueManagementPage: React.FC = () => {
                       variant="outlined"
                       size="small"
                       startIcon={<GetApp />}
-                      onClick={() => window.open(`/api/v1/issues/${selectedIssue.id}/files/console_logs`, '_blank')}
+                      onClick={() => window.open(`${API_BASE_URL}/api/v1/issues/${selectedIssue.id}/files/console_logs`, '_blank')}
                     >
                       Download Logs
                     </Button>

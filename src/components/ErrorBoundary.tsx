@@ -9,6 +9,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Box, Typography, Button, Alert, Paper } from '@mui/material';
 import { BugReport, Refresh } from '@mui/icons-material';
 import { autoErrorReporter } from '../services/autoErrorReporter';
+import { API_BASE_URL } from '../config/api';
 
 interface Props {
   children: ReactNode;
@@ -72,10 +73,11 @@ class ErrorBoundary extends Component<Props, State> {
       };
 
       // Use the auto error reporter to send the report
-      await fetch('/api/v1/issues/auto-report', {
+      await fetch(`${API_BASE_URL}/api/v1/issues/auto-report`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
         },
         body: JSON.stringify(report),
       });

@@ -21,6 +21,7 @@ import {
 import { BugReport } from '@mui/icons-material';
 import html2canvas from 'html2canvas';
 import { consoleLogCapture } from '../services/consoleLogCapture';
+import { API_BASE_URL } from '../config/api';
 import axios from 'axios';
 
 interface IssueReportButtonProps {
@@ -129,9 +130,10 @@ const IssueReportButton: React.FC<IssueReportButtonProps> = () => {
       };
 
       // Send to backend API
-      const response = await axios.post('/api/v1/issues/', issueData, {
+      const response = await axios.post(`${API_BASE_URL}/api/v1/issues/`, issueData, {
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
         },
       });
 
