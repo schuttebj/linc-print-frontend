@@ -141,6 +141,9 @@ const IssueManagementPage: React.FC = () => {
   const [issueToDelete, setIssueToDelete] = useState<Issue | null>(null);
   const [moveMenuAnchor, setMoveMenuAnchor] = useState<HTMLElement | null>(null);
   const [issueToMove, setIssueToMove] = useState<Issue | null>(null);
+  const [screenshotData, setScreenshotData] = useState<string | null>(null);
+  const [consoleLogsData, setConsoleLogsData] = useState<string | null>(null);
+  const [loadingFiles, setLoadingFiles] = useState(false);
   const [filters, setFilters] = useState({
     status: [] as string[],
     category: [] as string[],
@@ -184,8 +187,13 @@ const IssueManagementPage: React.FC = () => {
   // Update issue status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ issueId, newStatus }: { issueId: string; newStatus: string }) => {
-      await axios.patch(`${API_BASE_URL}/api/v1/issues/${issueId}/status`, { new_status: newStatus }, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+      await axios.patch(`${API_BASE_URL}/api/v1/issues/${issueId}/status`, { 
+        new_status: newStatus 
+      }, {
+        headers: { 
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+          'Content-Type': 'application/json'
+        }
       });
     },
     onSuccess: () => {
@@ -314,12 +322,61 @@ const IssueManagementPage: React.FC = () => {
     updateStatusMutation.mutate({ issueId, newStatus });
   };
 
-  const handleIssueClick = (issue: Issue) => {
+  // Fetch file content with authentication
+  const fetchFileContent = async (issueId: string, fileType: 'screenshot' | 'console_logs'): Promise<string | null> => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/v1/issues/${issueId}/files/${fileType}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` },
+        responseType: fileType === 'screenshot' ? 'blob' : 'text'
+      });
+      
+      if (fileType === 'screenshot') {
+        // Convert blob to data URL for display
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(response.data);
+        });
+      } else {
+        return response.data;
+      }
+    } catch (error) {
+      console.error(`Failed to fetch ${fileType}:`, error);
+      return null;
+    }
+  };
+
+  const handleIssueClick = async (issue: Issue) => {
     setSelectedIssue(issue);
+    setScreenshotData(null);
+    setConsoleLogsData(null);
+    setLoadingFiles(true);
+
+    // Load files if they exist
+    const promises: Promise<void>[] = [];
+    
+    if (issue.screenshot_path) {
+      promises.push(
+        fetchFileContent(issue.id, 'screenshot').then(data => setScreenshotData(data))
+      );
+    }
+    
+    if (issue.console_logs_path) {
+      promises.push(
+        fetchFileContent(issue.id, 'console_logs').then(data => setConsoleLogsData(data))
+      );
+    }
+
+    // Wait for all files to load
+    await Promise.all(promises);
+    setLoadingFiles(false);
   };
 
   const handleCloseIssueDialog = () => {
     setSelectedIssue(null);
+    setScreenshotData(null);
+    setConsoleLogsData(null);
+    setLoadingFiles(false);
   };
 
   const getCategoryIcon = (category: string) => {
@@ -846,104 +903,204 @@ const IssueManagementPage: React.FC = () => {
       <Dialog
         open={!!selectedIssue}
         onClose={handleCloseIssueDialog}
-        maxWidth="md"
+        maxWidth="lg"
         fullWidth
+        PaperProps={{
+          sx: { height: '90vh', maxHeight: '90vh' }
+        }}
       >
         {selectedIssue && (
           <>
             <DialogTitle>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                {getCategoryIcon(selectedIssue.category)}
-                <Typography variant="h6">{selectedIssue.title}</Typography>
-                <Chip
-                  label={selectedIssue.priority}
-                  size="small"
-                  color={PRIORITY_COLORS[selectedIssue.priority]}
-                />
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {getCategoryIcon(selectedIssue.category)}
+                  <Typography variant="h6">{selectedIssue.title}</Typography>
+                  <Chip
+                    label={selectedIssue.priority}
+                    size="small"
+                    color={PRIORITY_COLORS[selectedIssue.priority]}
+                  />
+                  <Chip
+                    label={selectedIssue.status}
+                    size="small"
+                    variant="outlined"
+                  />
+                </Box>
+                <IconButton onClick={handleCloseIssueDialog} size="small">
+                  <Cancel />
+                </IconButton>
               </Box>
             </DialogTitle>
             
-            <DialogContent>
-              <Stack spacing={2}>
-                <Typography variant="body1">{selectedIssue.description}</Typography>
-                
-                <Divider />
-                
-                <Grid container spacing={2}>
-                  <Grid item xs={6}>
-                    <Typography variant="caption" color="text.secondary">
-                      Status
+            <DialogContent sx={{ p: 0 }}>
+              <Grid container sx={{ height: '100%' }}>
+                {/* Left Panel - Issue Details */}
+                <Grid item xs={12} md={6} sx={{ p: 2, borderRight: '1px solid', borderColor: 'divider' }}>
+                  <Stack spacing={2}>
+                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                      {selectedIssue.description}
                     </Typography>
-                    <Typography variant="body2">{selectedIssue.status}</Typography>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Typography variant="caption" color="text.secondary">
-                      Category
-                    </Typography>
-                    <Typography variant="body2">{selectedIssue.category}</Typography>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Typography variant="caption" color="text.secondary">
-                      Reported
-                    </Typography>
-                    <Typography variant="body2">
-                      {format(new Date(selectedIssue.reported_at), 'PPpp')}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Typography variant="caption" color="text.secondary">
-                      Report Type
-                    </Typography>
-                    <Typography variant="body2">{selectedIssue.report_type}</Typography>
-                  </Grid>
+                    
+                    <Divider />
+                    
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="caption" color="text.secondary">
+                          Status
+                        </Typography>
+                        <Typography variant="body2">{selectedIssue.status}</Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="caption" color="text.secondary">
+                          Category
+                        </Typography>
+                        <Typography variant="body2">{selectedIssue.category}</Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="caption" color="text.secondary">
+                          Priority
+                        </Typography>
+                        <Typography variant="body2">{selectedIssue.priority}</Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="caption" color="text.secondary">
+                          Report Type
+                        </Typography>
+                        <Typography variant="body2">{selectedIssue.report_type}</Typography>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <Typography variant="caption" color="text.secondary">
+                          Reported
+                        </Typography>
+                        <Typography variant="body2">
+                          {format(new Date(selectedIssue.reported_at), 'PPpp')}
+                        </Typography>
+                      </Grid>
+                    </Grid>
+
+                    {selectedIssue.page_url && (
+                      <Box>
+                        <Typography variant="caption" color="text.secondary">
+                          Page URL
+                        </Typography>
+                        <Typography variant="body2" sx={{ 
+                          wordBreak: 'break-word',
+                          fontSize: '0.875rem',
+                          fontFamily: 'monospace',
+                          bgcolor: 'grey.100',
+                          p: 1,
+                          borderRadius: 1
+                        }}>
+                          {selectedIssue.page_url}
+                        </Typography>
+                      </Box>
+                    )}
+
+                    {selectedIssue.error_message && (
+                      <Alert severity="error">
+                        <Typography variant="body2">{selectedIssue.error_message}</Typography>
+                      </Alert>
+                    )}
+
+                    {selectedIssue.steps_to_reproduce && (
+                      <Box>
+                        <Typography variant="caption" color="text.secondary">
+                          Steps to Reproduce
+                        </Typography>
+                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                          {selectedIssue.steps_to_reproduce}
+                        </Typography>
+                      </Box>
+                    )}
+                  </Stack>
                 </Grid>
 
-                {selectedIssue.page_url && (
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">
-                      Page URL
-                    </Typography>
-                    <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
-                      {selectedIssue.page_url}
-                    </Typography>
-                  </Box>
-                )}
+                {/* Right Panel - Screenshots and Logs */}
+                <Grid item xs={12} md={6} sx={{ display: 'flex', flexDirection: 'column' }}>
+                  {loadingFiles && (
+                    <Box sx={{ p: 2, textAlign: 'center' }}>
+                      <Typography>Loading files...</Typography>
+                    </Box>
+                  )}
 
-                {selectedIssue.error_message && (
-                  <Alert severity="error">
-                    <Typography variant="body2">{selectedIssue.error_message}</Typography>
-                  </Alert>
-                )}
-
-                <Box sx={{ display: 'flex', gap: 1 }}>
+                  {/* Screenshot Section */}
                   {selectedIssue.screenshot_path && (
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      startIcon={<OpenInNew />}
-                      onClick={() => window.open(`${API_BASE_URL}/api/v1/issues/${selectedIssue.id}/files/screenshot`, '_blank')}
-                    >
-                      View Screenshot
-                    </Button>
+                    <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+                      <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
+                        Screenshot
+                      </Typography>
+                      {screenshotData ? (
+                        <Box sx={{ 
+                          maxHeight: '300px', 
+                          overflow: 'auto',
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          borderRadius: 1
+                        }}>
+                          <img 
+                            src={screenshotData} 
+                            alt="Issue Screenshot" 
+                            style={{ 
+                              width: '100%', 
+                              height: 'auto',
+                              display: 'block'
+                            }} 
+                          />
+                        </Box>
+                      ) : !loadingFiles ? (
+                        <Typography variant="body2" color="text.secondary">
+                          Failed to load screenshot
+                        </Typography>
+                      ) : null}
+                    </Box>
                   )}
+
+                  {/* Console Logs Section */}
                   {selectedIssue.console_logs_path && (
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      startIcon={<GetApp />}
-                      onClick={() => window.open(`${API_BASE_URL}/api/v1/issues/${selectedIssue.id}/files/console_logs`, '_blank')}
-                    >
-                      Download Logs
-                    </Button>
+                    <Box sx={{ p: 2, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                      <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
+                        Console Logs
+                      </Typography>
+                      {consoleLogsData ? (
+                        <Box sx={{ 
+                          flexGrow: 1,
+                          overflow: 'auto',
+                          bgcolor: '#1e1e1e',
+                          color: '#ffffff',
+                          fontFamily: 'monospace',
+                          fontSize: '0.75rem',
+                          p: 1,
+                          borderRadius: 1,
+                          maxHeight: '300px'
+                        }}>
+                          <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+                            {consoleLogsData}
+                          </pre>
+                        </Box>
+                      ) : !loadingFiles ? (
+                        <Typography variant="body2" color="text.secondary">
+                          Failed to load console logs
+                        </Typography>
+                      ) : null}
+                    </Box>
                   )}
-                </Box>
-              </Stack>
+
+                  {/* No files message */}
+                  {!selectedIssue.screenshot_path && !selectedIssue.console_logs_path && (
+                    <Box sx={{ p: 2, textAlign: 'center', color: 'text.secondary' }}>
+                      <Typography variant="body2">
+                        No screenshots or logs available for this issue
+                      </Typography>
+                    </Box>
+                  )}
+                </Grid>
+              </Grid>
             </DialogContent>
             
-            <DialogActions>
-              <Button onClick={handleCloseIssueDialog}>Close</Button>
-              <Button variant="contained" onClick={handleCloseIssueDialog}>
-                Edit Issue
+            <DialogActions sx={{ p: 2, bgcolor: 'grey.50' }}>
+              <Button onClick={handleCloseIssueDialog} variant="outlined">
+                Close
               </Button>
             </DialogActions>
           </>
