@@ -37,7 +37,10 @@ import {
   SpeedDialAction,
   SpeedDialIcon,
   Tab,
-  Tabs
+  Tabs,
+  Container,
+  Menu,
+  ButtonGroup
 } from '@mui/material';
 import {
   BugReport,
@@ -57,7 +60,17 @@ import {
   OpenInNew,
   DragIndicator,
   Dashboard,
-  List as ListIcon
+  List as ListIcon,
+  ArrowForward,
+  ArrowBack,
+  PlayArrow,
+  Warning,
+  MoreVert,
+  CheckCircle,
+  Schedule,
+  Build,
+  Done,
+  Cancel
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
@@ -123,6 +136,10 @@ const IssueManagementPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [issueToDelete, setIssueToDelete] = useState<Issue | null>(null);
+  const [moveMenuAnchor, setMoveMenuAnchor] = useState<HTMLElement | null>(null);
+  const [issueToMove, setIssueToMove] = useState<Issue | null>(null);
   const [filters, setFilters] = useState({
     status: [] as string[],
     category: [] as string[],
@@ -188,6 +205,21 @@ const IssueManagementPage: React.FC = () => {
     }
   });
 
+  // Delete issue mutation
+  const deleteIssueMutation = useMutation({
+    mutationFn: async (issueId: string) => {
+      await axios.delete(`${API_BASE_URL}/api/v1/issues/${issueId}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['issues'] });
+      queryClient.invalidateQueries({ queryKey: ['issue-stats'] });
+      setDeleteDialogOpen(false);
+      setIssueToDelete(null);
+    }
+  });
+
   // Group issues by status for Kanban
   const issuesByStatus = React.useMemo(() => {
     const grouped: Record<string, Issue[]> = {};
@@ -196,6 +228,53 @@ const IssueManagementPage: React.FC = () => {
     });
     return grouped;
   }, [issues]);
+
+  // Delete handlers
+  const handleDeleteClick = (issue: Issue, event: React.MouseEvent) => {
+    event.stopPropagation();
+    setIssueToDelete(issue);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (issueToDelete) {
+      deleteIssueMutation.mutate(issueToDelete.id);
+    }
+  };
+
+  // Move handlers
+  const handleMoveClick = (issue: Issue, event: React.MouseEvent) => {
+    event.stopPropagation();
+    setIssueToMove(issue);
+    setMoveMenuAnchor(event.currentTarget as HTMLElement);
+  };
+
+  const handleMoveToStatus = (newStatus: string) => {
+    if (issueToMove && issueToMove.status !== newStatus) {
+      updateStatusMutation.mutate({ 
+        issueId: issueToMove.id, 
+        newStatus 
+      });
+    }
+    setMoveMenuAnchor(null);
+    setIssueToMove(null);
+  };
+
+  const getNextStatus = (currentStatus: string): string | null => {
+    const currentIndex = STATUS_COLUMNS.findIndex(col => col.id === currentStatus);
+    if (currentIndex < STATUS_COLUMNS.length - 1) {
+      return STATUS_COLUMNS[currentIndex + 1].id;
+    }
+    return null;
+  };
+
+  const getPreviousStatus = (currentStatus: string): string | null => {
+    const currentIndex = STATUS_COLUMNS.findIndex(col => col.id === currentStatus);
+    if (currentIndex > 0) {
+      return STATUS_COLUMNS[currentIndex - 1].id;
+    }
+    return null;
+  };
 
   const handleStatusChange = (issueId: string, newStatus: string) => {
     updateStatusMutation.mutate({ issueId, newStatus });
@@ -239,22 +318,42 @@ const IssueManagementPage: React.FC = () => {
         mb: 1,
         cursor: 'pointer',
         '&:hover': {
-          boxShadow: 3,
-        }
+          boxShadow: 'rgba(0, 0, 0, 0.1) 0px 4px 12px',
+          '& .issue-actions': {
+            opacity: 1
+          }
+        },
+        position: 'relative',
+        bgcolor: 'white',
+        border: '1px solid #e0e0e0',
+        borderRadius: 2,
+        transition: 'all 0.2s ease'
       }}
       onClick={() => handleIssueClick(issue)}
     >
-      <CardContent sx={{ pb: '8px !important' }}>
+      <CardContent sx={{ p: 1.5, pb: '12px !important' }}>
         <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
-          <Avatar sx={{ width: 24, height: 24, mr: 1, bgcolor: CATEGORY_COLORS[issue.category] + '.main' }}>
+          <Avatar sx={{ 
+            width: 24, 
+            height: 24, 
+            mr: 1, 
+            bgcolor: CATEGORY_COLORS[issue.category] + '.main',
+            fontSize: '0.75rem'
+          }}>
             {getCategoryIcon(issue.category)}
           </Avatar>
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="body2" fontWeight="medium" noWrap>
+            <Typography variant="body2" fontWeight={600} noWrap sx={{ fontSize: '0.85rem', mb: 0.5 }}>
               {issue.title}
             </Typography>
-            <Typography variant="caption" color="text.secondary" noWrap>
-              {issue.description.substring(0, 80)}...
+            <Typography variant="caption" color="text.secondary" sx={{ 
+              fontSize: '0.7rem',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden'
+            }}>
+              {issue.description.substring(0, 100)}...
             </Typography>
           </Box>
         </Box>
@@ -264,9 +363,9 @@ const IssueManagementPage: React.FC = () => {
             label={issue.priority}
             size="small"
             color={PRIORITY_COLORS[issue.priority]}
-            sx={{ fontSize: '0.7rem', height: 20 }}
+            sx={{ fontSize: '0.65rem', height: '18px', fontWeight: 600 }}
           />
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
             {formatTimeAgo(issue.reported_at)}
           </Typography>
         </Box>
@@ -284,53 +383,188 @@ const IssueManagementPage: React.FC = () => {
           <Box sx={{ display: 'flex', gap: 0.5 }}>
             {issue.screenshot_path && (
               <Tooltip title="Has screenshot">
-                <Attachment sx={{ fontSize: 14, color: 'text.secondary' }} />
+                <Attachment sx={{ fontSize: 12, color: 'text.secondary' }} />
               </Tooltip>
             )}
             {issue.error_message && (
               <Tooltip title="Has error details">
-                <BugReport sx={{ fontSize: 14, color: 'error.main' }} />
+                <BugReport sx={{ fontSize: 12, color: 'error.main' }} />
               </Tooltip>
             )}
           </Box>
           
           {issue.assigned_to && (
-            <Avatar sx={{ width: 20, height: 20 }}>
-              <Person sx={{ fontSize: 14 }} />
+            <Avatar sx={{ width: 18, height: 18 }}>
+              <Person sx={{ fontSize: 12 }} />
             </Avatar>
           )}
+        </Box>
+
+        {/* Action buttons - shown on hover */}
+        <Box 
+          className="issue-actions"
+          sx={{ 
+            position: 'absolute',
+            top: 4,
+            right: 4,
+            opacity: 0,
+            transition: 'opacity 0.2s',
+            display: 'flex',
+            gap: 0.5
+          }}
+        >
+          {/* Quick move buttons */}
+          {getPreviousStatus(issue.status) && (
+            <Tooltip title={`Move to ${STATUS_COLUMNS.find(col => col.id === getPreviousStatus(issue.status))?.title}`}>
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const prevStatus = getPreviousStatus(issue.status);
+                  if (prevStatus) handleMoveToStatus(prevStatus);
+                }}
+                sx={{ 
+                  bgcolor: 'rgba(255,255,255,0.95)', 
+                  '&:hover': { bgcolor: 'primary.main', color: 'white' },
+                  width: 24,
+                  height: 24,
+                  boxShadow: 1
+                }}
+              >
+                <ArrowBack sx={{ fontSize: '14px' }} />
+              </IconButton>
+            </Tooltip>
+          )}
+          
+          {getNextStatus(issue.status) && (
+            <Tooltip title={`Move to ${STATUS_COLUMNS.find(col => col.id === getNextStatus(issue.status))?.title}`}>
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const nextStatus = getNextStatus(issue.status);
+                  if (nextStatus) handleMoveToStatus(nextStatus);
+                }}
+                sx={{ 
+                  bgcolor: 'rgba(255,255,255,0.95)', 
+                  '&:hover': { bgcolor: 'success.main', color: 'white' },
+                  width: 24,
+                  height: 24,
+                  boxShadow: 1
+                }}
+              >
+                <ArrowForward sx={{ fontSize: '14px' }} />
+              </IconButton>
+            </Tooltip>
+          )}
+
+          {/* More actions menu */}
+          <Tooltip title="More actions">
+            <IconButton
+              size="small"
+              onClick={(e) => handleMoveClick(issue, e)}
+              sx={{ 
+                bgcolor: 'rgba(255,255,255,0.95)', 
+                '&:hover': { bgcolor: 'info.main', color: 'white' },
+                width: 24,
+                height: 24,
+                boxShadow: 1
+              }}
+            >
+              <MoreVert sx={{ fontSize: '14px' }} />
+            </IconButton>
+          </Tooltip>
+          
+          {/* Delete button */}
+          <Tooltip title="Delete issue">
+            <IconButton
+              size="small"
+              onClick={(e) => handleDeleteClick(issue, e)}
+              sx={{ 
+                bgcolor: 'rgba(255,255,255,0.95)', 
+                '&:hover': { bgcolor: 'error.main', color: 'white' },
+                width: 24,
+                height: 24,
+                boxShadow: 1
+              }}
+            >
+              <Delete sx={{ fontSize: '14px' }} />
+            </IconButton>
+          </Tooltip>
         </Box>
       </CardContent>
     </Card>
   );
 
   const renderKanbanView = () => (
-    <Grid container spacing={2}>
+    <Grid container spacing={2} sx={{ height: '100%' }}>
       {STATUS_COLUMNS.map(column => (
         <Grid item xs={12} sm={6} md={2.4} key={column.id}>
-          <Paper sx={{ p: 2, height: '70vh', overflow: 'auto' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <Paper sx={{ 
+            p: 1.5, 
+            height: '100%', 
+            display: 'flex',
+            flexDirection: 'column',
+            bgcolor: 'white',
+            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+            borderRadius: 2,
+            border: '1px solid #e0e0e0'
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5, pb: 1, borderBottom: '1px solid #f0f0f0' }}>
               <Box
                 sx={{
-                  width: 12,
-                  height: 12,
+                  width: 10,
+                  height: 10,
                   borderRadius: '50%',
                   bgcolor: column.color,
                   mr: 1
                 }}
               />
-              <Typography variant="subtitle2" fontWeight="bold">
+              <Typography variant="subtitle2" fontWeight={600} sx={{ fontSize: '0.875rem' }}>
                 {column.title}
               </Typography>
               <Badge
                 badgeContent={issuesByStatus[column.id]?.length || 0}
                 color="primary"
-                sx={{ ml: 'auto' }}
+                sx={{ 
+                  ml: 'auto',
+                  '& .MuiBadge-badge': {
+                    fontSize: '0.75rem',
+                    minWidth: '18px',
+                    height: '18px'
+                  }
+                }}
               />
             </Box>
             
-            <Box>
+            <Box sx={{ 
+              flexGrow: 1, 
+              overflow: 'auto',
+              pr: 0.5,
+              '&::-webkit-scrollbar': {
+                width: '4px',
+              },
+              '&::-webkit-scrollbar-track': {
+                background: '#f1f1f1',
+                borderRadius: '4px',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                background: '#c1c1c1',
+                borderRadius: '4px',
+              }
+            }}>
               {issuesByStatus[column.id]?.map(issue => renderIssueCard(issue))}
+              {(!issuesByStatus[column.id] || issuesByStatus[column.id].length === 0) && (
+                <Box sx={{ 
+                  textAlign: 'center', 
+                  py: 3, 
+                  color: 'text.secondary',
+                  fontStyle: 'italic',
+                  fontSize: '0.875rem'
+                }}>
+                  No issues
+                </Box>
+              )}
             </Box>
           </Paper>
         </Grid>
@@ -393,93 +627,154 @@ const IssueManagementPage: React.FC = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" fontWeight="bold">
-          Issue Management
-        </Typography>
-        
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <Tabs value={viewMode} onChange={(_, value) => setViewMode(value)}>
-            <Tab icon={<Dashboard />} label="Kanban" value="kanban" />
-            <Tab icon={<ListIcon />} label="List" value="list" />
-          </Tabs>
+    <Container maxWidth="lg" sx={{ py: 1, height: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column' }}>
+      <Paper 
+        elevation={0}
+        sx={{ 
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: '#f8f9fa',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          overflow: 'hidden'
+        }}
+      >
+        {/* Header */}
+        <Box sx={{ 
+          p: 2, 
+          bgcolor: 'white', 
+          borderBottom: '1px solid', 
+          borderColor: 'divider',
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center' 
+        }}>
+          <Typography variant="h5" fontWeight={600} sx={{ fontSize: '1.25rem', color: 'primary.main' }}>
+            Issue Management
+          </Typography>
           
-          <Button
-            variant="outlined"
-            startIcon={<FilterList />}
-            onClick={() => setFilterDialogOpen(true)}
-          >
-            Filters
-          </Button>
-          
-          <Button
-            variant="outlined"
-            startIcon={<Refresh />}
-            onClick={() => refetch()}
-          >
-            Refresh
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+            <Tabs 
+              value={viewMode} 
+              onChange={(_, value) => setViewMode(value)}
+              sx={{ 
+                minHeight: 'auto',
+                '& .MuiTab-root': { 
+                  minHeight: 'auto', 
+                  py: 1, 
+                  fontSize: '0.875rem' 
+                }
+              }}
+            >
+              <Tab icon={<Dashboard sx={{ fontSize: '18px' }} />} label="Kanban" value="kanban" />
+              <Tab icon={<ListIcon sx={{ fontSize: '18px' }} />} label="List" value="list" />
+            </Tabs>
+            
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<FilterList />}
+              onClick={() => setFilterDialogOpen(true)}
+              sx={{ fontSize: '0.875rem' }}
+            >
+              Filters
+            </Button>
+            
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<Refresh />}
+              onClick={() => refetch()}
+              sx={{ fontSize: '0.875rem' }}
+            >
+              Refresh
+            </Button>
+          </Box>
         </Box>
-      </Box>
 
-      {/* Statistics Cards */}
-      {stats && (
-        <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" color="primary">
-                  {stats.total_issues}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Total Issues
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" color="warning.main">
-                  {stats.open_issues}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Open Issues
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" color="success.main">
-                  {stats.resolved_issues}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Resolved Issues
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6">
-                  {stats.avg_resolution_time || 'N/A'}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Avg Resolution Time
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      )}
+        {/* Statistics Cards */}
+        {stats && (
+          <Box sx={{ p: 2, bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6} md={3}>
+                <Paper sx={{ 
+                  p: 1.5, 
+                  textAlign: 'center', 
+                  bgcolor: 'primary.50',
+                  border: '1px solid #e3f2fd',
+                  borderRadius: 2
+                }}>
+                  <Typography variant="h5" color="primary.main" fontWeight={600}>
+                    {stats.total_issues}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+                    Total Issues
+                  </Typography>
+                </Paper>
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Paper sx={{ 
+                  p: 1.5, 
+                  textAlign: 'center', 
+                  bgcolor: 'warning.50',
+                  border: '1px solid #fff3e0',
+                  borderRadius: 2
+                }}>
+                  <Typography variant="h5" color="warning.main" fontWeight={600}>
+                    {stats.open_issues}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+                    Open Issues
+                  </Typography>
+                </Paper>
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Paper sx={{ 
+                  p: 1.5, 
+                  textAlign: 'center', 
+                  bgcolor: 'success.50',
+                  border: '1px solid #e8f5e8',
+                  borderRadius: 2
+                }}>
+                  <Typography variant="h5" color="success.main" fontWeight={600}>
+                    {stats.resolved_issues}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+                    Resolved Issues
+                  </Typography>
+                </Paper>
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Paper sx={{ 
+                  p: 1.5, 
+                  textAlign: 'center', 
+                  bgcolor: 'grey.50',
+                  border: '1px solid #f5f5f5',
+                  borderRadius: 2
+                }}>
+                  <Typography variant="h5" fontWeight={600}>
+                    {stats.avg_resolution_time || 'N/A'}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+                    Avg Resolution Time
+                  </Typography>
+                </Paper>
+              </Grid>
+            </Grid>
+          </Box>
+        )}
 
-      {/* Main Content */}
-      {viewMode === 'kanban' ? renderKanbanView() : renderListView()}
+        {/* Main Content */}
+        <Box sx={{ 
+          flexGrow: 1, 
+          p: 2, 
+          overflow: 'auto'
+        }}>
+          {viewMode === 'kanban' ? renderKanbanView() : renderListView()}
+        </Box>
+      </Paper>
+    </Container>
 
       {/* Issue Detail Dialog */}
       <Dialog
@@ -643,7 +938,110 @@ const IssueManagementPage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Warning color="error" />
+            <Typography variant="h6">Delete Issue</Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete this issue? This action cannot be undone.
+          </Typography>
+          {issueToDelete && (
+            <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+              <Typography variant="subtitle2" fontWeight={600}>
+                {issueToDelete.title}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {issueToDelete.description.substring(0, 150)}...
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setDeleteDialogOpen(false)}
+            color="inherit"
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleDeleteConfirm}
+            color="error"
+            variant="contained"
+            disabled={deleteIssueMutation.isPending}
+          >
+            {deleteIssueMutation.isPending ? 'Deleting...' : 'Delete Issue'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Move Menu */}
+      <Menu
+        anchorEl={moveMenuAnchor}
+        open={Boolean(moveMenuAnchor)}
+        onClose={() => {
+          setMoveMenuAnchor(null);
+          setIssueToMove(null);
+        }}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: 'rgba(0, 0, 0, 0.1) 0px 4px 12px',
+            border: '1px solid #e0e0e0'
+          }
+        }}
+      >
+        <Box sx={{ p: 1, minWidth: 200 }}>
+          <Typography variant="subtitle2" sx={{ px: 2, py: 1, fontWeight: 600, color: 'text.secondary' }}>
+            Move to Status
+          </Typography>
+          {STATUS_COLUMNS.map((column) => {
+            const isCurrentStatus = issueToMove?.status === column.id;
+            return (
+              <MenuItem
+                key={column.id}
+                onClick={() => handleMoveToStatus(column.id)}
+                disabled={isCurrentStatus}
+                sx={{
+                  borderRadius: 1,
+                  mx: 1,
+                  my: 0.5,
+                  '&:hover': { bgcolor: 'action.hover' }
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                  <Box
+                    sx={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: '50%',
+                      bgcolor: column.color,
+                      mr: 2
+                    }}
+                  />
+                  <Typography variant="body2" sx={{ flexGrow: 1 }}>
+                    {column.title}
+                  </Typography>
+                  {isCurrentStatus && (
+                    <CheckCircle sx={{ fontSize: 16, color: 'success.main' }} />
+                  )}
+                </Box>
+              </MenuItem>
+            );
+          })}
+        </Box>
+      </Menu>
+    </>
   );
 };
 
