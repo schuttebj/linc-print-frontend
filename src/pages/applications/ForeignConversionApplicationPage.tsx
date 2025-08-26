@@ -1189,6 +1189,8 @@ const ForeignConversionApplicationPage: React.FC = () => {
               onContinueToReview={handleContinueToReview}
               onCancel={handleCancel}
               showHeader={false}
+              personId={selectedPerson?.id}
+              demoMode={import.meta.env.DEV || localStorage.getItem('biometric_demo_mode') === 'true'}
             />
           </Box>
           

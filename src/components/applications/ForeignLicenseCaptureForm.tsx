@@ -182,6 +182,12 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
         
         return { isValid: true, state: 'valid' };
 
+      case 'verified':
+        if (!value) {
+          return { isValid: false, state: 'required', errorMessage: 'Physical verification is required' };
+        }
+        return { isValid: true, state: 'valid' };
+
       default:
         return { isValid: true, state: 'default' };
     }
@@ -753,7 +759,10 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                   control={
                     <Checkbox
                       checked={license.verified}
-                      onChange={(e) => updateForeignLicense(index, 'verified', e.target.checked)}
+                      onChange={(e) => {
+                        updateForeignLicense(index, 'verified', e.target.checked);
+                        debouncedValidation('verified', e.target.checked, license.id);
+                      }}
                       disabled={disabled}
                       size="small"
                     />
@@ -763,7 +772,20 @@ const ForeignLicenseCaptureForm: React.FC<ForeignLicenseCaptureFormProps> = ({
                       I have physically verified this foreign license is authentic and valid
                     </Typography>
                   }
-                  sx={{ color: license.verified ? 'success.main' : 'warning.main' }}
+                  sx={{ 
+                    color: (() => {
+                      const fieldKey = `${license.id}-verified`;
+                      const fieldState = fieldStates[fieldKey] || 'default';
+                      
+                      if (fieldState === 'required') {
+                        return 'warning.main';
+                      } else if (fieldState === 'valid') {
+                        return 'success.main';
+                      } else {
+                        return license.verified ? 'success.main' : 'text.primary';
+                      }
+                    })()
+                  }}
                 />
               </Grid>
             </Grid>
@@ -817,6 +839,9 @@ export const validateForeignLicenseCaptureData = (data: ForeignLicenseCaptureDat
     }
     if (!license.restrictions?.vehicle_restrictions?.length) {
       errors.push(`License ${index + 1}: Vehicle restrictions are required`);
+    }
+    if (!license.verified) {
+      errors.push(`License ${index + 1}: Physical verification is required`);
     }
   });
   
