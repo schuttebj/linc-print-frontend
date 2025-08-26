@@ -95,6 +95,12 @@ interface Issue {
   resolved_at?: string;
   screenshot_path?: string;
   console_logs_path?: string;
+  steps_to_reproduce?: string;
+  expected_behavior?: string;
+  actual_behavior?: string;
+  browser_version?: string;
+  operating_system?: string;
+  environment?: string;
 }
 
 interface IssueStats {
