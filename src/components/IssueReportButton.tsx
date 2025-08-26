@@ -40,6 +40,7 @@ const ISSUE_CATEGORIES = [
 const IssueReportButton: React.FC<IssueReportButtonProps> = () => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -50,12 +51,41 @@ const IssueReportButton: React.FC<IssueReportButtonProps> = () => {
   const handleOpen = () => setOpen(true);
   const handleClose = () => {
     setOpen(false);
+    setErrors({});
     setFormData({
       title: '',
       description: '',
       category: '',
       steps_to_reproduce: '',
     });
+  };
+
+  const validateForm = () => {
+    const newErrors: {[key: string]: string} = {};
+
+    // Title validation (min 3 characters)
+    if (!formData.title.trim()) {
+      newErrors.title = 'Title is required';
+    } else if (formData.title.trim().length < 3) {
+      newErrors.title = 'Title must be at least 3 characters';
+    } else if (formData.title.length > 255) {
+      newErrors.title = 'Title must be less than 255 characters';
+    }
+
+    // Description validation (min 5 characters)
+    if (!formData.description.trim()) {
+      newErrors.description = 'Description is required';
+    } else if (formData.description.trim().length < 5) {
+      newErrors.description = 'Description must be at least 5 characters';
+    }
+
+    // Category validation
+    if (!formData.category) {
+      newErrors.category = 'Please select a category';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const captureScreenshot = async (): Promise<string | null> => {
@@ -93,7 +123,11 @@ const IssueReportButton: React.FC<IssueReportButtonProps> = () => {
   };
 
   const handleSubmit = async () => {
-    if (!formData.title || !formData.description || !formData.category) {
+    // Clear previous errors
+    setErrors({});
+    
+    // Validate form
+    if (!validateForm()) {
       return;
     }
 
@@ -147,8 +181,22 @@ const IssueReportButton: React.FC<IssueReportButtonProps> = () => {
     } catch (error) {
       console.error('Failed to submit issue:', error);
       if (axios.isAxiosError(error)) {
-        const errorMessage = error.response?.data?.detail || 'Failed to submit issue. Please try again.';
-        alert(errorMessage);
+        const errorDetail = error.response?.data?.detail;
+        
+        // Handle Pydantic validation errors
+        if (Array.isArray(errorDetail)) {
+          const validationErrors: {[key: string]: string} = {};
+          errorDetail.forEach((err: any) => {
+            if (err.loc && err.loc.length > 1) {
+              const fieldName = err.loc[1]; // Get field name from loc array
+              validationErrors[fieldName] = err.msg;
+            }
+          });
+          setErrors(validationErrors);
+        } else {
+          const errorMessage = errorDetail || 'Failed to submit issue. Please try again.';
+          alert(errorMessage);
+        }
       } else {
         alert('Failed to submit issue. Please try again.');
       }
@@ -205,9 +253,11 @@ const IssueReportButton: React.FC<IssueReportButtonProps> = () => {
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               placeholder="Brief description of the issue"
+              error={!!errors.title}
+              helperText={errors.title || 'At least 3 characters required'}
             />
 
-            <FormControl fullWidth required>
+            <FormControl fullWidth required error={!!errors.category}>
               <InputLabel>Category</InputLabel>
               <Select
                 value={formData.category}
@@ -226,6 +276,11 @@ const IssueReportButton: React.FC<IssueReportButtonProps> = () => {
                   </MenuItem>
                 ))}
               </Select>
+              {errors.category && (
+                <Typography variant="caption" color="error" sx={{ mt: 0.5, mx: 1.5 }}>
+                  {errors.category}
+                </Typography>
+              )}
             </FormControl>
 
             <TextField
@@ -237,6 +292,8 @@ const IssueReportButton: React.FC<IssueReportButtonProps> = () => {
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Detailed description of the issue, what you expected to happen, and what actually happened"
+              error={!!errors.description}
+              helperText={errors.description || 'At least 5 characters required'}
             />
 
             <TextField
