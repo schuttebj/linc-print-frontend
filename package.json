@@ -34,7 +34,8 @@
     "zustand": "^4.3.2",
     "dayjs": "^1.11.7",
     "fuse.js": "^6.6.2",
-    "recharts": "^2.8.0"
+    "recharts": "^2.8.0",
+    "html2canvas": "^1.4.1"
   },
   "devDependencies": {
     "@types/react": "^18.0.27",

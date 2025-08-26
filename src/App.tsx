@@ -58,6 +58,7 @@ import UserFormPage from './pages/admin/UserFormPage';
 import LocationManagementPage from './pages/admin/LocationManagementPage';
 import LocationFormPage from './pages/admin/LocationFormPage';
 import AuditLogViewer from './pages/admin/AuditLogViewer';
+import IssueManagementPage from './pages/admin/IssueManagementPage';
 
 // Analytics Pages
 import AnalyticsDashboard from './pages/analytics/AnalyticsDashboard';
@@ -441,6 +442,14 @@ function App() {
                 element={
                   <ProtectedRoute requiredPermission="admin.audit">
                     <AuditLogViewer />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="issues" 
+                element={
+                  <ProtectedRoute requiredPermission="admin.issues.read">
+                    <IssueManagementPage />
                   </ProtectedRoute>
                 } 
               />

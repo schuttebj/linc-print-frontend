@@ -398,6 +398,12 @@ const DashboardLayout: React.FC = () => {
       path: '/dashboard/admin/audit',
       permission: 'admin.audit',
     },
+    {
+      text: 'Issue Management',
+      icon: <Assignment />,
+      path: '/dashboard/admin/issues',
+      permission: 'admin.issues.read',
+    },
   ];
 
   // Analytics navigation items
