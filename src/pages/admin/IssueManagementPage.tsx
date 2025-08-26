@@ -75,6 +75,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { format } from 'date-fns';
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { API_BASE_URL } from '../../config/api';
 
 // Types
@@ -276,6 +277,39 @@ const IssueManagementPage: React.FC = () => {
     return null;
   };
 
+  // Drag and drop handler
+  const handleDragEnd = (result: DropResult) => {
+    const { destination, source, draggableId } = result;
+
+    // If dropped outside a droppable area
+    if (!destination) {
+      return;
+    }
+
+    // If dropped in the same position
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
+      return;
+    }
+
+    // Find the issue being dragged
+    const issue = issues.find(issue => issue.id === draggableId);
+    if (!issue) {
+      return;
+    }
+
+    // Update issue status if dropped in a different column
+    if (destination.droppableId !== source.droppableId) {
+      const newStatus = destination.droppableId;
+      updateStatusMutation.mutate({ 
+        issueId: issue.id, 
+        newStatus 
+      });
+    }
+  };
+
   const handleStatusChange = (issueId: string, newStatus: string) => {
     updateStatusMutation.mutate({ issueId, newStatus });
   };
@@ -311,26 +345,39 @@ const IssueManagementPage: React.FC = () => {
     return format(date, 'MMM dd, yyyy');
   };
 
-  const renderIssueCard = (issue: Issue) => (
-    <Card
-      key={issue.id}
-      sx={{
-        mb: 1,
-        cursor: 'pointer',
-        '&:hover': {
-          boxShadow: 'rgba(0, 0, 0, 0.1) 0px 4px 12px',
-          '& .issue-actions': {
-            opacity: 1
-          }
-        },
-        position: 'relative',
-        bgcolor: 'white',
-        border: '1px solid #e0e0e0',
-        borderRadius: 2,
-        transition: 'all 0.2s ease'
-      }}
-      onClick={() => handleIssueClick(issue)}
-    >
+  const renderIssueCard = (issue: Issue, index: number) => (
+    <Draggable key={issue.id} draggableId={issue.id} index={index}>
+      {(provided, snapshot) => (
+        <Card
+          ref={provided.innerRef}
+          {...provided.draggableProps}
+          {...provided.dragHandleProps}
+          sx={{
+            mb: 1,
+            cursor: snapshot.isDragging ? 'grabbing' : 'grab',
+            '&:hover': {
+              boxShadow: 'rgba(0, 0, 0, 0.1) 0px 4px 12px',
+              '& .issue-actions': {
+                opacity: 1
+              }
+            },
+            position: 'relative',
+            bgcolor: snapshot.isDragging ? '#f5f5f5' : 'white',
+            border: snapshot.isDragging ? '2px solid #2196f3' : '1px solid #e0e0e0',
+            borderRadius: 2,
+            transition: snapshot.isDragging ? 'none' : 'all 0.2s ease',
+            transform: snapshot.isDragging ? 'rotate(3deg)' : 'none',
+            boxShadow: snapshot.isDragging 
+              ? 'rgba(0, 0, 0, 0.2) 0px 8px 24px' 
+              : 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
+          }}
+          onClick={(e) => {
+            // Prevent click when dragging
+            if (!snapshot.isDragging) {
+              handleIssueClick(issue);
+            }
+          }}
+        >
       <CardContent sx={{ p: 1.5, pb: '12px !important' }}>
         <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
           <Avatar sx={{ 
@@ -494,82 +541,100 @@ const IssueManagementPage: React.FC = () => {
         </Box>
       </CardContent>
     </Card>
+      )}
+    </Draggable>
   );
 
   const renderKanbanView = () => (
-    <Grid container spacing={2} sx={{ height: '100%' }}>
-      {STATUS_COLUMNS.map(column => (
-        <Grid item xs={12} sm={6} md={2.4} key={column.id}>
-          <Paper sx={{ 
-            p: 1.5, 
-            height: '100%', 
-            display: 'flex',
-            flexDirection: 'column',
-            bgcolor: 'white',
-            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-            borderRadius: 2,
-            border: '1px solid #e0e0e0'
-          }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5, pb: 1, borderBottom: '1px solid #f0f0f0' }}>
-              <Box
-                sx={{
-                  width: 10,
-                  height: 10,
-                  borderRadius: '50%',
-                  bgcolor: column.color,
-                  mr: 1
-                }}
-              />
-              <Typography variant="subtitle2" fontWeight={600} sx={{ fontSize: '0.875rem' }}>
-                {column.title}
-              </Typography>
-              <Badge
-                badgeContent={issuesByStatus[column.id]?.length || 0}
-                color="primary"
-                sx={{ 
-                  ml: 'auto',
-                  '& .MuiBadge-badge': {
-                    fontSize: '0.75rem',
-                    minWidth: '18px',
-                    height: '18px'
-                  }
-                }}
-              />
-            </Box>
-            
-            <Box sx={{ 
-              flexGrow: 1, 
-              overflow: 'auto',
-              pr: 0.5,
-              '&::-webkit-scrollbar': {
-                width: '4px',
-              },
-              '&::-webkit-scrollbar-track': {
-                background: '#f1f1f1',
-                borderRadius: '4px',
-              },
-              '&::-webkit-scrollbar-thumb': {
-                background: '#c1c1c1',
-                borderRadius: '4px',
-              }
+    <DragDropContext onDragEnd={handleDragEnd}>
+      <Grid container spacing={2} sx={{ height: '100%' }}>
+        {STATUS_COLUMNS.map(column => (
+          <Grid item xs={12} sm={6} md={2.4} key={column.id}>
+            <Paper sx={{ 
+              p: 1.5, 
+              height: '100%', 
+              display: 'flex',
+              flexDirection: 'column',
+              bgcolor: 'white',
+              boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+              borderRadius: 2,
+              border: '1px solid #e0e0e0'
             }}>
-              {issuesByStatus[column.id]?.map(issue => renderIssueCard(issue))}
-              {(!issuesByStatus[column.id] || issuesByStatus[column.id].length === 0) && (
-                <Box sx={{ 
-                  textAlign: 'center', 
-                  py: 3, 
-                  color: 'text.secondary',
-                  fontStyle: 'italic',
-                  fontSize: '0.875rem'
-                }}>
-                  No issues
-                </Box>
-              )}
-            </Box>
-          </Paper>
-        </Grid>
-      ))}
-    </Grid>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5, pb: 1, borderBottom: '1px solid #f0f0f0' }}>
+                <Box
+                  sx={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: '50%',
+                    bgcolor: column.color,
+                    mr: 1
+                  }}
+                />
+                <Typography variant="subtitle2" fontWeight={600} sx={{ fontSize: '0.875rem' }}>
+                  {column.title}
+                </Typography>
+                <Badge
+                  badgeContent={issuesByStatus[column.id]?.length || 0}
+                  color="primary"
+                  sx={{ 
+                    ml: 'auto',
+                    '& .MuiBadge-badge': {
+                      fontSize: '0.75rem',
+                      minWidth: '18px',
+                      height: '18px'
+                    }
+                  }}
+                />
+              </Box>
+              
+              <Droppable droppableId={column.id}>
+                {(provided, snapshot) => (
+                  <Box 
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    sx={{ 
+                      flexGrow: 1, 
+                      overflow: 'auto',
+                      pr: 0.5,
+                      bgcolor: snapshot.isDraggingOver ? 'rgba(33, 150, 243, 0.05)' : 'transparent',
+                      border: snapshot.isDraggingOver ? '2px dashed #2196f3' : '2px solid transparent',
+                      borderRadius: 1,
+                      transition: 'all 0.2s ease',
+                      minHeight: '100px',
+                      '&::-webkit-scrollbar': {
+                        width: '4px',
+                      },
+                      '&::-webkit-scrollbar-track': {
+                        background: '#f1f1f1',
+                        borderRadius: '4px',
+                      },
+                      '&::-webkit-scrollbar-thumb': {
+                        background: '#c1c1c1',
+                        borderRadius: '4px',
+                      }
+                    }}
+                  >
+                    {issuesByStatus[column.id]?.map((issue, index) => renderIssueCard(issue, index))}
+                    {(!issuesByStatus[column.id] || issuesByStatus[column.id].length === 0) && (
+                      <Box sx={{ 
+                        textAlign: 'center', 
+                        py: 3, 
+                        color: 'text.secondary',
+                        fontStyle: 'italic',
+                        fontSize: '0.875rem'
+                      }}>
+                        Drop issues here
+                      </Box>
+                    )}
+                    {provided.placeholder}
+                  </Box>
+                )}
+              </Droppable>
+            </Paper>
+          </Grid>
+        ))}
+      </Grid>
+    </DragDropContext>
   );
 
   const renderListView = () => (
