@@ -67,6 +67,26 @@ class AutoErrorReporter {
     }
   }
 
+  private extractBrowserVersion(userAgent: string): string {
+    // Extract browser name and version from user agent
+    const browsers = [
+      { name: 'Chrome', regex: /Chrome\/([0-9.]+)/ },
+      { name: 'Firefox', regex: /Firefox\/([0-9.]+)/ },
+      { name: 'Safari', regex: /Version\/([0-9.]+).*Safari/ },
+      { name: 'Edge', regex: /Edg\/([0-9.]+)/ },
+      { name: 'Opera', regex: /OPR\/([0-9.]+)/ }
+    ];
+
+    for (const browser of browsers) {
+      const match = userAgent.match(browser.regex);
+      if (match) {
+        return `${browser.name} ${match[1]}`;
+      }
+    }
+    
+    return 'Unknown Browser';
+  }
+
   private initialize(): void {
     // Capture global JavaScript errors
     if (this.config.reportJsErrors) {
@@ -203,7 +223,7 @@ class AutoErrorReporter {
         stack_trace: errorInfo.error?.stack || errorInfo.stack,
         page_url: window.location.href,
         user_agent: navigator.userAgent,
-        browser_version: navigator.userAgent,
+        browser_version: this.extractBrowserVersion(navigator.userAgent),
         operating_system: navigator.platform,
         environment: process.env.NODE_ENV || 'development',
         console_logs: consoleLogCapture.getRecentLogs(50),
@@ -251,7 +271,7 @@ class AutoErrorReporter {
         stack_trace: error.stack,
         page_url: window.location.href,
         user_agent: navigator.userAgent,
-        browser_version: navigator.userAgent,
+        browser_version: this.extractBrowserVersion(navigator.userAgent),
         operating_system: navigator.platform,
         environment: process.env.NODE_ENV || 'development',
         console_logs: consoleLogCapture.getErrorLogs(),

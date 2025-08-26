@@ -122,6 +122,26 @@ const IssueReportButton: React.FC<IssueReportButtonProps> = () => {
     return consoleLogCapture.getLogs();
   };
 
+  const extractBrowserVersion = (userAgent: string): string => {
+    // Extract browser name and version from user agent
+    const browsers = [
+      { name: 'Chrome', regex: /Chrome\/([0-9.]+)/ },
+      { name: 'Firefox', regex: /Firefox\/([0-9.]+)/ },
+      { name: 'Safari', regex: /Version\/([0-9.]+).*Safari/ },
+      { name: 'Edge', regex: /Edg\/([0-9.]+)/ },
+      { name: 'Opera', regex: /OPR\/([0-9.]+)/ }
+    ];
+
+    for (const browser of browsers) {
+      const match = userAgent.match(browser.regex);
+      if (match) {
+        return `${browser.name} ${match[1]}`;
+      }
+    }
+    
+    return 'Unknown Browser';
+  };
+
   const handleSubmit = async () => {
     // Clear previous errors
     setErrors({});
@@ -145,7 +165,7 @@ const IssueReportButton: React.FC<IssueReportButtonProps> = () => {
       
       // Get user context
       const userAgent = navigator.userAgent;
-      const browserVersion = navigator.userAgent;
+      const browserVersion = extractBrowserVersion(userAgent);
       const operatingSystem = navigator.platform;
       
       const issueData = {

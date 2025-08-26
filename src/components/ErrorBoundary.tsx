@@ -53,6 +53,26 @@ class ErrorBoundary extends Component<Props, State> {
     this.reportReactError(error, errorInfo);
   }
 
+  private extractBrowserVersion(userAgent: string): string {
+    // Extract browser name and version from user agent
+    const browsers = [
+      { name: 'Chrome', regex: /Chrome\/([0-9.]+)/ },
+      { name: 'Firefox', regex: /Firefox\/([0-9.]+)/ },
+      { name: 'Safari', regex: /Version\/([0-9.]+).*Safari/ },
+      { name: 'Edge', regex: /Edg\/([0-9.]+)/ },
+      { name: 'Opera', regex: /OPR\/([0-9.]+)/ }
+    ];
+
+    for (const browser of browsers) {
+      const match = userAgent.match(browser.regex);
+      if (match) {
+        return `${browser.name} ${match[1]}`;
+      }
+    }
+    
+    return 'Unknown Browser';
+  }
+
   private async reportReactError(error: Error, errorInfo: ErrorInfo): Promise<void> {
     try {
       // Create a detailed error report for React errors
@@ -66,7 +86,7 @@ class ErrorBoundary extends Component<Props, State> {
         stack_trace: error.stack,
         page_url: window.location.href,
         user_agent: navigator.userAgent,
-        browser_version: navigator.userAgent,
+        browser_version: this.extractBrowserVersion(navigator.userAgent),
         operating_system: navigator.platform,
         environment: process.env.NODE_ENV || 'development',
         console_logs: [], // Will be filled by the auto reporter

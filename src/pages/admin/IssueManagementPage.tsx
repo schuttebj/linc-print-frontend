@@ -627,154 +627,155 @@ const IssueManagementPage: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 1, height: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column' }}>
-      <Paper 
-        elevation={0}
-        sx={{ 
-          flexGrow: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          bgcolor: '#f8f9fa',
-          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-          borderRadius: 2,
-          overflow: 'hidden'
-        }}
-      >
-        {/* Header */}
-        <Box sx={{ 
-          p: 2, 
-          bgcolor: 'white', 
-          borderBottom: '1px solid', 
-          borderColor: 'divider',
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center' 
-        }}>
-          <Typography variant="h5" fontWeight={600} sx={{ fontSize: '1.25rem', color: 'primary.main' }}>
-            Issue Management
-          </Typography>
-          
-          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
-            <Tabs 
-              value={viewMode} 
-              onChange={(_, value) => setViewMode(value)}
-              sx={{ 
-                minHeight: 'auto',
-                '& .MuiTab-root': { 
-                  minHeight: 'auto', 
-                  py: 1, 
-                  fontSize: '0.875rem' 
-                }
-              }}
-            >
-              <Tab icon={<Dashboard sx={{ fontSize: '18px' }} />} label="Kanban" value="kanban" />
-              <Tab icon={<ListIcon sx={{ fontSize: '18px' }} />} label="List" value="list" />
-            </Tabs>
+    <>
+      <Container maxWidth="lg" sx={{ py: 1, height: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column' }}>
+        <Paper 
+          elevation={0}
+          sx={{ 
+            flexGrow: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            bgcolor: '#f8f9fa',
+            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+            borderRadius: 2,
+            overflow: 'hidden'
+          }}
+        >
+          {/* Header */}
+          <Box sx={{ 
+            p: 2, 
+            bgcolor: 'white', 
+            borderBottom: '1px solid', 
+            borderColor: 'divider',
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center' 
+          }}>
+            <Typography variant="h5" fontWeight={600} sx={{ fontSize: '1.25rem', color: 'primary.main' }}>
+              Issue Management
+            </Typography>
             
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<FilterList />}
-              onClick={() => setFilterDialogOpen(true)}
-              sx={{ fontSize: '0.875rem' }}
-            >
-              Filters
-            </Button>
-            
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<Refresh />}
-              onClick={() => refetch()}
-              sx={{ fontSize: '0.875rem' }}
-            >
-              Refresh
-            </Button>
+            <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+              <Tabs 
+                value={viewMode} 
+                onChange={(_, value) => setViewMode(value)}
+                sx={{ 
+                  minHeight: 'auto',
+                  '& .MuiTab-root': { 
+                    minHeight: 'auto', 
+                    py: 1, 
+                    fontSize: '0.875rem' 
+                  }
+                }}
+              >
+                <Tab icon={<Dashboard sx={{ fontSize: '18px' }} />} label="Kanban" value="kanban" />
+                <Tab icon={<ListIcon sx={{ fontSize: '18px' }} />} label="List" value="list" />
+              </Tabs>
+              
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<FilterList />}
+                onClick={() => setFilterDialogOpen(true)}
+                sx={{ fontSize: '0.875rem' }}
+              >
+                Filters
+              </Button>
+              
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<Refresh />}
+                onClick={() => refetch()}
+                sx={{ fontSize: '0.875rem' }}
+              >
+                Refresh
+              </Button>
+            </Box>
           </Box>
-        </Box>
 
-        {/* Statistics Cards */}
-        {stats && (
-          <Box sx={{ p: 2, bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6} md={3}>
-                <Paper sx={{ 
-                  p: 1.5, 
-                  textAlign: 'center', 
-                  bgcolor: 'primary.50',
-                  border: '1px solid #e3f2fd',
-                  borderRadius: 2
-                }}>
-                  <Typography variant="h5" color="primary.main" fontWeight={600}>
-                    {stats.total_issues}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
-                    Total Issues
-                  </Typography>
-                </Paper>
+          {/* Statistics Cards */}
+          {stats && (
+            <Box sx={{ p: 2, bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Paper sx={{ 
+                    p: 1.5, 
+                    textAlign: 'center', 
+                    bgcolor: 'primary.50',
+                    border: '1px solid #e3f2fd',
+                    borderRadius: 2
+                  }}>
+                    <Typography variant="h5" color="primary.main" fontWeight={600}>
+                      {stats.total_issues}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+                      Total Issues
+                    </Typography>
+                  </Paper>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Paper sx={{ 
+                    p: 1.5, 
+                    textAlign: 'center', 
+                    bgcolor: 'warning.50',
+                    border: '1px solid #fff3e0',
+                    borderRadius: 2
+                  }}>
+                    <Typography variant="h5" color="warning.main" fontWeight={600}>
+                      {stats.open_issues}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+                      Open Issues
+                    </Typography>
+                  </Paper>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Paper sx={{ 
+                    p: 1.5, 
+                    textAlign: 'center', 
+                    bgcolor: 'success.50',
+                    border: '1px solid #e8f5e8',
+                    borderRadius: 2
+                  }}>
+                    <Typography variant="h5" color="success.main" fontWeight={600}>
+                      {stats.resolved_issues}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+                      Resolved Issues
+                    </Typography>
+                  </Paper>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Paper sx={{ 
+                    p: 1.5, 
+                    textAlign: 'center', 
+                    bgcolor: 'grey.50',
+                    border: '1px solid #f5f5f5',
+                    borderRadius: 2
+                  }}>
+                    <Typography variant="h5" fontWeight={600}>
+                      {stats.avg_resolution_time || 'N/A'}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+                      Avg Resolution Time
+                    </Typography>
+                  </Paper>
+                </Grid>
               </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <Paper sx={{ 
-                  p: 1.5, 
-                  textAlign: 'center', 
-                  bgcolor: 'warning.50',
-                  border: '1px solid #fff3e0',
-                  borderRadius: 2
-                }}>
-                  <Typography variant="h5" color="warning.main" fontWeight={600}>
-                    {stats.open_issues}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
-                    Open Issues
-                  </Typography>
-                </Paper>
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <Paper sx={{ 
-                  p: 1.5, 
-                  textAlign: 'center', 
-                  bgcolor: 'success.50',
-                  border: '1px solid #e8f5e8',
-                  borderRadius: 2
-                }}>
-                  <Typography variant="h5" color="success.main" fontWeight={600}>
-                    {stats.resolved_issues}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
-                    Resolved Issues
-                  </Typography>
-                </Paper>
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <Paper sx={{ 
-                  p: 1.5, 
-                  textAlign: 'center', 
-                  bgcolor: 'grey.50',
-                  border: '1px solid #f5f5f5',
-                  borderRadius: 2
-                }}>
-                  <Typography variant="h5" fontWeight={600}>
-                    {stats.avg_resolution_time || 'N/A'}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
-                    Avg Resolution Time
-                  </Typography>
-                </Paper>
-              </Grid>
-            </Grid>
+            </Box>
+          )}
+
+          {/* Main Content */}
+          <Box sx={{ 
+            flexGrow: 1, 
+            p: 2, 
+            overflow: 'auto'
+          }}>
+            {viewMode === 'kanban' ? renderKanbanView() : renderListView()}
           </Box>
-        )}
-
-        {/* Main Content */}
-        <Box sx={{ 
-          flexGrow: 1, 
-          p: 2, 
-          overflow: 'auto'
-        }}>
-          {viewMode === 'kanban' ? renderKanbanView() : renderListView()}
-        </Box>
-      </Paper>
-    </Container>
+        </Paper>
+      </Container>
 
       {/* Issue Detail Dialog */}
       <Dialog
