@@ -154,17 +154,18 @@ const IssueReportButton: React.FC<IssueReportButtonProps> = () => {
       return;
     }
 
-    setLoading(true);
-    
     try {
       // Hide modal before taking screenshot to avoid it appearing in the image
       setOpen(false);
       
-      // Wait a moment for the UI to update
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Wait a moment for the UI to update completely
+      await new Promise(resolve => setTimeout(resolve, 300));
       
-      // Capture screenshot
+      // Capture screenshot with clean screen
       const screenshot = await captureScreenshot();
+      
+      // Now show loading state AFTER screenshot is captured
+      setLoading(true);
       
       // Get current page URL
       const currentUrl = window.location.href;

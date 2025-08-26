@@ -222,14 +222,19 @@ const IssueManagementPage: React.FC = () => {
       }));
     },
     onSuccess: (data, { issueId }) => {
-      // API call successful - clear optimistic update and refresh data
+      // API call successful - clear optimistic update but DON'T refresh to prevent jump
       setOptimisticUpdates(prev => {
         const newUpdates = { ...prev };
         delete newUpdates[issueId];
         return newUpdates;
       });
-      queryClient.invalidateQueries({ queryKey: ['issues'] });
+      // Only refresh stats to update counters immediately
       queryClient.invalidateQueries({ queryKey: ['issue-stats'] });
+      
+      // Delayed refresh of issues to get any other updates (after 2 seconds)
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['issues'] });
+      }, 2000);
     },
     onError: (error, { issueId }) => {
       // API call failed - revert optimistic update (card goes back)
@@ -239,6 +244,9 @@ const IssueManagementPage: React.FC = () => {
         return newUpdates;
       });
       console.error('Failed to update issue status:', error);
+      // Refresh queries on error to ensure data consistency
+      queryClient.invalidateQueries({ queryKey: ['issues'] });
+      queryClient.invalidateQueries({ queryKey: ['issue-stats'] });
     }
   });
 
