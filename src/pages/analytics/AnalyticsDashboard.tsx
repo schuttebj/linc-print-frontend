@@ -34,6 +34,7 @@ import PrintingAnalytics from './components/PrintingAnalytics';
 import FinancialAnalytics from './components/FinancialAnalytics';
 import ActivityFeed from './components/ActivityFeed';
 import SystemHealthCards from './components/SystemHealthCards';
+import ApiAnalytics from './components/ApiAnalytics';
 
 // Import hooks
 import { useAnalyticsData } from './hooks/useAnalyticsData';
@@ -124,7 +125,7 @@ const AnalyticsDashboard: React.FC = () => {
             Analytics Dashboard
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Monitor applications, licenses, printing, and financial performance
+            Monitor applications, licenses, printing, financial performance, and API analytics
           </Typography>
         </Box>
 
@@ -237,6 +238,13 @@ const AnalyticsDashboard: React.FC = () => {
             <Grid item xs={12} lg={4}>
               <Paper elevation={0} sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 'rgba(0,0,0,0.05) 0px 1px 2px 0px', p: 2, height: '100%' }}>
                 <ActivityFeed />
+              </Paper>
+            </Grid>
+
+            {/* Row 4: API Performance Analytics */}
+            <Grid item xs={12}>
+              <Paper elevation={0} sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 'rgba(0,0,0,0.05) 0px 1px 2px 0px', p: 2, height: '100%' }}>
+                <ApiAnalytics dateRange={dateRange} location={selectedLocation} />
               </Paper>
             </Grid>
           </Grid>

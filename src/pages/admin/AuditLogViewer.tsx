@@ -43,7 +43,7 @@ import {
 } from '@mui/icons-material';
 import { API_ENDPOINTS, api } from '../../config/api';
 
-// Audit log interfaces
+// Transaction audit log interfaces (CRUD operations)
 interface AuditLog {
   id: string;
   user_id?: string;
@@ -62,6 +62,24 @@ interface AuditLog {
   timestamp: string;
 }
 
+// API Request log interfaces (Middleware logs)
+interface ApiRequestLog {
+  id: string;
+  request_id: string;
+  method: string;
+  endpoint: string;
+  query_params?: string;
+  user_id?: string;
+  ip_address?: string;
+  user_agent?: string;
+  status_code: number;
+  response_size_bytes?: number;
+  duration_ms: number;
+  location_id?: string;
+  error_message?: string;
+  created_at: string;
+}
+
 interface AuditLogResponse {
   logs: AuditLog[];
   total: number;
@@ -75,6 +93,24 @@ interface AuditLogResponse {
     start_date?: string;
     end_date?: string;
     success_only?: boolean;
+  };
+}
+
+interface ApiRequestLogResponse {
+  logs: ApiRequestLog[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
+  filters_applied: {
+    method?: string;
+    endpoint?: string;
+    user_id?: string;
+    status_code?: number;
+    min_duration?: number;
+    max_duration?: number;
+    start_date?: string;
+    end_date?: string;
   };
 }
 
@@ -120,19 +156,41 @@ const RESOURCE_TYPES = [
   { value: 'SYSTEM_SECURITY', label: 'System Security' }
 ];
 
+const HTTP_METHODS = [
+  { value: 'GET', label: 'GET' },
+  { value: 'POST', label: 'POST' },
+  { value: 'PUT', label: 'PUT' },
+  { value: 'PATCH', label: 'PATCH' },
+  { value: 'DELETE', label: 'DELETE' }
+];
+
+const STATUS_CODES = [
+  { value: 200, label: '200 - OK' },
+  { value: 201, label: '201 - Created' },
+  { value: 400, label: '400 - Bad Request' },
+  { value: 401, label: '401 - Unauthorized' },
+  { value: 403, label: '403 - Forbidden' },
+  { value: 404, label: '404 - Not Found' },
+  { value: 500, label: '500 - Server Error' }
+];
+
 const AuditLogViewer: React.FC = () => {
-  // State management
+  // State management - Transaction audit logs (CRUD)
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [statistics, setStatistics] = useState<AuditStatistics | null>(null);
   const [suspiciousActivity, setSuspiciousActivity] = useState<SuspiciousActivity[]>([]);
+  
+  // State management - API request logs (Middleware)
+  const [apiRequestLogs, setApiRequestLogs] = useState<ApiRequestLog[]>([]);
+  
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   
-  // Tab management
+  // Tab management (0: Transaction Logs, 1: API Request Logs, 2: Statistics, 3: Security)
   const [activeTab, setActiveTab] = useState(0);
   
-  // Pagination and filtering - using TablePagination style
+  // Pagination and filtering - Transaction audit logs
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(50);
   const [totalResults, setTotalResults] = useState(0);
@@ -141,9 +199,23 @@ const AuditLogViewer: React.FC = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
+  // Pagination and filtering - API request logs
+  const [apiPage, setApiPage] = useState(0);
+  const [apiRowsPerPage, setApiRowsPerPage] = useState(50);
+  const [apiTotalResults, setApiTotalResults] = useState(0);
+  const [methodFilter, setMethodFilter] = useState('');
+  const [endpointFilter, setEndpointFilter] = useState('');
+  const [statusCodeFilter, setStatusCodeFilter] = useState('');
+  const [minDurationFilter, setMinDurationFilter] = useState('');
+  const [maxDurationFilter, setMaxDurationFilter] = useState('');
+  const [apiStartDate, setApiStartDate] = useState('');
+  const [apiEndDate, setApiEndDate] = useState('');
+
   // View log details
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+  const [selectedApiLog, setSelectedApiLog] = useState<ApiRequestLog | null>(null);
   const [showLogDetails, setShowLogDetails] = useState(false);
+  const [showApiLogDetails, setShowApiLogDetails] = useState(false);
 
   useEffect(() => {
     loadAuditData();
@@ -152,8 +224,16 @@ const AuditLogViewer: React.FC = () => {
   useEffect(() => {
     if (activeTab === 0) {
       loadAuditLogs();
+    } else if (activeTab === 1) {
+      loadApiRequestLogs();
     }
   }, [page, rowsPerPage, actionFilter, resourceFilter, startDate, endDate, activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 1) {
+      loadApiRequestLogs();
+    }
+  }, [apiPage, apiRowsPerPage, methodFilter, endpointFilter, statusCodeFilter, minDurationFilter, maxDurationFilter, apiStartDate, apiEndDate, activeTab]);
 
   const loadAuditData = async () => {
     try {
@@ -207,6 +287,28 @@ const AuditLogViewer: React.FC = () => {
     }
   };
 
+  const loadApiRequestLogs = async () => {
+    try {
+      const params = new URLSearchParams({
+        page: (apiPage + 1).toString(), // Convert from 0-based to 1-based
+        per_page: apiRowsPerPage.toString(),
+        ...(methodFilter && { method: methodFilter }),
+        ...(endpointFilter && { endpoint: endpointFilter }),
+        ...(statusCodeFilter && { status_code: statusCodeFilter }),
+        ...(minDurationFilter && { min_duration: minDurationFilter }),
+        ...(maxDurationFilter && { max_duration: maxDurationFilter }),
+        ...(apiStartDate && { start_date: apiStartDate }),
+        ...(apiEndDate && { end_date: apiEndDate })
+      });
+
+      const response = await api.get<ApiRequestLogResponse>(`${API_ENDPOINTS.apiRequestLogs}?${params}`);
+      setApiRequestLogs(response.logs || []);
+      setApiTotalResults(response.total || 0);
+    } catch (err) {
+      console.error('Failed to load API request logs:', err);
+    }
+  };
+
   const handleExport = async (format: 'csv' | 'json') => {
     try {
       setExporting(true);
@@ -242,6 +344,16 @@ const AuditLogViewer: React.FC = () => {
   const handleRowsPerPageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0); // Reset to first page when changing rows per page
+  };
+
+  // API Request Log pagination handlers
+  const handleApiPageChange = (_event: unknown, newPage: number) => {
+    setApiPage(newPage);
+  };
+
+  const handleApiRowsPerPageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setApiRowsPerPage(parseInt(event.target.value, 10));
+    setApiPage(0); // Reset to first page when changing rows per page
   };
 
   const formatDate = (dateString: string) => {
@@ -359,6 +471,42 @@ const AuditLogViewer: React.FC = () => {
     setShowLogDetails(true);
   };
 
+  const handleViewApiDetails = (log: ApiRequestLog) => {
+    setSelectedApiLog(log);
+    setShowApiLogDetails(true);
+  };
+
+  const getStatusCodeColor = (statusCode: number): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
+    if (statusCode >= 200 && statusCode < 300) return 'success';
+    if (statusCode >= 300 && statusCode < 400) return 'info';
+    if (statusCode >= 400 && statusCode < 500) return 'warning';
+    if (statusCode >= 500) return 'error';
+    return 'default';
+  };
+
+  const getMethodColor = (method: string): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
+    switch (method.toUpperCase()) {
+      case 'GET': return 'info';
+      case 'POST': return 'success';
+      case 'PUT': return 'warning';
+      case 'PATCH': return 'warning';
+      case 'DELETE': return 'error';
+      default: return 'default';
+    }
+  };
+
+  const formatDuration = (durationMs: number): string => {
+    if (durationMs < 1000) return `${durationMs}ms`;
+    return `${(durationMs / 1000).toFixed(2)}s`;
+  };
+
+  const formatFileSize = (bytes?: number): string => {
+    if (!bytes) return 'N/A';
+    if (bytes < 1024) return `${bytes}B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -395,7 +543,12 @@ const AuditLogViewer: React.FC = () => {
           textColor="primary"
         >
           <Tab 
-            label="Audit Logs" 
+            label="Transaction Logs" 
+            icon={<AssessmentIcon />}
+            iconPosition="start"
+          />
+          <Tab 
+            label="API Request Logs" 
             icon={<AssessmentIcon />}
             iconPosition="start"
           />
@@ -416,7 +569,7 @@ const AuditLogViewer: React.FC = () => {
         </Tabs>
       </Paper>
 
-      {/* Audit Logs Tab */}
+      {/* Transaction Logs Tab (CRUD operations) */}
       {activeTab === 0 && (
         <Box>
           {/* Filters */}
@@ -616,8 +769,220 @@ const AuditLogViewer: React.FC = () => {
         </Box>
       )}
 
+      {/* API Request Logs Tab (Middleware logs) */}
+      {activeTab === 1 && (
+        <Box>
+          {/* Filters */}
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                API Request Filters & Export
+              </Typography>
+              <Grid container spacing={2} sx={{ mb: 2 }}>
+                <Grid item xs={12} md={2}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Method</InputLabel>
+                    <Select
+                      value={methodFilter}
+                      onChange={(e) => setMethodFilter(e.target.value)}
+                      label="Method"
+                    >
+                      <MenuItem value="">All Methods</MenuItem>
+                      {HTTP_METHODS.map(method => (
+                        <MenuItem key={method.value} value={method.value}>{method.label}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                
+                <Grid item xs={12} md={3}>
+                  <TextField
+                    value={endpointFilter}
+                    onChange={(e) => setEndpointFilter(e.target.value)}
+                    fullWidth
+                    size="small"
+                    label="Endpoint Contains"
+                    placeholder="e.g. /api/v1/users"
+                  />
+                </Grid>
+                
+                <Grid item xs={12} md={2}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Status Code</InputLabel>
+                    <Select
+                      value={statusCodeFilter}
+                      onChange={(e) => setStatusCodeFilter(e.target.value)}
+                      label="Status Code"
+                    >
+                      <MenuItem value="">All Status</MenuItem>
+                      {STATUS_CODES.map(status => (
+                        <MenuItem key={status.value} value={status.value}>{status.label}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                <Grid item xs={12} md={2}>
+                  <TextField
+                    type="number"
+                    value={minDurationFilter}
+                    onChange={(e) => setMinDurationFilter(e.target.value)}
+                    fullWidth
+                    size="small"
+                    label="Min Duration (ms)"
+                    placeholder="0"
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={3}>
+                  <TextField
+                    type="number"
+                    value={maxDurationFilter}
+                    onChange={(e) => setMaxDurationFilter(e.target.value)}
+                    fullWidth
+                    size="small"
+                    label="Max Duration (ms)"
+                    placeholder="5000"
+                  />
+                </Grid>
+                
+                <Grid item xs={12} md={3}>
+                  <TextField
+                    type="date"
+                    value={apiStartDate}
+                    onChange={(e) => setApiStartDate(e.target.value)}
+                    fullWidth
+                    size="small"
+                    label="Start Date"
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+                
+                <Grid item xs={12} md={3}>
+                  <TextField
+                    type="date"
+                    value={apiEndDate}
+                    onChange={(e) => setApiEndDate(e.target.value)}
+                    fullWidth
+                    size="small"
+                    label="End Date"
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
+
+          {/* API Request Logs Table */}
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow sx={{ backgroundColor: 'grey.50' }}>
+                  <TableCell>Timestamp</TableCell>
+                  <TableCell>Method</TableCell>
+                  <TableCell>Endpoint</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Duration</TableCell>
+                  <TableCell>User</TableCell>
+                  <TableCell>Response Size</TableCell>
+                  <TableCell align="center">Details</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {apiRequestLogs.map((log) => (
+                  <TableRow key={log.id} hover>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {formatDate(log.created_at)}
+                      </Typography>
+                    </TableCell>
+                    
+                    <TableCell>
+                      <Chip 
+                        label={log.method}
+                        color={getMethodColor(log.method)}
+                        size="small"
+                      />
+                    </TableCell>
+                    
+                    <TableCell>
+                      <Typography variant="body2" sx={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {log.endpoint}
+                      </Typography>
+                      {log.query_params && (
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          Query params present
+                        </Typography>
+                      )}
+                    </TableCell>
+                    
+                    <TableCell>
+                      <Chip 
+                        label={log.status_code}
+                        color={getStatusCodeColor(log.status_code)}
+                        size="small"
+                      />
+                      {log.error_message && (
+                        <Typography variant="caption" color="error.main" display="block" noWrap>
+                          Error: {log.error_message.substring(0, 30)}...
+                        </Typography>
+                      )}
+                    </TableCell>
+                    
+                    <TableCell>
+                      <Typography variant="body2" fontWeight="medium">
+                        {formatDuration(log.duration_ms)}
+                      </Typography>
+                      <Typography variant="caption" color={log.duration_ms > 2000 ? 'error.main' : 'text.secondary'}>
+                        {log.duration_ms > 2000 ? 'Slow' : log.duration_ms > 1000 ? 'Normal' : 'Fast'}
+                      </Typography>
+                    </TableCell>
+                    
+                    <TableCell>
+                      <Typography variant="body2">
+                        {log.user_id ? `User ${log.user_id.substring(0, 8)}...` : 'Anonymous'}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {log.ip_address || 'Unknown IP'}
+                      </Typography>
+                    </TableCell>
+
+                    <TableCell>
+                      <Typography variant="body2">
+                        {formatFileSize(log.response_size_bytes)}
+                      </Typography>
+                    </TableCell>
+
+                    <TableCell align="center">
+                      <Button
+                        size="small"
+                        startIcon={<ViewIcon />}
+                        onClick={() => handleViewApiDetails(log)}
+                      >
+                        View
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          {/* Pagination */}
+          <TablePagination
+            rowsPerPageOptions={[25, 50, 100, 200]}
+            component="div"
+            count={apiTotalResults}
+            rowsPerPage={apiRowsPerPage}
+            page={apiPage}
+            onPageChange={handleApiPageChange}
+            onRowsPerPageChange={handleApiRowsPerPageChange}
+          />
+        </Box>
+      )}
+
       {/* Statistics Tab */}
-      {activeTab === 1 && statistics && (
+      {activeTab === 2 && statistics && (
         <Box>
           {/* Summary Cards */}
           <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -807,7 +1172,7 @@ const AuditLogViewer: React.FC = () => {
       )}
 
       {/* Statistics Loading State */}
-      {activeTab === 1 && !statistics && (
+      {activeTab === 2 && !statistics && (
         <Box sx={{ textAlign: 'center', py: 4 }}>
           <CircularProgress />
           <Typography variant="h6" sx={{ mt: 2 }}>
@@ -817,7 +1182,7 @@ const AuditLogViewer: React.FC = () => {
       )}
 
       {/* Security Monitoring Tab */}
-      {activeTab === 2 && (
+      {activeTab === 3 && (
         <Box>
           {suspiciousActivity && suspiciousActivity.length > 0 ? (
             <Grid container spacing={2}>
@@ -923,6 +1288,98 @@ const AuditLogViewer: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowLogDetails(false)}>
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* API Request Log Details Dialog */}
+      <Dialog open={showApiLogDetails} onClose={() => setShowApiLogDetails(false)} maxWidth="md" fullWidth>
+        <DialogTitle>API Request Log Details</DialogTitle>
+        <DialogContent>
+          {selectedApiLog && (
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <Typography variant="subtitle2">Timestamp:</Typography>
+                <Typography variant="body2">{formatDate(selectedApiLog.created_at)}</Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="subtitle2">Request ID:</Typography>
+                <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>{selectedApiLog.request_id}</Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="subtitle2">Method:</Typography>
+                <Chip 
+                  label={selectedApiLog.method}
+                  color={getMethodColor(selectedApiLog.method)}
+                  size="small"
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="subtitle2">Status Code:</Typography>
+                <Chip 
+                  label={selectedApiLog.status_code}
+                  color={getStatusCodeColor(selectedApiLog.status_code)}
+                  size="small"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <Typography variant="subtitle2">Endpoint:</Typography>
+                <Typography variant="body2" sx={{ wordBreak: 'break-all', fontFamily: 'monospace' }}>
+                  {selectedApiLog.endpoint}
+                </Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="subtitle2">Duration:</Typography>
+                <Typography variant="body2" fontWeight="medium">
+                  {formatDuration(selectedApiLog.duration_ms)}
+                </Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="subtitle2">Response Size:</Typography>
+                <Typography variant="body2">
+                  {formatFileSize(selectedApiLog.response_size_bytes)}
+                </Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="subtitle2">User ID:</Typography>
+                <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                  {selectedApiLog.user_id || 'Anonymous'}
+                </Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="subtitle2">IP Address:</Typography>
+                <Typography variant="body2">{selectedApiLog.ip_address || 'Unknown'}</Typography>
+              </Grid>
+              {selectedApiLog.query_params && (
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2">Query Parameters:</Typography>
+                  <Typography variant="body2" component="pre" sx={{ fontSize: '0.75rem', maxHeight: 200, overflow: 'auto', backgroundColor: 'grey.100', p: 1, borderRadius: 1 }}>
+                    {JSON.stringify(JSON.parse(selectedApiLog.query_params), null, 2)}
+                  </Typography>
+                </Grid>
+              )}
+              {selectedApiLog.error_message && (
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2">Error Message:</Typography>
+                  <Typography variant="body2" color="error.main">
+                    {selectedApiLog.error_message}
+                  </Typography>
+                </Grid>
+              )}
+              {selectedApiLog.user_agent && (
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2">User Agent:</Typography>
+                  <Typography variant="body2" sx={{ wordBreak: 'break-all', fontSize: '0.875rem' }}>
+                    {selectedApiLog.user_agent}
+                  </Typography>
+                </Grid>
+              )}
+            </Grid>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowApiLogDetails(false)}>
             Close
           </Button>
         </DialogActions>

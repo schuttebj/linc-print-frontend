@@ -78,13 +78,17 @@ export const API_ENDPOINTS = {
   roles: `${API_BASE_URL}/api/${API_VERSION}/roles`,
   roleById: (id: string) => `${API_BASE_URL}/api/${API_VERSION}/roles/${id}`,
   
-  // Audit logs
+  // Audit logs - Transaction/CRUD audit logs
   audit: `${API_BASE_URL}/api/${API_VERSION}/audit`,
   auditUser: (userId: string) => `${API_BASE_URL}/api/${API_VERSION}/audit/user/${userId}`,
   auditResource: (resourceType: string, resourceId: string) => `${API_BASE_URL}/api/${API_VERSION}/audit/resource/${resourceType}/${resourceId}`,
   auditStatistics: `${API_BASE_URL}/api/${API_VERSION}/audit/statistics`,
   auditSecurity: `${API_BASE_URL}/api/${API_VERSION}/audit/security/suspicious-activity`,
   auditExport: `${API_BASE_URL}/api/${API_VERSION}/audit/export`,
+  
+  // API Request logs - Middleware audit logs
+  apiRequestLogs: `${API_BASE_URL}/api/${API_VERSION}/audit/api-requests`,
+  apiRequestAnalytics: `${API_BASE_URL}/api/${API_VERSION}/audit/api-requests/analytics`,
   
   // Admin endpoints
   adminInitTables: `${API_BASE_URL}/admin/init-tables`,
