@@ -1014,16 +1014,36 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                     label="Driver Restrictions"
                     onChange={(e) => updateRestrictions(index, 'driver_restrictions', Array.isArray(e.target.value) ? e.target.value : [])}
                     disabled={disabled}
+                    sx={{
+                      position: 'relative',
+                      // Only override chip delete icon pointer events
+                      '& .chip-container .MuiChip-deleteIcon': {
+                        pointerEvents: 'auto',
+                        zIndex: 10000
+                      }
+                    }}
+                    MenuProps={{
+                      PaperProps: {
+                        sx: { zIndex: 1200 }
+                      }
+                    }}
                     renderValue={(selected) => (
                       <Box 
+                        className="chip-container"
+                        data-chip-container="true"
                         sx={{ 
                           display: 'flex', 
                           flexWrap: 'wrap', 
-                          gap: 0.5,
-                          zIndex: 1400, // Above MUI Select dropdown
-                          position: 'relative' // Ensure z-index takes effect
+                          gap: 0.5
                         }}
-                        onClick={(e) => e.stopPropagation()} // Prevent Select from opening when clicking on the Box
+                        onMouseDown={(e) => {
+                          // Only prevent dropdown if clicking directly on a chip or chip element
+                          const target = e.target as HTMLElement;
+                          if (target.closest('.MuiChip-root') || target.classList.contains('MuiChip-root')) {
+                            e.stopPropagation();
+                          }
+                          // Let clicks on empty space pass through to open dropdown
+                        }}
                       >
                         {(selected as string[]).map((value) => (
                           <Chip 
@@ -1034,14 +1054,16 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                             sx={{ 
                               fontSize: '0.65rem', 
                               height: '20px',
-                              zIndex: 1400, // Above MUI Select dropdown (which is typically 1300)
-                              position: 'relative' // Ensure z-index takes effect
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation(); // Prevent Select from opening when clicking chip
+                              '& .MuiChip-deleteIcon': {
+                                pointerEvents: 'auto',
+                                zIndex: 10000
+                              }
                             }}
                             onDelete={value !== '00' || selected.length > 1 ? (e) => {
-                              e?.stopPropagation(); // Prevent Select from opening
+                              if (e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }
                               const newValues = selected.filter(v => v !== value);
                               updateRestrictions(index, 'driver_restrictions', newValues);
                             } : undefined}
@@ -1068,16 +1090,36 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                     label="Vehicle Restrictions"
                     onChange={(e) => updateRestrictions(index, 'vehicle_restrictions', Array.isArray(e.target.value) ? e.target.value : [])}
                     disabled={disabled}
+                    sx={{
+                      position: 'relative',
+                      // Only override chip delete icon pointer events
+                      '& .chip-container .MuiChip-deleteIcon': {
+                        pointerEvents: 'auto',
+                        zIndex: 10000
+                      }
+                    }}
+                    MenuProps={{
+                      PaperProps: {
+                        sx: { zIndex: 1200 }
+                      }
+                    }}
                     renderValue={(selected) => (
                       <Box 
+                        className="chip-container"
+                        data-chip-container="true"
                         sx={{ 
                           display: 'flex', 
                           flexWrap: 'wrap', 
-                          gap: 0.5,
-                          zIndex: 1400, // Above MUI Select dropdown
-                          position: 'relative' // Ensure z-index takes effect
+                          gap: 0.5
                         }}
-                        onClick={(e) => e.stopPropagation()} // Prevent Select from opening when clicking on the Box
+                        onMouseDown={(e) => {
+                          // Only prevent dropdown if clicking directly on a chip or chip element
+                          const target = e.target as HTMLElement;
+                          if (target.closest('.MuiChip-root') || target.classList.contains('MuiChip-root')) {
+                            e.stopPropagation();
+                          }
+                          // Let clicks on empty space pass through to open dropdown
+                        }}
                       >
                         {(selected as string[]).map((value) => (
                           <Chip 
@@ -1088,14 +1130,16 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
                             sx={{ 
                               fontSize: '0.65rem', 
                               height: '20px',
-                              zIndex: 1400, // Above MUI Select dropdown (which is typically 1300)
-                              position: 'relative' // Ensure z-index takes effect
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation(); // Prevent Select from opening when clicking chip
+                              '& .MuiChip-deleteIcon': {
+                                pointerEvents: 'auto',
+                                zIndex: 10000
+                              }
                             }}
                             onDelete={value !== '00' || selected.length > 1 ? (e) => {
-                              e?.stopPropagation(); // Prevent Select from opening
+                              if (e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }
                               const newValues = selected.filter(v => v !== value);
                               updateRestrictions(index, 'vehicle_restrictions', newValues);
                             } : undefined}

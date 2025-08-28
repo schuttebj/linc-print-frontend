@@ -615,6 +615,8 @@ const ProfessionalLicenseApplicationPage: React.FC = () => {
             value={biometricData}
             onChange={setBiometricData}
             disabled={false}
+            personId={selectedPerson?.id}
+            demoMode={import.meta.env.DEV || localStorage.getItem('biometric_demo_mode') === 'true'}
           />
         );
 

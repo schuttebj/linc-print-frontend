@@ -588,6 +588,8 @@ const TemporaryLicenseApplicationPage: React.FC = () => {
             <BiometricCaptureStep
               value={biometricData}
               onChange={setBiometricData}
+              personId={selectedPerson?.id}
+              demoMode={import.meta.env.DEV || localStorage.getItem('biometric_demo_mode') === 'true'}
             />
           </Box>
         );
