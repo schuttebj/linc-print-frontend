@@ -269,34 +269,43 @@ const AuditLogViewer: React.FC = () => {
 
       const response = await api.get<AuditLogResponse>(`${API_ENDPOINTS.audit}?${params}`);
       
-      // Filter to show only business CRUD operations, exclude system operations
+      // Filter to show business operations and security events relevant to fraud detection
       const allLogs = response.logs || [];
       const filteredLogs = allLogs.filter(log => {
-        // Exclude token refresh and other system operations
-        const excludeActions = ['TOKEN_REFRESH', 'LOGIN', 'LOGOUT', 'LOGIN_FAILED'];
-        const excludeEndpoints = ['/api/v1/auth/refresh', '/api/v1/auth/login', '/api/v1/auth/logout'];
-        const excludeResources = ['AUTHENTICATION', 'SYSTEM_SECURITY', 'AUDIT_LOGS', 'API_REQUEST_LOGS'];
+        // EXCLUDE only pure system noise (keep security events for fraud detection)
+        const excludeActions = ['TOKEN_REFRESH']; // Only exclude token refresh spam
+        const excludeEndpoints = ['/api/v1/auth/refresh']; // Only exclude refresh endpoint
+        const excludeResources = ['API_REQUEST_LOGS']; // Don't show API request log access
         
-        // Include only business resources and CRUD operations
-        const businessResources = ['APPLICATION', 'PERSON', 'TRANSACTION', 'CARD_ORDER', 'FEE_STRUCTURE', 'LICENSE', 'USER'];
-        const crudActions = ['CREATE', 'UPDATE', 'DELETE'];
+        // INCLUDE business resources, security events, and CRUD operations
+        const businessResources = [
+          'APPLICATION', 'PERSON', 'TRANSACTION', 'CARD_ORDER', 'FEE_STRUCTURE', 
+          'LICENSE', 'USER', 'AUTHENTICATION', 'SYSTEM_SECURITY' // Keep security events!
+        ];
+        const fraudRelevantActions = [
+          'CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'LOGIN_FAILED', 
+          'PERMISSION_CHANGE', 'SECURITY_EVENT', 'EXPORT', 'PRINT'
+        ];
         
         return (
-          // Include if it's a business resource
+          // Include business and security resources
           (log.resource && businessResources.includes(log.resource)) ||
-          // Include if it's a CRUD action
-          (log.action && crudActions.includes(log.action)) ||
-          // Include if endpoint contains business operations
+          // Include fraud-relevant actions
+          (log.action && fraudRelevantActions.includes(log.action)) ||
+          // Include business operation endpoints
           (log.endpoint && (
             log.endpoint.includes('/applications') ||
             log.endpoint.includes('/persons') ||
             log.endpoint.includes('/transactions') ||
             log.endpoint.includes('/card-orders') ||
             log.endpoint.includes('/fee-structures') ||
-            log.endpoint.includes('/licenses')
+            log.endpoint.includes('/licenses') ||
+            log.endpoint.includes('/users') ||
+            log.endpoint.includes('/auth/login') ||
+            log.endpoint.includes('/auth/logout')
           ))
         ) && (
-          // Exclude system operations
+          // Exclude only pure system noise
           !excludeActions.includes(log.action) &&
           !excludeResources.includes(log.resource || '') &&
           !excludeEndpoints.some(endpoint => log.endpoint?.includes(endpoint))
