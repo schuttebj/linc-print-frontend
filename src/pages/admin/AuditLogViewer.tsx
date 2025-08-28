@@ -268,8 +268,43 @@ const AuditLogViewer: React.FC = () => {
       });
 
       const response = await api.get<AuditLogResponse>(`${API_ENDPOINTS.audit}?${params}`);
-      setAuditLogs(response.logs || []);
-      setTotalResults(response.total || 0);
+      
+      // Filter to show only business CRUD operations, exclude system operations
+      const allLogs = response.logs || [];
+      const filteredLogs = allLogs.filter(log => {
+        // Exclude token refresh and other system operations
+        const excludeActions = ['TOKEN_REFRESH', 'LOGIN', 'LOGOUT', 'LOGIN_FAILED'];
+        const excludeEndpoints = ['/api/v1/auth/refresh', '/api/v1/auth/login', '/api/v1/auth/logout'];
+        const excludeResources = ['AUTHENTICATION', 'SYSTEM_SECURITY', 'AUDIT_LOGS', 'API_REQUEST_LOGS'];
+        
+        // Include only business resources and CRUD operations
+        const businessResources = ['APPLICATION', 'PERSON', 'TRANSACTION', 'CARD_ORDER', 'FEE_STRUCTURE', 'LICENSE', 'USER'];
+        const crudActions = ['CREATE', 'UPDATE', 'DELETE'];
+        
+        return (
+          // Include if it's a business resource
+          (log.resource && businessResources.includes(log.resource)) ||
+          // Include if it's a CRUD action
+          (log.action && crudActions.includes(log.action)) ||
+          // Include if endpoint contains business operations
+          (log.endpoint && (
+            log.endpoint.includes('/applications') ||
+            log.endpoint.includes('/persons') ||
+            log.endpoint.includes('/transactions') ||
+            log.endpoint.includes('/card-orders') ||
+            log.endpoint.includes('/fee-structures') ||
+            log.endpoint.includes('/licenses')
+          ))
+        ) && (
+          // Exclude system operations
+          !excludeActions.includes(log.action) &&
+          !excludeResources.includes(log.resource || '') &&
+          !excludeEndpoints.some(endpoint => log.endpoint?.includes(endpoint))
+        );
+      });
+      
+      setAuditLogs(filteredLogs);
+      setTotalResults(filteredLogs.length); // Update total to reflect filtered results
     } catch (err) {
       console.error('Failed to load audit logs:', err);
     }
