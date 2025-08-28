@@ -60,6 +60,12 @@ interface AuditLog {
   details?: any;
   location_id?: string;
   timestamp: string;
+  // Enhanced audit fields for old/new value tracking
+  old_values?: Record<string, any>;
+  new_values?: Record<string, any>;
+  changed_fields?: string[];
+  screen_reference?: string;
+  transaction_id?: string;
 }
 
 // API Request log interfaces (Middleware logs)
@@ -667,6 +673,7 @@ const AuditLogViewer: React.FC = () => {
                   <TableCell>User</TableCell>
                   <TableCell>Action</TableCell>
                   <TableCell>Resource</TableCell>
+                  <TableCell>Changes</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell>IP Address</TableCell>
                   <TableCell align="center">Details</TableCell>
@@ -720,6 +727,48 @@ const AuditLogViewer: React.FC = () => {
                           )}
                         </Box>
                       )}
+                    </TableCell>
+
+                    {/* Changes Column - Show changed fields for CRUD operations */}
+                    <TableCell>
+                      <Box>
+                        {log.changed_fields && log.changed_fields.length > 0 ? (
+                          <Box>
+                            <Typography variant="caption" color="primary" fontWeight="medium">
+                              {log.changed_fields.length} field{log.changed_fields.length > 1 ? 's' : ''} changed
+                            </Typography>
+                            <Box sx={{ mt: 0.5 }}>
+                              {log.changed_fields.slice(0, 2).map((field, index) => (
+                                <Chip 
+                                  key={index}
+                                  label={field} 
+                                  size="small" 
+                                  color="primary" 
+                                  variant="outlined"
+                                  sx={{ mr: 0.5, mb: 0.5, fontSize: '0.6rem', height: '18px' }}
+                                />
+                              ))}
+                              {log.changed_fields.length > 2 && (
+                                <Typography variant="caption" color="text.secondary">
+                                  +{log.changed_fields.length - 2} more
+                                </Typography>
+                              )}
+                            </Box>
+                          </Box>
+                        ) : log.action === 'CREATE' ? (
+                          <Typography variant="caption" color="success.main">
+                            New record
+                          </Typography>
+                        ) : log.action === 'DELETE' ? (
+                          <Typography variant="caption" color="error.main">
+                            Record deleted
+                          </Typography>
+                        ) : (
+                          <Typography variant="caption" color="text.secondary">
+                            -
+                          </Typography>
+                        )}
+                      </Box>
                     </TableCell>
                     
                     <TableCell>
@@ -1267,6 +1316,20 @@ const AuditLogViewer: React.FC = () => {
                   </Typography>
                 </Grid>
               )}
+              {selectedLog.screen_reference && (
+                <Grid item xs={6}>
+                  <Typography variant="subtitle2">Screen/Form:</Typography>
+                  <Typography variant="body2">{selectedLog.screen_reference}</Typography>
+                </Grid>
+              )}
+              {selectedLog.transaction_id && (
+                <Grid item xs={6}>
+                  <Typography variant="subtitle2">Transaction ID:</Typography>
+                  <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                    {selectedLog.transaction_id}
+                  </Typography>
+                </Grid>
+              )}
               {selectedLog.user_agent && (
                 <Grid item xs={12}>
                   <Typography variant="subtitle2">User Agent:</Typography>
@@ -1275,9 +1338,63 @@ const AuditLogViewer: React.FC = () => {
                   </Typography>
                 </Grid>
               )}
+
+              {/* Data Changes Section - Enhanced for CRUD operations */}
+              {(selectedLog.old_values || selectedLog.new_values || selectedLog.changed_fields) && (
+                <Grid item xs={12}>
+                  <Paper elevation={1} sx={{ p: 2, backgroundColor: 'grey.50', mt: 2 }}>
+                    <Typography variant="h6" gutterBottom color="primary">
+                      Data Changes
+                    </Typography>
+                    
+                    {selectedLog.changed_fields && selectedLog.changed_fields.length > 0 && (
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant="subtitle2">Changed Fields:</Typography>
+                        <Box sx={{ mt: 1 }}>
+                          {selectedLog.changed_fields.map((field, index) => (
+                            <Chip 
+                              key={index} 
+                              label={field} 
+                              size="small" 
+                              color="primary" 
+                              variant="outlined"
+                              sx={{ mr: 1, mb: 1 }}
+                            />
+                          ))}
+                        </Box>
+                      </Box>
+                    )}
+
+                    <Grid container spacing={2}>
+                      {selectedLog.old_values && Object.keys(selectedLog.old_values).length > 0 && (
+                        <Grid item xs={6}>
+                          <Typography variant="subtitle2" color="warning.main">Previous Values:</Typography>
+                          <Paper variant="outlined" sx={{ p: 1, mt: 1, maxHeight: 200, overflow: 'auto' }}>
+                            <Typography component="pre" sx={{ fontSize: '0.75rem', whiteSpace: 'pre-wrap' }}>
+                              {JSON.stringify(selectedLog.old_values, null, 2)}
+                            </Typography>
+                          </Paper>
+                        </Grid>
+                      )}
+                      
+                      {selectedLog.new_values && Object.keys(selectedLog.new_values).length > 0 && (
+                        <Grid item xs={6}>
+                          <Typography variant="subtitle2" color="success.main">New Values:</Typography>
+                          <Paper variant="outlined" sx={{ p: 1, mt: 1, maxHeight: 200, overflow: 'auto' }}>
+                            <Typography component="pre" sx={{ fontSize: '0.75rem', whiteSpace: 'pre-wrap' }}>
+                              {JSON.stringify(selectedLog.new_values, null, 2)}
+                            </Typography>
+                          </Paper>
+                        </Grid>
+                      )}
+                    </Grid>
+                  </Paper>
+                </Grid>
+              )}
+
               {selectedLog.details && (
                 <Grid item xs={12}>
-                  <Typography variant="subtitle2">Additional Details:</Typography>
+                  <Typography variant="subtitle2">Technical Details:</Typography>
                   <Typography variant="body2" component="pre" sx={{ fontSize: '0.75rem', maxHeight: 200, overflow: 'auto' }}>
                     {JSON.stringify(selectedLog.details, null, 2)}
                   </Typography>
