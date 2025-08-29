@@ -81,14 +81,8 @@ const uploadPoliceDocument = async (applicationId: string, policeInfo: PoliceInf
   if (policeInfo.clearance_date) {
     formData.append('issue_date', policeInfo.clearance_date);
   }
-  if (policeInfo.issuing_authority) {
-    formData.append('issuing_authority', policeInfo.issuing_authority);
-  }
-  if (policeInfo.certificate_number) {
-    formData.append('document_number', policeInfo.certificate_number);
-  }
-  if (policeInfo.notes) {
-    formData.append('notes', policeInfo.notes);
+  if (policeInfo.report_type) {
+    formData.append('notes', `Report Type: ${policeInfo.report_type}`);
   }
 
   const token = localStorage.getItem('token');

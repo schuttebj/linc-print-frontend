@@ -93,9 +93,6 @@ const uploadPoliceDocument = async (applicationId: string, policeInfo: PoliceInf
   if (policeInfo.clearance_date) {
     formData.append('issue_date', policeInfo.clearance_date);
   }
-  if (policeInfo.issuing_authority) {
-    formData.append('issuing_authority', policeInfo.issuing_authority);
-  }
   if (policeInfo.report_type) {
     formData.append('notes', `Report Type: ${policeInfo.report_type}`);
   }
@@ -142,7 +139,7 @@ const TemporaryLicenseApplicationPage: React.FC = () => {
   
   // Temporary license specific state
   const [tempReason, setTempReason] = useState<string>('');
-  const [validityPeriod, setValidityPeriod] = useState<number>(30); // Default 30 days
+  const [validityPeriod] = useState<number>(90); // Fixed 90 days for all temporary licenses
   const [neverBeenRefused, setNeverBeenRefused] = useState<boolean>(true);
   const [refusalDetails, setRefusalDetails] = useState<string>('');
 
@@ -389,13 +386,17 @@ const TemporaryLicenseApplicationPage: React.FC = () => {
     return hasProfessionalPermits;
   };
 
-  // Get validity period options
-  const getValidityPeriodOptions = () => {
+  // Get temporary license reason options
+  const getTemporaryReasonOptions = () => {
     return [
-      { value: 14, label: '14 days' },
-      { value: 30, label: '30 days' },
-      { value: 60, label: '60 days' },
-      { value: 90, label: '90 days' }
+      { value: 'lost_license', label: 'Lost License' },
+      { value: 'stolen_license', label: 'Stolen License' },
+      { value: 'damaged_license', label: 'Damaged License' },
+      { value: 'emergency_travel', label: 'Emergency Travel' },
+      { value: 'pending_renewal', label: 'Pending Renewal' },
+      { value: 'forgotten_license', label: 'Forgotten License' },
+      { value: 'urgent_work_requirements', label: 'Urgent Work Requirements' },
+      { value: 'other', label: 'Other' }
     ];
   };
 
@@ -563,10 +564,9 @@ const TemporaryLicenseApplicationPage: React.FC = () => {
       case 1:
         const hasValidLicenses = existingLicenses.length > 0;
         const hasLocation = !!user?.primary_location_id || !!selectedLocationId;
-        const hasReason = !!tempReason.trim();
-        const hasValidityPeriod = !!validityPeriod;
+        const hasReason = !!tempReason; // Now it's a dropdown selection
         const hasRefusalInfo = neverBeenRefused || !!refusalDetails.trim();
-        return hasValidLicenses && hasLocation && hasReason && hasValidityPeriod && hasRefusalInfo && !!selectedPerson && !!selectedPerson.id;
+        return hasValidLicenses && hasLocation && hasReason && hasRefusalInfo && !!selectedPerson && !!selectedPerson.id;
       case 2:
         const age = selectedPerson?.birth_date ? calculateAge(selectedPerson.birth_date) : 0;
         const existingCategories = existingLicenses.flatMap(license => license.categories || []);
@@ -959,68 +959,28 @@ const TemporaryLicenseApplicationPage: React.FC = () => {
               <CardContent sx={{ p: 1.5, pt: 0 }}>
                 <Grid container spacing={2}>
                   {/* Reason for Temporary License */}
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Reason for Temporary License"
-                      value={tempReason}
-                      onChange={(e) => setTempReason(e.target.value)}
-                      multiline
-                      rows={3}
-                      required
-                      size="small"
-                      placeholder="Explain why a temporary license is needed (e.g., lost license, emergency travel, pending renewal, etc.)"
-                      {...getFieldStyling('tempReason', tempReason, true)}
-                    />
-                  </Grid>
-
-                  {/* Validity Period */}
                   <Grid item xs={12} md={6}>
                     <FormControl 
                       fullWidth 
                       required 
                       size="small"
-                      {...getSelectStyling('validityPeriod', validityPeriod, true)}
+                      {...getSelectStyling('tempReason', tempReason, true)}
                     >
-                      <InputLabel>Validity Period</InputLabel>
+                      <InputLabel>Reason for Temporary License</InputLabel>
                       <Select
-                        value={validityPeriod}
-                        onChange={(e) => setValidityPeriod(e.target.value as number)}
-                        label="Validity Period"
+                        value={tempReason}
+                        onChange={(e) => setTempReason(e.target.value)}
+                        label="Reason for Temporary License"
                         size="small"
                       >
-                        {getValidityPeriodOptions().map((period) => (
-                          <MenuItem key={period.value} value={period.value}>
-                            <Box display="flex" alignItems="center">
-                              <TemporaryIcon sx={{ mr: 1, fontSize: '1rem' }} />
-                              {period.label}
-                            </Box>
+                        {getTemporaryReasonOptions().map((reason) => (
+                          <MenuItem key={reason.value} value={reason.value}>
+                            {reason.label}
                           </MenuItem>
                         ))}
                       </Select>
                     </FormControl>
                   </Grid>
-
-                  {/* Professional Permits Alert */}
-                  {hasProfessionalPermits && (
-                    <Grid item xs={12}>
-                      <Alert 
-                        severity="info" 
-                        sx={{ mb: 2 }}
-                        icon={<SecurityIcon />}
-                      >
-                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                          Professional Driving Permits Detected
-                        </Typography>
-                        <Typography variant="caption" sx={{ display: 'block', mb: 1 }}>
-                          You have the following professional permit categories: {getProfessionalPermitCategories(existingLicenses).join(', ')}
-                        </Typography>
-                        <Typography variant="caption">
-                          Temporary license for professional permits requires police clearance certificates.
-                        </Typography>
-                      </Alert>
-                    </Grid>
-                  )}
 
                   {/* Never Been Refused Declaration */}
                   <Grid item xs={12}>
@@ -1068,15 +1028,7 @@ const TemporaryLicenseApplicationPage: React.FC = () => {
                     </Card>
                   </Grid>
 
-                  {/* Information Card */}
-                  <Grid item xs={12}>
-                    <Alert severity="warning" sx={{ py: 1 }}>
-                      <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                        <strong>Important:</strong> Temporary licenses are issued for urgent situations with limited validity ({validityPeriod} days). 
-                        This temporary license will cover ALL your current valid licenses and permits.
-                      </Typography>
-                    </Alert>
-                  </Grid>
+
                 </Grid>
               </CardContent>
             </Card>
@@ -1167,10 +1119,10 @@ const TemporaryLicenseApplicationPage: React.FC = () => {
               <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
                 <Grid container spacing={1}>
                   <Grid item xs={12} md={6}>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Validity Period</Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Reason</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                       <Chip 
-                        label={`${validityPeriod} days`} 
+                        label={getTemporaryReasonOptions().find(opt => opt.value === tempReason)?.label || tempReason} 
                         size="small" 
                         color="primary" 
                         sx={{ fontSize: '0.7rem', height: '20px' }} 
@@ -1185,12 +1137,6 @@ const TemporaryLicenseApplicationPage: React.FC = () => {
                       ) : (
                         <Chip label="Previously refused" size="small" color="warning" sx={{ fontSize: '0.7rem', height: '20px' }} />
                       )}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Reason</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                      {tempReason}
                     </Typography>
                   </Grid>
                   {!neverBeenRefused && refusalDetails && (
@@ -1378,7 +1324,7 @@ const TemporaryLicenseApplicationPage: React.FC = () => {
               {/* Important Notice */}
               <Alert severity="warning" sx={{ py: 1 }}>
                 <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                  <strong>Important:</strong> This temporary license will be valid for {validityPeriod} days and covers ALL your current licenses and permits. 
+                  <strong>Important:</strong> This temporary license will be valid for 90 days and covers ALL your current licenses and permits. 
                   A physical temporary license card will be issued.
                 </Typography>
               </Alert>

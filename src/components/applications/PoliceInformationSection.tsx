@@ -41,13 +41,9 @@ export interface PoliceInformation {
   police_clearance_obtained: boolean;
   clearance_date: string;
   report_type: string;
-  issuing_authority: string;
-  certificate_number: string;
   police_clearance_file?: File;
   clearance_passed: boolean;
   clearance_restrictions: string[];
-  examined_by: string;
-  notes: string;
 }
 
 interface PoliceInformationSectionProps {
@@ -100,13 +96,9 @@ const PoliceInformationSection: React.FC<PoliceInformationSectionProps> = ({
     police_clearance_obtained: false,
     clearance_date: '',
     report_type: '',
-    issuing_authority: '',
-    certificate_number: '',
     police_clearance_file: undefined,
     clearance_passed: false,
-    clearance_restrictions: [],
-    examined_by: '',
-    notes: ''
+    clearance_restrictions: []
   };
 
   // Available report types
@@ -118,14 +110,7 @@ const PoliceInformationSection: React.FC<PoliceInformationSectionProps> = ({
     'Character Certificate'
   ];
 
-  // Available issuing authorities
-  const issuingAuthorities = [
-    'Madagascar National Police',
-    'Regional Police Command',
-    'Local Police Station',
-    'Ministry of Interior',
-    'Other'
-  ];
+
 
   const updatePoliceInfo = (field: keyof PoliceInformation, value: any) => {
     const updated = {
@@ -330,46 +315,7 @@ const PoliceInformationSection: React.FC<PoliceInformationSectionProps> = ({
                   </FormControl>
                 </Grid>
 
-                <Grid item xs={12} md={6}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Issuing Authority</InputLabel>
-                    <Select
-                      value={policeData.issuing_authority}
-                      onChange={(e) => updatePoliceInfo('issuing_authority', e.target.value)}
-                      label="Issuing Authority"
-                      disabled={disabled}
-                      size="small"
-                    >
-                      {issuingAuthorities.map((authority) => (
-                        <MenuItem key={authority} value={authority}>
-                          {authority}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
 
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Certificate Number"
-                    value={policeData.certificate_number}
-                    onChange={(e) => updatePoliceInfo('certificate_number', e.target.value)}
-                    disabled={disabled}
-                    size="small"
-                  />
-                </Grid>
-
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Examined By"
-                    value={policeData.examined_by}
-                    onChange={(e) => updatePoliceInfo('examined_by', e.target.value)}
-                    disabled={disabled}
-                    size="small"
-                  />
-                </Grid>
 
                 {/* File Upload */}
                 <Grid item xs={12}>
@@ -404,20 +350,7 @@ const PoliceInformationSection: React.FC<PoliceInformationSectionProps> = ({
                   </Box>
                 </Grid>
 
-                {/* Notes */}
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    multiline
-                    rows={3}
-                    label="Notes (Optional)"
-                    value={policeData.notes}
-                    onChange={(e) => updatePoliceInfo('notes', e.target.value)}
-                    disabled={disabled}
-                    size="small"
-                    placeholder="Additional notes about the police clearance certificate..."
-                  />
-                </Grid>
+
 
                 {/* Clearance Status */}
                 <Grid item xs={12}>
