@@ -925,6 +925,60 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
 
       const application = await applicationService.createApplication(applicationData);
       
+      // Upload biometric data if any was captured
+      if (formData.biometric_data && (formData.biometric_data.photo || formData.biometric_data.signature || formData.biometric_data.fingerprint)) {
+        console.log('📸 Uploading biometric data for application:', application.id);
+        try {
+          // Convert FormData biometric structure to the format expected by storage service
+          const biometricDataForUpload: any = {};
+          
+          if (formData.biometric_data.photo) {
+            if (formData.biometric_data.photo instanceof File) {
+              biometricDataForUpload.photo = formData.biometric_data.photo;
+            } else if (typeof formData.biometric_data.photo === 'object' && formData.biometric_data.photo.base64_data) {
+              biometricDataForUpload.photo = formData.biometric_data.photo;
+            }
+          }
+          
+          if (formData.biometric_data.signature) {
+            if (formData.biometric_data.signature instanceof File) {
+              biometricDataForUpload.signature = formData.biometric_data.signature;
+            } else if (typeof formData.biometric_data.signature === 'object' && formData.biometric_data.signature.base64_data) {
+              biometricDataForUpload.signature = formData.biometric_data.signature;
+            }
+          }
+          
+          if (formData.biometric_data.fingerprint) {
+            if (formData.biometric_data.fingerprint instanceof File) {
+              biometricDataForUpload.fingerprint = formData.biometric_data.fingerprint;
+            } else if (typeof formData.biometric_data.fingerprint === 'object' && formData.biometric_data.fingerprint.base64_data) {
+              biometricDataForUpload.fingerprint = formData.biometric_data.fingerprint;
+            }
+          }
+          
+          const biometricResult = await applicationService.storeBiometricDataForApplication(
+            application.id, 
+            biometricDataForUpload
+          );
+          
+          if (biometricResult.success) {
+            console.log('✅ Biometric data uploaded successfully:', {
+              photo: !!biometricResult.photo_result,
+              signature: !!biometricResult.signature_result,
+              fingerprint: !!biometricResult.fingerprint_result
+            });
+          } else {
+            console.error('⚠️ Some biometric uploads failed:', biometricResult.errors);
+            // Don't fail the entire application submission for biometric upload errors
+            setError(`Application submitted but some biometric uploads failed: ${biometricResult.errors.join(', ')}`);
+          }
+        } catch (biometricError) {
+          console.error('❌ Biometric upload error:', biometricError);
+          // Don't fail the entire application submission for biometric upload errors
+          setError(`Application submitted but biometric upload failed: ${biometricError}`);
+        }
+      }
+      
       // For capture applications, move directly to completed status
       // For other applications, move to submitted status for normal workflow
       const finalStatus = isCaptureApplication() ? ApplicationStatus.COMPLETED : ApplicationStatus.SUBMITTED;
