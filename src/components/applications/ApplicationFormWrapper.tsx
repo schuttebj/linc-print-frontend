@@ -919,6 +919,7 @@ const ApplicationFormWrapper: React.FC<ApplicationFormWrapperProps> = ({
         application_type: formData.application_type,
         license_category: formData.license_category || LicenseCategory.B, // Default for TEMPORARY_LICENSE/RENEWAL
         medical_information: medicalInformation,
+        license_verification: formData.license_verification, // Include license verification data
         // Include license capture data for capture applications
         license_capture: isCaptureApplication() ? formData.license_capture : undefined
       };

@@ -632,9 +632,9 @@ const DrivingLicenseApplicationPage: React.FC = () => {
         application_type: ApplicationType.NEW_LICENSE,
         license_category: selectedCategory,
         medical_information: cleanMedicalInfo,
+        license_verification: licenseVerification, // Include license verification data
         never_been_refused: neverBeenRefused,
         refusal_details: neverBeenRefused ? undefined : refusalDetails
-        // Note: Biometric data captured but not yet included in submission - backend integration pending
       };
 
       console.log('User info:', user);
