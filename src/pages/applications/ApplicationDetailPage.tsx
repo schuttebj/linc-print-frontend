@@ -188,25 +188,38 @@ const ApplicationDetailPage: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Container maxWidth="lg" sx={{ py: 1, height: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
-      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Paper 
+        elevation={0}
+        sx={{ 
+          p: 1.5,
+          mb: 1,
+          bgcolor: 'white',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center' 
+        }}
+      >
         <Stack direction="row" alignItems="center" spacing={2}>
-          <IconButton onClick={handleBack}>
+          <IconButton onClick={handleBack} size="small">
             <ArrowBack />
           </IconButton>
           <Box>
-            <Typography variant="h4" component="h1">
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '1rem', mb: 0 }}>
               Application Details
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Application #{application.application_number || application.id?.substring(0, 8)}
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+              #{application.application_number || application.id?.substring(0, 8)}
             </Typography>
           </Box>
           <Chip
             label={application.status.replace(/_/g, ' ')}
             color={getStatusColor(application.status)}
-            size="medium"
+            size="small"
+            sx={{ fontSize: '0.7rem', height: 24 }}
           />
         </Stack>
         
@@ -215,524 +228,524 @@ const ApplicationDetailPage: React.FC = () => {
             variant="contained"
             startIcon={<EditIcon />}
             onClick={handleEdit}
+            size="small"
+            sx={{ fontSize: '0.8rem' }}
           >
             Edit Application
           </Button>
         )}
-      </Box>
+      </Paper>
 
-      <Grid container spacing={3}>
-        {/* Application Overview */}
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-                <AssignmentIcon sx={{ mr: 1 }} />
+      {/* Content Area */}
+      <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
+        <Grid container spacing={1}>
+          {/* Application Overview */}
+          <Grid item xs={12} md={6}>
+            <Paper 
+              elevation={0}
+              sx={{ 
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2,
+                p: 1.5,
+                mb: 1
+              }}
+            >
+              <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+                <AssignmentIcon sx={{ mr: 0.5, fontSize: '1rem' }} />
                 Application Information
               </Typography>
               
-              <Stack spacing={2}>
-                <Box>
-                  <Typography variant="body2" color="text.secondary">Application Type</Typography>
-                  <Typography variant="body1">{getApplicationTypeLabel(application.application_type)}</Typography>
-                </Box>
+              <Grid container spacing={1}>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Type</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                    {getApplicationTypeLabel(application.application_type)}
+                  </Typography>
+                </Grid>
                 
-                <Box>
-                  <Typography variant="body2" color="text.secondary">License Category</Typography>
-                  <Typography variant="body1">{application.license_category}</Typography>
-                </Box>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Category</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                    {application.license_category}
+                  </Typography>
+                </Grid>
                 
-                <Box>
-                  <Typography variant="body2" color="text.secondary">Status</Typography>
-                  <Chip
-                    label={application.status.replace(/_/g, ' ')}
-                    color={getStatusColor(application.status)}
-                    size="small"
-                  />
-                </Box>
-
-                {application.test_result && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">Test Result</Typography>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Status</Typography>
+                  <Box sx={{ mt: 0.5 }}>
                     <Chip
-                      label={application.test_result}
-                      color={application.test_result === 'PASSED' ? 'success' : 'error'}
+                      label={application.status.replace(/_/g, ' ')}
+                      color={getStatusColor(application.status)}
                       size="small"
-                      variant="outlined"
+                      sx={{ fontSize: '0.7rem', height: 20 }}
                     />
                   </Box>
+                </Grid>
+
+                {application.test_result && (
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Test Result</Typography>
+                    <Box sx={{ mt: 0.5 }}>
+                      <Chip
+                        label={application.test_result}
+                        color={application.test_result === 'PASSED' ? 'success' : 'error'}
+                        size="small"
+                        variant="outlined"
+                        sx={{ fontSize: '0.7rem', height: 20 }}
+                      />
+                    </Box>
+                  </Grid>
                 )}
 
                 {application.is_urgent && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">Urgency</Typography>
-                    <Chip label="URGENT" color="warning" size="small" />
-                    {application.urgency_reason && (
-                      <Typography variant="body2" sx={{ mt: 1 }}>
-                        Reason: {application.urgency_reason}
-                      </Typography>
-                    )}
-                  </Box>
-                )}
-
-                {application.is_temporary_license && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">Temporary License</Typography>
-                    <Typography variant="body1">
-                      Valid for {application.validity_period_days || 90} days
-                    </Typography>
-                  </Box>
-                )}
-              </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Applicant Information */}
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-                <PersonIcon sx={{ mr: 1 }} />
-                Applicant Information
-              </Typography>
-              
-              {application.person ? (
-                <Stack spacing={2}>
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">Full Name</Typography>
-                    <Typography variant="body1">
-                      {application.person.first_name} {application.person.middle_name || ''} {application.person.surname}
-                    </Typography>
-                  </Box>
-                  
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">Date of Birth</Typography>
-                    <Typography variant="body1">
-                      {application.person.birth_date ? formatDate(application.person.birth_date) : 'N/A'}
-                    </Typography>
-                  </Box>
-                  
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">Nationality</Typography>
-                    <Typography variant="body1">{application.person.nationality_code || 'N/A'}</Typography>
-                  </Box>
-                  
-                  {application.person.cell_phone && (
-                    <Box>
-                      <Typography variant="body2" color="text.secondary">Phone</Typography>
-                      <Typography variant="body1">
-                        +261 {application.person.cell_phone}
-                      </Typography>
-                    </Box>
-                  )}
-                  
-                  {application.person.email && (
-                    <Box>
-                      <Typography variant="body2" color="text.secondary">Email</Typography>
-                      <Typography variant="body1">{application.person.email}</Typography>
-                    </Box>
-                  )}
-                </Stack>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  Person ID: {application.person_id}
-                </Typography>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Requirements & Documents */}
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-                <CheckIcon sx={{ mr: 1 }} />
-                Requirements & Documents
-              </Typography>
-              
-              <List dense>
-                <ListItem>
-                  <ListItemIcon>
-                    {application.medical_certificate_required ? 
-                      (application.medical_certificate_provided ? <CheckIcon color="success" /> : <WarningIcon color="warning" />) :
-                      <InfoIcon color="disabled" />
-                    }
-                  </ListItemIcon>
-                  <ListItemText 
-                    primary="Medical Certificate"
-                    secondary={
-                      application.medical_certificate_required ? 
-                        (application.medical_certificate_provided ? 'Provided' : 'Required') :
-                        'Not required'
-                    }
-                  />
-                </ListItem>
-                
-                <ListItem>
-                  <ListItemIcon>
-                    {application.parental_consent_required ? 
-                      (application.parental_consent_provided ? <CheckIcon color="success" /> : <WarningIcon color="warning" />) :
-                      <InfoIcon color="disabled" />
-                    }
-                  </ListItemIcon>
-                  <ListItemText 
-                    primary="Parental Consent"
-                    secondary={
-                      application.parental_consent_required ? 
-                        (application.parental_consent_provided ? 'Provided' : 'Required') :
-                        'Not required'
-                    }
-                  />
-                </ListItem>
-                
-                {application.requires_existing_license && (
-                  <ListItem>
-                    <ListItemIcon>
-                      {application.existing_license_verified ? <CheckIcon color="success" /> : <WarningIcon color="warning" />}
-                    </ListItemIcon>
-                    <ListItemText 
-                      primary="Existing License Verification"
-                      secondary={application.existing_license_verified ? 'Verified' : 'Pending verification'}
-                    />
-                  </ListItem>
-                )}
-              </List>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Biometric Data Display */}
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-                <PhotoIcon sx={{ mr: 1 }} />
-                Biometric Data
-              </Typography>
-              
-              <Grid container spacing={3}>
-                {/* Photo Display */}
-                <Grid item xs={12} md={4}>
-                  <Paper 
-                    elevation={2} 
-                    sx={{ 
-                      p: 2, 
-                      textAlign: 'center',
-                      minHeight: 300,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-                      <PhotoIcon sx={{ mr: 1 }} />
-                      Photo
-                    </Typography>
-                    {(() => {
-                      // Find the most recent photo from biometric_data array
-                      const photoData = application.biometric_data?.find(item => item.data_type === 'PHOTO');
-                                              if (photoData) {
-                          const metadata = photoData.metadata; // Use correct field name from backend
-                        const standardPath = photoData.file_url; // Use new file_url field
-                        const licenseReadyInfo = metadata?.license_ready_version;
-                        
-                        return (
-                          <Box>
-                            <Grid container spacing={2}>
-                              {/* Standard Version */}
-                              <Grid item xs={6}>
-                                <Box sx={{ textAlign: 'center' }}>
-                                  <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mb: 1 }}>
-                                    Standard Version
-                                  </Typography>
-                                  {standardPath ? (
-                                    <Box>
-                                      <img
-                                        src={`${API_BASE_URL}${standardPath}`}
-                                        alt="Application Photo (Standard)"
-                                        style={{
-                                          maxWidth: '120px',
-                                          maxHeight: '120px',
-                                          objectFit: 'cover',
-                                          border: '2px solid #ddd',
-                                          borderRadius: '8px'
-                                        }}
-                                        onError={(e) => {
-                                          e.currentTarget.style.display = 'none';
-                                          e.currentTarget.nextElementSibling?.setAttribute('style', 'display: block');
-                                        }}
-                                      />
-                                      <Box sx={{ display: 'none', color: 'error.main' }}>
-                                        <WarningIcon sx={{ fontSize: 20, mb: 1 }} />
-                                        <Typography variant="caption">Failed to load</Typography>
-                                      </Box>
-                                      <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
-                                        High Quality ({photoData.file_size ? 
-                                          `${Math.round(photoData.file_size / 1024)}KB` : 'Unknown'})
-                                      </Typography>
-                                    </Box>
-                                  ) : (
-                                    <Box sx={{ color: 'error.main' }}>
-                                      <WarningIcon sx={{ fontSize: 20, mb: 1 }} />
-                                      <Typography variant="caption">No image</Typography>
-                                    </Box>
-                                  )}
-                                </Box>
-                              </Grid>
-
-                              {/* License-Ready Version */}
-                              <Grid item xs={6}>
-                                <Box sx={{ textAlign: 'center' }}>
-                                  <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mb: 1 }}>
-                                    License Card (8-bit)
-                                  </Typography>
-                                  {licenseReadyInfo ? (
-                                    <Box>
-                                      <img
-                                        src={`${API_BASE_URL}/api/v1/applications/${application.id}/biometric-data/PHOTO/license-ready`}
-                                        alt="Application Photo (License-Ready)"
-                                        style={{
-                                          maxWidth: '80px',
-                                          maxHeight: '80px',
-                                          objectFit: 'cover',
-                                          border: '1px solid #aaa',
-                                          borderRadius: '4px'
-                                        }}
-                                        onError={(e) => {
-                                          e.currentTarget.style.display = 'none';
-                                          e.currentTarget.nextElementSibling?.setAttribute('style', 'display: block');
-                                        }}
-                                      />
-                                      <Box sx={{ display: 'none', color: 'error.main' }}>
-                                        <WarningIcon sx={{ fontSize: 16, mb: 1 }} />
-                                        <Typography variant="caption">Failed to load</Typography>
-                                      </Box>
-                                      <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
-                                        Compressed ({licenseReadyInfo.file_size ? 
-                                          `${Math.round(licenseReadyInfo.file_size / 1024 * 10) / 10}KB` : 'Unknown'})
-                                      </Typography>
-                                    </Box>
-                                  ) : (
-                                    <Box sx={{ color: 'warning.main', minHeight: '80px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                                      <InfoIcon sx={{ fontSize: 24, mb: 1 }} />
-                                      <Typography variant="caption">Not generated</Typography>
-                                    </Box>
-                                  )}
-                                </Box>
-                              </Grid>
-                            </Grid>
-
-                            <Typography variant="caption" display="block" sx={{ mt: 2, textAlign: 'center', color: 'text.secondary' }}>
-                              Captured: {new Date(photoData.created_at || '').toLocaleDateString()}
-                            </Typography>
-                          </Box>
-                        );
-                      }
-                      return (
-                        <Box sx={{ color: 'text.secondary' }}>
-                          <WarningIcon sx={{ fontSize: 48, mb: 1 }} />
-                          <Typography variant="body2">No photo captured</Typography>
-                        </Box>
-                      );
-                    })()}
-                  </Paper>
-                </Grid>
-
-                {/* Signature Display */}
-                <Grid item xs={12} md={4}>
-                  <Paper 
-                    elevation={2} 
-                    sx={{ 
-                      p: 2, 
-                      textAlign: 'center',
-                      minHeight: 300,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-                      <SignatureIcon sx={{ mr: 1 }} />
-                      Signature
-                    </Typography>
-                    {(() => {
-                      // Find signature from biometric_data array
-                      const signatureData = application.biometric_data?.find(item => item.data_type === 'SIGNATURE');
-                      if (signatureData) {
-                        return (
-                          <Box>
-                            <img
-                              src={`${API_BASE_URL}${signatureData.file_url}`}
-                              alt="Application Signature"
-                              style={{
-                                maxWidth: '200px',
-                                maxHeight: '100px',
-                                objectFit: 'contain',
-                                border: '1px solid #ddd',
-                                borderRadius: '4px',
-                                backgroundColor: 'white'
-                              }}
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                                e.currentTarget.nextElementSibling?.setAttribute('style', 'display: block');
-                              }}
-                            />
-                            <Box sx={{ display: 'none', color: 'error.main' }}>
-                              <WarningIcon sx={{ fontSize: 24, mb: 1 }} />
-                              <Typography variant="caption">Failed to load signature</Typography>
-                            </Box>
-                            <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
-                              {signatureData.file_size ? `${Math.round(signatureData.file_size / 1024)}KB` : 'Unknown size'} | {signatureData.file_format}
-                            </Typography>
-                          </Box>
-                        );
-                      }
-
-                      return (
-                        <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
-                          <SignatureIcon sx={{ fontSize: 48, mb: 1, opacity: 0.5 }} />
-                          <Typography variant="body2">
-                            No signature captured
-                          </Typography>
-                        </Box>
-                      );
-                    })()}
-                  </Paper>
-                </Grid>
-
-                {/* Fingerprint Display */}
-                <Grid item xs={12} md={4}>
-                  <Paper 
-                    elevation={2} 
-                    sx={{ 
-                      p: 2, 
-                      textAlign: 'center',
-                      minHeight: 300,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-                      <FingerprintIcon sx={{ mr: 1 }} />
-                      Fingerprint
-                    </Typography>
-                    {(() => {
-                      // Find fingerprint from biometric_data array
-                      const fingerprintData = application.biometric_data?.find(item => item.data_type === 'FINGERPRINT');
-                      if (fingerprintData) {
-                        return (
-                          <Box>
-                            <img
-                              src={`${API_BASE_URL}${fingerprintData.file_url}`}
-                              alt="Application Fingerprint"
-                              style={{
-                                maxWidth: '150px',
-                                maxHeight: '150px',
-                                objectFit: 'contain',
-                                border: '1px solid #ddd',
-                                borderRadius: '4px',
-                                backgroundColor: 'white'
-                              }}
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                                e.currentTarget.nextElementSibling?.setAttribute('style', 'display: block');
-                              }}
-                            />
-                            <Box sx={{ display: 'none', color: 'error.main' }}>
-                              <WarningIcon sx={{ fontSize: 24, mb: 1 }} />
-                              <Typography variant="caption">Failed to load fingerprint</Typography>
-                            </Box>
-                            <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
-                              {fingerprintData.file_size ? `${Math.round(fingerprintData.file_size / 1024)}KB` : 'Unknown size'} | {fingerprintData.file_format}
-                            </Typography>
-                          </Box>
-                        );
-                      }
-
-                      return (
-                        <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
-                          <FingerprintIcon sx={{ fontSize: 48, mb: 1, opacity: 0.5 }} />
-                          <Typography variant="body2">
-                            No fingerprint captured
-                          </Typography>
-                        </Box>
-                      );
-                    })()}
-                  </Paper>
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Timestamps */}
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-                <CalendarIcon sx={{ mr: 1 }} />
-                Timeline
-              </Typography>
-              
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">Created</Typography>
-                    <Typography variant="body1">{formatDate(application.created_at)}</Typography>
-                  </Box>
-                </Grid>
-                
-                {application.submitted_at && (
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Box>
-                      <Typography variant="body2" color="text.secondary">Submitted</Typography>
-                      <Typography variant="body1">{formatDate(application.submitted_at)}</Typography>
-                    </Box>
-                  </Grid>
-                )}
-                
-                {application.approved_at && (
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Box>
-                      <Typography variant="body2" color="text.secondary">Approved</Typography>
-                      <Typography variant="body1">{formatDate(application.approved_at)}</Typography>
-                    </Box>
-                  </Grid>
-                )}
-                
-                {application.completed_at && (
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Box>
-                      <Typography variant="body2" color="text.secondary">Completed</Typography>
-                      <Typography variant="body1">{formatDate(application.completed_at)}</Typography>
-                    </Box>
-                  </Grid>
-                )}
-                
-                {application.rejected_at && (
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Box>
-                      <Typography variant="body2" color="text.secondary">Rejected</Typography>
-                      <Typography variant="body1">{formatDate(application.rejected_at)}</Typography>
-                      {application.rejection_reason && (
-                        <Typography variant="body2" color="error" sx={{ mt: 1 }}>
-                          Reason: {application.rejection_reason}
+                  <Grid item xs={12}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Urgency</Typography>
+                    <Box sx={{ mt: 0.5 }}>
+                      <Chip label="URGENT" color="warning" size="small" sx={{ fontSize: '0.7rem', height: 20 }} />
+                      {application.urgency_reason && (
+                        <Typography variant="body2" sx={{ mt: 0.5, fontSize: '0.75rem', color: 'text.secondary' }}>
+                          {application.urgency_reason}
                         </Typography>
                       )}
                     </Box>
                   </Grid>
                 )}
+
+                {application.is_temporary_license && (
+                  <Grid item xs={12}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Validity</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {application.validity_period_days || 90} days
+                    </Typography>
+                  </Grid>
+                )}
               </Grid>
-            </CardContent>
-          </Card>
+            </Paper>
+          </Grid>
+
+          {/* Applicant Information */}
+          <Grid item xs={12} md={6}>
+            <Paper 
+              elevation={0}
+              sx={{ 
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2,
+                p: 1.5,
+                mb: 1
+              }}
+            >
+              <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+                <PersonIcon sx={{ mr: 0.5, fontSize: '1rem' }} />
+                Applicant Information
+              </Typography>
+              
+              {application.person ? (
+                <Grid container spacing={1}>
+                  <Grid item xs={12}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Full Name</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {application.person.surname}, {application.person.first_name} {application.person.middle_name || ''}
+                    </Typography>
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Date of Birth</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {application.person.birth_date ? new Date(application.person.birth_date).toLocaleDateString('en-GB') : 'N/A'}
+                    </Typography>
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Nationality</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {application.person.nationality_code || 'N/A'}
+                    </Typography>
+                  </Grid>
+                  
+                  {application.person.cell_phone && (
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Phone</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                        +261 {application.person.cell_phone}
+                      </Typography>
+                    </Grid>
+                  )}
+                  
+                  {application.person.email && (
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Email</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                        {application.person.email}
+                      </Typography>
+                    </Grid>
+                  )}
+                </Grid>
+              ) : (
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                  Person ID: {application.person_id}
+                </Typography>
+              )}
+            </Paper>
+          </Grid>
+
+          {/* Requirements & Documents */}
+          <Grid item xs={12} md={6}>
+            <Paper 
+              elevation={0}
+              sx={{ 
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2,
+                p: 1.5,
+                mb: 1
+              }}
+            >
+              <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+                <CheckIcon sx={{ mr: 0.5, fontSize: '1rem' }} />
+                Requirements & Documents
+              </Typography>
+              
+              <Grid container spacing={1}>
+                <Grid item xs={12}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                    {application.medical_certificate_required ? 
+                      (application.medical_certificate_provided ? 
+                        <CheckIcon color="success" sx={{ fontSize: '1rem' }} /> : 
+                        <WarningIcon color="warning" sx={{ fontSize: '1rem' }} />) :
+                      <InfoIcon color="disabled" sx={{ fontSize: '1rem' }} />
+                    }
+                    <Box sx={{ flexGrow: 1 }}>
+                      <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 500 }}>
+                        Medical Certificate
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                        {application.medical_certificate_required ? 
+                          (application.medical_certificate_provided ? 'Provided' : 'Required') :
+                          'Not required'
+                        }
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Grid>
+                
+                <Grid item xs={12}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                    {application.parental_consent_required ? 
+                      (application.parental_consent_provided ? 
+                        <CheckIcon color="success" sx={{ fontSize: '1rem' }} /> : 
+                        <WarningIcon color="warning" sx={{ fontSize: '1rem' }} />) :
+                      <InfoIcon color="disabled" sx={{ fontSize: '1rem' }} />
+                    }
+                    <Box sx={{ flexGrow: 1 }}>
+                      <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 500 }}>
+                        Parental Consent
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                        {application.parental_consent_required ? 
+                          (application.parental_consent_provided ? 'Provided' : 'Required') :
+                          'Not required'
+                        }
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Grid>
+                
+                {application.requires_existing_license && (
+                  <Grid item xs={12}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                      {application.existing_license_verified ? 
+                        <CheckIcon color="success" sx={{ fontSize: '1rem' }} /> : 
+                        <WarningIcon color="warning" sx={{ fontSize: '1rem' }} />
+                      }
+                      <Box sx={{ flexGrow: 1 }}>
+                        <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 500 }}>
+                          License Verification
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                          {application.existing_license_verified ? 'Verified' : 'Pending verification'}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Grid>
+                )}
+              </Grid>
+            </Paper>
+          </Grid>
+
+          {/* Biometric Data Display */}
+          <Grid item xs={12}>
+            <Paper 
+              elevation={0}
+              sx={{ 
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2,
+                p: 1.5,
+                mb: 1
+              }}
+            >
+              <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+                <PhotoIcon sx={{ mr: 0.5, fontSize: '1rem' }} />
+                Biometric Data
+              </Typography>
+              
+              <Grid container spacing={2}>
+                {/* Photo Display */}
+                <Grid item xs={12} md={4}>
+                  <Box 
+                    sx={{ 
+                      p: 1, 
+                      border: '1px solid #e0e0e0', 
+                      borderRadius: 1, 
+                      backgroundColor: '#fafafa',
+                      textAlign: 'center',
+                      minHeight: 200
+                    }}
+                  >
+                    <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, fontSize: '0.8rem', mb: 1 }}>
+                      <PhotoIcon sx={{ mr: 0.5, fontSize: '0.9rem' }} />
+                      Photo
+                    </Typography>
+                    {(() => {
+                      // Find the most recent photo from biometric_data array
+                      const photoData = application.biometric_data?.find(item => item.data_type === 'PHOTO');
+                      if (photoData && photoData.file_url) {
+                        return (
+                          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                            <img
+                              src={`${API_BASE_URL}${photoData.file_url}`}
+                              alt="Application Photo"
+                              style={{
+                                maxWidth: '100px',
+                                maxHeight: '120px',
+                                objectFit: 'cover',
+                                border: '1px solid #ddd',
+                                borderRadius: '4px',
+                                marginBottom: '8px'
+                              }}
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.nextElementSibling?.setAttribute('style', 'display: block');
+                              }}
+                            />
+                            <Box sx={{ display: 'none', color: 'error.main', textAlign: 'center' }}>
+                              <WarningIcon sx={{ fontSize: 20, mb: 1 }} />
+                              <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>Failed to load</Typography>
+                            </Box>
+                            <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'text.secondary', textAlign: 'center' }}>
+                              {photoData.file_size ? `${Math.round(photoData.file_size / 1024)}KB` : 'Unknown'} | 
+                              {new Date(photoData.created_at || '').toLocaleDateString()}
+                            </Typography>
+                          </Box>
+                        );
+                      }
+                      return (
+                        <Box sx={{ color: 'text.secondary', py: 2, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <PhotoIcon sx={{ fontSize: 32, mb: 1, opacity: 0.5 }} />
+                          <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>No photo captured</Typography>
+                        </Box>
+                      );
+                    })()}
+                  </Box>
+                </Grid>
+
+                {/* Signature Display */}
+                <Grid item xs={12} md={4}>
+                  <Box 
+                    sx={{ 
+                      p: 1, 
+                      border: '1px solid #e0e0e0', 
+                      borderRadius: 1, 
+                      backgroundColor: '#fafafa',
+                      textAlign: 'center',
+                      minHeight: 200
+                    }}
+                  >
+                    <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, fontSize: '0.8rem', mb: 1 }}>
+                      <SignatureIcon sx={{ mr: 0.5, fontSize: '0.9rem' }} />
+                      Signature
+                    </Typography>
+                    {(() => {
+                      // Find signature from biometric_data array
+                      const signatureData = application.biometric_data?.find(item => item.data_type === 'SIGNATURE');
+                      if (signatureData && signatureData.file_url) {
+                        return (
+                          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                            <img
+                              src={`${API_BASE_URL}${signatureData.file_url}`}
+                              alt="Application Signature"
+                              style={{
+                                maxWidth: '150px',
+                                maxHeight: '80px',
+                                objectFit: 'contain',
+                                border: '1px solid #ddd',
+                                borderRadius: '4px',
+                                backgroundColor: 'white',
+                                marginBottom: '8px'
+                              }}
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.nextElementSibling?.setAttribute('style', 'display: block');
+                              }}
+                            />
+                            <Box sx={{ display: 'none', color: 'error.main', textAlign: 'center' }}>
+                              <WarningIcon sx={{ fontSize: 20, mb: 1 }} />
+                              <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>Failed to load</Typography>
+                            </Box>
+                            <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'text.secondary', textAlign: 'center' }}>
+                              {signatureData.file_size ? `${Math.round(signatureData.file_size / 1024)}KB` : 'Unknown'} | 
+                              {new Date(signatureData.created_at || '').toLocaleDateString()}
+                            </Typography>
+                          </Box>
+                        );
+                      }
+
+                      return (
+                        <Box sx={{ color: 'text.secondary', py: 2, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <SignatureIcon sx={{ fontSize: 32, mb: 1, opacity: 0.5 }} />
+                          <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>No signature captured</Typography>
+                        </Box>
+                      );
+                    })()}
+                  </Box>
+                </Grid>
+
+                {/* Fingerprint Display */}
+                <Grid item xs={12} md={4}>
+                  <Box 
+                    sx={{ 
+                      p: 1, 
+                      border: '1px solid #e0e0e0', 
+                      borderRadius: 1, 
+                      backgroundColor: '#fafafa',
+                      textAlign: 'center',
+                      minHeight: 200
+                    }}
+                  >
+                    <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, fontSize: '0.8rem', mb: 1 }}>
+                      <FingerprintIcon sx={{ mr: 0.5, fontSize: '0.9rem' }} />
+                      Fingerprint
+                    </Typography>
+                    {(() => {
+                      // Find fingerprint from biometric_data array
+                      const fingerprintData = application.biometric_data?.find(item => item.data_type === 'FINGERPRINT');
+                      if (fingerprintData && fingerprintData.file_url) {
+                        return (
+                          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                            <img
+                              src={`${API_BASE_URL}${fingerprintData.file_url}`}
+                              alt="Application Fingerprint"
+                              style={{
+                                maxWidth: '100px',
+                                maxHeight: '120px',
+                                objectFit: 'contain',
+                                border: '1px solid #ddd',
+                                borderRadius: '4px',
+                                backgroundColor: 'white',
+                                marginBottom: '8px'
+                              }}
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.nextElementSibling?.setAttribute('style', 'display: block');
+                              }}
+                            />
+                            <Box sx={{ display: 'none', color: 'error.main', textAlign: 'center' }}>
+                              <WarningIcon sx={{ fontSize: 20, mb: 1 }} />
+                              <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>Failed to load</Typography>
+                            </Box>
+                            <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'text.secondary', textAlign: 'center' }}>
+                              {fingerprintData.file_size ? `${Math.round(fingerprintData.file_size / 1024)}KB` : 'Unknown'} | 
+                              {new Date(fingerprintData.created_at || '').toLocaleDateString()}
+                            </Typography>
+                          </Box>
+                        );
+                      }
+
+                      return (
+                        <Box sx={{ color: 'text.secondary', py: 2, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <FingerprintIcon sx={{ fontSize: 32, mb: 1, opacity: 0.5 }} />
+                          <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>No fingerprint captured</Typography>
+                        </Box>
+                      );
+                    })()}
+                  </Box>
+                </Grid>
+              </Grid>
+            </Paper>
+          </Grid>
+
+          {/* Timeline */}
+          <Grid item xs={12}>
+            <Paper 
+              elevation={0}
+              sx={{ 
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2,
+                p: 1.5,
+                mb: 1
+              }}
+            >
+              <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+                <CalendarIcon sx={{ mr: 0.5, fontSize: '1rem' }} />
+                Timeline
+              </Typography>
+              
+              <Grid container spacing={1}>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Created</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                    {new Date(application.created_at).toLocaleDateString('en-GB')}
+                  </Typography>
+                </Grid>
+                
+                {application.submitted_at && (
+                  <Grid item xs={12} sm={6} md={3}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Submitted</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {new Date(application.submitted_at).toLocaleDateString('en-GB')}
+                    </Typography>
+                  </Grid>
+                )}
+                
+                {application.approved_at && (
+                  <Grid item xs={12} sm={6} md={3}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Approved</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {new Date(application.approved_at).toLocaleDateString('en-GB')}
+                    </Typography>
+                  </Grid>
+                )}
+                
+                {application.completed_at && (
+                  <Grid item xs={12} sm={6} md={3}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Completed</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {new Date(application.completed_at).toLocaleDateString('en-GB')}
+                    </Typography>
+                  </Grid>
+                )}
+                
+                {application.rejected_at && (
+                  <Grid item xs={12}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Rejected</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {new Date(application.rejected_at).toLocaleDateString('en-GB')}
+                    </Typography>
+                    {application.rejection_reason && (
+                      <Typography variant="body2" color="error" sx={{ mt: 0.5, fontSize: '0.75rem' }}>
+                        Reason: {application.rejection_reason}
+                      </Typography>
+                    )}
+                  </Grid>
+                )}
+              </Grid>
+            </Paper>
+          </Grid>
         </Grid>
-      </Grid>
+      </Box>
     </Container>
   );
 };
