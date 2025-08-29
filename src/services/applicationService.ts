@@ -432,10 +432,12 @@ class ApplicationService {
       console.log('🔍 Retrieving biometric data for application:', applicationId);
       const result = await api.get(API_ENDPOINTS.applicationBiometrics(applicationId));
       console.log('✅ Biometric data retrieved:', result);
-      return result;
+      // Ensure we return an array, even if the API returns an object or null
+      return Array.isArray(result) ? result : (result ? [result] : []);
     } catch (error) {
       console.error('❌ Failed to retrieve biometric data:', error);
-      throw error;
+      // Return empty array on error for consistency
+      return [];
     }
   }
 
