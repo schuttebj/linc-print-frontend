@@ -69,6 +69,49 @@ import { applicationService } from '../../services/applicationService';
 import { lookupService } from '../../services/lookupService';
 import type { Location } from '../../services/lookupService';
 
+// Helper function to upload police clearance document
+const uploadPoliceDocument = async (applicationId: string, policeInfo: PoliceInformation) => {
+  if (!policeInfo.police_clearance_file) return;
+
+  const formData = new FormData();
+  formData.append('file', policeInfo.police_clearance_file);
+  formData.append('document_type', 'POLICE_CLEARANCE');
+  formData.append('document_name', 'Police Clearance Certificate');
+  
+  if (policeInfo.clearance_date) {
+    formData.append('issue_date', policeInfo.clearance_date);
+  }
+  if (policeInfo.issuing_authority) {
+    formData.append('issuing_authority', policeInfo.issuing_authority);
+  }
+  if (policeInfo.certificate_number) {
+    formData.append('document_number', policeInfo.certificate_number);
+  }
+  if (policeInfo.notes) {
+    formData.append('notes', policeInfo.notes);
+  }
+
+  const token = localStorage.getItem('token');
+  if (!token) {
+    throw new Error('No authentication token found');
+  }
+
+  const response = await fetch(`/api/v1/applications/${applicationId}/documents`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Failed to upload police clearance document');
+  }
+
+  return await response.json();
+};
+
 const ProfessionalLicenseApplicationPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -614,7 +657,7 @@ const ProfessionalLicenseApplicationPage: React.FC = () => {
       if (policeInformation?.police_clearance_file) {
         try {
           console.log('Storing police clearance document for application:', application.id);
-          // TODO: Implement document storage in application/documents folder
+          await uploadPoliceDocument(application.id, policeInformation);
         } catch (documentError) {
           console.error('Document storage error (non-critical):', documentError);
         }

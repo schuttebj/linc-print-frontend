@@ -27,6 +27,8 @@ import {
   Select,
   MenuItem,
   FormHelperText,
+  FormControlLabel,
+  Checkbox,
   TextField,
   Table,
   TableHead,
@@ -53,12 +55,14 @@ import {
   Warning as WarningIcon,
   Error as ErrorIcon,
   ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon
+  ExpandLess as ExpandLessIcon,
+  Security as SecurityIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import PersonFormWrapper from '../../components/PersonFormWrapper';
 import MedicalInformationSection from '../../components/applications/MedicalInformationSection';
+import PoliceInformationSection, { PoliceInformation } from '../../components/applications/PoliceInformationSection';
 import BiometricCaptureStep, { BiometricData } from '../../components/applications/BiometricCaptureStep';
 import LicenseVerificationSection from '../../components/applications/LicenseVerificationSection';
 import { applicationService } from '../../services/applicationService';
@@ -73,9 +77,49 @@ import {
   LicenseVerificationData,
   ReplacementReason,
   requiresMedicalAlways,
-  requiresMedical60Plus
+  requiresMedical60Plus,
+  ProfessionalPermitCategory,
+  isCommercialLicense
 } from '../../types';
 import { API_ENDPOINTS, getAuthToken } from '../../config/api';
+
+// Helper function to upload police clearance document
+const uploadPoliceDocument = async (applicationId: string, policeInfo: PoliceInformation) => {
+  if (!policeInfo.police_clearance_file) return;
+
+  const formData = new FormData();
+  formData.append('file', policeInfo.police_clearance_file);
+  formData.append('document_type', 'POLICE_CLEARANCE');
+  formData.append('document_name', 'Police Clearance Certificate');
+  
+  if (policeInfo.clearance_date) {
+    formData.append('issue_date', policeInfo.clearance_date);
+  }
+  if (policeInfo.issuing_authority) {
+    formData.append('issuing_authority', policeInfo.issuing_authority);
+  }
+  if (policeInfo.report_type) {
+    formData.append('notes', `Report Type: ${policeInfo.report_type}`);
+  }
+
+  const token = getAuthToken();
+  if (!token) throw new Error('No authentication token available');
+
+  const response = await fetch(`${API_ENDPOINTS.applications}/${applicationId}/documents`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Failed to upload police clearance document');
+  }
+
+  return response.json();
+};
 
 const RenewDrivingLicensePage: React.FC = () => {
   const { user } = useAuth();
@@ -94,7 +138,12 @@ const RenewDrivingLicensePage: React.FC = () => {
 
   const [licenseVerification, setLicenseVerification] = useState<LicenseVerificationData | null>(null);
   const [medicalInformation, setMedicalInformation] = useState<MedicalInformation | null>(null);
+  const [policeInformation, setPoliceInformation] = useState<PoliceInformation | null>(null);
   const [biometricData, setBiometricData] = useState<BiometricData>({});
+  const [policeStep, setPoliceStep] = useState(0);
+  const [policeFormValid, setPoliceFormValid] = useState(false);
+  const [skipProfessionalPermits, setSkipProfessionalPermits] = useState(false);
+  const [hasProfessionalPermits, setHasProfessionalPermits] = useState(false);
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [availableLocations, setAvailableLocations] = useState<Location[]>([]);
   const [existingLicenses, setExistingLicenses] = useState<any[]>([]);
@@ -291,6 +340,10 @@ const RenewDrivingLicensePage: React.FC = () => {
       icon: <MedicalIcon />
     },
     {
+      label: 'Police Clearance',
+      icon: <SecurityIcon />
+    },
+    {
       label: 'Biometric Data',
       icon: <CameraIcon />
     },
@@ -310,6 +363,38 @@ const RenewDrivingLicensePage: React.FC = () => {
       age--;
     }
     return age;
+  };
+
+  // Helper function to check if user has professional permits
+  const checkHasProfessionalPermits = (licenses: any[]): boolean => {
+    return licenses.some((license) => {
+      const categories = license.categories || [];
+      // Check for commercial categories (B2, C, C1, CE, C1E, D, D1, D2) or professional permit categories
+      return categories.some((cat: string) => 
+        isCommercialLicense(cat as LicenseCategory) || 
+        ['P', 'D', 'G'].includes(cat)
+      );
+    });
+  };
+
+  // Helper function to get professional permit categories from existing licenses
+  const getProfessionalPermitCategories = (licenses: any[]): string[] => {
+    const professionalCategories: string[] = [];
+    licenses.forEach((license) => {
+      const categories = license.categories || [];
+      categories.forEach((cat: string) => {
+        if (['P', 'D', 'G'].includes(cat) && !professionalCategories.includes(cat)) {
+          professionalCategories.push(cat);
+        }
+      });
+    });
+    return professionalCategories;
+  };
+
+  // Helper function to check if police clearance is required
+  const isPoliceRequired = (): boolean => {
+    if (skipProfessionalPermits) return false;
+    return hasProfessionalPermits && !skipProfessionalPermits;
   };
 
   // Load available locations for admin users
@@ -355,9 +440,15 @@ const RenewDrivingLicensePage: React.FC = () => {
       });
       
       setExistingLicenses(drivingLicenses);
+      
+      // Check if user has professional permits
+      const hasProfessional = checkHasProfessionalPermits(drivingLicenses);
+      setHasProfessionalPermits(hasProfessional);
+      
     } catch (error) {
       console.error('Error loading existing licenses:', error);
       setExistingLicenses([]);
+      setHasProfessionalPermits(false);
     } finally {
       setLoadingExisting(false);
     }
@@ -424,8 +515,34 @@ const RenewDrivingLicensePage: React.FC = () => {
     setMedicalStep(step);
   };
 
+  const handleContinueFromMedical = () => {
+    console.log('🎯 User confirmed to continue from medical');
+    // Go to police clearance if required, otherwise skip to biometric
+    if (isPoliceRequired()) {
+      setActiveStep(3); // Police clearance step
+    } else {
+      setActiveStep(4); // Biometric step
+    }
+  };
+
   const handleContinueToBiometric = () => {
     console.log('🎯 User confirmed to continue to biometric capture');
+    setActiveStep(4);
+  };
+
+  // Police form callbacks (similar to PersonFormWrapper and MedicalInformationSection)
+  const handlePoliceValidationChange = (step: number, isValid: boolean) => {
+    console.log('🎯 PoliceInformationSection validation callback:', { step, isValid });
+    setPoliceFormValid(isValid);
+  };
+
+  const handlePoliceStepChange = (step: number, canAdvance: boolean) => {
+    console.log('🎯 PoliceInformationSection step change:', step, 'canAdvance:', canAdvance);
+    setPoliceStep(step);
+  };
+
+  const handleContinueToPolice = () => {
+    console.log('🎯 User confirmed to continue to police clearance');
     setActiveStep(3);
   };
 
@@ -442,7 +559,7 @@ const RenewDrivingLicensePage: React.FC = () => {
 
   const handleContinueToReview = () => {
     console.log('🎯 User confirmed to continue to review');
-    setActiveStep(4);
+    setActiveStep(5); // Updated to account for police clearance step
   };
 
   // Step validation
@@ -461,14 +578,22 @@ const RenewDrivingLicensePage: React.FC = () => {
                                  (age >= 60 && licenseVerification?.all_license_categories?.some(cat => requiresMedical60Plus(cat as LicenseCategory)));
         return isMedicalMandatory ? !!medicalInformation?.medical_clearance : true;
       case 3:
+        // Police clearance step - only validate if required
+        if (!isPoliceRequired()) {
+          return true; // Skip validation if not required
+        }
+        return !!policeInformation?.police_clearance_obtained;
+      case 4:
         // Biometric step - photo and signature required for driving license renewals (card-eligible)
         const hasPhoto = !!biometricData.photo;
         const hasRequiredSignature = !!biometricData.signature; // Always required for renewals
         return hasPhoto && hasRequiredSignature;
-      case 4:
+      case 5:
+        // Final review step
         const finalHasPhoto = !!biometricData.photo;
         const finalHasRequiredSignature = !!biometricData.signature; // Always required for renewals
-        return !!selectedPerson && !!selectedPerson.id && !!licenseVerification && finalHasPhoto && finalHasRequiredSignature;
+        const finalPoliceValid = !isPoliceRequired() || !!policeInformation?.police_clearance_obtained;
+        return !!selectedPerson && !!selectedPerson.id && !!licenseVerification && finalHasPhoto && finalHasRequiredSignature && finalPoliceValid;
       default:
         return false;
     }
@@ -579,6 +704,16 @@ const RenewDrivingLicensePage: React.FC = () => {
       console.log('Submitting application data:', applicationData);
 
       const application = await applicationService.createApplication(applicationData);
+      
+      // Store police clearance documents if provided
+      if (policeInformation?.police_clearance_file) {
+        try {
+          console.log('Storing police clearance document for application:', application.id);
+          await uploadPoliceDocument(application.id, policeInformation);
+        } catch (documentError) {
+          console.error('Document storage error (non-critical):', documentError);
+        }
+      }
       
       setSuccess('Driving license renewal submitted successfully!');
       setShowSuccessSnackbar(true);
@@ -834,13 +969,13 @@ const RenewDrivingLicensePage: React.FC = () => {
                       {...getSelectStyling('renewalReason', replacementReason, true)}
                     >
                       <InputLabel>Reason for Renewal</InputLabel>
-                                        <Select
-                    value={replacementReason}
-                    onChange={(e) => {
-                      setReplacementReason(e.target.value as ReplacementReason);
-                      setError('');
-                    }}
-                    label="Reason for Renewal"
+                      <Select
+                        value={replacementReason}
+                        onChange={(e) => {
+                          setReplacementReason(e.target.value as ReplacementReason);
+                          setError('');
+                        }}
+                        label="Reason for Renewal"
                         size="small"
                       >
                         {replacementReasonOptions.map((option) => (
@@ -848,14 +983,59 @@ const RenewDrivingLicensePage: React.FC = () => {
                             {option.label}
                           </MenuItem>
                         ))}
-                  </Select>
+                      </Select>
                       {!replacementReason && (
                         <FormHelperText sx={{ color: '#ff9800' }}>This field is required</FormHelperText>
                       )}
                     </FormControl>
                   </Grid>
 
+                  {/* Professional Permits Options */}
+                  {hasProfessionalPermits && (
+                    <Grid item xs={12}>
+                      <Alert 
+                        severity="info" 
+                        sx={{ mb: 2 }}
+                        icon={<SecurityIcon />}
+                      >
+                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                          Professional Driving Permits Detected
+                        </Typography>
+                        <Typography variant="caption" sx={{ display: 'block', mb: 1 }}>
+                          You have the following professional permit categories: {getProfessionalPermitCategories(existingLicenses).join(', ')}
+                        </Typography>
+                        <Typography variant="caption">
+                          Professional permit renewals require police clearance certificates.
+                        </Typography>
+                      </Alert>
 
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={skipProfessionalPermits}
+                            onChange={(e) => {
+                              setSkipProfessionalPermits(e.target.checked);
+                              if (e.target.checked) {
+                                // Clear police information if skipping professional permits
+                                setPoliceInformation(null);
+                              }
+                            }}
+                            color="primary"
+                          />
+                        }
+                        label={
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                              Skip professional permits renewal
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Check this if you no longer need professional permits and only want to renew your regular license
+                            </Typography>
+                          </Box>
+                        }
+                      />
+                    </Grid>
+                  )}
                 </Grid>
               </CardContent>
             </Card>
@@ -865,10 +1045,13 @@ const RenewDrivingLicensePage: React.FC = () => {
       case 2: // Medical step - handled separately to preserve state
         return null;
 
-      case 3: // Biometric step - handled separately to preserve state
+      case 3: // Police clearance step - handled separately to preserve state
         return null;
 
-      case 4: // Review step
+      case 4: // Biometric step - handled separately to preserve state
+        return null;
+
+      case 5: // Review step
         return (
           <Paper 
             elevation={0}
@@ -990,6 +1173,91 @@ const RenewDrivingLicensePage: React.FC = () => {
                   </Grid>
                 </Grid>
               </Box>
+
+              {/* Police Clearance Details - Show if required */}
+              {hasProfessionalPermits && (
+                <>
+                  <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+                    Professional Permits & Police Clearance
+                  </Typography>
+                  <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
+                    <Grid container spacing={1}>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Professional Permits</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                          {skipProfessionalPermits ? (
+                            <Chip 
+                              label="Skipping Professional Permits" 
+                              size="small" 
+                              color="warning" 
+                              sx={{ fontSize: '0.7rem', height: '20px' }}
+                            />
+                          ) : (
+                            <Box>
+                              {getProfessionalPermitCategories(existingLicenses).map((cat) => (
+                                <Chip 
+                                  key={cat}
+                                  label={cat} 
+                                  size="small" 
+                                  color="primary" 
+                                  sx={{ mr: 0.5, fontSize: '0.7rem', height: '20px' }}
+                                />
+                              ))}
+                            </Box>
+                          )}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Police Clearance</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                          {skipProfessionalPermits ? (
+                            <Chip 
+                              label="Not Required" 
+                              size="small" 
+                              color="default" 
+                              sx={{ fontSize: '0.7rem', height: '20px' }}
+                            />
+                          ) : policeInformation?.police_clearance_obtained ? (
+                            <Chip 
+                              label="Provided" 
+                              size="small" 
+                              color="success" 
+                              sx={{ fontSize: '0.7rem', height: '20px' }}
+                            />
+                          ) : (
+                            <Chip 
+                              label="Required" 
+                              size="small" 
+                              color="error" 
+                              sx={{ fontSize: '0.7rem', height: '20px' }}
+                            />
+                          )}
+                        </Typography>
+                      </Grid>
+                      {policeInformation && policeInformation.police_clearance_obtained && !skipProfessionalPermits && (
+                        <>
+                          {policeInformation.clearance_date && (
+                            <Grid item xs={12} md={6}>
+                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Clearance Date</Typography>
+                              <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                                {policeInformation.clearance_date}
+                              </Typography>
+                            </Grid>
+                          )}
+                          {policeInformation.report_type && (
+                            <Grid item xs={12} md={6}>
+                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Report Type</Typography>
+                              <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                                {policeInformation.report_type}
+                              </Typography>
+                            </Grid>
+                          )}
+                        </>
+                      )}
+                    </Grid>
+                  </Box>
+                </>
+              )}
 
               {/* Biometric & Medical Data - Comprehensive */}
               <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
@@ -1139,8 +1407,8 @@ const RenewDrivingLicensePage: React.FC = () => {
         {/* Tab Content */}
         <Box sx={{ 
           flexGrow: 1, 
-          overflow: (activeStep === 0 || activeStep === 2 || activeStep === 3) ? 'hidden' : 'auto',
-          p: (activeStep === 0 || activeStep === 2 || activeStep === 3) ? 0 : 2
+          overflow: (activeStep === 0 || activeStep === 2 || activeStep === 3 || activeStep === 4) ? 'hidden' : 'auto',
+          p: (activeStep === 0 || activeStep === 2 || activeStep === 3 || activeStep === 4) ? 0 : 2
         }}>
           {/* Person Form - Always rendered but conditionally visible */}
           <Box sx={{ display: activeStep === 0 ? 'block' : 'none' }}>
@@ -1175,6 +1443,23 @@ const RenewDrivingLicensePage: React.FC = () => {
               externalMedicalStep={medicalStep}
               onMedicalValidationChange={handleMedicalValidationChange}
               onMedicalStepChange={handleMedicalStepChange}
+              onContinueToApplication={handleContinueFromMedical}
+              onCancel={handleCancel}
+              showHeader={false}
+            />
+          </Box>
+
+          {/* Police Clearance Form - Always rendered but conditionally visible */}
+          <Box sx={{ display: activeStep === 3 ? 'block' : 'none' }}>
+            <PoliceInformationSection
+              key="police-form-wrapper"
+              value={policeInformation}
+              onChange={setPoliceInformation}
+              disabled={false}
+              isRequired={isPoliceRequired()}
+              externalPoliceStep={policeStep}
+              onPoliceValidationChange={handlePoliceValidationChange}
+              onPoliceStepChange={handlePoliceStepChange}
               onContinueToApplication={handleContinueToBiometric}
               onCancel={handleCancel}
               showHeader={false}
@@ -1182,7 +1467,7 @@ const RenewDrivingLicensePage: React.FC = () => {
           </Box>
 
           {/* Biometric Form - Always rendered but conditionally visible */}
-          <Box sx={{ display: activeStep === 3 ? 'block' : 'none' }}>
+          <Box sx={{ display: activeStep === 4 ? 'block' : 'none' }}>
             <BiometricCaptureStep
               key="biometric-form-wrapper"
               value={biometricData}
@@ -1200,11 +1485,11 @@ const RenewDrivingLicensePage: React.FC = () => {
           </Box>
           
           {/* Other step content */}
-          {activeStep !== 0 && activeStep !== 2 && activeStep !== 3 && renderStepContent(activeStep)}
+          {activeStep !== 0 && activeStep !== 2 && activeStep !== 3 && activeStep !== 4 && renderStepContent(activeStep)}
         </Box>
 
-        {/* Navigation Footer - Only shown when not on person, medical, or biometric step */}
-        {activeStep !== 0 && activeStep !== 2 && activeStep !== 3 && (
+        {/* Navigation Footer - Only shown when not on person, medical, police, or biometric step */}
+        {activeStep !== 0 && activeStep !== 2 && activeStep !== 3 && activeStep !== 4 && (
           <Box sx={{ p: 2, bgcolor: 'white', borderTop: '1px solid', borderColor: 'divider' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Button

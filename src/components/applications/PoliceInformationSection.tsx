@@ -141,10 +141,14 @@ const PoliceInformationSection: React.FC<PoliceInformationSectionProps> = ({
     onChange(updated);
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       updatePoliceInfo('police_clearance_file', file);
+      
+      // TODO: Upload file to backend when application ID is available
+      // This would be called during final submission or when the police step is completed
+      // Example: await uploadPoliceDocument(applicationId, file, policeData);
     }
   };
 
