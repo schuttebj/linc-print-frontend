@@ -45,6 +45,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { applicationService } from '../../services/applicationService';
 import { Application, ApplicationStatus } from '../../types';
+import { API_BASE_URL } from '../../config/api';
 
 const ApplicationDetailPage: React.FC = () => {
   const { applicationId } = useParams<{ applicationId: string }>();
@@ -450,7 +451,7 @@ const ApplicationDetailPage: React.FC = () => {
                                   {standardPath ? (
                                     <Box>
                                       <img
-                                        src={`https://linc-print-backend.onrender.com${standardPath}`}
+                                        src={`${API_BASE_URL}${standardPath}`}
                                         alt="Application Photo (Standard)"
                                         style={{
                                           maxWidth: '120px',
@@ -491,7 +492,7 @@ const ApplicationDetailPage: React.FC = () => {
                                   {licenseReadyInfo ? (
                                     <Box>
                                       <img
-                                        src={`https://linc-print-backend.onrender.com/api/v1/applications/${application.id}/biometric-data/PHOTO/license-ready`}
+                                        src={`${API_BASE_URL}/api/v1/applications/${application.id}/biometric-data/PHOTO/license-ready`}
                                         alt="Application Photo (License-Ready)"
                                         style={{
                                           maxWidth: '80px',
@@ -565,7 +566,7 @@ const ApplicationDetailPage: React.FC = () => {
                         return (
                           <Box>
                             <img
-                              src={`https://linc-print-backend.onrender.com${signatureData.file_url}`}
+                              src={`${API_BASE_URL}${signatureData.file_url}`}
                               alt="Application Signature"
                               style={{
                                 maxWidth: '200px',
@@ -628,7 +629,7 @@ const ApplicationDetailPage: React.FC = () => {
                         return (
                           <Box>
                             <img
-                              src={`https://linc-print-backend.onrender.com${fingerprintData.file_url}`}
+                              src={`${API_BASE_URL}${fingerprintData.file_url}`}
                               alt="Application Fingerprint"
                               style={{
                                 maxWidth: '150px',

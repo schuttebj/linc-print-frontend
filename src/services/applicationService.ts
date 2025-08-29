@@ -288,9 +288,9 @@ class ApplicationService {
   async storeBiometricDataForApplication(
     applicationId: string,
     biometricData: {
-      photo?: any;
-      signature?: any;
-      fingerprint?: any;
+      photo?: File | { base64_data?: string; filename?: string; processed_url?: string; [key: string]: any };
+      signature?: File | { base64_data?: string; filename?: string; processed_url?: string; [key: string]: any };
+      fingerprint?: File | { base64_data?: string; filename?: string; processed_url?: string; [key: string]: any };
     }
   ): Promise<{
     photo_result?: any;
@@ -304,21 +304,32 @@ class ApplicationService {
 
     try {
       // Store photo if available
-      if (biometricData.photo?.base64_data) {
+      if (biometricData.photo) {
         try {
           const photoFormData = new FormData();
+          let photoFile: File;
           
-          // Convert base64 back to File object for upload
-          const photoBlob = this.base64ToBlob(biometricData.photo.base64_data, 'image/jpeg');
-          const photoFile = new File([photoBlob], biometricData.photo.filename || 'license_photo.jpg', {
-            type: 'image/jpeg'
-          });
+          if (biometricData.photo instanceof File) {
+            // Direct File object - use as is
+            photoFile = biometricData.photo;
+            console.log('📸 Using direct File object for photo:', photoFile.name, photoFile.size);
+          } else if (biometricData.photo.base64_data) {
+            // Convert base64 back to File object for upload
+            const photoBlob = this.base64ToBlob(biometricData.photo.base64_data, 'image/jpeg');
+            photoFile = new File([photoBlob], biometricData.photo.filename || 'license_photo.jpg', {
+              type: 'image/jpeg'
+            });
+            console.log('📸 Converting base64 to File for photo:', photoFile.name, photoFile.size);
+          } else {
+            throw new Error('Photo data must be a File object or contain base64_data');
+          }
           
           photoFormData.append('file', photoFile);
           photoFormData.append('data_type', 'PHOTO');
           photoFormData.append('capture_method', 'WEBCAM');
           
           results.photo_result = await this.uploadBiometricData(applicationId, photoFormData);
+          console.log('✅ Photo uploaded successfully:', results.photo_result);
         } catch (error) {
           console.error('Photo upload failed:', error);
           errors.push(`Photo upload failed: ${error}`);
@@ -326,20 +337,32 @@ class ApplicationService {
       }
 
       // Store signature if available
-      if (biometricData.signature?.base64_data) {
+      if (biometricData.signature) {
         try {
           const signatureFormData = new FormData();
+          let signatureFile: File;
           
-          const signatureBlob = this.base64ToBlob(biometricData.signature.base64_data, 'image/png');
-          const signatureFile = new File([signatureBlob], biometricData.signature.filename || 'signature.png', {
-            type: 'image/png'
-          });
+          if (biometricData.signature instanceof File) {
+            // Direct File object - use as is
+            signatureFile = biometricData.signature;
+            console.log('✍️ Using direct File object for signature:', signatureFile.name, signatureFile.size);
+          } else if (biometricData.signature.base64_data) {
+            // Convert base64 back to File object for upload
+            const signatureBlob = this.base64ToBlob(biometricData.signature.base64_data, 'image/png');
+            signatureFile = new File([signatureBlob], biometricData.signature.filename || 'signature.png', {
+              type: 'image/png'
+            });
+            console.log('✍️ Converting base64 to File for signature:', signatureFile.name, signatureFile.size);
+          } else {
+            throw new Error('Signature data must be a File object or contain base64_data');
+          }
           
           signatureFormData.append('file', signatureFile);
           signatureFormData.append('data_type', 'SIGNATURE');
           signatureFormData.append('capture_method', 'DIGITAL_PAD');
           
           results.signature_result = await this.uploadBiometricData(applicationId, signatureFormData);
+          console.log('✅ Signature uploaded successfully:', results.signature_result);
         } catch (error) {
           console.error('Signature upload failed:', error);
           errors.push(`Signature upload failed: ${error}`);
@@ -347,20 +370,41 @@ class ApplicationService {
       }
 
       // Store fingerprint if available
-      if (biometricData.fingerprint?.base64_data) {
+      if (biometricData.fingerprint) {
         try {
           const fingerprintFormData = new FormData();
+          let fingerprintFile: File;
+          let captureMethod = 'SCANNER'; // Default for actual hardware
           
-          const fingerprintBlob = this.base64ToBlob(biometricData.fingerprint.base64_data, 'image/png');
-          const fingerprintFile = new File([fingerprintBlob], biometricData.fingerprint.filename || 'fingerprint.png', {
-            type: 'image/png'
-          });
+          if (biometricData.fingerprint instanceof File) {
+            // Direct File object - use as is
+            fingerprintFile = biometricData.fingerprint;
+            console.log('👆 Using direct File object for fingerprint:', fingerprintFile.name, fingerprintFile.size);
+            
+            // Determine capture method from filename
+            if (fingerprintFile.name.includes('demo') || fingerprintFile.name.includes('mock')) {
+              captureMethod = 'MOCK_SCANNER';
+            } else if (fingerprintFile.name.includes('verified') || fingerprintFile.name.includes('enrolled')) {
+              captureMethod = 'BIO_MINI_SCANNER';
+            }
+          } else if (biometricData.fingerprint.base64_data) {
+            // Convert base64 back to File object for upload
+            const fingerprintBlob = this.base64ToBlob(biometricData.fingerprint.base64_data, 'image/png');
+            fingerprintFile = new File([fingerprintBlob], biometricData.fingerprint.filename || 'fingerprint.png', {
+              type: 'image/png'
+            });
+            console.log('👆 Converting base64 to File for fingerprint:', fingerprintFile.name, fingerprintFile.size);
+            captureMethod = 'MOCK_SCANNER'; // Legacy method for base64 data
+          } else {
+            throw new Error('Fingerprint data must be a File object or contain base64_data');
+          }
           
           fingerprintFormData.append('file', fingerprintFile);
           fingerprintFormData.append('data_type', 'FINGERPRINT');
-          fingerprintFormData.append('capture_method', 'MOCK_SCANNER');
+          fingerprintFormData.append('capture_method', captureMethod);
           
           results.fingerprint_result = await this.uploadBiometricData(applicationId, fingerprintFormData);
+          console.log('✅ Fingerprint uploaded successfully:', results.fingerprint_result);
         } catch (error) {
           console.error('Fingerprint upload failed:', error);
           errors.push(`Fingerprint upload failed: ${error}`);
@@ -379,6 +423,55 @@ class ApplicationService {
         success: false,
         errors: [`Biometric data storage failed: ${error}`]
       };
+    }
+  }
+
+  // Get biometric data for an application
+  async getBiometricData(applicationId: string): Promise<any[]> {
+    try {
+      console.log('🔍 Retrieving biometric data for application:', applicationId);
+      const result = await api.get(API_ENDPOINTS.applicationBiometrics(applicationId));
+      console.log('✅ Biometric data retrieved:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Failed to retrieve biometric data:', error);
+      throw error;
+    }
+  }
+
+  // Get specific biometric data type (PHOTO, SIGNATURE, FINGERPRINT)
+  async getBiometricDataByType(applicationId: string, dataType: 'PHOTO' | 'SIGNATURE' | 'FINGERPRINT'): Promise<any> {
+    try {
+      console.log(`🔍 Retrieving ${dataType} data for application:`, applicationId);
+      const result = await api.get(`${API_ENDPOINTS.applicationBiometrics(applicationId)}/${dataType}`);
+      console.log(`✅ ${dataType} data retrieved:`, result);
+      return result;
+    } catch (error) {
+      console.error(`❌ Failed to retrieve ${dataType} data:`, error);
+      throw error;
+    }
+  }
+
+  // Get license-ready (8-bit) version of photo for card printing
+  async getLicenseReadyPhoto(applicationId: string): Promise<Blob> {
+    try {
+      console.log('🔍 Retrieving license-ready photo for application:', applicationId);
+      const response = await fetch(`${API_ENDPOINTS.applicationBiometrics(applicationId)}/PHOTO/license-ready`, {
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const blob = await response.blob();
+      console.log('✅ License-ready photo retrieved, size:', blob.size);
+      return blob;
+    } catch (error) {
+      console.error('❌ Failed to retrieve license-ready photo:', error);
+      throw error;
     }
   }
 
