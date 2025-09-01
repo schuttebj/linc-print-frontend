@@ -145,7 +145,7 @@ const ApplicationsDashboard: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 1, height: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column' }}>
+    <Container maxWidth="lg" sx={{ py: 1, display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <Box sx={{ mb: 1.5 }}>
         <Typography variant="h5" component="h1" gutterBottom sx={{ fontSize: '1.25rem', fontWeight: 600, mb: 0.5 }}>

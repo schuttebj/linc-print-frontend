@@ -66,7 +66,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import CommandPalette from '../components/CommandPalette';
 
-const DRAWER_WIDTH = 240;
+const DRAWER_WIDTH = 300;
 
 const DashboardLayout: React.FC = () => {
   const { user, logout, hasPermission } = useAuth();
