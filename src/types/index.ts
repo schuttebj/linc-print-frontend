@@ -259,6 +259,8 @@ export interface ApplicationCreate {
   police_station?: string;
   police_reference_number?: string;
   date_of_change?: string;
+  // Professional permit categories (for PROFESSIONAL_LICENSE applications)
+  professional_permit_categories?: ProfessionalPermitCategory[];
 }
 
 export interface ApplicationUpdate {

@@ -629,9 +629,9 @@ const ProfessionalLicenseApplicationPage: React.FC = () => {
         license_category: primaryCategory,
         medical_information: cleanMedicalInfo,
         never_been_refused: neverBeenRefused,
-        refusal_details: neverBeenRefused ? undefined : refusalDetails
-        // Note: Professional permit categories and police clearance will be handled separately
-        // TODO: Add license verification for professional licenses that require existing licenses
+        refusal_details: neverBeenRefused ? undefined : refusalDetails,
+        // Professional permit categories - now properly sent to backend
+        professional_permit_categories: selectedCategories
       };
 
       console.log('Submitting application data:', applicationData);
