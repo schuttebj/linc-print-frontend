@@ -5,7 +5,8 @@
  * Now supports both single-component usage and tabbed interface like PersonFormWrapper
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useScrollbarDetection } from '../../hooks/useScrollbarDetection';
 import {
   Box,
   Card,
@@ -85,6 +86,10 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
   // Internal tab state (only used if using tabbed interface)
   const [internalStep, setInternalStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  
+  // Scrollbar detection for conditional padding
+  const scrollableRef = useRef<HTMLDivElement>(null);
+  const hasScrollbar = useScrollbarDetection(scrollableRef);
   
   // Medical steps for tabbed interface
   const medicalSteps = [
@@ -911,34 +916,36 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
             </Paper>
 
             {/* Tab content - p:0 */}
-            <Box sx={{ 
-              flex: 1,
-              overflow: 'auto',
-              display: 'flex',
-              flexDirection: 'column',
-              p: 0, // Tab content - p:0
-              // Reserve space for scrollbar only when needed
-              scrollbarGutter: 'stable',
-              // Custom scrollbar styling
-              '&::-webkit-scrollbar': {
-                  width: '8px',
-              },
-              '&::-webkit-scrollbar-track': {
-                  background: '#f1f1f1',
-                  borderRadius: '4px',
-                  marginRight: '2px', // Small gap from content
-              },
-              '&::-webkit-scrollbar-thumb': {
-                  background: '#c1c1c1',
-                  borderRadius: '4px',
-                  '&:hover': {
-                      background: '#a8a8a8',
-                  },
-              },
-              // Firefox scrollbar
-              scrollbarWidth: 'thin',
-              scrollbarColor: '#c1c1c1 #f1f1f1',
-            }}>
+            <Box 
+              ref={scrollableRef}
+              sx={{ 
+                flex: 1,
+                overflow: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                p: 0, // Tab content - p:0
+                // Conditional padding based on scrollbar presence
+                pr: hasScrollbar ? 1 : 0,
+                // Custom scrollbar styling
+                '&::-webkit-scrollbar': {
+                    width: '8px',
+                },
+                '&::-webkit-scrollbar-track': {
+                    background: '#f1f1f1',
+                    borderRadius: '4px',
+                    marginRight: '2px', // Small gap from content
+                },
+                '&::-webkit-scrollbar-thumb': {
+                    background: '#c1c1c1',
+                    borderRadius: '4px',
+                    '&:hover': {
+                        background: '#a8a8a8',
+                    },
+                },
+                // Firefox scrollbar
+                scrollbarWidth: 'thin',
+                scrollbarColor: '#c1c1c1 #f1f1f1',
+              }}>
               {/* Step Content - Aligned at top */}
               <Box sx={{ flex: 1, overflow: 'visible' }}>
                 {internalStep === 0 && renderVisionTestContent()}

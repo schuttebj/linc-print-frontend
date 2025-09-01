@@ -63,6 +63,7 @@ import { ValidatedTextField, ValidatedSelect } from './ValidatedFormField';
 
 import { useAuth } from '../contexts/AuthContext';
 import { API_BASE_URL } from '../config/api';
+import { useScrollbarDetection } from '../hooks/useScrollbarDetection';
 import lookupService, { 
     DocumentType, 
     PersonNature, 
@@ -313,6 +314,10 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
     // Ref for auto-scrolling to active step content
     const stepContentRef = useRef<HTMLDivElement>(null);
+    
+    // Ref for scrollable form container and scrollbar detection
+    const scrollableRef = useRef<HTMLDivElement>(null);
+    const hasScrollbar = useScrollbarDetection(scrollableRef);
 
     // State management
     const [internalCurrentStep, setInternalCurrentStep] = useState(skipFirstStep ? 1 : 0);
@@ -3578,6 +3583,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
             {/* Main Form Container - Scrollable form content */}
             <Paper 
+                ref={scrollableRef}
                 elevation={0}
                 onKeyDown={(e) => {
                     // Enter key shortcut to proceed to next step
@@ -3599,8 +3605,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     overflow: 'auto', // Allow scroll on form content
                     display: 'flex',
                     flexDirection: 'column',
-                    // Reserve space for scrollbar only when needed
-                    scrollbarGutter: 'stable',
+                    // Conditional padding based on scrollbar presence
+                    pr: hasScrollbar ? 1 : 0,
                     // Custom scrollbar styling
                     '&::-webkit-scrollbar': {
                         width: '8px',
