@@ -1120,11 +1120,11 @@ const LearnersLicenseApplicationPage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 1, minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Container maxWidth="lg" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Paper 
         elevation={0}
         sx={{ 
-          flexGrow: 1,
+          height: '100%',
           display: 'flex',
           flexDirection: 'column',
           bgcolor: '#f8f9fa',
@@ -1152,14 +1152,19 @@ const LearnersLicenseApplicationPage: React.FC = () => {
           </Box>
         )}
 
-        {/* Navigation Tabs */}
-        <Box sx={{ bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
+        {/* Navigation Tabs - Fixed Height */}
+        <Box sx={{ 
+          bgcolor: 'white', 
+          borderBottom: '1px solid', 
+          borderColor: 'divider',
+          flexShrink: 0 // Prevent shrinking
+        }}>
           <Tabs 
             value={activeStep} 
             onChange={(e, newValue) => setActiveStep(newValue)}
             variant="scrollable"
             scrollButtons="auto"
-                    sx={{
+            sx={{
               '& .MuiTab-root': { 
                 minHeight: 48,
                 textTransform: 'none',
@@ -1176,14 +1181,14 @@ const LearnersLicenseApplicationPage: React.FC = () => {
               />
             ))}
           </Tabs>
-                  </Box>
+        </Box>
 
-        {/* Tab Content */}
+        {/* Tab Content - Scrollable Area */}
         <Box sx={{ 
-          flexGrow: 1, 
-          overflow: (activeStep === 0 || activeStep === 2 || activeStep === 3) ? 'hidden' : 'auto',
+          flex: 1, 
+          overflow: 'hidden', // Prevent entire page scroll
           p: (activeStep === 0 || activeStep === 2 || activeStep === 3) ? 0 : 2,
-          height: '100%', // Ensure this container fills available space
+          minHeight: 0, // Allow flex shrinking
           display: 'flex',
           flexDirection: 'column'
         }}>
@@ -1269,9 +1274,15 @@ const LearnersLicenseApplicationPage: React.FC = () => {
           )}
         </Box>
 
-        {/* Navigation Footer - Only shown when not on person, medical, or biometric step */}
+        {/* Navigation Footer - Fixed at bottom */}
         {activeStep !== 0 && activeStep !== 2 && activeStep !== 3 && (
-          <Box sx={{ p: 2, bgcolor: 'white', borderTop: '1px solid', borderColor: 'divider' }}>
+          <Box sx={{ 
+            p: 2, 
+            bgcolor: 'white', 
+            borderTop: '1px solid', 
+            borderColor: 'divider',
+            flexShrink: 0 // Keep footer visible
+          }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Button
                     onClick={handleCancel}

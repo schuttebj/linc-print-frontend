@@ -3462,7 +3462,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 overflow: 'hidden', // No scroll on outer container
                 p: 2, // Padding for content area
                 display: 'flex',
-                flexDirection: 'column'
+                flexDirection: 'column',
+                minHeight: 0 // Allow flex shrinking
             }}>
                 <Box sx={{ 
                     maxWidth: mode === 'application' ? 'none' : 1200, // No max width in application mode
