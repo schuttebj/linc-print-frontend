@@ -146,15 +146,7 @@ const ApplicationsDashboard: React.FC = () => {
 
   return (
     <Container maxWidth="lg" sx={{ py: 1, display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
-      <Box sx={{ mb: 1.5 }}>
-        <Typography variant="h5" component="h1" gutterBottom sx={{ fontSize: '1.25rem', fontWeight: 600, mb: 0.5 }}>
-          Applications Dashboard
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
-          Manage and track license applications for Madagascar Driver's License System
-        </Typography>
-      </Box>
+      
 
       {/* Header Actions */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
