@@ -1204,7 +1204,7 @@ const DashboardLayout: React.FC = () => {
         <AppBar 
           position="fixed" 
           sx={{ 
-            bgcolor: '#fafafa',
+            bgcolor: '#ffffff',
             borderBottom: '1px solid #e0e0e0',
             boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
             color: '#1a1a1a',
