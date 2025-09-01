@@ -3599,7 +3599,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     overflow: 'auto', // Allow scroll on form content
                     display: 'flex',
                     flexDirection: 'column',
-                    pr: 1, // Add right padding for scrollbar gap
+                    // Reserve space for scrollbar only when needed
+                    scrollbarGutter: 'stable',
                     // Custom scrollbar styling
                     '&::-webkit-scrollbar': {
                         width: '8px',
@@ -3607,6 +3608,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     '&::-webkit-scrollbar-track': {
                         background: '#f1f1f1',
                         borderRadius: '4px',
+                        marginRight: '2px', // Small gap from content
                     },
                     '&::-webkit-scrollbar-thumb': {
                         background: '#c1c1c1',
