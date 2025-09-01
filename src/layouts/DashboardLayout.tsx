@@ -1264,7 +1264,6 @@ const DashboardLayout: React.FC = () => {
                         }
                       }}
                     >
-{crumb.icon}
                       {crumb.text}
                     </Box>
                   );
@@ -1281,7 +1280,6 @@ const DashboardLayout: React.FC = () => {
                         fontWeight: isLast ? 500 : 400
                       }}
                     >
-{crumb.icon}
                       {crumb.text}
                     </Box>
                   );
