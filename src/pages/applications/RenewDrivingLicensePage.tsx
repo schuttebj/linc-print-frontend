@@ -1348,15 +1348,7 @@ const RenewDrivingLicensePage: React.FC = () => {
           overflow: 'hidden'
         }}
       >
-        {/* Header */}
-        <Box sx={{ p: 2, bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
-          <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 0.5 }}>
-            Renew Driving License
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Renew existing driving license for Madagascar
-          </Typography>
-        </Box>
+
 
         {/* Error/Success Messages */}
         {(error || success) && (

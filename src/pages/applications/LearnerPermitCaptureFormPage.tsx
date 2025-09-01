@@ -55,6 +55,7 @@ import {
 } from '../../types';
 import { CapturedLicense, validateCapturedDataForAuthorization } from '../../components/applications/LicenseCaptureForm';
 import { API_ENDPOINTS, getAuthToken } from '../../config/api';
+import { useScrollbarDetection } from '../../hooks/useScrollbarDetection';
 
 const LearnerPermitCaptureFormPage: React.FC = () => {
   const { user } = useAuth();
@@ -120,6 +121,10 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
 
   // Person step validation state
   const [personFormValid, setPersonFormValid] = useState(false);
+
+  // Scrollbar detection for LicenseCaptureForm
+  const scrollableRef = useRef<HTMLDivElement>(null);
+  const hasScrollbar = useScrollbarDetection(scrollableRef);
   
   // Person step validation callback from PersonFormWrapper
   const handlePersonValidationChange = (step: number, isValid: boolean) => {
@@ -447,13 +452,39 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
               </Card>
             )}
 
-            <LicenseCaptureForm
-              applicationtype={ApplicationType.LEARNERS_PERMIT_CAPTURE}
-              value={licenseCaptureData}
-              onChange={handleLicenseCaptureChange}
-              personBirthDate={selectedPerson?.birth_date}
-            />
-
+            <Box
+              ref={scrollableRef}
+              sx={{
+                // Conditional padding based on scrollbar presence
+                pr: hasScrollbar ? 1 : 0,
+                // Custom scrollbar styling
+                '&::-webkit-scrollbar': {
+                  width: '8px',
+                },
+                '&::-webkit-scrollbar-track': {
+                  background: '#f1f1f1',
+                  borderRadius: '4px',
+                  marginRight: '2px', // Small gap from content
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: '#c1c1c1',
+                  borderRadius: '4px',
+                  '&:hover': {
+                    background: '#a8a8a8',
+                  },
+                },
+                // Firefox scrollbar
+                scrollbarWidth: 'thin',
+                scrollbarColor: '#c1c1c1 #f1f1f1',
+              }}
+            >
+              <LicenseCaptureForm
+                applicationtype={ApplicationType.LEARNERS_PERMIT_CAPTURE}
+                value={licenseCaptureData}
+                onChange={handleLicenseCaptureChange}
+                personBirthDate={selectedPerson?.birth_date}
+              />
+            </Box>
 
           </Box>
         );
@@ -625,15 +656,7 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
           overflow: 'hidden'
         }}
       >
-        {/* Header */}
-        <Box sx={{ p: 2, bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
-          <Typography variant="h5" gutterBottom sx={{ mb: 1 }}>
-            Learner's Permit Capture
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Capture existing learner's permit details for system registration
-          </Typography>
-        </Box>
+
 
         {/* Error/Success Messages */}
         {error && (

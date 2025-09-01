@@ -5,7 +5,7 @@
  * Workflow: Person Selection (A) → License Capture → Review & Submit
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Container,
   Paper,
@@ -55,6 +55,7 @@ import {
 } from '../../types';
 import { CapturedLicense, validateCapturedDataForAuthorization } from '../../components/applications/LicenseCaptureForm';
 import { API_ENDPOINTS, getAuthToken } from '../../config/api';
+import { useScrollbarDetection } from '../../hooks/useScrollbarDetection';
 
 const DriverLicenseCaptureFormPage: React.FC = () => {
   const { user } = useAuth();
@@ -74,6 +75,10 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
 
   // Person form validation state
   const [personFormValid, setPersonFormValid] = useState(false);
+
+  // Scrollbar detection for LicenseCaptureForm
+  const scrollableRef = useRef<HTMLDivElement>(null);
+  const hasScrollbar = useScrollbarDetection(scrollableRef);
 
   // Steps for driver's license capture
   const steps = [
@@ -438,13 +443,40 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
               </Card>
             )}
 
-            <LicenseCaptureForm
-              applicationtype={ApplicationType.DRIVERS_LICENSE_CAPTURE}
-              value={licenseCaptureData}
-              onChange={handleLicenseCaptureChange}
-              personBirthDate={selectedPerson?.birth_date}
-              personId={selectedPerson?.id}
-            />
+            <Box
+              ref={scrollableRef}
+              sx={{
+                // Conditional padding based on scrollbar presence
+                pr: hasScrollbar ? 1 : 0,
+                // Custom scrollbar styling
+                '&::-webkit-scrollbar': {
+                  width: '8px',
+                },
+                '&::-webkit-scrollbar-track': {
+                  background: '#f1f1f1',
+                  borderRadius: '4px',
+                  marginRight: '2px', // Small gap from content
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: '#c1c1c1',
+                  borderRadius: '4px',
+                  '&:hover': {
+                    background: '#a8a8a8',
+                  },
+                },
+                // Firefox scrollbar
+                scrollbarWidth: 'thin',
+                scrollbarColor: '#c1c1c1 #f1f1f1',
+              }}
+            >
+              <LicenseCaptureForm
+                applicationtype={ApplicationType.DRIVERS_LICENSE_CAPTURE}
+                value={licenseCaptureData}
+                onChange={handleLicenseCaptureChange}
+                personBirthDate={selectedPerson?.birth_date}
+                personId={selectedPerson?.id}
+              />
+            </Box>
           </Box>
         );
 
@@ -615,15 +647,7 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
           overflow: 'hidden'
         }}
       >
-        {/* Header */}
-        <Box sx={{ p: 2, bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
-          <Typography variant="h5" gutterBottom sx={{ mb: 1 }}>
-            Driver's License Capture
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Capture existing driver's license details for system registration
-          </Typography>
-        </Box>
+
 
         {/* Error/Success Messages */}
         {error && (

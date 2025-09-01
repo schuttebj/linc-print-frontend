@@ -1146,15 +1146,7 @@ const ProfessionalLicenseApplicationPage: React.FC = () => {
           overflow: 'hidden'
         }}
       >
-        {/* Header */}
-        <Box sx={{ p: 2, bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
-          <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 0.5 }}>
-            Professional Driving License Application
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Apply for professional driving permits for commercial transport
-          </Typography>
-        </Box>
+
 
         {/* Error/Success Messages */}
         {(error || success) && (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -72,6 +72,7 @@ import { applicationService } from '../../services/applicationService';
 import { lookupService } from '../../services/lookupService';
 import type { Location } from '../../services/lookupService';
 import { API_ENDPOINTS, getAuthToken } from '../../config/api';
+import { useScrollbarDetection } from '../../hooks/useScrollbarDetection';
 
 const steps = [
   {
@@ -124,6 +125,10 @@ const ForeignConversionApplicationPage: React.FC = () => {
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
   const [showSuccessSnackbar, setShowSuccessSnackbar] = useState(false);
+
+  // Scrollbar detection for ForeignLicenseCaptureForm
+  const scrollableRef = useRef<HTMLDivElement>(null);
+  const hasScrollbar = useScrollbarDetection(scrollableRef);
 
   // Form validation helper functions
   const getFieldStyling = (fieldName: string, value: any, isRequired: boolean = true) => {
@@ -840,13 +845,40 @@ const ForeignConversionApplicationPage: React.FC = () => {
                 subheader="Provide details for each foreign license you want to convert to a Madagascar license"
               />
               <CardContent sx={{ p: 1.5, pt: 0 }}>
-                <ForeignLicenseCaptureForm
-                  value={foreignLicenseCaptureData}
-                  onChange={handleForeignLicenseCaptureChange}
-                  disabled={loading}
-                  personBirthDate={selectedPerson?.birth_date}
-                  personId={selectedPerson?.id}
-                />
+                <Box
+                  ref={scrollableRef}
+                  sx={{
+                    // Conditional padding based on scrollbar presence
+                    pr: hasScrollbar ? 1 : 0,
+                    // Custom scrollbar styling
+                    '&::-webkit-scrollbar': {
+                      width: '8px',
+                    },
+                    '&::-webkit-scrollbar-track': {
+                      background: '#f1f1f1',
+                      borderRadius: '4px',
+                      marginRight: '2px', // Small gap from content
+                    },
+                    '&::-webkit-scrollbar-thumb': {
+                      background: '#c1c1c1',
+                      borderRadius: '4px',
+                      '&:hover': {
+                        background: '#a8a8a8',
+                      },
+                    },
+                    // Firefox scrollbar
+                    scrollbarWidth: 'thin',
+                    scrollbarColor: '#c1c1c1 #f1f1f1',
+                  }}
+                >
+                  <ForeignLicenseCaptureForm
+                    value={foreignLicenseCaptureData}
+                    onChange={handleForeignLicenseCaptureChange}
+                    disabled={loading}
+                    personBirthDate={selectedPerson?.birth_date}
+                    personId={selectedPerson?.id}
+                  />
+                </Box>
               </CardContent>
             </Card>
 
@@ -1079,15 +1111,7 @@ const ForeignConversionApplicationPage: React.FC = () => {
           overflow: 'hidden'
         }}
       >
-        {/* Header */}
-        <Box sx={{ p: 2, bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
-          <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 0.5 }}>
-            Foreign License Conversion Application
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Convert your foreign driving license to a Madagascar license
-          </Typography>
-        </Box>
+
 
         {/* Error/Success Messages */}
         {(error || success) && (
