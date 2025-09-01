@@ -1225,15 +1225,35 @@ const DashboardLayout: React.FC = () => {
             <MenuIcon />
           </IconButton>
 
-          {/* Breadcrumbs */}
-          <Box sx={{ flexGrow: 1 }}>
+          {/* Page Title and Breadcrumbs */}
+          <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            {/* Page Title */}
+            <Typography
+              variant="h6"
+              sx={{
+                color: '#1a1a1a',
+                fontSize: '1.25rem',
+                fontWeight: 600,
+                lineHeight: 1.2,
+                margin: 0
+              }}
+            >
+              {(() => {
+                const breadcrumbs = generateBreadcrumbs();
+                const lastCrumb = breadcrumbs[breadcrumbs.length - 1];
+                return lastCrumb ? lastCrumb.text : 'Dashboard';
+              })()}
+            </Typography>
+            
+            {/* Breadcrumbs */}
             <Breadcrumbs 
-              separator={<NavigateNext fontSize="small" sx={{ color: '#999' }} />}
+              separator={<NavigateNext fontSize="inherit" sx={{ color: '#999', fontSize: '0.75rem' }} />}
               aria-label="breadcrumb"
               sx={{
                 '& .MuiBreadcrumbs-ol': {
                   alignItems: 'center'
-                }
+                },
+                fontSize: '0.75rem'
               }}
             >
               {generateBreadcrumbs().map((crumb, index) => {
@@ -1247,16 +1267,16 @@ const DashboardLayout: React.FC = () => {
                       sx={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 0.5,
+                        gap: 0.25,
                         cursor: 'pointer',
-                        color: '#666',
-                        fontSize: '0.875rem',
+                        color: '#888',
+                        fontSize: '0.75rem',
                         '&:hover': {
                           color: '#1976d2'
                         }
                       }}
                     >
-                      {crumb.icon}
+{crumb.icon}
                       {crumb.text}
                     </Box>
                   );
@@ -1267,13 +1287,13 @@ const DashboardLayout: React.FC = () => {
                       sx={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 0.5,
-                        color: isLast ? '#1a1a1a' : '#666',
-                        fontSize: '0.875rem',
+                        gap: 0.25,
+                        color: isLast ? '#666' : '#888',
+                        fontSize: '0.75rem',
                         fontWeight: isLast ? 500 : 400
                       }}
                     >
-                      {crumb.icon}
+{crumb.icon}
                       {crumb.text}
                     </Box>
                   );
