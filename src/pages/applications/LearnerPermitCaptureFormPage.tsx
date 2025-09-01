@@ -643,11 +643,11 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 1, height: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column' }}>
+    <Container maxWidth="lg" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Paper 
         elevation={0}
         sx={{ 
-          flexGrow: 1,
+          height: '100%',
           display: 'flex',
           flexDirection: 'column',
           bgcolor: '#f8f9fa',
@@ -671,8 +671,13 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
           </Alert>
         )}
 
-        {/* Application Tabs */}
-        <Box sx={{ bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
+        {/* Application Tabs - Fixed Height */}
+        <Box sx={{ 
+          bgcolor: 'white', 
+          borderBottom: '1px solid', 
+          borderColor: 'divider',
+          flexShrink: 0 // Prevent shrinking
+        }}>
           <Tabs
             value={activeStep}
             onChange={handleTabChange}
@@ -712,14 +717,23 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
           </Tabs>
         </Box>
 
-        {/* Tab Content */}
+        {/* Tab Content - Scrollable Area */}
         <Box sx={{ 
-          flexGrow: 1, 
-          overflow: activeStep === 0 ? 'hidden' : 'auto', // No scroll for person step, scroll for other steps
-          p: activeStep === 0 ? 0 : 2 // No padding for person step, padding for other steps
+          flex: 1, 
+          overflow: 'hidden', // Prevent entire page scroll
+          p: activeStep === 0 ? 0 : 2,
+          minHeight: 0, // Allow flex shrinking
+          display: 'flex',
+          flexDirection: 'column'
         }}>
-          {/* Person Form - Always rendered but conditionally visible to preserve state */}
-          <Box sx={{ display: activeStep === 0 ? 'block' : 'none' }}>
+          {/* Person Form - Always rendered but conditionally visible */}
+          <Box sx={{ 
+            display: activeStep === 0 ? 'flex' : 'none',
+            flexDirection: 'column',
+            flex: 1,
+            minHeight: 0, // Allow flex shrinking
+            width: '100%'
+          }}>
             <PersonFormWrapper
               key="person-form-wrapper" // Stable key to preserve component instance
               mode="application"
@@ -736,13 +750,26 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
             />
           </Box>
           
-          {/* Other step content - only render when needed */}
-          {activeStep !== 0 && renderStepContent(activeStep)}
+          {/* Other step content */}
+          {activeStep !== 0 && (
+            <Box sx={{ flex: 1, minHeight: 0, width: '100%' }}>
+              {renderStepContent(activeStep)}
+            </Box>
+          )}
         </Box>
 
-        {/* Navigation Buttons - Only show when NOT on person step (activeStep !== 0) */}
+        {/* Navigation Footer - Fixed at bottom */}
         {activeStep !== 0 && (
-          <Box sx={{ p: 2, bgcolor: 'white', borderTop: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+          <Box sx={{ 
+            p: 2, 
+            bgcolor: 'white', 
+            borderTop: '1px solid', 
+            borderColor: 'divider',
+            flexShrink: 0, // Keep footer visible
+            display: 'flex', 
+            justifyContent: 'flex-end', 
+            gap: 1 
+          }}>
             <Button
               onClick={handleCancel}
               disabled={loading}
