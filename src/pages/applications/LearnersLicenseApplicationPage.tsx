@@ -1133,15 +1133,7 @@ const LearnersLicenseApplicationPage: React.FC = () => {
           overflow: 'hidden'
         }}
       >
-        {/* Header */}
-        <Box sx={{ p: 2, bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
-          <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 0.5 }}>
-            Learner's License Application
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Apply for a new learner's permit for Madagascar
-          </Typography>
-        </Box>
+
 
         {/* Error/Success Messages */}
         {(error || success) && (

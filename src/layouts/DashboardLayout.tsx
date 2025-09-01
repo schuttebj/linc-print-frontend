@@ -25,6 +25,7 @@ import {
   Collapse,
   Chip,
   Badge,
+  Breadcrumbs,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -59,6 +60,7 @@ import {
   Analytics,
   BarChart,
   KeyboardArrowDown,
+  NavigateNext,
 } from '@mui/icons-material';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -98,6 +100,77 @@ const DashboardLayout: React.FC = () => {
       default:
         return '';
     }
+  };
+
+  // Function to generate breadcrumbs based on current route
+  const generateBreadcrumbs = () => {
+    const pathSegments = location.pathname.split('/').filter(segment => segment !== '');
+    const breadcrumbs: { text: string; path?: string; icon?: React.ReactNode }[] = [];
+
+    // Always start with Dashboard
+    breadcrumbs.push({
+      text: 'Dashboard',
+      path: '/dashboard',
+      icon: <Dashboard fontSize="small" />
+    });
+
+    // Route mapping for breadcrumbs
+    const routeMap: Record<string, { text: string; icon?: React.ReactNode }> = {
+      'persons': { text: 'Persons', icon: <People fontSize="small" /> },
+      'manage': { text: 'Person Management', icon: <Person fontSize="small" /> },
+      'search': { text: 'Person Search', icon: <Search fontSize="small" /> },
+      'applications': { text: 'Applications', icon: <Apps fontSize="small" /> },
+      'dashboard': { text: 'Dashboard' },
+      'learners-license': { text: "Learner's License Application", icon: <School fontSize="small" /> },
+      'driving-license': { text: 'Driving License Application', icon: <DirectionsCar fontSize="small" /> },
+      'professional-license': { text: 'Professional License Application', icon: <DirectionsCar fontSize="small" /> },
+      'temporary-license': { text: 'Temporary License Application', icon: <Assignment fontSize="small" /> },
+      'renew-license': { text: 'Renew License', icon: <Refresh fontSize="small" /> },
+      'duplicate-learners': { text: "Duplicate Learner's License", icon: <FileCopy fontSize="small" /> },
+      'foreign-conversion': { text: 'Convert Foreign License', icon: <Assessment fontSize="small" /> },
+      'international-permit': { text: 'International Driving Permit', icon: <CreditCard fontSize="small" /> },
+      'driver-license-capture': { text: 'Driver License Capture', icon: <CreditCard fontSize="small" /> },
+      'learner-permit-capture': { text: 'Learner Permit Capture', icon: <Assignment fontSize="small" /> },
+      'learner-permit-capture-compact': { text: 'Learner Permit (Compact)', icon: <Assignment fontSize="small" /> },
+      'create': { text: 'Create Application', icon: <AddIcon fontSize="small" /> },
+      'licenses': { text: 'Licenses', icon: <CreditCard fontSize="small" /> },
+      'list': { text: 'Search Licenses', icon: <Visibility fontSize="small" /> },
+      'approval': { text: 'License Approval', icon: <Assessment fontSize="small" /> },
+      'cards': { text: 'Cards', icon: <CreditCard fontSize="small" /> },
+      'order': { text: 'Order Cards', icon: <Search fontSize="small" /> },
+      'print-queue': { text: 'Print Queue', icon: <Assessment fontSize="small" /> },
+      'quality-assurance': { text: 'Quality Assurance', icon: <AdminPanelSettings fontSize="small" /> },
+      'transactions': { text: 'Transactions', icon: <Receipt fontSize="small" /> },
+      'pos': { text: 'Point of Sale', icon: <PointOfSale fontSize="small" /> },
+      'fee-management': { text: 'Fee Management', icon: <AttachMoney fontSize="small" /> },
+      'analytics': { text: 'Analytics', icon: <BarChart fontSize="small" /> },
+      'admin': { text: 'Admin', icon: <AdminPanelSettings fontSize="small" /> },
+      'users': { text: 'User Management', icon: <People fontSize="small" /> },
+      'locations': { text: 'Location Management', icon: <LocationOn fontSize="small" /> },
+      'audit': { text: 'Audit Logs', icon: <Assessment fontSize="small" /> },
+      'issues': { text: 'Issue Management', icon: <Assignment fontSize="small" /> }
+    };
+
+    // Build breadcrumbs based on path segments
+    let currentPath = '';
+    for (let i = 1; i < pathSegments.length; i++) {
+      const segment = pathSegments[i];
+      currentPath += `/${segment}`;
+      
+      const route = routeMap[segment];
+      if (route) {
+        // Don't add duplicate "Dashboard" breadcrumb
+        if (!(segment === 'dashboard' && breadcrumbs.length === 1)) {
+          breadcrumbs.push({
+            text: route.text,
+            path: i === pathSegments.length - 1 ? undefined : `/dashboard${currentPath}`, // No link for current page
+            icon: route.icon
+          });
+        }
+      }
+    }
+
+    return breadcrumbs;
   };
 
   const handleDrawerToggle = () => {
@@ -1071,77 +1144,169 @@ const DashboardLayout: React.FC = () => {
           </List>
       </Box>
 
-      {/* User Profile Section */}
-      <Box sx={{ 
-        borderTop: '1px solid #e0e0e0',
-        p: 2,
-        bgcolor: 'white'
-      }}>
-        <Box 
-          onClick={handleProfileMenuOpen}
-          sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 1.5,
-            cursor: 'pointer',
-            p: 1,
-            borderRadius: '6px',
-            '&:hover': {
-              backgroundColor: '#f5f5f5',
-            },
-          }}
-        >
-          <Avatar sx={{ 
-            width: 32, 
-            height: 32, 
-            backgroundColor: '#1976d2',
-            fontSize: '0.875rem'
-          }}>
-            {user?.first_name?.[0]}{user?.last_name?.[0]}
-          </Avatar>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                fontWeight: 500,
-                fontSize: '0.875rem',
-                color: '#1a1a1a',
-                lineHeight: 1.2,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              {user?.first_name} {user?.last_name}
-            </Typography>
-            <Typography 
-              variant="caption" 
-              sx={{ 
-                color: '#666',
-                fontSize: '0.75rem',
-                lineHeight: 1.2,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              {user?.email || `${user?.username}@system.local`}
-            </Typography>
-          </Box>
-        </Box>
-      </Box>
+
     </Box>
   );
 
   return (
-    <Box sx={{ display: 'flex' }}>
-
-
-      <Box
-        component="nav"
-        sx={{ width: { md: DRAWER_WIDTH }, flexShrink: { md: 0 } }}
-        aria-label="mailbox folders"
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      {/* Top Header Bar */}
+      <AppBar 
+        position="fixed" 
+        sx={{ 
+          zIndex: (theme) => theme.zIndex.drawer + 1,
+          bgcolor: '#fafafa',
+          borderBottom: '1px solid #e0e0e0',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          color: '#1a1a1a'
+        }}
       >
+        <Toolbar sx={{ minHeight: '64px !important', px: 2 }}>
+          {/* Mobile Menu Toggle */}
+          <IconButton
+            color="inherit"
+            aria-label="open drawer"
+            edge="start"
+            onClick={handleDrawerToggle}
+            sx={{ mr: 2, display: { md: 'none' }, color: '#666' }}
+          >
+            <MenuIcon />
+          </IconButton>
+
+          {/* Logo/Title */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 3 }}>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                fontWeight: 600,
+                color: '#1a1a1a',
+                fontSize: '1.1rem'
+              }}
+            >
+              LINC Print
+            </Typography>
+          </Box>
+
+          {/* Breadcrumbs */}
+          <Box sx={{ flexGrow: 1 }}>
+            <Breadcrumbs 
+              separator={<NavigateNext fontSize="small" sx={{ color: '#999' }} />}
+              aria-label="breadcrumb"
+              sx={{
+                '& .MuiBreadcrumbs-ol': {
+                  alignItems: 'center'
+                }
+              }}
+            >
+              {generateBreadcrumbs().map((crumb, index) => {
+                const isLast = index === generateBreadcrumbs().length - 1;
+                
+                if (crumb.path && !isLast) {
+                  return (
+                    <Box
+                      key={crumb.text}
+                      onClick={() => navigate(crumb.path!)}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 0.5,
+                        cursor: 'pointer',
+                        color: '#666',
+                        fontSize: '0.875rem',
+                        '&:hover': {
+                          color: '#1976d2'
+                        }
+                      }}
+                    >
+                      {crumb.icon}
+                      {crumb.text}
+                    </Box>
+                  );
+                } else {
+                  return (
+                    <Box
+                      key={crumb.text}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 0.5,
+                        color: isLast ? '#1a1a1a' : '#666',
+                        fontSize: '0.875rem',
+                        fontWeight: isLast ? 500 : 400
+                      }}
+                    >
+                      {crumb.icon}
+                      {crumb.text}
+                    </Box>
+                  );
+                }
+              })}
+            </Breadcrumbs>
+          </Box>
+
+          {/* User Profile */}
+          <Box 
+            onClick={handleProfileMenuOpen}
+            sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 1.5,
+              cursor: 'pointer',
+              p: 1,
+              borderRadius: '6px',
+              '&:hover': {
+                backgroundColor: '#f0f0f0',
+              },
+            }}
+          >
+            <Avatar sx={{ 
+              width: 32, 
+              height: 32, 
+              backgroundColor: '#1976d2',
+              fontSize: '0.875rem'
+            }}>
+              {user?.first_name?.[0]}{user?.last_name?.[0]}
+            </Avatar>
+            <Box sx={{ minWidth: 0, display: { xs: 'none', sm: 'block' } }}>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  fontWeight: 500,
+                  fontSize: '0.875rem',
+                  color: '#1a1a1a',
+                  lineHeight: 1.2,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {user?.first_name} {user?.last_name}
+              </Typography>
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  color: '#666',
+                  fontSize: '0.75rem',
+                  lineHeight: 1.2,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {getUserLocationText()}
+              </Typography>
+            </Box>
+          </Box>
+        </Toolbar>
+      </AppBar>
+
+      {/* Main Content Area */}
+      <Box sx={{ display: 'flex', pt: '64px', flexGrow: 1 }}>
+        <Box
+          component="nav"
+          sx={{ width: { md: DRAWER_WIDTH }, flexShrink: { md: 0 } }}
+          aria-label="mailbox folders"
+        >
         <Drawer
           variant="temporary"
           open={mobileOpen}
@@ -1178,17 +1343,18 @@ const DashboardLayout: React.FC = () => {
         </Drawer>
       </Box>
 
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
-          minHeight: '100vh',
-          backgroundColor: theme.palette.background.default,
-        }}
-      >
-        <Box sx={{ p: 3 }}>
-          <Outlet />
+        <Box
+          component="main"
+          sx={{
+            flexGrow: 1,
+            width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
+            minHeight: 'calc(100vh - 64px)',
+            backgroundColor: theme.palette.background.default,
+          }}
+        >
+          <Box sx={{ p: 3 }}>
+            <Outlet />
+          </Box>
         </Box>
       </Box>
 
