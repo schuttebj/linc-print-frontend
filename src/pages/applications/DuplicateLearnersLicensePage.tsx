@@ -1119,14 +1119,23 @@ const DuplicateLearnersLicensePage: React.FC = () => {
           </Tabs>
         </Box>
 
-        {/* Tab Content */}
+        {/* Tab Content - Scrollable Area */}
         <Box sx={{ 
-          flexGrow: 1, 
-          overflow: (activeStep === 0 || activeStep === 2 || activeStep === 3) ? 'hidden' : 'auto',
-          p: (activeStep === 0 || activeStep === 2 || activeStep === 3) ? 0 : 2
+          flex: 1, 
+          overflow: 'hidden', // Prevent entire page scroll
+          p: (activeStep === 0 || activeStep === 2 || activeStep === 3) ? 0 : 2,
+          minHeight: 0, // Allow flex shrinking
+          display: 'flex',
+          flexDirection: 'column'
         }}>
           {/* Person Form - Always rendered but conditionally visible */}
-          <Box sx={{ display: activeStep === 0 ? 'block' : 'none' }}>
+          <Box sx={{ 
+            display: activeStep === 0 ? 'flex' : 'none',
+            flexDirection: 'column',
+            flex: 1,
+            minHeight: 0, // Allow flex shrinking
+            width: '100%'
+          }}>
             <PersonFormWrapper
               key="person-form-wrapper"
               mode="application"
@@ -1142,7 +1151,13 @@ const DuplicateLearnersLicensePage: React.FC = () => {
           </Box>
           
           {/* Medical Form - Always rendered but conditionally visible */}
-          <Box sx={{ display: activeStep === 2 ? 'block' : 'none' }}>
+          <Box sx={{ 
+            display: activeStep === 2 ? 'flex' : 'none',
+            flexDirection: 'column',
+            flex: 1,
+            minHeight: 0, // Allow flex shrinking
+            width: '100%'
+          }}>
             <MedicalInformationSection
               key="medical-form-wrapper"
               value={medicalInformation}
@@ -1164,7 +1179,13 @@ const DuplicateLearnersLicensePage: React.FC = () => {
           </Box>
 
           {/* Biometric Form - Always rendered but conditionally visible */}
-          <Box sx={{ display: activeStep === 3 ? 'block' : 'none' }}>
+          <Box sx={{ 
+            display: activeStep === 3 ? 'flex' : 'none',
+            flexDirection: 'column',
+            flex: 1,
+            minHeight: 0, // Allow flex shrinking
+            width: '100%'
+          }}>
             <BiometricCaptureStep
               key="biometric-form-wrapper"
               value={biometricData}
@@ -1182,7 +1203,11 @@ const DuplicateLearnersLicensePage: React.FC = () => {
           </Box>
           
           {/* Other step content */}
-          {activeStep !== 0 && activeStep !== 2 && activeStep !== 3 && renderStepContent(activeStep)}
+          {activeStep !== 0 && activeStep !== 2 && activeStep !== 3 && (
+            <Box sx={{ flex: 1, minHeight: 0, width: '100%' }}>
+              {renderStepContent(activeStep)}
+            </Box>
+          )}
         </Box>
 
         {/* Navigation Footer - Only shown when not on person, medical, or biometric step */}

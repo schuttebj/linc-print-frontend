@@ -1191,14 +1191,23 @@ const ProfessionalLicenseApplicationPage: React.FC = () => {
           </Tabs>
         </Box>
 
-        {/* Tab Content */}
+        {/* Tab Content - Scrollable Area */}
         <Box sx={{ 
-          flexGrow: 1, 
-          overflow: (activeStep === 0 || activeStep === 2 || activeStep === 3 || activeStep === 4) ? 'hidden' : 'auto',
-          p: (activeStep === 0 || activeStep === 2 || activeStep === 3 || activeStep === 4) ? 0 : 2
+          flex: 1, 
+          overflow: 'hidden', // Prevent entire page scroll
+          p: (activeStep === 0 || activeStep === 2 || activeStep === 3 || activeStep === 4) ? 0 : 2,
+          minHeight: 0, // Allow flex shrinking
+          display: 'flex',
+          flexDirection: 'column'
         }}>
           {/* Person Form - Always rendered but conditionally visible */}
-          <Box sx={{ display: activeStep === 0 ? 'block' : 'none' }}>
+          <Box sx={{ 
+            display: activeStep === 0 ? 'flex' : 'none',
+            flexDirection: 'column',
+            flex: 1,
+            minHeight: 0, // Allow flex shrinking
+            width: '100%'
+          }}>
             <PersonFormWrapper
               key="person-form-wrapper"
               mode="application"
@@ -1214,7 +1223,13 @@ const ProfessionalLicenseApplicationPage: React.FC = () => {
           </Box>
           
           {/* Medical Form - Always rendered but conditionally visible */}
-          <Box sx={{ display: activeStep === 2 ? 'block' : 'none' }}>
+          <Box sx={{ 
+            display: activeStep === 2 ? 'flex' : 'none',
+            flexDirection: 'column',
+            flex: 1,
+            minHeight: 0, // Allow flex shrinking
+            width: '100%'
+          }}>
             <MedicalInformationSection
               key="medical-form-wrapper"
               value={medicalInformation}
@@ -1236,7 +1251,13 @@ const ProfessionalLicenseApplicationPage: React.FC = () => {
           </Box>
 
           {/* Police Form - Always rendered but conditionally visible */}
-          <Box sx={{ display: activeStep === 3 ? 'block' : 'none' }}>
+          <Box sx={{ 
+            display: activeStep === 3 ? 'flex' : 'none',
+            flexDirection: 'column',
+            flex: 1,
+            minHeight: 0, // Allow flex shrinking
+            width: '100%'
+          }}>
             <PoliceInformationSection
               key="police-form-wrapper"
               value={policeInformation}
@@ -1255,7 +1276,13 @@ const ProfessionalLicenseApplicationPage: React.FC = () => {
           </Box>
 
           {/* Biometric Form - Always rendered but conditionally visible */}
-          <Box sx={{ display: activeStep === 4 ? 'block' : 'none' }}>
+          <Box sx={{ 
+            display: activeStep === 4 ? 'flex' : 'none',
+            flexDirection: 'column',
+            flex: 1,
+            minHeight: 0, // Allow flex shrinking
+            width: '100%'
+          }}>
             <BiometricCaptureStep
               key="biometric-form-wrapper"
               value={biometricData}
@@ -1273,7 +1300,11 @@ const ProfessionalLicenseApplicationPage: React.FC = () => {
           </Box>
           
           {/* Other step content */}
-          {activeStep !== 0 && activeStep !== 2 && activeStep !== 3 && activeStep !== 4 && renderStepContent(activeStep)}
+          {activeStep !== 0 && activeStep !== 2 && activeStep !== 3 && activeStep !== 4 && (
+            <Box sx={{ flex: 1, minHeight: 0, width: '100%' }}>
+              {renderStepContent(activeStep)}
+            </Box>
+          )}
         </Box>
 
         {/* Navigation Footer - Only shown when not on person, medical, police, or biometric step */}
