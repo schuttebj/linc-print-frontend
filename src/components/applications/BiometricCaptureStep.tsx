@@ -703,8 +703,8 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
         borderRadius: 2,
         display: 'flex',
         flexDirection: 'column',
-        height: 'calc(100vh - 200px)',
-        minHeight: '600px'
+        height: '100%',
+        minHeight: '100%'
       }}>
         {/* Step content - p:0 */}
         <Box sx={{ 

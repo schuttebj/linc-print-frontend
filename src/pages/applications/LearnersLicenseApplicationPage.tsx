@@ -1120,7 +1120,7 @@ const LearnersLicenseApplicationPage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 1, minHeight: 'calc(100vh - 96px)', display: 'flex', flexDirection: 'column' }}>
+    <Container maxWidth="lg" sx={{ py: 1, minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
       <Paper 
         elevation={0}
         sx={{ 
@@ -1185,7 +1185,12 @@ const LearnersLicenseApplicationPage: React.FC = () => {
           p: (activeStep === 0 || activeStep === 2 || activeStep === 3) ? 0 : 2
         }}>
           {/* Person Form - Always rendered but conditionally visible */}
-          <Box sx={{ display: activeStep === 0 ? 'block' : 'none' }}>
+          <Box sx={{ 
+            display: activeStep === 0 ? 'flex' : 'none',
+            flexDirection: 'column',
+            height: '100%',
+            flexGrow: 1
+          }}>
             <PersonFormWrapper
               key="person-form-wrapper"
               mode="application"
@@ -1198,10 +1203,15 @@ const LearnersLicenseApplicationPage: React.FC = () => {
               onCancel={handleCancel}
               showHeader={false}
             />
-                </Box>
+          </Box>
                 
           {/* Medical Form - Always rendered but conditionally visible */}
-          <Box sx={{ display: activeStep === 2 ? 'block' : 'none' }}>
+          <Box sx={{ 
+            display: activeStep === 2 ? 'flex' : 'none',
+            flexDirection: 'column',
+            height: '100%',
+            flexGrow: 1
+          }}>
             <MedicalInformationSection
               key="medical-form-wrapper"
               value={medicalInformation}
@@ -1223,7 +1233,12 @@ const LearnersLicenseApplicationPage: React.FC = () => {
           </Box>
 
           {/* Biometric Form - Always rendered but conditionally visible */}
-          <Box sx={{ display: activeStep === 3 ? 'block' : 'none' }}>
+          <Box sx={{ 
+            display: activeStep === 3 ? 'flex' : 'none',
+            flexDirection: 'column',
+            height: '100%',
+            flexGrow: 1
+          }}>
             <BiometricCaptureStep
               key="biometric-form-wrapper"
               value={biometricData}
