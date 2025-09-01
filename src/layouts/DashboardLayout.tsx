@@ -1200,14 +1200,17 @@ const DashboardLayout: React.FC = () => {
         flexDirection: 'column',
         width: { md: `calc(100% - ${DRAWER_WIDTH}px)` }
       }}>
-        {/* Top Header Bar - Only spans right side */}
+        {/* Top Header Bar - Fixed position spanning right side only */}
         <AppBar 
-          position="static" 
+          position="fixed" 
           sx={{ 
             bgcolor: '#fafafa',
             borderBottom: '1px solid #e0e0e0',
             boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-            color: '#1a1a1a'
+            color: '#1a1a1a',
+            left: { xs: 0, md: DRAWER_WIDTH },
+            width: { xs: '100%', md: `calc(100% - ${DRAWER_WIDTH}px)` },
+            zIndex: (theme) => theme.zIndex.drawer + 1,
           }}
         >
         <Toolbar sx={{ minHeight: '64px !important', px: 2 }}>
@@ -1340,11 +1343,12 @@ const DashboardLayout: React.FC = () => {
         component="main"
         sx={{
           flexGrow: 1,
-          minHeight: 'calc(100vh - 64px)',
+          minHeight: '100vh',
           backgroundColor: theme.palette.background.default,
+          paddingTop: '64px', // Account for fixed header
         }}
       >
-        <Box sx={{ p: 2 }}>
+        <Box sx={{ p: 2, height: 'calc(100vh - 64px)', overflow: 'auto' }}>
           <Outlet />
         </Box>
       </Box>
