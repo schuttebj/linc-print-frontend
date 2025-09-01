@@ -24,7 +24,7 @@ import ApplicationFormPage from './pages/applications/ApplicationFormPage';
 import ApplicationDetailPage from './pages/applications/ApplicationDetailPage';
 import DriverLicenseCaptureFormPage from './pages/applications/DriverLicenseCaptureFormPage';
 import LearnerPermitCaptureFormPage from './pages/applications/LearnerPermitCaptureFormPage';
-import LearnerPermitCaptureCompactPage from './pages/applications/LearnerPermitCaptureCompactPage';
+
 import LearnersLicenseApplicationPage from './pages/applications/LearnersLicenseApplicationPage';
 import DuplicateLearnersLicensePage from './pages/applications/DuplicateLearnersLicensePage';
 import DrivingLicenseApplicationPage from './pages/applications/DrivingLicenseApplicationPage';
@@ -249,14 +249,7 @@ function App() {
                   </ProtectedRoute>
                 } 
               />
-              <Route 
-                path="learner-permit-capture-compact" 
-                element={
-                  <ProtectedRoute requiredPermission="applications.create">
-                    <LearnerPermitCaptureCompactPage />
-                  </ProtectedRoute>
-                } 
-              />
+
               
 
               

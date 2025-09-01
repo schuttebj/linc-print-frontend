@@ -129,14 +129,7 @@ const ApplicationsDashboard: React.FC = () => {
           path: '/dashboard/applications/learner-permit-capture',
           permission: 'applications.create',
         },
-        {
-          title: 'Learner Permit Capture (Compact)',
-          description: 'Compact layout - no scrolling, keyboard-friendly',
-          icon: <Assignment />,
-          path: '/dashboard/applications/learner-permit-capture-compact',
-          permission: 'applications.create',
-          isNew: true,
-        },
+
       ]
     }
   ];

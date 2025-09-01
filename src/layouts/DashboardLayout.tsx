@@ -131,7 +131,7 @@ const DashboardLayout: React.FC = () => {
       'international-permit': { text: 'International Driving Permit', icon: <CreditCard fontSize="small" /> },
       'driver-license-capture': { text: 'Driver License Capture', icon: <CreditCard fontSize="small" /> },
       'learner-permit-capture': { text: 'Learner Permit Capture', icon: <Assignment fontSize="small" /> },
-      'learner-permit-capture-compact': { text: 'Learner Permit (Compact)', icon: <Assignment fontSize="small" /> },
+
       'create': { text: 'Create Application', icon: <AddIcon fontSize="small" /> },
       'licenses': { text: 'Licenses', icon: <CreditCard fontSize="small" /> },
       'list': { text: 'Search Licenses', icon: <Visibility fontSize="small" /> },
@@ -350,13 +350,7 @@ const DashboardLayout: React.FC = () => {
           path: '/dashboard/applications/learner-permit-capture',
           permission: 'applications.create',
         },
-        {
-          text: 'Learner Permit (Compact)',
-          icon: <Assignment />,
-          path: '/dashboard/applications/learner-permit-capture-compact',
-          permission: 'applications.create',
-          isNew: true,
-        },
+
       ]
     },
     {
@@ -576,13 +570,7 @@ const DashboardLayout: React.FC = () => {
           path: '/dashboard/applications/learner-permit-capture',
           permission: 'applications.create',
         },
-        {
-          text: 'Learner Permit Capture (Compact)',
-          icon: <Assignment />,
-          path: '/dashboard/applications/learner-permit-capture-compact',
-          permission: 'applications.create',
-          isNew: true,
-        },
+
       ]
     }
   ];

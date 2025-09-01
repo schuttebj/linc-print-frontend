@@ -260,17 +260,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
       keywords: ['capture', 'learner', 'permit', 'existing'],
       permission: 'applications.create',
     },
-    {
-      id: 'action-learner-permit-compact',
-      label: 'Learner Permit Capture (Compact)',
-      description: 'Quick capture for learner permits',
-      icon: <Assignment />,
-      action: () => navigate('/dashboard/applications/learner-permit-capture-compact'),
-      shortcut: 'C L',
-      category: 'actions',
-      keywords: ['learner', 'permit', 'capture', 'compact', 'quick'],
-      permission: 'applications.create',
-    },
+
 
     // Other Quick Actions
     {
