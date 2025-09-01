@@ -1122,7 +1122,7 @@ const DuplicateLearnersLicensePage: React.FC = () => {
         {/* Tab Content - Scrollable Area */}
         <Box sx={{ 
           flex: 1, 
-          overflow: 'hidden', // Prevent entire page scroll
+          overflow: 'auto', // Allow scrolling when content exceeds height
           p: (activeStep === 0 || activeStep === 2 || activeStep === 3) ? 0 : 2,
           minHeight: 0, // Allow flex shrinking
           display: 'flex',
