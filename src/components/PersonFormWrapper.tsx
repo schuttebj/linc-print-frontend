@@ -3453,7 +3453,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             display: 'flex',
             flexDirection: 'column',
             height: mode === 'application' ? '100%' : 'auto',
-            minHeight: mode === 'application' ? '100%' : 'auto'
+            minHeight: mode === 'application' ? '100%' : 'auto',
+            flex: mode === 'application' ? 1 : 'none'
         }}>
             {/* Content Container - Tabs and Form Content with padding */}
             <Box sx={{ 

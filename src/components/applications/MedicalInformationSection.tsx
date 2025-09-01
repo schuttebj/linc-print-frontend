@@ -804,7 +804,8 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        minHeight: '100%'
+        minHeight: '100%',
+        flex: 1
       }}>
         {/* Step content - p:0 */}
         <Box sx={{ 

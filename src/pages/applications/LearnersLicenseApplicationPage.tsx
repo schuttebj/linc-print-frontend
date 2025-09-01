@@ -1182,14 +1182,18 @@ const LearnersLicenseApplicationPage: React.FC = () => {
         <Box sx={{ 
           flexGrow: 1, 
           overflow: (activeStep === 0 || activeStep === 2 || activeStep === 3) ? 'hidden' : 'auto',
-          p: (activeStep === 0 || activeStep === 2 || activeStep === 3) ? 0 : 2
+          p: (activeStep === 0 || activeStep === 2 || activeStep === 3) ? 0 : 2,
+          height: '100%', // Ensure this container fills available space
+          display: 'flex',
+          flexDirection: 'column'
         }}>
           {/* Person Form - Always rendered but conditionally visible */}
           <Box sx={{ 
             display: activeStep === 0 ? 'flex' : 'none',
             flexDirection: 'column',
-            height: '100%',
-            flexGrow: 1
+            flex: 1,
+            minHeight: 0, // Allow flex shrinking
+            width: '100%'
           }}>
             <PersonFormWrapper
               key="person-form-wrapper"
@@ -1209,8 +1213,9 @@ const LearnersLicenseApplicationPage: React.FC = () => {
           <Box sx={{ 
             display: activeStep === 2 ? 'flex' : 'none',
             flexDirection: 'column',
-            height: '100%',
-            flexGrow: 1
+            flex: 1,
+            minHeight: 0, // Allow flex shrinking
+            width: '100%'
           }}>
             <MedicalInformationSection
               key="medical-form-wrapper"
@@ -1236,8 +1241,9 @@ const LearnersLicenseApplicationPage: React.FC = () => {
           <Box sx={{ 
             display: activeStep === 3 ? 'flex' : 'none',
             flexDirection: 'column',
-            height: '100%',
-            flexGrow: 1
+            flex: 1,
+            minHeight: 0, // Allow flex shrinking
+            width: '100%'
           }}>
             <BiometricCaptureStep
               key="biometric-form-wrapper"
@@ -1256,7 +1262,11 @@ const LearnersLicenseApplicationPage: React.FC = () => {
           </Box>
           
           {/* Other step content */}
-          {activeStep !== 0 && activeStep !== 2 && activeStep !== 3 && renderStepContent(activeStep)}
+          {activeStep !== 0 && activeStep !== 2 && activeStep !== 3 && (
+            <Box sx={{ flex: 1, minHeight: 0, width: '100%' }}>
+              {renderStepContent(activeStep)}
+            </Box>
+          )}
         </Box>
 
         {/* Navigation Footer - Only shown when not on person, medical, or biometric step */}
