@@ -1149,18 +1149,67 @@ const DashboardLayout: React.FC = () => {
   );
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      {/* Top Header Bar */}
-      <AppBar 
-        position="fixed" 
-        sx={{ 
-          zIndex: (theme) => theme.zIndex.drawer + 1,
-          bgcolor: '#fafafa',
-          borderBottom: '1px solid #e0e0e0',
-          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-          color: '#1a1a1a'
-        }}
+    <React.Fragment>
+      <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+      {/* Left Sidebar - Full Height */}
+      <Box
+        component="nav"
+        sx={{ width: { md: DRAWER_WIDTH }, flexShrink: { md: 0 } }}
+        aria-label="mailbox folders"
       >
+        <Drawer
+          variant="temporary"
+          open={mobileOpen}
+          onClose={handleDrawerToggle}
+          ModalProps={{
+            keepMounted: true,
+          }}
+          sx={{
+            display: { xs: 'block', md: 'none' },
+            '& .MuiDrawer-paper': { 
+              boxSizing: 'border-box', 
+              width: DRAWER_WIDTH,
+              borderRight: '1px solid #e0e0e0',
+              boxShadow: 'none',
+            },
+          }}
+        >
+          {drawer}
+        </Drawer>
+        <Drawer
+          variant="permanent"
+          sx={{
+            display: { xs: 'none', md: 'block' },
+            '& .MuiDrawer-paper': { 
+              boxSizing: 'border-box', 
+              width: DRAWER_WIDTH,
+              borderRight: '1px solid #e0e0e0',
+              boxShadow: 'none',
+            },
+          }}
+          open
+        >
+          {drawer}
+        </Drawer>
+      </Box>
+
+      {/* Right Side Content Area */}
+      <Box sx={{ 
+        flexGrow: 1, 
+        display: 'flex', 
+        flexDirection: 'column',
+        width: { md: `calc(100% - ${DRAWER_WIDTH}px)` }
+      }}>
+        {/* Top Header Bar - Only spans right side */}
+        <AppBar 
+          position="static" 
+          sx={{ 
+            bgcolor: '#fafafa',
+            borderBottom: '1px solid #e0e0e0',
+            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+            color: '#1a1a1a'
+          }}
+        >
         <Toolbar sx={{ minHeight: '64px !important', px: 2 }}>
           {/* Mobile Menu Toggle */}
           <IconButton
@@ -1172,20 +1221,6 @@ const DashboardLayout: React.FC = () => {
           >
             <MenuIcon />
           </IconButton>
-
-          {/* Logo/Title */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 3 }}>
-            <Typography 
-              variant="h6" 
-              sx={{ 
-                fontWeight: 600,
-                color: '#1a1a1a',
-                fontSize: '1.1rem'
-              }}
-            >
-              LINC Print
-            </Typography>
-          </Box>
 
           {/* Breadcrumbs */}
           <Box sx={{ flexGrow: 1 }}>
@@ -1301,64 +1336,22 @@ const DashboardLayout: React.FC = () => {
       </AppBar>
 
       {/* Main Content Area */}
-      <Box sx={{ display: 'flex', pt: '64px', flexGrow: 1 }}>
-        <Box
-          component="nav"
-          sx={{ width: { md: DRAWER_WIDTH }, flexShrink: { md: 0 } }}
-          aria-label="mailbox folders"
-        >
-        <Drawer
-          variant="temporary"
-          open={mobileOpen}
-          onClose={handleDrawerToggle}
-          ModalProps={{
-            keepMounted: true,
-          }}
-          sx={{
-            display: { xs: 'block', md: 'none' },
-            '& .MuiDrawer-paper': { 
-              boxSizing: 'border-box', 
-              width: DRAWER_WIDTH,
-              borderRight: '1px solid #e0e0e0',
-              boxShadow: 'none',
-            },
-          }}
-        >
-          {drawer}
-        </Drawer>
-        <Drawer
-          variant="permanent"
-          sx={{
-            display: { xs: 'none', md: 'block' },
-            '& .MuiDrawer-paper': { 
-              boxSizing: 'border-box', 
-              width: DRAWER_WIDTH,
-              borderRight: '1px solid #e0e0e0',
-              boxShadow: 'none',
-            },
-          }}
-          open
-        >
-          {drawer}
-        </Drawer>
-      </Box>
-
-        <Box
-          component="main"
-          sx={{
-            flexGrow: 1,
-            width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
-            minHeight: 'calc(100vh - 64px)',
-            backgroundColor: theme.palette.background.default,
-          }}
-        >
-          <Box sx={{ p: 3 }}>
-            <Outlet />
-          </Box>
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          minHeight: 'calc(100vh - 64px)',
+          backgroundColor: theme.palette.background.default,
+        }}
+      >
+        <Box sx={{ p: 2 }}>
+          <Outlet />
         </Box>
       </Box>
+    </Box>
+  </Box>
 
-      <Menu
+  <Menu
         id="menu-appbar"
         anchorEl={anchorEl}
         anchorOrigin={{
@@ -1388,7 +1381,7 @@ const DashboardLayout: React.FC = () => {
         open={commandPaletteOpen} 
         onClose={handleCloseCommandPalette} 
       />
-    </Box>
+    </React.Fragment>
   );
 };
 
