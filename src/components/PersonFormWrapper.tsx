@@ -3595,10 +3595,29 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
                     borderRadius: 2,
                     mb: 2, // Add margin bottom for spacing from navigation
-                    flex: 1,
+                    flex: 'none', // Use content height instead of filling space
                     overflow: 'auto', // Allow scroll on form content
                     display: 'flex',
-                    flexDirection: 'column'
+                    flexDirection: 'column',
+                    pr: 1, // Add right padding for scrollbar gap
+                    // Custom scrollbar styling
+                    '&::-webkit-scrollbar': {
+                        width: '8px',
+                    },
+                    '&::-webkit-scrollbar-track': {
+                        background: '#f1f1f1',
+                        borderRadius: '4px',
+                    },
+                    '&::-webkit-scrollbar-thumb': {
+                        background: '#c1c1c1',
+                        borderRadius: '4px',
+                        '&:hover': {
+                            background: '#a8a8a8',
+                        },
+                    },
+                    // Firefox scrollbar
+                    scrollbarWidth: 'thin',
+                    scrollbarColor: '#c1c1c1 #f1f1f1',
                 }}
             >
                 {/* Missing Fields Alert - Show if existing person has incomplete data */}

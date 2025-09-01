@@ -807,7 +807,26 @@ const BiometricCaptureStep: React.FC<BiometricCaptureStepProps> = ({
               overflow: 'auto',
               display: 'flex',
               flexDirection: 'column',
-              p: 0 // Tab content - p:0
+              p: 0, // Tab content - p:0
+              pr: 1, // Add right padding for scrollbar gap
+              // Custom scrollbar styling
+              '&::-webkit-scrollbar': {
+                  width: '8px',
+              },
+              '&::-webkit-scrollbar-track': {
+                  background: '#f1f1f1',
+                  borderRadius: '4px',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                  background: '#c1c1c1',
+                  borderRadius: '4px',
+                  '&:hover': {
+                      background: '#a8a8a8',
+                  },
+              },
+              // Firefox scrollbar
+              scrollbarWidth: 'thin',
+              scrollbarColor: '#c1c1c1 #f1f1f1',
             }}>
               {/* Step Content - Aligned at top */}
               <Box sx={{ flex: 1, overflow: 'visible' }}>
