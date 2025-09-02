@@ -183,7 +183,7 @@ const ApplicationListPage: React.FC = () => {
 
   // Handle navigation
   const handleCreateNew = () => {
-    navigate('/dashboard/applications/create');
+    navigate('/dashboard/applications/dashboard');
   };
 
   const handleViewApplication = (applicationId: string) => {
@@ -219,7 +219,7 @@ const ApplicationListPage: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 1, height: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column' }}>
+    <Container maxWidth="lg" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Paper 
         elevation={0}
         sx={{ 
@@ -240,22 +240,6 @@ const ApplicationListPage: React.FC = () => {
           flexShrink: 0,
           p: 2
         }}>
-          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-              Filter Applications
-            </Typography>
-            {hasPermission('applications.create') && (
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={handleCreateNew}
-                size="small"
-              >
-                New Application
-              </Button>
-            )}
-          </Box>
-          
           <Grid container spacing={2} alignItems="center">
             <Grid item xs={12} md={4}>
               <TextField
@@ -364,8 +348,7 @@ const ApplicationListPage: React.FC = () => {
         {/* Content Area - Applications Table */}
         <Box sx={{ 
           flex: 1, 
-          overflow: 'auto',
-          p: 2,
+          overflow: 'hidden',
           minHeight: 0,
           display: 'flex',
           flexDirection: 'column'
@@ -374,8 +357,6 @@ const ApplicationListPage: React.FC = () => {
             elevation={0}
             sx={{ 
               bgcolor: 'white',
-              boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-              borderRadius: 2,
               flex: 1,
               display: 'flex',
               flexDirection: 'column',
@@ -405,7 +386,7 @@ const ApplicationListPage: React.FC = () => {
                             <>
                               {' '}
                               <Button variant="text" onClick={handleCreateNew}>
-                                Create your first application
+                                Go to Applications Dashboard
                               </Button>
                             </>
                           )}
@@ -414,7 +395,7 @@ const ApplicationListPage: React.FC = () => {
                     </TableRow>
                   ) : (
                     applications.map((application) => (
-                      <TableRow key={application.id} hover>
+                      <TableRow key={application.id} hover sx={{ '& > *': { py: 1 } }}>
                         <TableCell>
                           <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>
                             {application.id?.substring(0, 8)}...
@@ -466,22 +447,34 @@ const ApplicationListPage: React.FC = () => {
                 </TableBody>
               </Table>
             </TableContainer>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider', bgcolor: 'white' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                  <Pagination
-                    count={totalPages}
-                    page={page}
-                    onChange={(event, newPage) => setPage(newPage)}
-                    color="primary"
-                    size="small"
-                  />
-                </Box>
-              </Box>
-            )}
           </Paper>
+        </Box>
+
+        {/* Pagination & Results - Bottom of wrapper */}
+        <Box sx={{ 
+          p: 2, 
+          borderTop: '1px solid', 
+          borderColor: 'divider', 
+          bgcolor: 'white',
+          flexShrink: 0,
+          display: 'flex', 
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+            Showing {applications.length} application{applications.length !== 1 ? 's' : ''}
+            {totalPages > 1 && ` (Page ${page} of ${totalPages})`}
+          </Typography>
+          
+          {totalPages > 1 && (
+            <Pagination
+              count={totalPages}
+              page={page}
+              onChange={(event, newPage) => setPage(newPage)}
+              color="primary"
+              size="small"
+            />
+          )}
         </Box>
       </Paper>
     </Container>
