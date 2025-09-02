@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box,
+  Container,
   Card,
   CardContent,
   Typography,
@@ -24,7 +25,7 @@ import {
   DialogContent,
   DialogActions,
   Grid,
-  Pagination,
+  TablePagination,
   Tooltip,
   IconButton,
   Collapse,
@@ -57,9 +58,9 @@ const TransactionListPage: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [itemsPerPage] = useState(25);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [totalResults, setTotalResults] = useState(0);
 
   // Filters
   const [filters, setFilters] = useState({
@@ -70,7 +71,7 @@ const TransactionListPage: React.FC = () => {
     dateFrom: null as Date | null,
     dateTo: null as Date | null
   });
-  const [showFilters, setShowFilters] = useState(false);
+
 
   // Dialog states
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
@@ -83,7 +84,7 @@ const TransactionListPage: React.FC = () => {
 
   useEffect(() => {
     loadTransactions();
-  }, [page, filters]);
+  }, [page, rowsPerPage, filters]);
 
   const loadTransactions = async () => {
     setLoading(true);
@@ -91,8 +92,8 @@ const TransactionListPage: React.FC = () => {
 
     try {
       const params: any = {
-        skip: (page - 1) * itemsPerPage,
-        limit: itemsPerPage
+        skip: page * rowsPerPage,
+        limit: rowsPerPage === -1 ? undefined : rowsPerPage
       };
 
       if (filters.status) params.transaction_status = filters.status;
@@ -103,9 +104,7 @@ const TransactionListPage: React.FC = () => {
 
       const response = await transactionService.getTransactions(params);
       setTransactions(response);
-      
-      // Calculate total pages (this would come from backend in real implementation)
-      setTotalPages(Math.ceil(response.length / itemsPerPage));
+      setTotalResults(response.length);
     } catch (err: any) {
       setError(err.message || 'Failed to load transactions');
     } finally {
@@ -115,7 +114,7 @@ const TransactionListPage: React.FC = () => {
 
   const handleFilterChange = (field: string, value: any) => {
     setFilters(prev => ({ ...prev, [field]: value }));
-    setPage(1); // Reset to first page when filters change
+    setPage(0); // Reset to first page when filters change
   };
 
   const handleViewTransaction = (transaction: Transaction) => {
@@ -420,103 +419,7 @@ const TransactionListPage: React.FC = () => {
     return true;
   });
 
-  const renderFilters = () => (
-    <Collapse in={showFilters}>
-      <Card sx={{ mb: 2 }}>
-        <CardContent>
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={3}>
-              <TextField
-                fullWidth
-                label="Search"
-                value={filters.search}
-                onChange={(e) => handleFilterChange('search', e.target.value)}
-                placeholder="Transaction #, Receipt #, Reference"
-                InputProps={{
-                  endAdornment: <SearchIcon />
-                }}
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={2}>
-              <FormControl fullWidth>
-                <InputLabel>Status</InputLabel>
-                <Select
-                  value={filters.status}
-                  onChange={(e) => handleFilterChange('status', e.target.value)}
-                  label="Status"
-                >
-                  <MenuItem value="">All Statuses</MenuItem>
-                  {transactionService.getTransactionStatuses().map(status => (
-                    <MenuItem key={status.value} value={status.value}>
-                      {status.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            <Grid item xs={12} md={2}>
-              <FormControl fullWidth>
-                <InputLabel>Payment Method</InputLabel>
-                <Select
-                  value={filters.paymentMethod}
-                  onChange={(e) => handleFilterChange('paymentMethod', e.target.value)}
-                  label="Payment Method"
-                >
-                  <MenuItem value="">All Methods</MenuItem>
-                  {transactionService.getPaymentMethods().map(method => (
-                    <MenuItem key={method.value} value={method.value}>
-                      {method.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            <Grid item xs={12} md={2}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  label="Date From"
-                  value={filters.dateFrom}
-                  onChange={(date) => handleFilterChange('dateFrom', date)}
-                  renderInput={(params) => <TextField {...params} fullWidth />}
-                />
-              </LocalizationProvider>
-            </Grid>
-            
-            <Grid item xs={12} md={2}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  label="Date To"
-                  value={filters.dateTo}
-                  onChange={(date) => handleFilterChange('dateTo', date)}
-                  renderInput={(params) => <TextField {...params} fullWidth />}
-                />
-              </LocalizationProvider>
-            </Grid>
-            
-            <Grid item xs={12} md={1}>
-              <Button
-                fullWidth
-                variant="outlined"
-                onClick={() => setFilters({
-                  search: '',
-                  status: '',
-                  paymentMethod: '',
-                  locationId: '',
-                  dateFrom: null,
-                  dateTo: null
-                })}
-              >
-                Clear
-              </Button>
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
-    </Collapse>
-  );
+
 
   const renderTransactionDialog = () => (
     <Dialog
@@ -754,199 +657,346 @@ const TransactionListPage: React.FC = () => {
   );
 
   return (
-    <Box p={3}>
-      <Box display="flex" justifyContent="between" alignItems="center" mb={3}>
-        <Typography variant="h4">
-          Transaction History
-        </Typography>
-        <Box display="flex" gap={1}>
-          <Button
-            variant="outlined"
-            onClick={() => setShowFilters(!showFilters)}
-            startIcon={<FilterIcon />}
-          >
-            Filters
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={loadTransactions}
-            startIcon={<RefreshIcon />}
-          >
-            Refresh
-          </Button>
+    <>
+    <Container maxWidth="lg" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Paper 
+        elevation={0}
+        sx={{ 
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: '#f8f9fa',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          overflow: 'hidden'
+        }}
+      >
+        {/* Filter Section */}
+        <Box sx={{ 
+          bgcolor: 'white', 
+          borderBottom: '1px solid', 
+          borderColor: 'divider',
+          flexShrink: 0,
+          p: 2
+        }}>
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+              Search & Filters
+            </Typography>
+            <Button
+              variant="contained"
+              onClick={loadTransactions}
+              startIcon={<RefreshIcon />}
+              size="small"
+            >
+              Refresh
+            </Button>
+          </Box>
+          
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} md={3}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Search"
+                value={filters.search}
+                onChange={(e) => handleFilterChange('search', e.target.value)}
+                placeholder="Transaction #, Receipt #, Reference"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': { borderWidth: '1px' },
+                    '&:hover fieldset': { borderWidth: '1px' },
+                    '&.Mui-focused fieldset': { borderWidth: '1px' },
+                  },
+                }}
+                InputProps={{
+                  endAdornment: <SearchIcon />
+                }}
+              />
+            </Grid>
+            
+            <Grid item xs={12} md={2}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={filters.status}
+                  onChange={(e) => handleFilterChange('status', e.target.value)}
+                  label="Status"
+                  sx={{
+                    '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                    '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                  }}
+                >
+                  <MenuItem value="">All Statuses</MenuItem>
+                  {transactionService.getTransactionStatuses().map(status => (
+                    <MenuItem key={status.value} value={status.value}>
+                      {status.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} md={2}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Payment Method</InputLabel>
+                <Select
+                  value={filters.paymentMethod}
+                  onChange={(e) => handleFilterChange('paymentMethod', e.target.value)}
+                  label="Payment Method"
+                  sx={{
+                    '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                    '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                  }}
+                >
+                  <MenuItem value="">All Methods</MenuItem>
+                  {transactionService.getPaymentMethods().map(method => (
+                    <MenuItem key={method.value} value={method.value}>
+                      {method.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} md={2}>
+              <Button
+                variant="outlined"
+                onClick={() => setFilters({
+                  search: '',
+                  status: '',
+                  paymentMethod: '',
+                  locationId: '',
+                  dateFrom: null,
+                  dateTo: null
+                })}
+                size="small"
+                fullWidth
+                sx={{
+                  borderWidth: '1px',
+                  '&:hover': { borderWidth: '1px' },
+                }}
+              >
+                Clear
+              </Button>
+            </Grid>
+          </Grid>
         </Box>
-      </Box>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
+        {/* Content Area */}
+        <Box sx={{ 
+          flex: 1, 
+          overflow: 'hidden',
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          {/* Error Display */}
+          {error && (
+            <Alert severity="error" sx={{ m: 2, flexShrink: 0 }}>
+              {error}
+            </Alert>
+          )}
 
-      {renderFilters()}
-
-      <Card>
-        <CardContent>
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Transaction #</TableCell>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Person</TableCell>
-                  <TableCell>Amount</TableCell>
-                  <TableCell>Payment Method</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Receipt</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {loading ? (
+          {/* Transaction Table */}
+          <Paper 
+            elevation={0}
+            sx={{ 
+              bgcolor: 'white',
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              borderRadius: 0
+            }}
+          >
+            <TableContainer sx={{ flex: 1 }}>
+              <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+                <TableHead>
                   <TableRow>
-                    <TableCell colSpan={8} align="center">
-                      Loading transactions...
-                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Transaction #</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Date</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Person</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Amount</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Payment Method</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Receipt</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Actions</TableCell>
                   </TableRow>
-                ) : filteredTransactions.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} align="center">
-                      No transactions found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredTransactions.map((transaction) => (
-                    <React.Fragment key={transaction.id}>
-                      <TableRow hover>
-                        <TableCell>
-                          <Box display="flex" alignItems="center">
-                            <IconButton
-                              size="small"
-                              onClick={() => toggleRowExpansion(transaction.id)}
-                            >
-                              {expandedRows.has(transaction.id) ? 
-                                <ExpandLessIcon /> : <ExpandMoreIcon />
-                              }
-                            </IconButton>
-                            {transaction.transaction_number}
-                          </Box>
-                        </TableCell>
-                        <TableCell>
-                          {format(parseISO(transaction.created_at), 'yyyy-MM-dd HH:mm')}
-                        </TableCell>
-                        <TableCell>
-                          {/* Person name would come from backend relationship */}
-                          Person #{transaction.person_id.slice(0, 8)}...
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" fontWeight="bold" color="primary">
-                            {formatCurrency(transaction.total_amount)}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          {transaction.payment_method && (
-                            <Chip
-                              label={transactionService.formatPaymentMethod(transaction.payment_method)}
-                              color={getPaymentMethodColor(transaction.payment_method) as any}
-                              size="small"
-                            />
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={transactionService.formatTransactionStatus(transaction.status)}
-                            color={getStatusColor(transaction.status) as any}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          {transaction.receipt_number && (
-                            <Chip
-                              label={transaction.receipt_printed ? 'Printed' : 'Available'}
-                              color={transaction.receipt_printed ? 'success' : 'warning'}
-                              size="small"
-                            />
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Box display="flex" gap={1}>
-                            <Tooltip title="View Details">
+                </TableHead>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={8} align="center" sx={{ py: 1, px: 2 }}>
+                        Loading transactions...
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredTransactions.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} align="center" sx={{ py: 1, px: 2 }}>
+                        No transactions found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredTransactions.map((transaction) => (
+                      <React.Fragment key={transaction.id}>
+                        <TableRow hover>
+                          <TableCell sx={{ py: 1, px: 2 }}>
+                            <Box display="flex" alignItems="center">
                               <IconButton
                                 size="small"
-                                onClick={() => handleViewTransaction(transaction)}
+                                onClick={() => toggleRowExpansion(transaction.id)}
                               >
-                                <ViewIcon />
+                                {expandedRows.has(transaction.id) ? 
+                                  <ExpandLessIcon /> : <ExpandMoreIcon />
+                                }
                               </IconButton>
-                            </Tooltip>
+                              <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                {transaction.transaction_number}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell sx={{ py: 1, px: 2 }}>
+                            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                              {format(parseISO(transaction.created_at), 'yyyy-MM-dd HH:mm')}
+                            </Typography>
+                          </TableCell>
+                          <TableCell sx={{ py: 1, px: 2 }}>
+                            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                              Person #{transaction.person_id.slice(0, 8)}...
+                            </Typography>
+                          </TableCell>
+                          <TableCell sx={{ py: 1, px: 2 }}>
+                            <Typography variant="body2" fontWeight="bold" color="primary" sx={{ fontSize: '0.8rem' }}>
+                              {formatCurrency(transaction.total_amount)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell sx={{ py: 1, px: 2 }}>
+                            {transaction.payment_method && (
+                              <Chip
+                                label={transactionService.formatPaymentMethod(transaction.payment_method)}
+                                color={getPaymentMethodColor(transaction.payment_method) as any}
+                                size="small"
+                              />
+                            )}
+                          </TableCell>
+                          <TableCell sx={{ py: 1, px: 2 }}>
+                            <Chip
+                              label={transactionService.formatTransactionStatus(transaction.status)}
+                              color={getStatusColor(transaction.status) as any}
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell sx={{ py: 1, px: 2 }}>
                             {transaction.receipt_number && (
-                              <Tooltip title="View Receipt">
+                              <Chip
+                                label={transaction.receipt_printed ? 'Printed' : 'Available'}
+                                color={transaction.receipt_printed ? 'success' : 'warning'}
+                                size="small"
+                              />
+                            )}
+                          </TableCell>
+                          <TableCell sx={{ py: 1, px: 2 }}>
+                            <Box display="flex" gap={1}>
+                              <Tooltip title="View Details">
                                 <IconButton
                                   size="small"
-                                  onClick={() => handleViewReceipt(transaction)}
+                                  onClick={() => handleViewTransaction(transaction)}
                                 >
-                                  <ReceiptIcon />
+                                  <ViewIcon />
                                 </IconButton>
                               </Tooltip>
-                            )}
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                      
-                      {/* Expanded row with transaction items */}
-                      <TableRow>
-                        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
-                          <Collapse in={expandedRows.has(transaction.id)} timeout="auto" unmountOnExit>
-                            <Box margin={1}>
-                              <Typography variant="h6" gutterBottom component="div">
-                                Transaction Items
-                              </Typography>
-                              <Table size="small">
-                                <TableHead>
-                                  <TableRow>
-                                    <TableCell>Description</TableCell>
-                                    <TableCell>Type</TableCell>
-                                    <TableCell align="right">Amount</TableCell>
-                                  </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                  {transaction.items?.map((item) => (
-                                    <TableRow key={item.id}>
-                                      <TableCell>{item.description}</TableCell>
-                                      <TableCell>{item.item_type.replace('_', ' ')}</TableCell>
-                                      <TableCell align="right">
-                                        {formatCurrency(item.amount)}
-                                      </TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
+                              {transaction.receipt_number && (
+                                <Tooltip title="View Receipt">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleViewReceipt(transaction)}
+                                  >
+                                    <ReceiptIcon />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
                             </Box>
-                          </Collapse>
-                        </TableCell>
+                          </TableCell>
                       </TableRow>
-                    </React.Fragment>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                        
+                        {/* Expanded row with transaction items */}
+                        <TableRow>
+                          <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
+                            <Collapse in={expandedRows.has(transaction.id)} timeout="auto" unmountOnExit>
+                              <Box margin={1}>
+                                <Typography variant="h6" gutterBottom component="div" sx={{ fontSize: '0.875rem' }}>
+                                  Transaction Items
+                                </Typography>
+                                <Table size="small">
+                                  <TableHead>
+                                    <TableRow>
+                                      <TableCell sx={{ fontSize: '0.75rem' }}>Description</TableCell>
+                                      <TableCell sx={{ fontSize: '0.75rem' }}>Type</TableCell>
+                                      <TableCell align="right" sx={{ fontSize: '0.75rem' }}>Amount</TableCell>
+                                    </TableRow>
+                                  </TableHead>
+                                  <TableBody>
+                                    {transaction.items?.map((item) => (
+                                      <TableRow key={item.id}>
+                                        <TableCell sx={{ fontSize: '0.75rem' }}>{item.description}</TableCell>
+                                        <TableCell sx={{ fontSize: '0.75rem' }}>{item.item_type.replace('_', ' ')}</TableCell>
+                                        <TableCell align="right" sx={{ fontSize: '0.75rem' }}>
+                                          {formatCurrency(item.amount)}
+                                        </TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </Box>
+                            </Collapse>
+                          </TableCell>
+                        </TableRow>
+                      </React.Fragment>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        </Box>
 
-          {filteredTransactions.length > 0 && (
-            <Box display="flex" justifyContent="center" mt={2}>
-              <Pagination
-                count={totalPages}
-                page={page}
-                onChange={(_, newPage) => setPage(newPage)}
-                color="primary"
-              />
-            </Box>
-          )}
-        </CardContent>
-      </Card>
+        {/* Pagination */}
+        <TablePagination
+          component="div"
+          count={totalResults}
+          page={page}
+          onPageChange={(_event: unknown, newPage: number) => setPage(newPage)}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+            setRowsPerPage(parseInt(event.target.value, 10));
+            setPage(0);
+          }}
+          rowsPerPageOptions={[10, 25, 50, { value: -1, label: 'All' }]}
+          sx={{
+            bgcolor: 'white',
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            flexShrink: 0,
+            '& .MuiTablePagination-toolbar': {
+              minHeight: '52px',
+            },
+            '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+              fontSize: '0.8rem',
+            },
+            '& .MuiTablePagination-select': {
+              fontSize: '0.8rem',
+            },
+          }}
+        />
+      </Paper>
+    </Container>
 
-      {renderTransactionDialog()}
-      {renderReceiptDialog()}
-    </Box>
+    {renderTransactionDialog()}
+    {renderReceiptDialog()}
+    </>
   );
 };
 

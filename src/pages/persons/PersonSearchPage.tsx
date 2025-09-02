@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box,
+  Container,
   Typography,
   Card,
   CardContent,
@@ -459,36 +460,46 @@ const PersonSearchPage: React.FC = () => {
   }
 
   return (
-    <Box sx={{ maxWidth: 1400, mx: 'auto', p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" component="h1">
-          Person Search
-        </Typography>
-        
-        {hasPermission('persons.create') && (
-          <Button
-            variant="contained"
-            onClick={() => navigate('/dashboard/persons/manage')}
-            startIcon={<PersonIcon />}
-          >
-            Add New Person
-          </Button>
-        )}
-      </Box>
-      
-      <Typography variant="body1" color="text.secondary" gutterBottom>
-        Search for existing Madagascar citizens in the system.
-      </Typography>
-
-      {/* Search Form */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Search Criteria
-          </Typography>
+    <>
+    <Container maxWidth="lg" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Paper 
+        elevation={0}
+        sx={{ 
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: '#f8f9fa',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          overflow: 'hidden'
+        }}
+      >
+        {/* Search Form Section */}
+        <Box sx={{ 
+          bgcolor: 'white', 
+          borderBottom: '1px solid', 
+          borderColor: 'divider',
+          flexShrink: 0,
+          p: 2
+        }}>
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+              Search Criteria
+            </Typography>
+            {hasPermission('persons.create') && (
+              <Button
+                variant="contained"
+                onClick={() => navigate('/dashboard/persons/manage')}
+                startIcon={<PersonIcon />}
+                size="small"
+              >
+                Add New Person
+              </Button>
+            )}
+          </Box>
           
           <form onSubmit={searchForm.handleSubmit(onSearch)}>
-            <Grid container spacing={3}>
+            <Grid container spacing={2} alignItems="center">
               {/* Quick Search */}
               <Grid item xs={12} md={6}>
                 <Controller
@@ -498,8 +509,16 @@ const PersonSearchPage: React.FC = () => {
                     <TextField
                       {...field}
                       fullWidth
+                      size="small"
                       label="Quick Search"
                       placeholder="Search by name, document number, or phone"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          '& fieldset': { borderWidth: '1px' },
+                          '&:hover fieldset': { borderWidth: '1px' },
+                          '&.Mui-focused fieldset': { borderWidth: '1px' },
+                        },
+                      }}
                       InputProps={{
                         startAdornment: (
                           <InputAdornment position="start">
@@ -527,8 +546,16 @@ const PersonSearchPage: React.FC = () => {
                     <TextField
                       {...field}
                       fullWidth
+                      size="small"
                       label="Document Number"
                       placeholder="Enter exact document number"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          '& fieldset': { borderWidth: '1px' },
+                          '&:hover fieldset': { borderWidth: '1px' },
+                          '&.Mui-focused fieldset': { borderWidth: '1px' },
+                        },
+                      }}
                     />
                   )}
                 />
@@ -543,8 +570,16 @@ const PersonSearchPage: React.FC = () => {
                     <TextField
                       {...field}
                       fullWidth
+                      size="small"
                       label="Surname"
                       placeholder="Family name"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          '& fieldset': { borderWidth: '1px' },
+                          '&:hover fieldset': { borderWidth: '1px' },
+                          '&.Mui-focused fieldset': { borderWidth: '1px' },
+                        },
+                      }}
                     />
                   )}
                 />
@@ -558,8 +593,16 @@ const PersonSearchPage: React.FC = () => {
                     <TextField
                       {...field}
                       fullWidth
+                      size="small"
                       label="First Name"
                       placeholder="Given name"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          '& fieldset': { borderWidth: '1px' },
+                          '&:hover fieldset': { borderWidth: '1px' },
+                          '&.Mui-focused fieldset': { borderWidth: '1px' },
+                        },
+                      }}
                     />
                   )}
                 />
@@ -573,8 +616,16 @@ const PersonSearchPage: React.FC = () => {
                     <TextField
                       {...field}
                       fullWidth
+                      size="small"
                       label="Locality"
                       placeholder="Village, quartier, city"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          '& fieldset': { borderWidth: '1px' },
+                          '&:hover fieldset': { borderWidth: '1px' },
+                          '&.Mui-focused fieldset': { borderWidth: '1px' },
+                        },
+                      }}
                     />
                   )}
                 />
@@ -588,8 +639,16 @@ const PersonSearchPage: React.FC = () => {
                     <TextField
                       {...field}
                       fullWidth
+                      size="small"
                       label="Phone Number"
                       placeholder="Cell or work phone"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          '& fieldset': { borderWidth: '1px' },
+                          '&:hover fieldset': { borderWidth: '1px' },
+                          '&.Mui-focused fieldset': { borderWidth: '1px' },
+                        },
+                      }}
                     />
                   )}
                 />
@@ -600,9 +659,17 @@ const PersonSearchPage: React.FC = () => {
                   name="document_type"
                   control={searchForm.control}
                   render={({ field }) => (
-                    <FormControl fullWidth>
+                    <FormControl fullWidth size="small">
                       <InputLabel>Document Type</InputLabel>
-                      <Select {...field} label="Document Type">
+                      <Select 
+                        {...field} 
+                        label="Document Type"
+                        sx={{
+                          '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                          '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                        }}
+                      >
                         <MenuItem value="">ALL TYPES</MenuItem>
                         {DOCUMENT_TYPES.map((option) => (
                           <MenuItem key={option.value} value={option.value}>
@@ -620,7 +687,7 @@ const PersonSearchPage: React.FC = () => {
                   name="is_active"
                   control={searchForm.control}
                   render={({ field }) => (
-                    <FormControl fullWidth>
+                    <FormControl fullWidth size="small">
                       <InputLabel>Status</InputLabel>
                       <Select 
                         {...field} 
@@ -633,6 +700,11 @@ const PersonSearchPage: React.FC = () => {
                           } else {
                             field.onChange(value === "true");
                           }
+                        }}
+                        sx={{
+                          '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                          '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
                         }}
                       >
                         <MenuItem value="">ALL STATUSES</MenuItem>
@@ -651,6 +723,11 @@ const PersonSearchPage: React.FC = () => {
                     variant="outlined"
                     onClick={clearSearch}
                     startIcon={<ClearIcon />}
+                    size="small"
+                    sx={{
+                      borderWidth: '1px',
+                      '&:hover': { borderWidth: '1px' },
+                    }}
                   >
                     Clear
                   </Button>
@@ -659,6 +736,7 @@ const PersonSearchPage: React.FC = () => {
                     variant="contained"
                     disabled={searching}
                     startIcon={searching ? <CircularProgress size={20} /> : <SearchIcon />}
+                    size="small"
                   >
                     {searching ? 'Searching...' : 'Search'}
                   </Button>
@@ -666,239 +744,269 @@ const PersonSearchPage: React.FC = () => {
               </Grid>
             </Grid>
           </form>
-        </CardContent>
-      </Card>
+        </Box>
 
-      {/* Search Results */}
-      {hasSearched && (
-        <Card>
-          <CardContent>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">
-                Search Results ({totalResults} found)
-              </Typography>
-            </Box>
+        {/* Content Area */}
+        <Box sx={{ 
+          flex: 1, 
+          overflow: 'hidden',
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          {/* Search Results */}
+          {hasSearched && (
+            <Paper 
+              elevation={0}
+              sx={{ 
+                bgcolor: 'white',
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                borderRadius: 0
+              }}
+            >
+              <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+                <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                  Search Results ({totalResults} found)
+                </Typography>
+              </Box>
 
-            {searchResults.length === 0 ? (
-              <Alert severity="info">
-                No persons found matching your search criteria. Try adjusting your search terms.
-              </Alert>
-            ) : (
-              <>
-                <TableContainer component={Paper} variant="outlined">
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Name</TableCell>
-                        <TableCell>Gender</TableCell>
-                        <TableCell>Primary Document</TableCell>
-                        <TableCell>Contact</TableCell>
-                        <TableCell>Status</TableCell>
-                        <TableCell>Created</TableCell>
-                        <TableCell align="center">Actions</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {searchResults
-                        .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                        .map((person) => {
-                          const primaryDoc = getPrimaryDocument(person);
-                          const primaryAddress = getPrimaryAddress(person);
-                          
-                          return (
-                            <TableRow key={person.id} hover>
-                              <TableCell>
-                                <Box>
-                                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                                    {[person.first_name, person.middle_name, person.surname].filter(Boolean).join(' ')}
+              {searchResults.length === 0 ? (
+                <Box sx={{ p: 2 }}>
+                  <Alert severity="info">
+                    No persons found matching your search criteria. Try adjusting your search terms.
+                  </Alert>
+                </Box>
+              ) : (
+                <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                  <TableContainer sx={{ flex: 1 }}>
+                    <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Name</TableCell>
+                          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Gender</TableCell>
+                          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Primary Document</TableCell>
+                          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Contact</TableCell>
+                          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
+                          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Created</TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Actions</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {searchResults
+                          .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                          .map((person) => {
+                            const primaryDoc = getPrimaryDocument(person);
+                            const primaryAddress = getPrimaryAddress(person);
+                            
+                            return (
+                              <TableRow key={person.id} hover>
+                                <TableCell sx={{ py: 1, px: 2 }}>
+                                  <Box>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
+                                      {[person.first_name, person.middle_name, person.surname].filter(Boolean).join(' ')}
+                                    </Typography>
+                                    {person.birth_date && (
+                                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                        Born: {formatDate(person.birth_date)}
+                                      </Typography>
+                                    )}
+                                    {primaryAddress && (
+                                      <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.7rem' }}>
+                                        {primaryAddress.locality}, {primaryAddress.town}
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                </TableCell>
+                                <TableCell sx={{ py: 1, px: 2 }}>
+                                  <Chip
+                                    label={getPersonNatureDisplay(person.person_nature)}
+                                    size="small"
+                                    color={person.person_nature === '01' ? 'primary' : 'secondary'}
+                                  />
+                                </TableCell>
+                                <TableCell sx={{ py: 1, px: 2 }}>
+                                  <Box>
+                                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                                      {primaryDoc?.document_number || 'NO DOCUMENT'}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                      {getDocumentTypeDisplay(primaryDoc?.document_type || '')}
+                                    </Typography>
+                                  </Box>
+                                </TableCell>
+                                <TableCell sx={{ py: 1, px: 2 }}>
+                                  <Box>
+                                    {person.cell_phone && (
+                                      <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                        {person.cell_phone_country_code} {person.cell_phone}
+                                      </Typography>
+                                    )}
+                                    {person.email_address && (
+                                      <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.7rem' }}>
+                                        {person.email_address}
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                </TableCell>
+                                <TableCell sx={{ py: 1, px: 2 }}>
+                                  <Chip
+                                    label={person.is_active ? 'ACTIVE' : 'INACTIVE'}
+                                    color={person.is_active ? 'success' : 'default'}
+                                    size="small"
+                                  />
+                                </TableCell>
+                                <TableCell sx={{ py: 1, px: 2 }}>
+                                  <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                    {formatDate(person.created_at)}
                                   </Typography>
-                                  {person.birth_date && (
-                                    <Typography variant="caption" color="text.secondary">
-                                      Born: {formatDate(person.birth_date)}
-                                    </Typography>
-                                  )}
-                                  {primaryAddress && (
-                                    <Typography variant="caption" color="text.secondary" display="block">
-                                      {primaryAddress.locality}, {primaryAddress.town}
-                                    </Typography>
-                                  )}
-                                </Box>
-                              </TableCell>
-                              <TableCell>
-                                <Chip
-                                  label={getPersonNatureDisplay(person.person_nature)}
-                                  size="small"
-                                  color={person.person_nature === '01' ? 'primary' : 'secondary'}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Box>
-                                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                    {primaryDoc?.document_number || 'NO DOCUMENT'}
-                                  </Typography>
-                                  <Typography variant="caption" color="text.secondary">
-                                    {getDocumentTypeDisplay(primaryDoc?.document_type || '')}
-                                  </Typography>
-                                </Box>
-                              </TableCell>
-                              <TableCell>
-                                <Box>
-                                  {person.cell_phone && (
-                                    <Typography variant="body2">
-                                      {person.cell_phone_country_code} {person.cell_phone}
-                                    </Typography>
-                                  )}
-                                  {person.email_address && (
-                                    <Typography variant="caption" color="text.secondary" display="block">
-                                      {person.email_address}
-                                    </Typography>
-                                  )}
-                                </Box>
-                              </TableCell>
-                              <TableCell>
-                                <Chip
-                                  label={person.is_active ? 'ACTIVE' : 'INACTIVE'}
-                                  color={person.is_active ? 'success' : 'default'}
-                                  size="small"
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Typography variant="body2">
-                                  {formatDate(person.created_at)}
-                                </Typography>
-                              </TableCell>
-                              <TableCell align="center">
-                                <Box sx={{ display: 'flex', gap: 1 }}>
-                                  <Tooltip title="View Details">
-                                    <IconButton
-                                      size="small"
-                                      onClick={() => viewPersonDetails(person)}
-                                    >
-                                      <VisibilityIcon />
-                                    </IconButton>
-                                  </Tooltip>
-                                  {hasPermission('persons.update') && (
-                                    <Tooltip title="Edit Person">
+                                </TableCell>
+                                <TableCell align="center" sx={{ py: 1, px: 2 }}>
+                                  <Box sx={{ display: 'flex', gap: 1 }}>
+                                    <Tooltip title="View Details">
                                       <IconButton
                                         size="small"
-                                        onClick={() => editPerson(person)}
-                                        color="primary"
+                                        onClick={() => viewPersonDetails(person)}
                                       >
-                                        <EditIcon />
+                                        <VisibilityIcon />
                                       </IconButton>
                                     </Tooltip>
-                                  )}
-                                  {hasPermission('persons.delete') && (
-                                    <Tooltip title="Delete Person">
-                                      <IconButton
-                                        size="small"
-                                        onClick={() => deletePerson(person)}
-                                        color="error"
-                                      >
-                                        <DeleteIcon />
-                                      </IconButton>
-                                    </Tooltip>
-                                  )}
-                                </Box>
-                              </TableCell>
+                                    {hasPermission('persons.update') && (
+                                      <Tooltip title="Edit Person">
+                                        <IconButton
+                                          size="small"
+                                          onClick={() => editPerson(person)}
+                                          color="primary"
+                                        >
+                                          <EditIcon />
+                                        </IconButton>
+                                      </Tooltip>
+                                    )}
+                                    {hasPermission('persons.delete') && (
+                                      <Tooltip title="Delete Person">
+                                        <IconButton
+                                          size="small"
+                                          onClick={() => deletePerson(person)}
+                                          color="error"
+                                        >
+                                          <DeleteIcon />
+                                        </IconButton>
+                                      </Tooltip>
+                                    )}
+                                  </Box>
+                                </TableCell>
                             </TableRow>
                           );
                         })}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
 
-                <TablePagination
-                  rowsPerPageOptions={[5, 10, 25, 50]}
-                  component="div"
-                  count={totalResults}
-                  rowsPerPage={rowsPerPage}
-                  page={page}
-                  onPageChange={handlePageChange}
-                  onRowsPerPageChange={handleRowsPerPageChange}
-                />
-              </>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog 
-        open={showDeleteDialog} 
-        onClose={() => {}}
-        disableEscapeKeyDown
-        maxWidth="sm" 
-        fullWidth
-        slotProps={{
-          backdrop: {
-            onClick: (event) => {
-              console.log('🚨 PersonSearchPage DELETE DIALOG: Backdrop clicked!', event);
-              event.stopPropagation();
-              event.preventDefault();
-            }
-          }
-        }}
-      >
-        <DialogTitle>
-          <Typography variant="h6" color="error">
-            Confirm Delete
-          </Typography>
-        </DialogTitle>
-        <DialogContent>
-          {selectedPerson && (
-            <Box>
-              <Alert severity="warning" sx={{ mb: 2 }}>
-                This action cannot be undone. All associated data will be permanently removed.
-              </Alert>
-              <Typography variant="body1">
-                Are you sure you want to delete the person record for:
-              </Typography>
-              <Typography variant="h6" sx={{ mt: 1, fontWeight: 600 }}>
-                {[selectedPerson.first_name, selectedPerson.middle_name, selectedPerson.surname].filter(Boolean).join(' ')}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                This will also delete all associated documents and addresses.
-              </Typography>
-            </Box>
+                  <TablePagination
+                    component="div"
+                    count={totalResults}
+                    page={page}
+                    onPageChange={handlePageChange}
+                    rowsPerPage={rowsPerPage}
+                    onRowsPerPageChange={handleRowsPerPageChange}
+                    rowsPerPageOptions={[5, 10, 25, { value: -1, label: 'All' }]}
+                    sx={{
+                      bgcolor: 'white',
+                      borderTop: '1px solid',
+                      borderColor: 'divider',
+                      flexShrink: 0,
+                      '& .MuiTablePagination-toolbar': {
+                        minHeight: '52px',
+                      },
+                      '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+                        fontSize: '0.8rem',
+                      },
+                      '& .MuiTablePagination-select': {
+                        fontSize: '0.8rem',
+                      },
+                    }}
+                  />
+                </Box>
+              )}
+            </Paper>
           )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowDeleteDialog(false)} disabled={deleteLoading}>
-            Cancel
-          </Button>
-          <Button
-            onClick={confirmDelete}
-            color="error"
-            variant="contained"
-            disabled={deleteLoading}
-            startIcon={deleteLoading ? <CircularProgress size={20} /> : <DeleteIcon />}
-          >
-            {deleteLoading ? 'Deleting...' : 'Delete Person'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        </Box>
+      </Paper>
+    </Container>
 
-
-
-      {/* Snackbar for notifications */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
-      >
-        <Alert
-          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
+    {/* Delete Confirmation Dialog */}
+    <Dialog 
+      open={showDeleteDialog} 
+      onClose={() => {}}
+      disableEscapeKeyDown
+      maxWidth="sm" 
+      fullWidth
+      slotProps={{
+        backdrop: {
+          onClick: (event) => {
+            console.log('🚨 PersonSearchPage DELETE DIALOG: Backdrop clicked!', event);
+            event.stopPropagation();
+            event.preventDefault();
+          }
+        }
+      }}
+    >
+      <DialogTitle>
+        <Typography variant="h6" color="error">
+          Confirm Delete
+        </Typography>
+      </DialogTitle>
+      <DialogContent>
+        {selectedPerson && (
+          <Box>
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              This action cannot be undone. All associated data will be permanently removed.
+            </Alert>
+            <Typography variant="body1">
+              Are you sure you want to delete the person record for:
+            </Typography>
+            <Typography variant="h6" sx={{ mt: 1, fontWeight: 600 }}>
+              {[selectedPerson.first_name, selectedPerson.middle_name, selectedPerson.surname].filter(Boolean).join(' ')}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              This will also delete all associated documents and addresses.
+            </Typography>
+          </Box>
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setShowDeleteDialog(false)} disabled={deleteLoading}>
+          Cancel
+        </Button>
+        <Button
+          onClick={confirmDelete}
+          color="error"
+          variant="contained"
+          disabled={deleteLoading}
+          startIcon={deleteLoading ? <CircularProgress size={20} /> : <DeleteIcon />}
         >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </Box>
-  );
+          {deleteLoading ? 'Deleting...' : 'Delete Person'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+
+    {/* Snackbar for notifications */}
+    <Snackbar
+      open={snackbar.open}
+      autoHideDuration={6000}
+      onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+    >
+      <Alert
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        severity={snackbar.severity}
+        sx={{ width: '100%' }}
+      >
+        {snackbar.message}
+      </Alert>
+    </Snackbar>
+    </>);
 };
 
 export default PersonSearchPage; 
