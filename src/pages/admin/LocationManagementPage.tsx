@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
+  Container,
   Typography,
   TextField,
   Select,
@@ -271,42 +272,58 @@ const LocationManagementPage: React.FC = () => {
   }
 
   return (
-    <Box sx={{ maxWidth: 1400, mx: 'auto', p: 3 }}>
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" component="h1">
-          Location Management
-        </Typography>
-        
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleCreateLocation}
-        >
-          Create Location
-        </Button>
-      </Box>
-
-      <Typography variant="body1" color="text.secondary" gutterBottom>
-        Manage office locations, capacity, and operational status for the Madagascar LINC Print system.
-      </Typography>
-
-      {/* Filters */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <FilterIcon />
-            Search & Filters
-          </Typography>
+    <>
+    <Container maxWidth="lg" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Paper 
+        elevation={0}
+        sx={{ 
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: '#f8f9fa',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          overflow: 'hidden'
+        }}
+      >
+        {/* Filter Section */}
+        <Box sx={{ 
+          bgcolor: 'white', 
+          borderBottom: '1px solid', 
+          borderColor: 'divider',
+          flexShrink: 0,
+          p: 2
+        }}>
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+              Search & Filters
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleCreateLocation}
+              size="small"
+            >
+              Create Location
+            </Button>
+          </Box>
           
-          <Grid container spacing={3}>
+          <Grid container spacing={2} alignItems="center">
             <Grid item xs={12} md={4}>
               <TextField
                 fullWidth
+                size="small"
                 label="Search Locations"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Location name, code, or address"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': { borderWidth: '1px' },
+                    '&:hover fieldset': { borderWidth: '1px' },
+                    '&.Mui-focused fieldset': { borderWidth: '1px' },
+                  },
+                }}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -318,12 +335,17 @@ const LocationManagementPage: React.FC = () => {
             </Grid>
             
             <Grid item xs={12} md={2}>
-              <FormControl fullWidth>
+              <FormControl fullWidth size="small">
                 <InputLabel>Province</InputLabel>
                 <Select
                   value={provinceFilter}
                   onChange={(e) => setProvinceFilter(e.target.value)}
                   label="Province"
+                  sx={{
+                    '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                    '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                  }}
                 >
                   <MenuItem value="">All Provinces</MenuItem>
                   {provinces.map(province => (
@@ -336,12 +358,17 @@ const LocationManagementPage: React.FC = () => {
             </Grid>
             
             <Grid item xs={12} md={3}>
-              <FormControl fullWidth>
+              <FormControl fullWidth size="small">
                 <InputLabel>Office Type</InputLabel>
                 <Select
                   value={typeFilter}
                   onChange={(e) => setTypeFilter(e.target.value)}
                   label="Office Type"
+                  sx={{
+                    '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                    '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                  }}
                 >
                   <MenuItem value="">All Types</MenuItem>
                   {officeTypes.map(type => (
@@ -354,12 +381,17 @@ const LocationManagementPage: React.FC = () => {
             </Grid>
             
             <Grid item xs={12} md={3}>
-              <FormControl fullWidth>
+              <FormControl fullWidth size="small">
                 <InputLabel>Status</InputLabel>
                 <Select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                   label="Status"
+                  sx={{
+                    '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                    '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                  }}
                 >
                   <MenuItem value="">All Status</MenuItem>
                   <MenuItem value="true">Operational</MenuItem>
@@ -368,213 +400,249 @@ const LocationManagementPage: React.FC = () => {
               </FormControl>
             </Grid>
           </Grid>
-        </CardContent>
-      </Card>
+        </Box>
 
-      {/* Error Display */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-
-      {/* Locations Table */}
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Location Code</TableCell>
-              <TableCell>Location Name</TableCell>
-              <TableCell>Office Type</TableCell>
-              <TableCell>Province</TableCell>
-              <TableCell>Contact Info</TableCell>
-              <TableCell>Capacity</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell align="right">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {locations.map((location) => (
-              <TableRow key={location.id} hover>
-                <TableCell>
-                  <Typography variant="body1" color="primary.main" sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
-                    {location.display_code}
-                  </Typography>
-                </TableCell>
-
-                <TableCell>
-                  <Box>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                      {location.name}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {location.street_address}
-                    </Typography>
-                    {location.locality && (
-                      <Typography variant="caption" color="text.secondary" display="block">
-                        {location.locality}
-                      </Typography>
-                    )}
-                  </Box>
-                </TableCell>
-                
-                <TableCell>
-                  <Chip
-                    label={getOfficeTypeDisplay(location.office_type).label}
-                    color={getOfficeTypeDisplay(location.office_type).color}
-                    size="small"
-                  />
-                </TableCell>
-
-                <TableCell>
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    {location.province_name}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    ({location.province_code})
-                  </Typography>
-                </TableCell>
-                
-                <TableCell>
-                  <Stack spacing={0.5}>
-                    {location.phone_number ? (
-                      <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                        {location.phone_number}
-                      </Typography>
-                    ) : (
-                      <Typography variant="caption" color="text.secondary">No phone</Typography>
-                    )}
-                    {location.email ? (
-                      <Typography variant="caption" color="text.secondary">
-                        {location.email}
-                      </Typography>
-                    ) : (
-                      <Typography variant="caption" color="text.secondary">
-                        No email
-                      </Typography>
-                    )}
-                  </Stack>
-                </TableCell>
-                
-                <TableCell>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {location.max_daily_capacity}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Daily Capacity
-                  </Typography>
-                </TableCell>
-                
-                <TableCell>
-                  <Chip
-                    label={location.is_operational ? 'Operational' : 'Closed'}
-                    color={getStatusColor(location.is_operational)}
-                    size="small"
-                  />
-                </TableCell>
-                
-                <TableCell align="right">
-                  <Box sx={{ display: 'flex', gap: 0.5 }}>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleEditLocation(location)}
-                      title="Edit Location"
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    
-                    <IconButton
-                      size="small"
-                      color={location.is_operational ? 'warning' : 'success'}
-                      onClick={() => handleToggleOperational(location)}
-                      title={location.is_operational ? 'Close Location' : 'Open Location'}
-                    >
-                      {location.is_operational ? <CloseIcon /> : <OpenIcon />}
-                    </IconButton>
-                    
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => {
-                        setSelectedLocation(location);
-                        setShowDeleteModal(true);
-                      }}
-                      title="Delete Location"
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </Box>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      {/* Pagination */}
-      <TablePagination
-        rowsPerPageOptions={[10, 20, 50, 100]}
-        component="div"
-        count={totalResults}
-        rowsPerPage={rowsPerPage}
-        page={page}
-        onPageChange={handlePageChange}
-        onRowsPerPageChange={handleRowsPerPageChange}
-      />
-
-      {/* Delete Confirmation Modal */}
-      <Dialog open={showDeleteModal} onClose={() => setShowDeleteModal(false)}>
-        <DialogTitle sx={{ bgcolor: 'error.main', color: 'white' }}>
-          <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <WarningIcon />
-            Confirm Location Deletion
-          </Typography>
-        </DialogTitle>
-        <DialogContent sx={{ pt: 3 }}>
-          <Alert severity="error" sx={{ mb: 2 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-              This action cannot be undone!
-            </Typography>
-          </Alert>
-          
-          {selectedLocation && (
-            <Typography variant="body1">
-              Are you sure you want to delete location <strong>{selectedLocation.name}</strong>? 
-              This will affect all associated users and data.
-            </Typography>
+        {/* Content Area */}
+        <Box sx={{ 
+          flex: 1, 
+          overflow: 'hidden',
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          {/* Error Display */}
+          {error && (
+            <Alert severity="error" sx={{ m: 2, flexShrink: 0 }} onClose={() => setError(null)}>
+              {error}
+            </Alert>
           )}
-        </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setShowDeleteModal(false)} variant="outlined">
-            Cancel
-          </Button>
-          <Button onClick={handleDeleteLocation} variant="contained" color="error">
-            Delete Location
-          </Button>
-        </DialogActions>
-      </Dialog>
 
-      {/* Success Dialog */}
-      <Dialog open={showSuccessDialog} onClose={() => setShowSuccessDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ bgcolor: 'success.main', color: 'white' }}>
-          <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <CheckCircleIcon />
-            Success
+          {/* Locations Table */}
+          <Paper 
+            elevation={0}
+            sx={{ 
+              bgcolor: 'white',
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              borderRadius: 0
+            }}
+          >
+            <TableContainer sx={{ flex: 1 }}>
+              <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Location Code</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Location Name</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Office Type</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Province</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Contact Info</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Capacity</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {locations.map((location) => (
+                    <TableRow key={location.id} hover>
+                      <TableCell sx={{ py: 1, px: 2 }}>
+                        <Typography variant="body2" color="primary.main" sx={{ fontFamily: 'monospace', fontWeight: 600, fontSize: '0.8rem' }}>
+                          {location.display_code}
+                        </Typography>
+                      </TableCell>
+
+                      <TableCell sx={{ py: 1, px: 2 }}>
+                        <Box>
+                          <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
+                            {location.name}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                            {location.street_address}
+                          </Typography>
+                          {location.locality && (
+                            <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.7rem' }}>
+                              {location.locality}
+                            </Typography>
+                          )}
+                        </Box>
+                      </TableCell>
+                      
+                      <TableCell sx={{ py: 1, px: 2 }}>
+                        <Chip
+                          label={getOfficeTypeDisplay(location.office_type).label}
+                          color={getOfficeTypeDisplay(location.office_type).color}
+                          size="small"
+                        />
+                      </TableCell>
+
+                      <TableCell sx={{ py: 1, px: 2 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                          {location.province_name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                          ({location.province_code})
+                        </Typography>
+                      </TableCell>
+                      
+                      <TableCell sx={{ py: 1, px: 2 }}>
+                        <Stack spacing={0.5}>
+                          {location.phone_number ? (
+                            <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                              {location.phone_number}
+                            </Typography>
+                          ) : (
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>No phone</Typography>
+                          )}
+                          {location.email ? (
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                              {location.email}
+                            </Typography>
+                          ) : (
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                              No email
+                            </Typography>
+                          )}
+                        </Stack>
+                      </TableCell>
+                      
+                      <TableCell sx={{ py: 1, px: 2 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
+                          {location.max_daily_capacity}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                          Daily Capacity
+                        </Typography>
+                      </TableCell>
+                      
+                      <TableCell sx={{ py: 1, px: 2 }}>
+                        <Chip
+                          label={location.is_operational ? 'Operational' : 'Closed'}
+                          color={getStatusColor(location.is_operational)}
+                          size="small"
+                        />
+                      </TableCell>
+                      
+                      <TableCell align="right" sx={{ py: 1, px: 2 }}>
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleEditLocation(location)}
+                            title="Edit Location"
+                          >
+                            <EditIcon />
+                          </IconButton>
+                          
+                          <IconButton
+                            size="small"
+                            color={location.is_operational ? 'warning' : 'success'}
+                            onClick={() => handleToggleOperational(location)}
+                            title={location.is_operational ? 'Close Location' : 'Open Location'}
+                          >
+                            {location.is_operational ? <CloseIcon /> : <OpenIcon />}
+                          </IconButton>
+                          
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => {
+                              setSelectedLocation(location);
+                              setShowDeleteModal(true);
+                            }}
+                            title="Delete Location"
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        </Box>
+
+        {/* Pagination */}
+        <TablePagination
+          component="div"
+          count={totalResults}
+          page={page}
+          onPageChange={handlePageChange}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={handleRowsPerPageChange}
+          rowsPerPageOptions={[10, 20, 50, { value: -1, label: 'All' }]}
+          sx={{
+            bgcolor: 'white',
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            flexShrink: 0,
+            '& .MuiTablePagination-toolbar': {
+              minHeight: '52px',
+            },
+            '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+              fontSize: '0.8rem',
+            },
+            '& .MuiTablePagination-select': {
+              fontSize: '0.8rem',
+            },
+          }}
+        />
+      </Paper>
+    </Container>
+
+    {/* Delete Confirmation Modal */}
+    <Dialog open={showDeleteModal} onClose={() => setShowDeleteModal(false)}>
+      <DialogTitle sx={{ bgcolor: 'error.main', color: 'white' }}>
+        <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <WarningIcon />
+          Confirm Location Deletion
+        </Typography>
+      </DialogTitle>
+      <DialogContent sx={{ pt: 3 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+            This action cannot be undone!
           </Typography>
-        </DialogTitle>
-        <DialogContent sx={{ pt: 3 }}>
-          <Alert severity="success">
-            {successMessage}
-          </Alert>
-        </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setShowSuccessDialog(false)} variant="contained">
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
-  );
+        </Alert>
+        
+        {selectedLocation && (
+          <Typography variant="body1">
+            Are you sure you want to delete location <strong>{selectedLocation.name}</strong>? 
+            This will affect all associated users and data.
+          </Typography>
+        )}
+      </DialogContent>
+      <DialogActions sx={{ p: 3 }}>
+        <Button onClick={() => setShowDeleteModal(false)} variant="outlined">
+          Cancel
+        </Button>
+        <Button onClick={handleDeleteLocation} variant="contained" color="error">
+          Delete Location
+        </Button>
+      </DialogActions>
+    </Dialog>
+
+    {/* Success Dialog */}
+    <Dialog open={showSuccessDialog} onClose={() => setShowSuccessDialog(false)} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ bgcolor: 'success.main', color: 'white' }}>
+        <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <CheckCircleIcon />
+          Success
+        </Typography>
+      </DialogTitle>
+      <DialogContent sx={{ pt: 3 }}>
+        <Alert severity="success">
+          {successMessage}
+        </Alert>
+      </DialogContent>
+      <DialogActions sx={{ p: 3 }}>
+        <Button onClick={() => setShowSuccessDialog(false)} variant="contained">
+          Close
+        </Button>
+      </DialogActions>
+    </Dialog>
+  </>);
 };
 
 export default LocationManagementPage; 
