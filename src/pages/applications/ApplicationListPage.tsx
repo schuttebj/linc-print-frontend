@@ -29,7 +29,7 @@ import {
   IconButton,
   Alert,
   CircularProgress,
-  Pagination,
+  TablePagination,
   Stack
 } from '@mui/material';
 import {
@@ -52,8 +52,9 @@ const ApplicationListPage: React.FC = () => {
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [page, setPage] = useState(0); // TablePagination uses 0-based indexing
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [totalCount, setTotalCount] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<string>('');
@@ -108,9 +109,11 @@ const ApplicationListPage: React.FC = () => {
       setLoading(true);
       setError(null);
       
+      const limit = rowsPerPage === -1 ? 1000 : rowsPerPage; // Use large number for "All"
+      const skip = rowsPerPage === -1 ? 0 : page * rowsPerPage; // No skip for "All"
       const params = {
-        skip: (page - 1) * 20,
-        limit: 20,
+        skip: skip,
+        limit: limit,
         ...(statusFilter && { status: statusFilter }),
         ...(typeFilter && { application_type: typeFilter })
       };
@@ -118,8 +121,13 @@ const ApplicationListPage: React.FC = () => {
       const data = await applicationService.getApplications(params);
       setApplications(data);
       
-      // Calculate total pages (assuming 20 items per page)
-      setTotalPages(Math.ceil(data.length / 20));
+      // For now, estimate total count based on returned data
+      // In a real app, the backend should return total count
+      if (rowsPerPage === -1) {
+        setTotalCount(data.length); // For "All", total is what we got
+      } else {
+        setTotalCount(data.length < limit ? skip + data.length : skip + data.length + 1);
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to load applications');
     } finally {
@@ -136,7 +144,7 @@ const ApplicationListPage: React.FC = () => {
     if (!lookupsLoading) {
       loadApplications();
     }
-  }, [page, statusFilter, typeFilter, lookupsLoading]);
+  }, [page, rowsPerPage, statusFilter, typeFilter, lookupsLoading]);
 
   // Status color mapping
   const getStatusColor = (status: ApplicationStatus): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
@@ -188,6 +196,17 @@ const ApplicationListPage: React.FC = () => {
 
   const handleViewApplication = (applicationId: string) => {
     navigate(`/dashboard/applications/${applicationId}`);
+  };
+
+  // Pagination handlers
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value === 'All' ? -1 : parseInt(event.target.value, 10);
+    setRowsPerPage(value);
+    setPage(0); // Reset to first page when changing rows per page
   };
 
   if (loading) {
@@ -397,7 +416,8 @@ const ApplicationListPage: React.FC = () => {
                         <TableCell>
                           <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                             {application.person ? 
-                              `${application.person.first_name} ${application.person.surname}` : 'N/A'}
+                              `${application.person.first_name || ''} ${application.person.surname || ''}`.trim() || 'N/A'
+                              : 'Loading...'}
                           </Typography>
                         </TableCell>
                         <TableCell>
@@ -414,9 +434,17 @@ const ApplicationListPage: React.FC = () => {
                                 />
                               ))}
                             </Box>
+                          ) : application.license_category ? (
+                            <Chip
+                              label={application.license_category}
+                              size="small"
+                              variant="outlined"
+                              color="primary"
+                              sx={{ fontSize: '0.7rem', height: '20px' }}
+                            />
                           ) : (
                             <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                              {application.license_category || 'N/A'}
+                              N/A
                             </Typography>
                           )}
                         </TableCell>
@@ -458,30 +486,31 @@ const ApplicationListPage: React.FC = () => {
           </Paper>
         </Box>
 
-        {/* Pagination & Results - Bottom of wrapper */}
-        <Box sx={{ 
-          p: 2, 
-          borderTop: '1px solid', 
-          borderColor: 'divider', 
-          bgcolor: 'white',
-          flexShrink: 0,
-          display: 'flex', 
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
-            Showing {applications.length} application{applications.length !== 1 ? 's' : ''}
-            {` (Page ${page} of ${Math.max(totalPages, 10)})`}
-          </Typography>
-          
-          <Pagination
-            count={Math.max(totalPages, 10)} // Always show at least 10 pages for testing
-            page={page}
-            onChange={(event, newPage) => setPage(newPage)}
-            color="primary"
-            size="small"
-          />
-        </Box>
+        {/* Table Pagination - Bottom of wrapper */}
+        <TablePagination
+          component="div"
+          count={totalCount}
+          page={page}
+          onPageChange={handleChangePage}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          rowsPerPageOptions={[10, 50, { value: -1, label: 'All' }]}
+          sx={{
+            bgcolor: 'white',
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            flexShrink: 0,
+            '& .MuiTablePagination-toolbar': {
+              minHeight: '52px',
+            },
+            '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+              fontSize: '0.8rem',
+            },
+            '& .MuiTablePagination-select': {
+              fontSize: '0.8rem',
+            },
+          }}
+        />
       </Paper>
     </Container>
   );
