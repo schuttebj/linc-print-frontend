@@ -11,7 +11,7 @@ This directory contains standardized UI components for the LINC Print Frontend, 
 
 ### Key Features
 - **5px border radius** (not round)
-- **1px borders** matching text color
+- **1px softer borders** (medium tone between text and background)
 - **Consistent colors** across the application
 - **Compact sizing** for better space utilization
 
@@ -60,16 +60,16 @@ All standard MUI Chip components automatically inherit the global styling:
 ## Color Schemes
 
 ### Status Colors
-- **Processed/Completed**: Green (`#1b5e20` text, `#e8f5e8` background)
-- **Possible Fraud**: Orange (`#e65100` text, `#fff8e1` background)
-- **Draft**: Gray (`#424242` text, `#f5f5f5` background)
-- **Submitted**: Blue (`#1565c0` text, `#e3f2fd` background)
-- **Error States**: Red (`#c62828` text, `#ffebee` background)
+- **Processed/Completed**: Green (`#1b5e20` text, `#e8f5e8` bg, `#a6e8ab` border)
+- **Possible Fraud**: Orange (`#e65100` text, `#fff8e1` bg, `#ffb74d` border)
+- **Draft**: Gray (`#424242` text, `#f5f5f5` bg, `#9e9e9e` border)
+- **Submitted**: Blue (`#1565c0` text, `#e3f2fd` bg, `#90caf9` border)
+- **Error States**: Red (`#c62828` text, `#ffebee` bg, `#ef9a9a` border)
 
 ### License Colors
-- **License Categories**: Blue outlined (`#1565c0` border, transparent background)
-- **General Tags**: Purple (`#6a1b9a` text, `#f3e5f5` background)
-- **Info Chips**: Light blue (`#0277bd` text, `#e1f5fe` background)
+- **License Categories**: Blue outlined (`#1565c0` text, transparent bg, `#90caf9` border)
+- **General Tags**: Purple (`#6a1b9a` text, `#f3e5f5` bg, `#ce93d8` border)
+- **Info Chips**: Light blue (`#0277bd` text, `#e1f5fe` bg, `#4fc3f7` border)
 
 ## Global Theme Integration
 
