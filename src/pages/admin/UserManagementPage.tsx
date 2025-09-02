@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
+  Container,
   Typography,
   TextField,
   Select,
@@ -302,44 +303,60 @@ const UserManagementPage: React.FC = () => {
   }
 
   return (
-    <Box sx={{ maxWidth: 1400, mx: 'auto', p: 3 }}>
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" component="h1">
-          User Management
-        </Typography>
-        
-        {hasPermission('users.create') && (
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => navigate('/dashboard/admin/users/create')}
-          >
-            Create User
-          </Button>
-        )}
-      </Box>
-
-      <Typography variant="body1" color="text.secondary" gutterBottom>
-        Manage user accounts, roles, and permissions for the Madagascar LINC Print system.
-      </Typography>
-
-      {/* Filters */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <FilterIcon />
-            Search & Filters
-          </Typography>
+    <>
+    <Container maxWidth="lg" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Paper 
+        elevation={0}
+        sx={{ 
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: '#f8f9fa',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          overflow: 'hidden'
+        }}
+      >
+        {/* Filter Section */}
+        <Box sx={{ 
+          bgcolor: 'white', 
+          borderBottom: '1px solid', 
+          borderColor: 'divider',
+          flexShrink: 0,
+          p: 2
+        }}>
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+              Search & Filters
+            </Typography>
+            {hasPermission('users.create') && (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => navigate('/dashboard/admin/users/create')}
+                size="small"
+              >
+                Create User
+              </Button>
+            )}
+          </Box>
           
-          <Grid container spacing={3}>
+          <Grid container spacing={2} alignItems="center">
             <Grid item xs={12} md={4}>
               <TextField
                 fullWidth
+                size="small"
                 label="Search Users"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Username, name, or email"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': { borderWidth: '1px' },
+                    '&:hover fieldset': { borderWidth: '1px' },
+                    '&.Mui-focused fieldset': { borderWidth: '1px' },
+                  },
+                }}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -351,12 +368,17 @@ const UserManagementPage: React.FC = () => {
             </Grid>
             
             <Grid item xs={12} md={2}>
-              <FormControl fullWidth>
+              <FormControl fullWidth size="small">
                 <InputLabel>Status</InputLabel>
                 <Select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                   label="Status"
+                  sx={{
+                    '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                    '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                  }}
                 >
                   <MenuItem value="">All Statuses</MenuItem>
                   <MenuItem value="ACTIVE">Active</MenuItem>
@@ -367,12 +389,17 @@ const UserManagementPage: React.FC = () => {
             </Grid>
             
             <Grid item xs={12} md={3}>
-              <FormControl fullWidth>
+              <FormControl fullWidth size="small">
                 <InputLabel>User Type</InputLabel>
                 <Select
                   value={userTypeFilter}
                   onChange={(e) => setUserTypeFilter(e.target.value)}
                   label="User Type"
+                  sx={{
+                    '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                    '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                  }}
                 >
                   <MenuItem value="">All Types</MenuItem>
                   <MenuItem value="SYSTEM_USER">System User</MenuItem>
@@ -384,12 +411,17 @@ const UserManagementPage: React.FC = () => {
             </Grid>
             
             <Grid item xs={12} md={3}>
-              <FormControl fullWidth>
+              <FormControl fullWidth size="small">
                 <InputLabel>Province</InputLabel>
                 <Select
                   value={provinceFilter}
                   onChange={(e) => setProvinceFilter(e.target.value)}
                   label="Province"
+                  sx={{
+                    '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                    '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                  }}
                 >
                   <MenuItem value="">All Provinces</MenuItem>
                   <MenuItem value="T">Antananarivo</MenuItem>
@@ -402,283 +434,319 @@ const UserManagementPage: React.FC = () => {
               </FormControl>
             </Grid>
           </Grid>
-        </CardContent>
-      </Card>
+        </Box>
 
-      {/* Error Display */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
-      )}
+        {/* Content Area */}
+        <Box sx={{ 
+          flex: 1, 
+          overflow: 'hidden',
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          {/* Error Display */}
+          {error && (
+            <Alert severity="error" sx={{ m: 2, flexShrink: 0 }}>
+              {error}
+            </Alert>
+          )}
 
-      {/* Users Table */}
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>User</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>Assignment</TableCell>
-              <TableCell>Roles</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Last Login</TableCell>
-              <TableCell align="right">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {users.map((user) => (
-              <TableRow key={user.id} hover>
-                <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Avatar sx={{ bgcolor: 'primary.main' }}>
-                      <PersonIcon />
-                    </Avatar>
-                    <Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                        {user.first_name} {user.last_name}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-                        {user.username}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {user.email}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </TableCell>
-                
-                <TableCell>
-                  <Chip
-                    label={getUserTypeDisplay(user.user_type).label}
-                    color={getUserTypeDisplay(user.user_type).color}
-                    size="small"
-                  />
-                </TableCell>
-                
-                <TableCell>
-                  <Typography variant="body2">
-                    {getLocationInfo(user)}
-                  </Typography>
-                </TableCell>
-                
-                <TableCell>
-                  <Stack direction="row" spacing={0.5} flexWrap="wrap">
-                    {user.roles?.map((role) => (
-                      <Chip
-                        key={role.id}
-                        label={`${role.display_name || role.name}${role.hierarchy_level ? ` (${role.hierarchy_level})` : ''}`}
-                        size="small"
-                        variant="outlined"
-                      />
-                    ))}
-                  </Stack>
-                </TableCell>
-                
-                <TableCell>
-                  <Chip
-                    label={user.status}
-                    color={getStatusColor(user.status)}
-                    size="small"
-                  />
-                </TableCell>
-                
-                <TableCell>
-                  <Typography variant="body2">
-                    {user.last_login ? formatDate(user.last_login) : 'Never'}
-                  </Typography>
-                </TableCell>
-                
-                <TableCell align="right">
-                  <Box sx={{ display: 'flex', gap: 0.5 }}>
-                    <IconButton
-                      size="small"
-                      onClick={() => {
-                        setSelectedUser(user);
-                        setShowViewModal(true);
-                      }}
-                    >
-                      <ViewIcon />
-                    </IconButton>
-                    
-                    {hasPermission('users.update') && (
-                      <IconButton
-                        size="small"
-                        onClick={() => navigate(`/dashboard/admin/users/edit/${user.id}`)}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                    )}
-                    
-                    {hasPermission('users.update') && (
-                      <IconButton
-                        size="small"
-                        onClick={() => handleToggleActivation(user)}
-                        color={user.status === 'ACTIVE' ? 'warning' : 'success'}
-                        title={user.status === 'ACTIVE' ? 'Deactivate User' : 'Activate User'}
-                      >
-                        {user.status === 'ACTIVE' ? <DeactivateIcon /> : <ActivateIcon />}
-                      </IconButton>
-                    )}
-                    
-                    {hasPermission('users.delete') && (
-                      <IconButton
-                        size="small"
-                        onClick={() => {
-                          setSelectedUser(user);
-                          setShowDeleteModal(true);
-                        }}
-                        color="error"
-                        title="Delete User"
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    )}
-                  </Box>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      {/* Pagination */}
-      <TablePagination
-        rowsPerPageOptions={[10, 20, 50, 100]}
-        component="div"
-        count={totalResults}
-        rowsPerPage={rowsPerPage}
-        page={page}
-        onPageChange={handlePageChange}
-        onRowsPerPageChange={handleRowsPerPageChange}
-      />
-
-      {/* View User Modal */}
-      <Dialog open={showViewModal} onClose={() => setShowViewModal(false)} maxWidth="md" fullWidth>
-        <DialogTitle>User Details</DialogTitle>
-        <DialogContent>
-          {selectedUser && (
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <Typography variant="h6">
-                  {selectedUser.first_name} {selectedUser.last_name}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {selectedUser.email}
-                </Typography>
-              </Grid>
-              
-              <Grid item xs={6}>
-                <Typography variant="subtitle2">Username:</Typography>
-                <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                  {selectedUser.username}
-                </Typography>
-              </Grid>
-              
-              <Grid item xs={6}>
-                <Typography variant="subtitle2">User Type:</Typography>
-                <Chip
-                  label={getUserTypeDisplay(selectedUser.user_type).label}
-                  color={getUserTypeDisplay(selectedUser.user_type).color}
-                  size="small"
-                />
-              </Grid>
-              
-              <Grid item xs={12}>
-                <Typography variant="subtitle2">Assignment:</Typography>
-                <Typography variant="body2">
-                  {getLocationInfo(selectedUser)}
-                </Typography>
-              </Grid>
-              
-              <Grid item xs={12}>
-                <Typography variant="subtitle2">Roles:</Typography>
-                <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1 }}>
-                  {selectedUser.roles?.map((role) => (
-                    <Chip
-                      key={role.id}
-                      label={`${role.display_name || role.name}${role.hierarchy_level ? ` (Level ${role.hierarchy_level})` : ''}`}
-                      variant="outlined"
-                    />
+          {/* Users Table */}
+          <Paper 
+            elevation={0}
+            sx={{ 
+              bgcolor: 'white',
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              borderRadius: 0
+            }}
+          >
+            <TableContainer sx={{ flex: 1 }}>
+              <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>User</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Type</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Assignment</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Roles</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Last Login</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {users.map((user) => (
+                    <TableRow key={user.id} hover>
+                      <TableCell sx={{ py: 1, px: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Avatar sx={{ bgcolor: 'primary.main', width: 32, height: 32 }}>
+                            <PersonIcon sx={{ fontSize: '1rem' }} />
+                          </Avatar>
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
+                              {user.first_name} {user.last_name}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace', fontSize: '0.7rem' }}>
+                              {user.username}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.7rem' }}>
+                              {user.email}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </TableCell>
+                      
+                      <TableCell sx={{ py: 1, px: 2 }}>
+                        <Chip
+                          label={getUserTypeDisplay(user.user_type).label}
+                          color={getUserTypeDisplay(user.user_type).color}
+                          size="small"
+                        />
+                      </TableCell>
+                      
+                      <TableCell sx={{ py: 1, px: 2 }}>
+                        <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                          {getLocationInfo(user)}
+                        </Typography>
+                      </TableCell>
+                      
+                      <TableCell sx={{ py: 1, px: 2 }}>
+                        <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                          {user.roles?.map((role) => (
+                            <Chip
+                              key={role.id}
+                              label={`${role.display_name || role.name}${role.hierarchy_level ? ` (${role.hierarchy_level})` : ''}`}
+                              size="small"
+                              variant="outlined"
+                            />
+                          ))}
+                        </Stack>
+                      </TableCell>
+                      
+                      <TableCell sx={{ py: 1, px: 2 }}>
+                        <Chip
+                          label={user.status}
+                          color={getStatusColor(user.status)}
+                          size="small"
+                        />
+                      </TableCell>
+                      
+                      <TableCell sx={{ py: 1, px: 2 }}>
+                        <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                          {user.last_login ? formatDate(user.last_login) : 'Never'}
+                        </Typography>
+                      </TableCell>
+                      
+                      <TableCell align="right" sx={{ py: 1, px: 2 }}>
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setShowViewModal(true);
+                            }}
+                          >
+                            <ViewIcon />
+                          </IconButton>
+                          
+                          {hasPermission('users.update') && (
+                            <IconButton
+                              size="small"
+                              onClick={() => navigate(`/dashboard/admin/users/edit/${user.id}`)}
+                            >
+                              <EditIcon />
+                            </IconButton>
+                          )}
+                          
+                          {hasPermission('users.update') && (
+                            <IconButton
+                              size="small"
+                              onClick={() => handleToggleActivation(user)}
+                              color={user.status === 'ACTIVE' ? 'warning' : 'success'}
+                              title={user.status === 'ACTIVE' ? 'Deactivate User' : 'Activate User'}
+                            >
+                              {user.status === 'ACTIVE' ? <DeactivateIcon /> : <ActivateIcon />}
+                            </IconButton>
+                          )}
+                          
+                          {hasPermission('users.delete') && (
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setShowDeleteModal(true);
+                              }}
+                              color="error"
+                              title="Delete User"
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          )}
+                        </Box>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </Stack>
-              </Grid>
-              
-              <Grid item xs={6}>
-                <Typography variant="subtitle2">Status:</Typography>
-                <Chip
-                  label={selectedUser.status}
-                  color={getStatusColor(selectedUser.status)}
-                  size="small"
-                />
-              </Grid>
-              
-              <Grid item xs={6}>
-                <Typography variant="subtitle2">Last Login:</Typography>
-                <Typography variant="body2">
-                  {selectedUser.last_login ? formatDate(selectedUser.last_login) : 'Never'}
-                </Typography>
-              </Grid>
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        </Box>
+
+        {/* Pagination */}
+        <TablePagination
+          component="div"
+          count={totalResults}
+          page={page}
+          onPageChange={handlePageChange}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={handleRowsPerPageChange}
+          rowsPerPageOptions={[10, 20, 50, { value: -1, label: 'All' }]}
+          sx={{
+            bgcolor: 'white',
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            flexShrink: 0,
+            '& .MuiTablePagination-toolbar': {
+              minHeight: '52px',
+            },
+            '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+              fontSize: '0.8rem',
+            },
+            '& .MuiTablePagination-select': {
+              fontSize: '0.8rem',
+            },
+          }}
+        />
+      </Paper>
+    </Container>
+
+    {/* View User Modal */}
+    <Dialog open={showViewModal} onClose={() => setShowViewModal(false)} maxWidth="md" fullWidth>
+      <DialogTitle>User Details</DialogTitle>
+      <DialogContent>
+        {selectedUser && (
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <Typography variant="h6">
+                {selectedUser.first_name} {selectedUser.last_name}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {selectedUser.email}
+              </Typography>
             </Grid>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowViewModal(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
+            
+            <Grid item xs={6}>
+              <Typography variant="subtitle2">Username:</Typography>
+              <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                {selectedUser.username}
+              </Typography>
+            </Grid>
+            
+            <Grid item xs={6}>
+              <Typography variant="subtitle2">User Type:</Typography>
+              <Chip
+                label={getUserTypeDisplay(selectedUser.user_type).label}
+                color={getUserTypeDisplay(selectedUser.user_type).color}
+                size="small"
+              />
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Typography variant="subtitle2">Assignment:</Typography>
+              <Typography variant="body2">
+                {getLocationInfo(selectedUser)}
+              </Typography>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Typography variant="subtitle2">Roles:</Typography>
+              <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1 }}>
+                {selectedUser.roles?.map((role) => (
+                  <Chip
+                    key={role.id}
+                    label={`${role.display_name || role.name}${role.hierarchy_level ? ` (Level ${role.hierarchy_level})` : ''}`}
+                    variant="outlined"
+                  />
+                ))}
+              </Stack>
+            </Grid>
+            
+            <Grid item xs={6}>
+              <Typography variant="subtitle2">Status:</Typography>
+              <Chip
+                label={selectedUser.status}
+                color={getStatusColor(selectedUser.status)}
+                size="small"
+              />
+            </Grid>
+            
+            <Grid item xs={6}>
+              <Typography variant="subtitle2">Last Login:</Typography>
+              <Typography variant="body2">
+                {selectedUser.last_login ? formatDate(selectedUser.last_login) : 'Never'}
+              </Typography>
+            </Grid>
+          </Grid>
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setShowViewModal(false)}>Close</Button>
+      </DialogActions>
+    </Dialog>
 
-      {/* Delete Confirmation Modal */}
-      <Dialog open={showDeleteModal} onClose={() => setShowDeleteModal(false)}>
-        <DialogTitle sx={{ bgcolor: 'error.main', color: 'white' }}>
-          <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <WarningIcon />
-            Confirm User Deletion
+    {/* Delete Confirmation Modal */}
+    <Dialog open={showDeleteModal} onClose={() => setShowDeleteModal(false)}>
+      <DialogTitle sx={{ bgcolor: 'error.main', color: 'white' }}>
+        <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <WarningIcon />
+          Confirm User Deletion
+        </Typography>
+      </DialogTitle>
+      <DialogContent sx={{ pt: 3 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+            This action cannot be undone!
           </Typography>
-        </DialogTitle>
-        <DialogContent sx={{ pt: 3 }}>
-          <Alert severity="error" sx={{ mb: 2 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-              This action cannot be undone!
-            </Typography>
-          </Alert>
-          
-          {selectedUser && (
-            <Typography variant="body1">
-              Are you sure you want to delete user <strong>{selectedUser.first_name} {selectedUser.last_name}</strong>?
-            </Typography>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setShowDeleteModal(false)} variant="outlined">
-            Cancel
-          </Button>
-          <Button onClick={handleDeleteUser} variant="contained" color="error">
-            Delete User
-          </Button>
-        </DialogActions>
-      </Dialog>
+        </Alert>
+        
+        {selectedUser && (
+          <Typography variant="body1">
+            Are you sure you want to delete user <strong>{selectedUser.first_name} {selectedUser.last_name}</strong>?
+          </Typography>
+        )}
+      </DialogContent>
+      <DialogActions sx={{ p: 3 }}>
+        <Button onClick={() => setShowDeleteModal(false)} variant="outlined">
+          Cancel
+        </Button>
+        <Button onClick={handleDeleteUser} variant="contained" color="error">
+          Delete User
+        </Button>
+      </DialogActions>
+    </Dialog>
 
-      {/* Success Dialog */}
-      <Dialog open={showSuccessDialog} onClose={() => setShowSuccessDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ bgcolor: 'success.main', color: 'white' }}>
-          <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <CheckCircleIcon />
-            Success
-          </Typography>
-        </DialogTitle>
-        <DialogContent sx={{ pt: 3 }}>
-          <Alert severity="success">
-            {successMessage}
-          </Alert>
-        </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setShowSuccessDialog(false)} variant="contained">
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
-  );
+    {/* Success Dialog */}
+    <Dialog open={showSuccessDialog} onClose={() => setShowSuccessDialog(false)} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ bgcolor: 'success.main', color: 'white' }}>
+        <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <CheckCircleIcon />
+          Success
+        </Typography>
+      </DialogTitle>
+      <DialogContent sx={{ pt: 3 }}>
+        <Alert severity="success">
+          {successMessage}
+        </Alert>
+      </DialogContent>
+      <DialogActions sx={{ p: 3 }}>
+        <Button onClick={() => setShowSuccessDialog(false)} variant="contained">
+          Close
+        </Button>
+      </DialogActions>
+    </Dialog>
+    </>);
 };
 
 export default UserManagementPage; 
