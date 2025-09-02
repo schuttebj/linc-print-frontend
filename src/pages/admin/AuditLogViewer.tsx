@@ -648,7 +648,6 @@ const AuditLogViewer: React.FC = () => {
         <Box sx={{ 
           flex: 1, 
           overflow: 'auto',
-          p: 2,
           minHeight: 0,
           display: 'flex',
           flexDirection: 'column'
