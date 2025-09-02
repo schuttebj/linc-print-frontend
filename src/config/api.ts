@@ -78,15 +78,16 @@ export const API_ENDPOINTS = {
   roles: `${API_BASE_URL}/api/${API_VERSION}/roles`,
   roleById: (id: string) => `${API_BASE_URL}/api/${API_VERSION}/roles/${id}`,
   
-  // Audit logs - Transaction/CRUD audit logs
+  // Audit logs - Unified endpoint for both transaction and API logs
   audit: `${API_BASE_URL}/api/${API_VERSION}/audit`,
   auditUser: (userId: string) => `${API_BASE_URL}/api/${API_VERSION}/audit/user/${userId}`,
   auditResource: (resourceType: string, resourceId: string) => `${API_BASE_URL}/api/${API_VERSION}/audit/resource/${resourceType}/${resourceId}`,
   auditStatistics: `${API_BASE_URL}/api/${API_VERSION}/audit/statistics`,
+  auditStatisticsComprehensive: `${API_BASE_URL}/api/${API_VERSION}/audit/statistics/comprehensive`,
   auditSecurity: `${API_BASE_URL}/api/${API_VERSION}/audit/security/suspicious-activity`,
   auditExport: `${API_BASE_URL}/api/${API_VERSION}/audit/export`,
   
-  // API Request logs - Middleware audit logs
+  // Legacy API Request logs endpoints (deprecated - use audit with log_type=api)
   apiRequestLogs: `${API_BASE_URL}/api/${API_VERSION}/audit/api-requests`,
   apiRequestAnalytics: `${API_BASE_URL}/api/${API_VERSION}/audit/api-requests/analytics`,
   

@@ -227,87 +227,17 @@ const AuditLogViewer: React.FC = () => {
   // Export tab state
   const [exportLogType, setExportLogType] = useState<'transaction' | 'api'>('transaction');
 
-  // Calculate real statistics from audit logs
-  const calculateRealStatistics = (): AuditStatistics => {
-    if (!auditLogs || auditLogs.length === 0) {
-      return {
-        total_actions: 0,
-        total_users: 0,
-        success_rate: 0,
-        top_actions: [],
-        daily_activity: [],
-        failed_actions: 0,
-        security_events: 0
-      };
+  // State for backend-calculated comprehensive statistics
+  const [comprehensiveStats, setComprehensiveStats] = useState<any>(null);
+
+  // Load comprehensive statistics from backend
+  const loadComprehensiveStatistics = async () => {
+    try {
+      const response = await api.get(`${API_ENDPOINTS.auditStatisticsComprehensive}?days=7`);
+      setComprehensiveStats(response);
+    } catch (err) {
+      console.error('Failed to load comprehensive statistics:', err);
     }
-
-    const totalActions = auditLogs.length;
-    const successfulActions = auditLogs.filter(log => log.success).length;
-    const failedActions = totalActions - successfulActions;
-    const successRate = totalActions > 0 ? successfulActions / totalActions : 0;
-
-    // Count unique users
-    const uniqueUsers = new Set(auditLogs.map(log => log.username || log.user_id).filter(Boolean));
-    const totalUsers = uniqueUsers.size;
-
-    // Count security events
-    const securityEvents = auditLogs.filter(log => 
-      log.action?.includes('SECURITY') || 
-      log.action?.includes('LOGIN_FAILED') ||
-      log.resource === 'SYSTEM_SECURITY' ||
-      !log.success
-    ).length;
-
-    // Calculate top actions
-    const actionCounts: Record<string, number> = {};
-    auditLogs.forEach(log => {
-      if (log.action) {
-        actionCounts[log.action] = (actionCounts[log.action] || 0) + 1;
-      }
-    });
-
-    const topActions = Object.entries(actionCounts)
-      .map(([action, count]) => ({ action, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
-
-    // Calculate daily activity for the last 7 days
-    const dailyActivity: Record<string, number> = {};
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      return date.toISOString().split('T')[0];
-    });
-
-    // Initialize all days with 0
-    last7Days.forEach(date => {
-      dailyActivity[date] = 0;
-    });
-
-    // Count activities by day
-    auditLogs.forEach(log => {
-      if (log.timestamp) {
-        const logDate = new Date(log.timestamp).toISOString().split('T')[0];
-        if (dailyActivity.hasOwnProperty(logDate)) {
-          dailyActivity[logDate]++;
-        }
-      }
-    });
-
-    const dailyActivityArray = last7Days.map(date => ({
-      date,
-      count: dailyActivity[date] || 0
-    })).reverse(); // Reverse to show oldest to newest
-
-    return {
-      total_actions: totalActions,
-      total_users: totalUsers,
-      success_rate: successRate,
-      top_actions: topActions,
-      daily_activity: dailyActivityArray,
-      failed_actions: failedActions,
-      security_events: securityEvents
-    };
   };
 
   useEffect(() => {
@@ -333,6 +263,7 @@ const AuditLogViewer: React.FC = () => {
       setLoading(true);
       await Promise.all([
         loadAuditLogs(),
+        loadComprehensiveStatistics(),
         loadSuspiciousActivity()
       ]);
     } catch (err) {
@@ -345,6 +276,7 @@ const AuditLogViewer: React.FC = () => {
   const loadAuditLogs = async () => {
     try {
       const params = new URLSearchParams({
+        log_type: 'transaction', // Explicitly request transaction logs only
         page: (page + 1).toString(), // Convert from 0-based to 1-based
         per_page: rowsPerPage.toString(),
         ...(actionFilter && { action_type: actionFilter }),
@@ -354,52 +286,8 @@ const AuditLogViewer: React.FC = () => {
       });
 
       const response = await api.get<AuditLogResponse>(`${API_ENDPOINTS.audit}?${params}`);
-      
-      // Filter to show business operations and security events relevant to fraud detection
-      const allLogs = response.logs || [];
-      const filteredLogs = allLogs.filter(log => {
-        // EXCLUDE only pure system noise (keep security events for fraud detection)
-        const excludeActions = ['TOKEN_REFRESH']; // Only exclude token refresh spam
-        const excludeEndpoints = ['/api/v1/auth/refresh']; // Only exclude refresh endpoint
-        const excludeResources = ['API_REQUEST_LOGS']; // Don't show API request log access
-        
-        // INCLUDE business resources, security events, and CRUD operations
-        const businessResources = [
-          'APPLICATION', 'PERSON', 'TRANSACTION', 'CARD_ORDER', 'FEE_STRUCTURE', 
-          'LICENSE', 'USER', 'AUTHENTICATION', 'SYSTEM_SECURITY' // Keep security events!
-        ];
-        const fraudRelevantActions = [
-          'CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'LOGIN_FAILED', 
-          'PERMISSION_CHANGE', 'SECURITY_EVENT', 'EXPORT', 'PRINT'
-        ];
-        
-        return (
-          // Include business and security resources
-          (log.resource && businessResources.includes(log.resource)) ||
-          // Include fraud-relevant actions
-          (log.action && fraudRelevantActions.includes(log.action)) ||
-          // Include business operation endpoints
-          (log.endpoint && (
-            log.endpoint.includes('/applications') ||
-            log.endpoint.includes('/persons') ||
-            log.endpoint.includes('/transactions') ||
-            log.endpoint.includes('/card-orders') ||
-            log.endpoint.includes('/fee-structures') ||
-            log.endpoint.includes('/licenses') ||
-            log.endpoint.includes('/users') ||
-            log.endpoint.includes('/auth/login') ||
-            log.endpoint.includes('/auth/logout')
-          ))
-        ) && (
-          // Exclude only pure system noise
-          !excludeActions.includes(log.action) &&
-          !excludeResources.includes(log.resource || '') &&
-          !excludeEndpoints.some(endpoint => log.endpoint?.includes(endpoint))
-        );
-      });
-      
-      setAuditLogs(filteredLogs);
-      setTotalResults(filteredLogs.length); // Update total to reflect filtered results
+      setAuditLogs(response.logs || []);
+      setTotalResults(response.total || 0);
     } catch (err) {
       console.error('Failed to load audit logs:', err);
     }
@@ -426,9 +314,10 @@ const AuditLogViewer: React.FC = () => {
   const loadApiRequestLogs = async () => {
     try {
       const params = new URLSearchParams({
+        log_type: 'api', // Explicitly request API logs only
         page: (apiPage + 1).toString(), // Convert from 0-based to 1-based
         per_page: apiRowsPerPage.toString(),
-        ...(methodFilter && { method: methodFilter }),
+        ...(methodFilter && { action_type: methodFilter }), // Map method filter to action_type for API logs
         ...(endpointFilter && { endpoint: endpointFilter }),
         ...(statusCodeFilter && { status_code: statusCodeFilter }),
         ...(minDurationFilter && { min_duration: minDurationFilter }),
@@ -437,7 +326,7 @@ const AuditLogViewer: React.FC = () => {
         ...(apiEndDate && { end_date: apiEndDate })
       });
 
-      const response = await api.get<ApiRequestLogResponse>(`${API_ENDPOINTS.apiRequestLogs}?${params}`);
+      const response = await api.get<ApiRequestLogResponse>(`${API_ENDPOINTS.audit}?${params}`);
       setApiRequestLogs(response.logs || []);
       setApiTotalResults(response.total || 0);
     } catch (err) {
@@ -1296,168 +1185,322 @@ const AuditLogViewer: React.FC = () => {
           {/* Statistics Tab */}
           {activeTab === 2 && (
             <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, p: 2 }}>
-              {auditLogs.length > 0 ? (
+              <Typography variant="h5" gutterBottom sx={{ fontSize: '1.25rem', fontWeight: 600, mb: 1 }}>
+                System Statistics
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', mb: 3 }}>
+                {comprehensiveStats ? 
+                  `Database statistics from ${comprehensiveStats.time_period?.start_date ? new Date(comprehensiveStats.time_period.start_date).toLocaleDateString() : 'last'} to ${comprehensiveStats.time_period?.end_date ? new Date(comprehensiveStats.time_period.end_date).toLocaleDateString() : 'today'} (${comprehensiveStats.time_period?.days || 7} days)` :
+                  'Loading comprehensive system statistics...'
+                }
+              </Typography>
+              
+              {comprehensiveStats ? (
                 <>
-                  <Typography variant="h5" gutterBottom sx={{ fontSize: '1.25rem', fontWeight: 600, mb: 3 }}>
-                    Audit Log Statistics
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', mb: 3 }}>
-                    Real-time statistics calculated from the current audit log data (showing {auditLogs.length} filtered records)
-                  </Typography>
-                  
-                  {/* Summary Cards */}
-                  <Grid container spacing={3} sx={{ mb: 2 }}>
-                    <Grid item xs={12} md={3}>
-                      <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
-                        <CardContent>
-                          <Typography variant="h4" color="primary.main">
-                            {calculateRealStatistics().total_actions}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
-                            Total Actions
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                    <Grid item xs={12} md={3}>
-                      <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
-                        <CardContent>
-                          <Typography variant="h4" color="success.main">
-                            {(calculateRealStatistics().success_rate * 100).toFixed(1)}%
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
-                            Success Rate
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                    <Grid item xs={12} md={3}>
-                      <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
-                        <CardContent>
-                          <Typography variant="h4" color="info.main">
-                            {calculateRealStatistics().total_users}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
-                            Unique Users
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                    <Grid item xs={12} md={3}>
-                      <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
-                        <CardContent>
-                          <Typography variant="h4" color="error.main">
-                            {calculateRealStatistics().failed_actions}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
-                            Failed Actions
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  </Grid>
+                  {/* Transaction Log Statistics */}
+                  {comprehensiveStats.transaction_logs?.summary && (
+                    <>
+                      <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600, mb: 2 }}>
+                        Transaction Logs
+                      </Typography>
+                      
+                      <Grid container spacing={3} sx={{ mb: 4 }}>
+                        <Grid item xs={12} md={3}>
+                          <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
+                            <CardContent>
+                              <Typography variant="h4" color="primary.main">
+                                {comprehensiveStats.transaction_logs.summary.total_actions}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                                Total Actions
+                              </Typography>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                        <Grid item xs={12} md={3}>
+                          <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
+                            <CardContent>
+                              <Typography variant="h4" color="success.main">
+                                {comprehensiveStats.transaction_logs.summary.success_rate.toFixed(1)}%
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                                Success Rate
+                              </Typography>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                        <Grid item xs={12} md={3}>
+                          <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
+                            <CardContent>
+                              <Typography variant="h4" color="info.main">
+                                {comprehensiveStats.transaction_logs.summary.unique_users}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                                Unique Users
+                              </Typography>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                        <Grid item xs={12} md={3}>
+                          <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
+                            <CardContent>
+                              <Typography variant="h4" color="error.main">
+                                {comprehensiveStats.transaction_logs.summary.failed_actions}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                                Failed Actions
+                              </Typography>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                      </Grid>
+                    </>
+                  )}
+
+                  {/* API Request Statistics */}
+                  {comprehensiveStats.api_requests?.summary && (
+                    <>
+                      <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600, mb: 2 }}>
+                        API Performance Metrics
+                      </Typography>
+                      
+                      <Grid container spacing={3} sx={{ mb: 4 }}>
+                        <Grid item xs={12} md={3}>
+                          <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
+                            <CardContent>
+                              <Typography variant="h4" color="primary.main">
+                                {comprehensiveStats.api_requests.summary.total_requests}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                                Total Requests
+                              </Typography>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                        <Grid item xs={12} md={3}>
+                          <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
+                            <CardContent>
+                              <Typography variant="h4" color="info.main">
+                                {comprehensiveStats.api_requests.summary.avg_response_time_ms}ms
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                                Avg Response Time
+                              </Typography>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                        <Grid item xs={12} md={3}>
+                          <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
+                            <CardContent>
+                              <Typography variant="h4" color="warning.main">
+                                {comprehensiveStats.api_requests.summary.max_response_time_ms}ms
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                                Slowest Request
+                              </Typography>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                        <Grid item xs={12} md={3}>
+                          <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
+                            <CardContent>
+                              <Typography variant="h4" color="error.main">
+                                {comprehensiveStats.api_requests.summary.success_rate ? (100 - comprehensiveStats.api_requests.summary.success_rate).toFixed(1) : '0'}%
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                                Error Rate
+                              </Typography>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                      </Grid>
+                    </>
+                  )}
                 </>
               ) : (
                 <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600, mb: 2 }}>
-                    No Data Available
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
-                    Load some audit logs in the Transaction Logs tab to see statistics here.
+                  <CircularProgress />
+                  <Typography variant="h6" sx={{ mt: 2, fontSize: '1.1rem', fontWeight: 600 }}>
+                    Loading Statistics...
                   </Typography>
                 </Box>
               )}
 
-              {auditLogs.length > 0 && (
+              {/* Detailed Analytics */}
+              {comprehensiveStats && (comprehensiveStats.transaction_logs?.top_actions?.length > 0 || comprehensiveStats.api_requests?.top_endpoints?.length > 0) && (
                 <>
-                  {/* Top Actions */}
+                  <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600, mb: 2, mt: 2 }}>
+                    Detailed Analytics
+                  </Typography>
+                  
                   <Grid container spacing={3}>
-                    <Grid item xs={12} md={6}>
-                      <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
-                        <CardContent>
-                          <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-                            Most Common Actions
-                          </Typography>
-                          {calculateRealStatistics().top_actions.length > 0 ? (
-                            <Box>
-                              {calculateRealStatistics().top_actions.slice(0, 10).map((action, index) => (
-                                <Box key={action.action} sx={{ mb: 2 }}>
-                                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                    <Typography variant="body2" fontWeight="medium" sx={{ fontSize: '0.8rem' }}>
-                                      {getHumanReadableActionFromString(action.action)}
-                                    </Typography>
-                                    <Chip 
-                                      label={action.count} 
-                                      size="small" 
-                                      color="primary"
-                                    />
+                    {/* Transaction Log Analytics */}
+                    {comprehensiveStats.transaction_logs?.top_actions?.length > 0 && (
+                      <>
+                        <Grid item xs={12} md={6}>
+                          <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
+                            <CardContent>
+                              <Typography variant="h6" gutterBottom sx={{ fontSize: '1rem', fontWeight: 600 }}>
+                                Most Common Actions
+                              </Typography>
+                              <Box>
+                                {comprehensiveStats.transaction_logs.top_actions.slice(0, 5).map((action: any, index: number) => (
+                                  <Box key={action.action} sx={{ mb: 2 }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                      <Typography variant="body2" fontWeight="medium" sx={{ fontSize: '0.8rem' }}>
+                                        {getHumanReadableActionFromString(action.action)}
+                                      </Typography>
+                                      <Chip 
+                                        label={action.count} 
+                                        size="small" 
+                                        color="primary"
+                                      />
+                                    </Box>
+                                    <Box sx={{ width: '100%', height: 8, backgroundColor: 'grey.200', borderRadius: 1 }}>
+                                      <Box 
+                                        sx={{ 
+                                          width: `${(action.count / comprehensiveStats.transaction_logs.top_actions[0].count) * 100}%`, 
+                                          height: '100%', 
+                                          backgroundColor: 'primary.main', 
+                                          borderRadius: 1 
+                                        }} 
+                                      />
+                                    </Box>
                                   </Box>
-                                  <Box sx={{ width: '100%', height: 8, backgroundColor: 'grey.200', borderRadius: 1 }}>
-                                    <Box 
-                                      sx={{ 
-                                        width: `${(action.count / calculateRealStatistics().top_actions[0].count) * 100}%`, 
-                                        height: '100%', 
-                                        backgroundColor: 'primary.main', 
-                                        borderRadius: 1 
-                                      }} 
-                                    />
-                                  </Box>
-                                </Box>
-                              ))}
-                            </Box>
-                          ) : (
-                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
-                              No action data available
-                            </Typography>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </Grid>
+                                ))}
+                              </Box>
+                            </CardContent>
+                          </Card>
+                        </Grid>
 
-                    {/* Daily Activity */}
-                    <Grid item xs={12} md={6}>
-                      <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
-                        <CardContent>
-                          <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-                            Daily Activity (Last 7 Days)
-                          </Typography>
-                          {calculateRealStatistics().daily_activity.length > 0 ? (
-                            <Box>
-                              {calculateRealStatistics().daily_activity.map((day, index) => (
-                                <Box key={day.date} sx={{ mb: 2 }}>
-                                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                    <Typography variant="body2" fontWeight="medium" sx={{ fontSize: '0.8rem' }}>
-                                      {formatDateOnly(day.date)}
-                                    </Typography>
-                                    <Chip 
-                                      label={day.count} 
-                                      size="small" 
-                                      color="info"
-                                    />
-                                  </Box>
-                                  <Box sx={{ width: '100%', height: 8, backgroundColor: 'grey.200', borderRadius: 1 }}>
-                                    <Box 
-                                      sx={{ 
-                                        width: calculateRealStatistics().daily_activity.length > 0 
-                                          ? `${(day.count / Math.max(...calculateRealStatistics().daily_activity.map(d => d.count))) * 100}%` 
-                                          : '0%', 
-                                        height: '100%', 
-                                        backgroundColor: 'info.main', 
-                                        borderRadius: 1 
-                                      }} 
-                                    />
-                                  </Box>
+                        <Grid item xs={12} md={6}>
+                          <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
+                            <CardContent>
+                              <Typography variant="h6" gutterBottom sx={{ fontSize: '1rem', fontWeight: 600 }}>
+                                Transaction Activity (Last 7 Days)
+                              </Typography>
+                              {comprehensiveStats.transaction_logs.daily_activity?.length > 0 ? (
+                                <Box>
+                                  {comprehensiveStats.transaction_logs.daily_activity.map((day: any, index: number) => (
+                                    <Box key={day.date} sx={{ mb: 2 }}>
+                                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                        <Typography variant="body2" fontWeight="medium" sx={{ fontSize: '0.8rem' }}>
+                                          {formatDateOnly(day.date)}
+                                        </Typography>
+                                        <Chip 
+                                          label={day.count} 
+                                          size="small" 
+                                          color="info"
+                                        />
+                                      </Box>
+                                      <Box sx={{ width: '100%', height: 8, backgroundColor: 'grey.200', borderRadius: 1 }}>
+                                        <Box 
+                                          sx={{ 
+                                            width: comprehensiveStats.transaction_logs.daily_activity.length > 0 
+                                              ? `${(day.count / Math.max(...comprehensiveStats.transaction_logs.daily_activity.map((d: any) => d.count))) * 100}%` 
+                                              : '0%', 
+                                            height: '100%', 
+                                            backgroundColor: 'info.main', 
+                                            borderRadius: 1 
+                                          }} 
+                                        />
+                                      </Box>
+                                    </Box>
+                                  ))}
                                 </Box>
-                              ))}
-                            </Box>
-                          ) : (
-                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
-                              No daily activity data available
-                            </Typography>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </Grid>
+                              ) : (
+                                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                                  No daily activity data available
+                                </Typography>
+                              )}
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                      </>
+                    )}
+
+                    {/* API Request Analytics */}
+                    {comprehensiveStats.api_requests?.top_endpoints?.length > 0 && (
+                      <>
+                        <Grid item xs={12} md={6}>
+                          <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
+                            <CardContent>
+                              <Typography variant="h6" gutterBottom sx={{ fontSize: '1rem', fontWeight: 600 }}>
+                                Top API Endpoints
+                              </Typography>
+                              <Box>
+                                {comprehensiveStats.api_requests.top_endpoints.slice(0, 5).map((endpoint: any, index: number) => (
+                                  <Box key={endpoint.endpoint} sx={{ mb: 2 }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                      <Typography variant="body2" fontWeight="medium" sx={{ fontSize: '0.8rem' }}>
+                                        {endpoint.endpoint}
+                                      </Typography>
+                                      <Chip 
+                                        label={endpoint.request_count} 
+                                        size="small" 
+                                        color="secondary"
+                                      />
+                                    </Box>
+                                    <Box sx={{ width: '100%', height: 8, backgroundColor: 'grey.200', borderRadius: 1 }}>
+                                      <Box 
+                                        sx={{ 
+                                          width: `${(endpoint.request_count / comprehensiveStats.api_requests.top_endpoints[0].request_count) * 100}%`, 
+                                          height: '100%', 
+                                          backgroundColor: 'secondary.main', 
+                                          borderRadius: 1 
+                                        }} 
+                                      />
+                                    </Box>
+                                  </Box>
+                                ))}
+                              </Box>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+
+                        <Grid item xs={12} md={6}>
+                          <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
+                            <CardContent>
+                              <Typography variant="h6" gutterBottom sx={{ fontSize: '1rem', fontWeight: 600 }}>
+                                Status Code Distribution
+                              </Typography>
+                              {comprehensiveStats.api_requests.status_distribution?.length > 0 ? (
+                                <Box>
+                                  {comprehensiveStats.api_requests.status_distribution.map((status: any, index: number) => (
+                                    <Box key={status.status_category} sx={{ mb: 2 }}>
+                                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                        <Typography variant="body2" fontWeight="medium" sx={{ fontSize: '0.8rem' }}>
+                                          {status.status_category}
+                                        </Typography>
+                                        <Chip 
+                                          label={status.count} 
+                                          size="small" 
+                                          color={status.status_category.startsWith('2') ? 'success' : status.status_category.startsWith('4') || status.status_category.startsWith('5') ? 'error' : 'warning'}
+                                        />
+                                      </Box>
+                                      <Box sx={{ width: '100%', height: 8, backgroundColor: 'grey.200', borderRadius: 1 }}>
+                                        <Box 
+                                          sx={{ 
+                                            width: `${(status.count / comprehensiveStats.api_requests.status_distribution[0].count) * 100}%`, 
+                                            height: '100%', 
+                                            backgroundColor: status.status_category.startsWith('2') ? 'success.main' : status.status_category.startsWith('4') || status.status_category.startsWith('5') ? 'error.main' : 'warning.main', 
+                                            borderRadius: 1 
+                                          }} 
+                                        />
+                                      </Box>
+                                    </Box>
+                                  ))}
+                                </Box>
+                              ) : (
+                                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                                  No status code data available
+                                </Typography>
+                              )}
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                      </>
+                    )}
 
                     {/* System Health */}
                     <Grid item xs={12}>
@@ -1470,17 +1513,17 @@ const AuditLogViewer: React.FC = () => {
                             <Grid item xs={12} md={4}>
                               <Box sx={{ textAlign: 'center' }}>
                                 <Typography variant="h3" color="success.main">
-                                  {(calculateRealStatistics().success_rate * 100).toFixed(1)}%
+                                  {comprehensiveStats.transaction_logs?.summary?.success_rate ? comprehensiveStats.transaction_logs.summary.success_rate.toFixed(1) : '0'}%
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
-                                  Success Rate
+                                  Transaction Success Rate
                                 </Typography>
                               </Box>
                             </Grid>
                             <Grid item xs={12} md={4}>
                               <Box sx={{ textAlign: 'center' }}>
                                 <Typography variant="h3" color="warning.main">
-                                  {calculateRealStatistics().security_events}
+                                  {comprehensiveStats.transaction_logs?.summary?.security_events || 0}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
                                   Security Events
@@ -1490,10 +1533,10 @@ const AuditLogViewer: React.FC = () => {
                             <Grid item xs={12} md={4}>
                               <Box sx={{ textAlign: 'center' }}>
                                 <Typography variant="h3" color="info.main">
-                                  {Math.round(calculateRealStatistics().total_actions / Math.max(calculateRealStatistics().daily_activity.length, 1))}
+                                  {comprehensiveStats.api_requests?.summary?.avg_response_time_ms || 0}ms
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
-                                  Avg Daily Actions
+                                  Avg API Response Time
                                 </Typography>
                               </Box>
                             </Grid>
@@ -1510,10 +1553,7 @@ const AuditLogViewer: React.FC = () => {
           {/* Export Tab */}
           {activeTab === 3 && (
             <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, p: 2 }}>
-              <Typography variant="h5" gutterBottom sx={{ fontSize: '1.25rem', fontWeight: 600, mb: 3 }}>
-                Export Audit Logs
-              </Typography>
-              
+                            
               {/* Export Configuration */}
               <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px', mb: 3 }}>
                 <CardContent>
