@@ -363,12 +363,12 @@ const ApplicationListPage: React.FC = () => {
               <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Type</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Applicant</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>License Category</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Status</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Date Created</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Actions</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Type</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Applicant</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>License Category</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Date Created</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
