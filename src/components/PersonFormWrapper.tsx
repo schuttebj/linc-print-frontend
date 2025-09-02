@@ -3470,35 +3470,27 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             flex: mode === 'application' ? 1 : 'none',
             overflow: 'hidden' // Ensure parent doesn't scroll
         }}>
-            {/* Content Container - Tabs and Form Content with padding */}
+            {/* Step content - p:0 (match medical component exactly) */}
             <Box sx={{ 
                 flex: 1,
-                overflow: 'hidden', // Prevent outer container from scrolling
-                p: 2, // Padding for content area
+                overflow: 'hidden',
+                p: 0, // Step content - p:0
                 display: 'flex',
-                flexDirection: 'column',
-                minHeight: 0 // Allow flex shrinking
+                flexDirection: 'column'
             }}>
-                <Box sx={{ 
-                    maxWidth: mode === 'application' ? 'none' : 1200, // No max width in application mode
-                    mx: mode === 'application' ? 0 : 'auto', // No horizontal margin in application mode
-                    display: 'flex',
-                    flexDirection: 'column',
-                    flex: 1,
-                    overflow: 'visible' // Allow content to be visible
-                }}>
                 {showHeader && (
-                    <Paper 
-                        elevation={0}
-                        sx={{ 
-                            p: 2, 
-                            mb: 3,
-                            bgcolor: 'white',
-                            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-                            borderRadius: 2,
-                            flexShrink: 0 // Prevent header from shrinking
-                        }}
-                    >
+                    <Box sx={{ p: 2 }}>
+                        <Paper 
+                            elevation={0}
+                            sx={{ 
+                                p: 2, 
+                                mb: 3,
+                                bgcolor: 'white',
+                                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                                borderRadius: 2,
+                                flexShrink: 0 // Prevent header from shrinking
+                            }}
+                        >
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                             <Typography variant="h5" component="h1" sx={{ fontWeight: 600 }}>
                             {title}
@@ -3531,19 +3523,21 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                         {subtitle}
                     </Typography>
                     </Paper>
+                    </Box>
             )}
 
             {/* Person Form Tabs */}
-            <Paper 
-                elevation={0}
-                sx={{
-                    mb: 2,
-                    bgcolor: 'white',
-                    boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-                    borderRadius: 2,
-                    flexShrink: 0 // Prevent tabs from shrinking - KEEP TABS FIXED
-                }}
-            >
+            <Box sx={{ p: 2 }}>
+                <Paper 
+                    elevation={0}
+                    sx={{
+                        mb: 2,
+                        bgcolor: 'white',
+                        boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                        borderRadius: 2,
+                        flexShrink: 0 // Prevent tabs from shrinking - KEEP TABS FIXED
+                    }}
+                >
                 <Tabs
                     value={currentStep}
                     onChange={handleTabChange}
@@ -3589,18 +3583,20 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     })}
                 </Tabs>
             </Paper>
+            </Box>
 
-            {/* Main Form Container - Scrollable form content */}
-            <Box 
-                ref={scrollableRef}
-                sx={{ 
-                    flex: 1, // Fill remaining space after tabs
-                    overflow: 'auto', // Allow scroll on form content ONLY
-                    display: 'flex',
-                    flexDirection: 'column',
-                    p: 0, // No padding on scrollable container
-                    // Conditional padding based on scrollbar presence
-                    pr: hasScrollbar ? 1 : 0,
+            {/* Tab content - p:0 (match medical component exactly) */}
+            <Box sx={{ p: 2 }}>
+                <Box 
+                    ref={scrollableRef}
+                    sx={{ 
+                        flex: 1,
+                        overflow: 'auto',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        p: 0, // Tab content - p:0
+                        // Conditional padding based on scrollbar presence
+                        pr: hasScrollbar ? 1 : 0,
                     // Custom scrollbar styling - NO ARROWS
                     '&::-webkit-scrollbar': {
                         width: '8px',
@@ -3655,7 +3651,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     {renderStepContent()}
                 </Box>
             </Box>
-                </Box>
+            </Box>
             </Box>
 
             {/* Navigation - Full width at bottom - STAYS FIXED */}
