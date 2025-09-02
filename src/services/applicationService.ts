@@ -45,6 +45,7 @@ class ApplicationService {
     application_type?: string;
     location_id?: string;
     is_urgent?: boolean;
+    include_person?: boolean;
   } = {}): Promise<Application[]> {
     const queryString = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {

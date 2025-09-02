@@ -114,11 +114,21 @@ const ApplicationListPage: React.FC = () => {
       const params = {
         skip: skip,
         limit: limit,
+        include_person: true, // Try to include person data
         ...(statusFilter && { status: statusFilter }),
         ...(typeFilter && { application_type: typeFilter })
       };
       
       const data = await applicationService.getApplications(params);
+      
+      // Debug: Check what data we're actually getting
+      console.log('🔍 Applications data received:', {
+        count: data.length,
+        firstApplication: data[0],
+        personData: data[0]?.person,
+        allPersonData: data.map(app => ({ id: app.id, person: app.person }))
+      });
+      
       setApplications(data);
       
       // For now, estimate total count based on returned data
@@ -146,34 +156,78 @@ const ApplicationListPage: React.FC = () => {
     }
   }, [page, rowsPerPage, statusFilter, typeFilter, lookupsLoading]);
 
-  // Status color mapping
-  const getStatusColor = (status: ApplicationStatus): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
+  // Status color mapping with custom styling to match screenshot
+  const getStatusChipProps = (status: ApplicationStatus) => {
+    const statusText = getApplicationStatusLabel(status);
+    
+    // Special handling for "Possible Fraud" to match screenshot
+    if (statusText.toLowerCase().includes('fraud') || status === 'POSSIBLE_FRAUD' as any) {
+      return { 
+        color: 'warning' as const,
+        sx: { bgcolor: '#fff8e1', color: '#f57c00', fontWeight: 500 }
+      };
+    }
+    
+    // Special handling for "Processed" to match screenshot green
+    if (statusText.toLowerCase().includes('processed')) {
+      return { 
+        color: 'success' as const,
+        sx: { bgcolor: '#e8f5e8', color: '#2e7d32', fontWeight: 500 }
+      };
+    }
+    
     switch (status) {
       case ApplicationStatus.DRAFT:
-        return 'default';
+        return { 
+          color: 'default' as const,
+          sx: { bgcolor: '#f5f5f5', color: '#666' }
+        };
       case ApplicationStatus.SUBMITTED:
-        return 'info';
+        return { 
+          color: 'info' as const,
+          sx: { bgcolor: '#e3f2fd', color: '#1976d2' }
+        };
       case ApplicationStatus.PAID:
-        return 'primary';
+        return { 
+          color: 'primary' as const,
+          sx: { bgcolor: '#e8f5e8', color: '#2e7d32' }
+        };
       case ApplicationStatus.PASSED:
-        return 'success';
+      case ApplicationStatus.APPROVED:
+      case ApplicationStatus.COMPLETED:
+        return { 
+          color: 'success' as const,
+          sx: { bgcolor: '#e8f5e8', color: '#2e7d32', fontWeight: 500 }
+        };
       case ApplicationStatus.FAILED:
       case ApplicationStatus.ABSENT:
       case ApplicationStatus.REJECTED:
       case ApplicationStatus.CANCELLED:
-        return 'error';
+        return { 
+          color: 'error' as const,
+          sx: { bgcolor: '#ffebee', color: '#d32f2f' }
+        };
       case ApplicationStatus.ON_HOLD:
-        return 'warning';
-      case ApplicationStatus.APPROVED:
-      case ApplicationStatus.COMPLETED:
-        return 'success';
+        return { 
+          color: 'warning' as const,
+          sx: { bgcolor: '#fff3e0', color: '#f57c00', fontWeight: 500 }
+        };
       case ApplicationStatus.SENT_TO_PRINTER:
       case ApplicationStatus.CARD_PRODUCTION:
-        return 'primary';
+        return { 
+          color: 'primary' as const,
+          sx: { bgcolor: '#e3f2fd', color: '#1976d2' }
+        };
       case ApplicationStatus.READY_FOR_COLLECTION:
-        return 'info';
+        return { 
+          color: 'info' as const,
+          sx: { bgcolor: '#e0f7fa', color: '#00796b' }
+        };
       default:
-        return 'primary';
+        return { 
+          color: 'primary' as const,
+          sx: { bgcolor: '#e3f2fd', color: '#1976d2' }
+        };
     }
   };
 
@@ -418,7 +472,7 @@ const ApplicationListPage: React.FC = () => {
                           <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                             {application.person ? 
                               `${application.person.first_name || ''} ${application.person.surname || ''}`.trim() || 'N/A'
-                              : 'Loading...'}
+                              : application.person_id ? 'Person data not available' : 'N/A'}
                           </Typography>
                         </TableCell>
                         <TableCell>
@@ -452,13 +506,14 @@ const ApplicationListPage: React.FC = () => {
                         <TableCell>
                           <Chip
                             label={getApplicationStatusLabel(application.status)}
-                            color={getStatusColor(application.status)}
+                            {...getStatusChipProps(application.status)}
                             size="small"
                             sx={{ 
                               fontSize: '0.7rem', 
                               height: '24px',
                               borderRadius: '12px',
-                              fontWeight: 500
+                              fontWeight: 500,
+                              ...getStatusChipProps(application.status).sx
                             }}
                           />
                         </TableCell>
