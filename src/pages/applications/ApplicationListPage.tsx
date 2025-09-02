@@ -376,7 +376,7 @@ const ApplicationListPage: React.FC = () => {
               overflow: 'hidden'
             }}
           >
-            <TableContainer sx={{ flex: 1 }}>
+            <TableContainer sx={{ flex: 1, borderRadius: 0 }}>
               <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
                 <TableHead>
                   <TableRow>
