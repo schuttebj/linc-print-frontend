@@ -219,46 +219,89 @@ const ApplicationListPage: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      {/* Header */}
-      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h4" component="h1">
-          License Applications
-        </Typography>
-        {hasPermission('applications.create') && (
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleCreateNew}
-          >
-            New Application
-          </Button>
-        )}
-      </Box>
-
-      {/* Filters */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Grid container spacing={3} alignItems="center">
+    <Container maxWidth="lg" sx={{ py: 1, height: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column' }}>
+      <Paper 
+        elevation={0}
+        sx={{ 
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: '#f8f9fa',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          overflow: 'hidden'
+        }}
+      >
+        {/* Filter Section - Top Area */}
+        <Box sx={{ 
+          bgcolor: 'white', 
+          borderBottom: '1px solid', 
+          borderColor: 'divider',
+          flexShrink: 0,
+          p: 2
+        }}>
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+              Filter Applications
+            </Typography>
+            {hasPermission('applications.create') && (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={handleCreateNew}
+                size="small"
+              >
+                New Application
+              </Button>
+            )}
+          </Box>
+          
+          <Grid container spacing={2} alignItems="center">
             <Grid item xs={12} md={4}>
               <TextField
                 fullWidth
                 label="Search applications"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                size="small"
                 InputProps={{
                   startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': {
+                      borderWidth: '2px',
+                      transition: 'border-color 0.2s ease-in-out',
+                    },
+                    '&:hover fieldset': {
+                      borderWidth: '2px',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderWidth: '2px',
+                    },
+                  },
                 }}
               />
             </Grid>
             <Grid item xs={12} md={3}>
-              <FormControl fullWidth>
+              <FormControl fullWidth size="small">
                 <InputLabel>Status</InputLabel>
                 <Select
                   value={statusFilter}
                   label="Status"
                   onChange={(e) => setStatusFilter(e.target.value)}
                   disabled={lookupsLoading}
+                  sx={{
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderWidth: '2px',
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderWidth: '2px',
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderWidth: '2px',
+                    },
+                  }}
                 >
                   <MenuItem value="">All Statuses</MenuItem>
                   {statusOptions.map((status) => (
@@ -270,13 +313,24 @@ const ApplicationListPage: React.FC = () => {
               </FormControl>
             </Grid>
             <Grid item xs={12} md={3}>
-              <FormControl fullWidth>
+              <FormControl fullWidth size="small">
                 <InputLabel>Type</InputLabel>
                 <Select
                   value={typeFilter}
                   label="Type"
                   onChange={(e) => setTypeFilter(e.target.value)}
                   disabled={lookupsLoading}
+                  sx={{
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderWidth: '2px',
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderWidth: '2px',
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderWidth: '2px',
+                    },
+                  }}
                 >
                   <MenuItem value="">All Types</MenuItem>
                   {typeOptions.map((type) => (
@@ -293,110 +347,143 @@ const ApplicationListPage: React.FC = () => {
                 variant="outlined"
                 startIcon={<FilterIcon />}
                 onClick={loadApplications}
+                size="small"
+                sx={{
+                  borderWidth: '2px',
+                  '&:hover': {
+                    borderWidth: '2px',
+                  },
+                }}
               >
-                Filter
+                Refresh
               </Button>
             </Grid>
           </Grid>
-        </CardContent>
-      </Card>
-
-      {/* Applications Table */}
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Application ID</TableCell>
-              <TableCell>Applicant</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>License Category</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Date Created</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {applications.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} align="center">
-                  <Typography variant="body1" color="text.secondary" sx={{ py: 4 }}>
-                    No applications found. 
-                    {hasPermission('applications.create') && (
-                      <>
-                        {' '}
-                        <Button variant="text" onClick={handleCreateNew}>
-                          Create your first application
-                        </Button>
-                      </>
-                    )}
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              applications.map((application) => (
-                <TableRow key={application.id} hover>
-                  <TableCell>
-                    <Typography variant="body2" fontWeight="bold">
-                      {application.id?.substring(0, 8)}...
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
-                      {application.person ? 
-                        `${application.person.first_name} ${application.person.surname}` : 'N/A'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
-                      {getApplicationTypeLabel(application.application_type)}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
-                      {application.license_category || 'N/A'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={getApplicationStatusLabel(application.status)}
-                      color={getStatusColor(application.status)}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
-                      {application.created_at ? new Date(application.created_at).toLocaleDateString() : 'N/A'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Stack direction="row" spacing={1}>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleViewApplication(application.id!)}
-                        title="View Application"
-                      >
-                        <ViewIcon />
-                      </IconButton>
-                    </Stack>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
-          <Pagination
-            count={totalPages}
-            page={page}
-            onChange={(event, newPage) => setPage(newPage)}
-            color="primary"
-          />
         </Box>
-      )}
+
+        {/* Content Area - Applications Table */}
+        <Box sx={{ 
+          flex: 1, 
+          overflow: 'auto',
+          p: 2,
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          <Paper 
+            elevation={0}
+            sx={{ 
+              bgcolor: 'white',
+              boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+              borderRadius: 2,
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
+            }}
+          >
+            <TableContainer sx={{ flex: 1 }}>
+              <Table stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Application ID</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Applicant</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Type</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>License Category</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Status</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Date Created</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {applications.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} align="center">
+                        <Typography variant="body1" color="text.secondary" sx={{ py: 4 }}>
+                          No applications found. 
+                          {hasPermission('applications.create') && (
+                            <>
+                              {' '}
+                              <Button variant="text" onClick={handleCreateNew}>
+                                Create your first application
+                              </Button>
+                            </>
+                          )}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    applications.map((application) => (
+                      <TableRow key={application.id} hover>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>
+                            {application.id?.substring(0, 8)}...
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                            {application.person ? 
+                              `${application.person.first_name} ${application.person.surname}` : 'N/A'}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                            {getApplicationTypeLabel(application.application_type)}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                            {application.license_category || 'N/A'}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={getApplicationStatusLabel(application.status)}
+                            color={getStatusColor(application.status)}
+                            size="small"
+                            sx={{ fontSize: '0.7rem', height: '20px' }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                            {application.created_at ? new Date(application.created_at).toLocaleDateString() : 'N/A'}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Stack direction="row" spacing={1}>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleViewApplication(application.id!)}
+                              title="View Application"
+                            >
+                              <ViewIcon fontSize="small" />
+                            </IconButton>
+                          </Stack>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider', bgcolor: 'white' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                  <Pagination
+                    count={totalPages}
+                    page={page}
+                    onChange={(event, newPage) => setPage(newPage)}
+                    color="primary"
+                    size="small"
+                  />
+                </Box>
+              </Box>
+            )}
+          </Paper>
+        </Box>
+      </Paper>
     </Container>
   );
 };
