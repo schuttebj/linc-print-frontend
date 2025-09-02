@@ -43,6 +43,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { applicationService } from '../../services/applicationService';
 import { Application, ApplicationStatus, ApplicationType } from '../../types';
 import { lookupService, ApplicationStatus as LookupApplicationStatus, ApplicationType as LookupApplicationType } from '../../services/lookupService';
+import { StatusChip, LicenseChip } from '../../components/ui/StatusChip';
 
 const ApplicationListPage: React.FC = () => {
   const { hasPermission } = useAuth();
@@ -156,80 +157,7 @@ const ApplicationListPage: React.FC = () => {
     }
   }, [page, rowsPerPage, statusFilter, typeFilter, lookupsLoading]);
 
-  // Status color mapping with custom styling to match screenshot
-  const getStatusChipProps = (status: ApplicationStatus) => {
-    const statusText = getApplicationStatusLabel(status);
-    
-    // Special handling for "Possible Fraud" to match screenshot
-    if (statusText.toLowerCase().includes('fraud') || status === 'POSSIBLE_FRAUD' as any) {
-      return { 
-        color: 'warning' as const,
-        sx: { bgcolor: '#fff8e1', color: '#f57c00', fontWeight: 500 }
-      };
-    }
-    
-    // Special handling for "Processed" to match screenshot green
-    if (statusText.toLowerCase().includes('processed')) {
-      return { 
-        color: 'success' as const,
-        sx: { bgcolor: '#e8f5e8', color: '#2e7d32', fontWeight: 500 }
-      };
-    }
-    
-    switch (status) {
-      case ApplicationStatus.DRAFT:
-        return { 
-          color: 'default' as const,
-          sx: { bgcolor: '#f5f5f5', color: '#666' }
-        };
-      case ApplicationStatus.SUBMITTED:
-        return { 
-          color: 'info' as const,
-          sx: { bgcolor: '#e3f2fd', color: '#1976d2' }
-        };
-      case ApplicationStatus.PAID:
-        return { 
-          color: 'primary' as const,
-          sx: { bgcolor: '#e8f5e8', color: '#2e7d32' }
-        };
-      case ApplicationStatus.PASSED:
-      case ApplicationStatus.APPROVED:
-      case ApplicationStatus.COMPLETED:
-        return { 
-          color: 'success' as const,
-          sx: { bgcolor: '#e8f5e8', color: '#2e7d32', fontWeight: 500 }
-        };
-      case ApplicationStatus.FAILED:
-      case ApplicationStatus.ABSENT:
-      case ApplicationStatus.REJECTED:
-      case ApplicationStatus.CANCELLED:
-        return { 
-          color: 'error' as const,
-          sx: { bgcolor: '#ffebee', color: '#d32f2f' }
-        };
-      case ApplicationStatus.ON_HOLD:
-        return { 
-          color: 'warning' as const,
-          sx: { bgcolor: '#fff3e0', color: '#f57c00', fontWeight: 500 }
-        };
-      case ApplicationStatus.SENT_TO_PRINTER:
-      case ApplicationStatus.CARD_PRODUCTION:
-        return { 
-          color: 'primary' as const,
-          sx: { bgcolor: '#e3f2fd', color: '#1976d2' }
-        };
-      case ApplicationStatus.READY_FOR_COLLECTION:
-        return { 
-          color: 'info' as const,
-          sx: { bgcolor: '#e0f7fa', color: '#00796b' }
-        };
-      default:
-        return { 
-          color: 'primary' as const,
-          sx: { bgcolor: '#e3f2fd', color: '#1976d2' }
-        };
-    }
-  };
+
 
   // Get display label for application type
   const getApplicationTypeLabel = (value: string): string => {
@@ -479,23 +407,17 @@ const ApplicationListPage: React.FC = () => {
                           {application.license_capture?.captured_licenses ? (
                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                               {application.license_capture.captured_licenses.map((license, index) => (
-                                <Chip
+                                <LicenseChip
                                   key={index}
-                                  label={license.license_category}
-                                  size="small"
-                                  variant="outlined"
-                                  color="primary"
-                                  sx={{ fontSize: '0.7rem', height: '20px' }}
+                                  category={license.license_category}
+                                  variant="license"
                                 />
                               ))}
                             </Box>
                           ) : application.license_category ? (
-                            <Chip
-                              label={application.license_category}
-                              size="small"
-                              variant="outlined"
-                              color="primary"
-                              sx={{ fontSize: '0.7rem', height: '20px' }}
+                            <LicenseChip
+                              category={application.license_category}
+                              variant="license"
                             />
                           ) : (
                             <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
@@ -504,17 +426,9 @@ const ApplicationListPage: React.FC = () => {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Chip
-                            label={getApplicationStatusLabel(application.status)}
-                            {...getStatusChipProps(application.status)}
-                            size="small"
-                            sx={{ 
-                              fontSize: '0.7rem', 
-                              height: '24px',
-                              borderRadius: '12px',
-                              fontWeight: 500,
-                              ...getStatusChipProps(application.status).sx
-                            }}
+                          <StatusChip
+                            status={application.status}
+                            statusLabel={getApplicationStatusLabel(application.status)}
                           />
                         </TableCell>
                         <TableCell>

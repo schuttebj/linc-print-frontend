@@ -1,5 +1,6 @@
 import { createTheme } from '@mui/material/styles';
 import { useState } from 'react';
+import { chipThemeOverrides } from '../theme/chipTheme';
 
 // Madagascar Driver's License System Theme Configuration
 
@@ -108,6 +109,7 @@ export const theme = createTheme({
   },
   spacing: 8,
   components: {
+    ...chipThemeOverrides,
     MuiButton: {
       styleOverrides: {
         root: {
@@ -279,6 +281,7 @@ export const compactTheme = createTheme({
   },
   spacing: 6, // Was 8 (-25% spacing)
   components: {
+    ...chipThemeOverrides,
     MuiButton: {
       styleOverrides: {
         root: {
@@ -400,13 +403,19 @@ export const compactTheme = createTheme({
     },
     MuiChip: {
       styleOverrides: {
+        ...chipThemeOverrides.MuiChip.styleOverrides,
         root: {
-          height: '24px',       // Smaller chips
-          fontSize: '0.75rem',  // Smaller text
+          ...chipThemeOverrides.MuiChip.styleOverrides.root,
+          height: '20px',       // Even smaller for compact theme
+          fontSize: '0.65rem',  // Smaller text for compact
         },
         label: {
-          paddingLeft: '8px',   // Compact chip padding
-          paddingRight: '8px',
+          paddingLeft: '6px',   // Extra compact chip padding
+          paddingRight: '6px',
+        },
+        sizeSmall: {
+          height: '18px',
+          fontSize: '0.6rem',
         },
       },
       defaultProps: {
