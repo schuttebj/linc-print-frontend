@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box,
+  Container,
   Paper,
   Typography,
   Tab,
@@ -575,746 +576,912 @@ const AuditLogViewer: React.FC = () => {
   }
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: 'auto', p: 3 }}>
-      {/* Header */}
-      <Typography variant="h4" component="h1" gutterBottom>
-        Audit Log Viewer
-      </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-        Monitor system activity, security events, and user actions
-      </Typography>
+    <Container maxWidth="lg" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Paper 
+        elevation={0}
+        sx={{ 
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: '#f8f9fa',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          overflow: 'hidden'
+        }}
+      >
+        {/* Navigation Tabs */}
+        <Box sx={{ bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider', flexShrink: 0 }}>
+          <Tabs 
+            value={activeTab} 
+            onChange={(_, newValue) => setActiveTab(newValue)}
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{
+              '& .MuiTab-root': { 
+                minHeight: 48,
+                textTransform: 'none',
+                fontSize: '0.875rem'
+              }
+            }}
+          >
+            <Tab 
+              label="Transaction Logs" 
+              icon={<AssessmentIcon />}
+              iconPosition="start"
+              sx={{ minWidth: 140 }}
+            />
+            <Tab 
+              label="API Request Logs" 
+              icon={<AssessmentIcon />}
+              iconPosition="start"
+              sx={{ minWidth: 140 }}
+            />
+            <Tab 
+              label="Statistics" 
+              icon={<AssessmentIcon />}
+              iconPosition="start"
+              sx={{ minWidth: 120 }}
+            />
+            <Tab 
+              label={
+                <Badge badgeContent={suspiciousActivity?.length || 0} color="error">
+                  Security Monitoring
+                </Badge>
+              }
+              icon={<SecurityIcon />}
+              iconPosition="start"
+              sx={{ minWidth: 160 }}
+            />
+          </Tabs>
+        </Box>
 
-      {/* Main Tabs */}
-      <Paper sx={{ mb: 3 }}>
-        <Tabs 
-          value={activeTab} 
-          onChange={(_, newValue) => setActiveTab(newValue)}
-          indicatorColor="primary"
-          textColor="primary"
-        >
-          <Tab 
-            label="Transaction Logs" 
-            icon={<AssessmentIcon />}
-            iconPosition="start"
-          />
-          <Tab 
-            label="API Request Logs" 
-            icon={<AssessmentIcon />}
-            iconPosition="start"
-          />
-          <Tab 
-            label="Statistics" 
-            icon={<AssessmentIcon />}
-            iconPosition="start"
-          />
-          <Tab 
-            label={
-              <Badge badgeContent={suspiciousActivity?.length || 0} color="error">
-                Security Monitoring
-              </Badge>
-            }
-            icon={<SecurityIcon />}
-            iconPosition="start"
-          />
-        </Tabs>
-      </Paper>
-
-      {/* Transaction Logs Tab (CRUD operations) */}
-      {activeTab === 0 && (
-        <Box>
-          {/* Filters */}
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Filters & Export
-              </Typography>
-              <Grid container spacing={2} sx={{ mb: 2 }}>
-                <Grid item xs={12} md={3}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Action</InputLabel>
-                    <Select
-                      value={actionFilter}
-                      onChange={(e) => setActionFilter(e.target.value)}
-                      label="Action"
-                    >
-                      <MenuItem value="">All Actions</MenuItem>
-                      {ACTION_TYPES.map(action => (
-                        <MenuItem key={action.value} value={action.value}>{action.label}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+        {/* Content Area */}
+        <Box sx={{ 
+          flex: 1, 
+          overflow: 'auto',
+          p: 2,
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          {/* Transaction Logs Tab (CRUD operations) */}
+          {activeTab === 0 && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+              {/* Filters */}
+              <Box sx={{ 
+                bgcolor: 'white', 
+                borderBottom: '1px solid', 
+                borderColor: 'divider',
+                flexShrink: 0,
+                p: 2,
+                mb: 2,
+                borderRadius: 2,
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
+              }}>
+                <Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}>
+                  <Grid item xs={12} md={3}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Action</InputLabel>
+                      <Select
+                        value={actionFilter}
+                        onChange={(e) => setActionFilter(e.target.value)}
+                        label="Action"
+                        sx={{
+                          '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                          '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                        }}
+                      >
+                        <MenuItem value="">All Actions</MenuItem>
+                        {ACTION_TYPES.map(action => (
+                          <MenuItem key={action.value} value={action.value}>{action.label}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  
+                  <Grid item xs={12} md={3}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Resource</InputLabel>
+                      <Select
+                        value={resourceFilter}
+                        onChange={(e) => setResourceFilter(e.target.value)}
+                        label="Resource"
+                        sx={{
+                          '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                          '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                        }}
+                      >
+                        <MenuItem value="">All Resources</MenuItem>
+                        {RESOURCE_TYPES.map(resource => (
+                          <MenuItem key={resource.value} value={resource.value}>{resource.label}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  
+                  <Grid item xs={12} md={2}>
+                    <TextField
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      fullWidth
+                      size="small"
+                      label="Start Date"
+                      InputLabelProps={{ shrink: true }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          '& fieldset': { borderWidth: '1px' },
+                          '&:hover fieldset': { borderWidth: '1px' },
+                          '&.Mui-focused fieldset': { borderWidth: '1px' },
+                        },
+                      }}
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12} md={2}>
+                    <TextField
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      fullWidth
+                      size="small"
+                      label="End Date"
+                      InputLabelProps={{ shrink: true }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          '& fieldset': { borderWidth: '1px' },
+                          '&:hover fieldset': { borderWidth: '1px' },
+                          '&.Mui-focused fieldset': { borderWidth: '1px' },
+                        },
+                      }}
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12} md={2}>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button
+                        variant="contained"
+                        startIcon={<ExportIcon />}
+                        onClick={() => handleExport('csv')}
+                        disabled={exporting}
+                        size="small"
+                        fullWidth
+                      >
+                        {exporting ? 'Exporting...' : 'CSV'}
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<ExportIcon />}
+                        onClick={() => handleExport('json')}
+                        disabled={exporting}
+                        size="small"
+                        sx={{
+                          borderWidth: '1px',
+                          '&:hover': { borderWidth: '1px' },
+                        }}
+                      >
+                        JSON
+                      </Button>
+                    </Box>
+                  </Grid>
                 </Grid>
-                
-                <Grid item xs={12} md={3}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Resource</InputLabel>
-                    <Select
-                      value={resourceFilter}
-                      onChange={(e) => setResourceFilter(e.target.value)}
-                      label="Resource"
-                    >
-                      <MenuItem value="">All Resources</MenuItem>
-                      {RESOURCE_TYPES.map(resource => (
-                        <MenuItem key={resource.value} value={resource.value}>{resource.label}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-                
-                <Grid item xs={12} md={3}>
-                  <TextField
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    fullWidth
-                    size="small"
-                    label="Start Date"
-                    InputLabelProps={{ shrink: true }}
-                  />
-                </Grid>
-                
-                <Grid item xs={12} md={3}>
-                  <TextField
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    fullWidth
-                    size="small"
-                    label="End Date"
-                    InputLabelProps={{ shrink: true }}
-                  />
-                </Grid>
-              </Grid>
-
-              {/* Export buttons */}
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <Button
-                  variant="outlined"
-                  startIcon={<ExportIcon />}
-                  onClick={() => handleExport('csv')}
-                  disabled={exporting}
-                >
-                  {exporting ? 'Exporting...' : 'Export CSV'}
-                </Button>
-                <Button
-                  variant="outlined"
-                  startIcon={<ExportIcon />}
-                  onClick={() => handleExport('json')}
-                  disabled={exporting}
-                >
-                  {exporting ? 'Exporting...' : 'Export JSON'}
-                </Button>
               </Box>
-            </CardContent>
-          </Card>
 
-          {/* Audit Logs Table */}
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow sx={{ backgroundColor: 'grey.50' }}>
-                  <TableCell>Timestamp</TableCell>
-                  <TableCell>User</TableCell>
-                  <TableCell>Action</TableCell>
-                  <TableCell>Resource</TableCell>
-                  <TableCell>Changes</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>IP Address</TableCell>
-                  <TableCell align="center">Details</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {auditLogs.map((log) => (
-                  <TableRow key={log.id} hover>
-                    <TableCell>
-                      <Typography variant="body2">
-                        {formatDate(log.timestamp)}
-                      </Typography>
-                    </TableCell>
-                    
-                    <TableCell>
-                      <Typography variant="body2" fontWeight="medium">
-                        {log.username || 'System'}
-                      </Typography>
-                      {log.user_agent && (
-                        <Typography variant="caption" color="text.secondary" noWrap>
-                          {log.user_agent.substring(0, 30)}...
-                        </Typography>
-                      )}
-                    </TableCell>
-                    
-                    <TableCell>
-                      <Box>
-                        <Chip 
-                          label={getHumanReadableAction(log)}
-                          color={getActionColor(log.action)}
-                          size="small"
-                        />
-                        {log.method && (
-                          <Typography variant="caption" color="text.secondary" display="block">
-                            {log.method}
-                          </Typography>
-                        )}
-                      </Box>
-                    </TableCell>
-                    
-                    <TableCell>
-                      {log.resource && (
-                        <Box>
-                          <Typography variant="body2" fontWeight="medium">
-                            {RESOURCE_TYPES.find(r => r.value === log.resource)?.label || log.resource}
-                          </Typography>
-                          {log.resource_id && (
-                            <Typography variant="caption" color="text.secondary" noWrap>
-                              ID: {log.resource_id.substring(0, 8)}...
+              {/* Audit Logs Table */}
+              <Paper 
+                elevation={0}
+                sx={{ 
+                  bgcolor: 'white',
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden',
+                  borderRadius: 0,
+                  boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
+                }}
+              >
+                <TableContainer sx={{ flex: 1 }}>
+                  <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Timestamp</TableCell>
+                        <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>User</TableCell>
+                        <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Action</TableCell>
+                        <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Resource</TableCell>
+                        <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Changes</TableCell>
+                        <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
+                        <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>IP Address</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Details</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {auditLogs.map((log) => (
+                        <TableRow key={log.id} hover sx={{ '& > *': { py: 0, px: 2 } }}>
+                          <TableCell>
+                            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                              {formatDate(log.timestamp)}
                             </Typography>
-                          )}
-                        </Box>
-                      )}
-                    </TableCell>
-
-                    {/* Changes Column - Show changed fields for CRUD operations */}
-                    <TableCell>
-                      <Box>
-                        {log.changed_fields && log.changed_fields.length > 0 ? (
-                          <Box>
-                            <Typography variant="caption" color="primary" fontWeight="medium">
-                              {log.changed_fields.length} field{log.changed_fields.length > 1 ? 's' : ''} changed
+                          </TableCell>
+                          
+                          <TableCell>
+                            <Typography variant="body2" fontWeight="medium" sx={{ fontSize: '0.8rem' }}>
+                              {log.username || 'System'}
                             </Typography>
-                            <Box sx={{ mt: 0.5 }}>
-                              {log.changed_fields.slice(0, 2).map((field, index) => (
-                                <Chip 
-                                  key={index}
-                                  label={field} 
-                                  size="small" 
-                                  color="primary" 
-                                  variant="outlined"
-                                  sx={{ mr: 0.5, mb: 0.5, fontSize: '0.6rem', height: '18px' }}
-                                />
-                              ))}
-                              {log.changed_fields.length > 2 && (
-                                <Typography variant="caption" color="text.secondary">
-                                  +{log.changed_fields.length - 2} more
+                            {log.user_agent && (
+                              <Typography variant="caption" color="text.secondary" noWrap sx={{ fontSize: '0.7rem' }}>
+                                {log.user_agent.substring(0, 30)}...
+                              </Typography>
+                            )}
+                          </TableCell>
+                    
+                          
+                          <TableCell>
+                            <Box>
+                              <Chip 
+                                label={getHumanReadableAction(log)}
+                                color={getActionColor(log.action)}
+                                size="small"
+                              />
+                              {log.method && (
+                                <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.7rem' }}>
+                                  {log.method}
                                 </Typography>
                               )}
                             </Box>
-                          </Box>
-                        ) : log.action === 'CREATE' ? (
-                          <Typography variant="caption" color="success.main">
-                            New record
-                          </Typography>
-                        ) : log.action === 'DELETE' ? (
-                          <Typography variant="caption" color="error.main">
-                            Record deleted
-                          </Typography>
-                        ) : (
-                          <Typography variant="caption" color="text.secondary">
-                            -
-                          </Typography>
-                        )}
-                      </Box>
-                    </TableCell>
-                    
-                    <TableCell>
-                      <Chip 
-                        label={log.success ? 'Success' : 'Failed'}
-                        color={log.success ? 'success' : 'error'}
-                        size="small"
-                      />
-                      {!log.success && log.error_message && (
-                        <Typography variant="caption" color="error.main" display="block" noWrap>
-                          {log.error_message.substring(0, 30)}...
-                        </Typography>
-                      )}
-                    </TableCell>
-                    
-                    <TableCell>
-                      <Typography variant="body2">
-                        {log.ip_address || 'Unknown'}
-                      </Typography>
-                    </TableCell>
+                          </TableCell>
+                          
+                          <TableCell>
+                            {log.resource && (
+                              <Box>
+                                <Typography variant="body2" fontWeight="medium" sx={{ fontSize: '0.8rem' }}>
+                                  {RESOURCE_TYPES.find(r => r.value === log.resource)?.label || log.resource}
+                                </Typography>
+                                {log.resource_id && (
+                                  <Typography variant="caption" color="text.secondary" noWrap sx={{ fontSize: '0.7rem' }}>
+                                    ID: {log.resource_id.substring(0, 8)}...
+                                  </Typography>
+                                )}
+                              </Box>
+                            )}
+                          </TableCell>
 
-                    <TableCell align="center">
-                      <Button
-                        size="small"
-                        startIcon={<ViewIcon />}
-                        onClick={() => handleViewDetails(log)}
-                      >
-                        View
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-
-          {/* Pagination */}
-          <TablePagination
-            rowsPerPageOptions={[25, 50, 100, 200]}
-            component="div"
-            count={totalResults}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={handlePageChange}
-            onRowsPerPageChange={handleRowsPerPageChange}
-          />
-        </Box>
-      )}
-
-      {/* API Request Logs Tab (Middleware logs) */}
-      {activeTab === 1 && (
-        <Box>
-          {/* Filters */}
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                API Request Filters & Export
-              </Typography>
-              <Grid container spacing={2} sx={{ mb: 2 }}>
-                <Grid item xs={12} md={2}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Method</InputLabel>
-                    <Select
-                      value={methodFilter}
-                      onChange={(e) => setMethodFilter(e.target.value)}
-                      label="Method"
-                    >
-                      <MenuItem value="">All Methods</MenuItem>
-                      {HTTP_METHODS.map(method => (
-                        <MenuItem key={method.value} value={method.value}>{method.label}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-                
-                <Grid item xs={12} md={3}>
-                  <TextField
-                    value={endpointFilter}
-                    onChange={(e) => setEndpointFilter(e.target.value)}
-                    fullWidth
-                    size="small"
-                    label="Endpoint Contains"
-                    placeholder="e.g. /api/v1/users"
-                  />
-                </Grid>
-                
-                <Grid item xs={12} md={2}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Status Code</InputLabel>
-                    <Select
-                      value={statusCodeFilter}
-                      onChange={(e) => setStatusCodeFilter(e.target.value)}
-                      label="Status Code"
-                    >
-                      <MenuItem value="">All Status</MenuItem>
-                      {STATUS_CODES.map(status => (
-                        <MenuItem key={status.value} value={status.value}>{status.label}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-
-                <Grid item xs={12} md={2}>
-                  <TextField
-                    type="number"
-                    value={minDurationFilter}
-                    onChange={(e) => setMinDurationFilter(e.target.value)}
-                    fullWidth
-                    size="small"
-                    label="Min Duration (ms)"
-                    placeholder="0"
-                  />
-                </Grid>
-
-                <Grid item xs={12} md={3}>
-                  <TextField
-                    type="number"
-                    value={maxDurationFilter}
-                    onChange={(e) => setMaxDurationFilter(e.target.value)}
-                    fullWidth
-                    size="small"
-                    label="Max Duration (ms)"
-                    placeholder="5000"
-                  />
-                </Grid>
-                
-                <Grid item xs={12} md={3}>
-                  <TextField
-                    type="date"
-                    value={apiStartDate}
-                    onChange={(e) => setApiStartDate(e.target.value)}
-                    fullWidth
-                    size="small"
-                    label="Start Date"
-                    InputLabelProps={{ shrink: true }}
-                  />
-                </Grid>
-                
-                <Grid item xs={12} md={3}>
-                  <TextField
-                    type="date"
-                    value={apiEndDate}
-                    onChange={(e) => setApiEndDate(e.target.value)}
-                    fullWidth
-                    size="small"
-                    label="End Date"
-                    InputLabelProps={{ shrink: true }}
-                  />
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-
-          {/* API Request Logs Table */}
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow sx={{ backgroundColor: 'grey.50' }}>
-                  <TableCell>Timestamp</TableCell>
-                  <TableCell>Method</TableCell>
-                  <TableCell>Endpoint</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Duration</TableCell>
-                  <TableCell>User</TableCell>
-                  <TableCell>Response Size</TableCell>
-                  <TableCell align="center">Details</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {apiRequestLogs.map((log) => (
-                  <TableRow key={log.id} hover>
-                    <TableCell>
-                      <Typography variant="body2">
-                        {formatDate(log.created_at)}
-                      </Typography>
-                    </TableCell>
-                    
-                    <TableCell>
-                      <Chip 
-                        label={log.method}
-                        color={getMethodColor(log.method)}
-                        size="small"
-                      />
-                    </TableCell>
-                    
-                    <TableCell>
-                      <Typography variant="body2" sx={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {log.endpoint}
-                      </Typography>
-                      {log.query_params && (
-                        <Typography variant="caption" color="text.secondary" display="block">
-                          Query params present
-                        </Typography>
-                      )}
-                    </TableCell>
-                    
-                    <TableCell>
-                      <Chip 
-                        label={log.status_code}
-                        color={getStatusCodeColor(log.status_code)}
-                        size="small"
-                      />
-                      {log.error_message && (
-                        <Typography variant="caption" color="error.main" display="block" noWrap>
-                          Error: {log.error_message.substring(0, 30)}...
-                        </Typography>
-                      )}
-                    </TableCell>
-                    
-                    <TableCell>
-                      <Typography variant="body2" fontWeight="medium">
-                        {formatDuration(log.duration_ms)}
-                      </Typography>
-                      <Typography variant="caption" color={log.duration_ms > 2000 ? 'error.main' : 'text.secondary'}>
-                        {log.duration_ms > 2000 ? 'Slow' : log.duration_ms > 1000 ? 'Normal' : 'Fast'}
-                      </Typography>
-                    </TableCell>
-                    
-                    <TableCell>
-                      <Typography variant="body2">
-                        {log.user_id ? `User ${log.user_id.substring(0, 8)}...` : 'Anonymous'}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {log.ip_address || 'Unknown IP'}
-                      </Typography>
-                    </TableCell>
-
-                    <TableCell>
-                      <Typography variant="body2">
-                        {formatFileSize(log.response_size_bytes)}
-                      </Typography>
-                    </TableCell>
-
-                    <TableCell align="center">
-                      <Button
-                        size="small"
-                        startIcon={<ViewIcon />}
-                        onClick={() => handleViewApiDetails(log)}
-                      >
-                        View
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-
-          {/* Pagination */}
-          <TablePagination
-            rowsPerPageOptions={[25, 50, 100, 200]}
-            component="div"
-            count={apiTotalResults}
-            rowsPerPage={apiRowsPerPage}
-            page={apiPage}
-            onPageChange={handleApiPageChange}
-            onRowsPerPageChange={handleApiRowsPerPageChange}
-          />
-        </Box>
-      )}
-
-      {/* Statistics Tab */}
-      {activeTab === 2 && statistics && (
-        <Box>
-          {/* Summary Cards */}
-          <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} md={3}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h4" color="primary.main">
-                    {statistics.total_actions}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Total Actions
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h4" color="success.main">
-                    {(statistics.success_rate * 100).toFixed(1)}%
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Success Rate
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h4" color="info.main">
-                    {statistics.total_users}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Active Users
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h4" color="error.main">
-                    {statistics.failed_actions}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Failed Actions
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-
-          {/* Top Actions */}
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Most Common Actions
-                  </Typography>
-                  {statistics.top_actions && statistics.top_actions.length > 0 ? (
-                    <Box>
-                      {statistics.top_actions.slice(0, 10).map((action, index) => (
-                        <Box key={action.action} sx={{ mb: 2 }}>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                            <Typography variant="body2" fontWeight="medium">
-                              {getHumanReadableActionFromString(action.action)}
-                            </Typography>
+                          {/* Changes Column - Show changed fields for CRUD operations */}
+                          <TableCell>
+                            <Box>
+                              {log.changed_fields && log.changed_fields.length > 0 ? (
+                                <Box>
+                                  <Typography variant="caption" color="primary" fontWeight="medium" sx={{ fontSize: '0.7rem' }}>
+                                    {log.changed_fields.length} field{log.changed_fields.length > 1 ? 's' : ''} changed
+                                  </Typography>
+                                  <Box sx={{ mt: 0.5 }}>
+                                    {log.changed_fields.slice(0, 2).map((field, index) => (
+                                      <Chip 
+                                        key={index}
+                                        label={field} 
+                                        size="small" 
+                                        color="primary" 
+                                        variant="outlined"
+                                        sx={{ mr: 0.5, mb: 0.5, fontSize: '0.6rem', height: '18px' }}
+                                      />
+                                    ))}
+                                    {log.changed_fields.length > 2 && (
+                                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                        +{log.changed_fields.length - 2} more
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                </Box>
+                              ) : log.action === 'CREATE' ? (
+                                <Typography variant="caption" color="success.main" sx={{ fontSize: '0.7rem' }}>
+                                  New record
+                                </Typography>
+                              ) : log.action === 'DELETE' ? (
+                                <Typography variant="caption" color="error.main" sx={{ fontSize: '0.7rem' }}>
+                                  Record deleted
+                                </Typography>
+                              ) : (
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                  -
+                                </Typography>
+                              )}
+                            </Box>
+                          </TableCell>
+                          
+                          <TableCell>
                             <Chip 
-                              label={action.count} 
-                              size="small" 
-                              color="primary"
+                              label={log.success ? 'Success' : 'Failed'}
+                              color={log.success ? 'success' : 'error'}
+                              size="small"
                             />
-                          </Box>
-                          <Box sx={{ width: '100%', height: 8, backgroundColor: 'grey.200', borderRadius: 1 }}>
-                            <Box 
-                              sx={{ 
-                                width: `${(action.count / statistics.top_actions[0].count) * 100}%`, 
-                                height: '100%', 
-                                backgroundColor: 'primary.main', 
-                                borderRadius: 1 
-                              }} 
-                            />
-                          </Box>
-                        </Box>
-                      ))}
-                    </Box>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      No action data available
-                    </Typography>
-                  )}
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* Daily Activity */}
-            <Grid item xs={12} md={6}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Daily Activity (Last 7 Days)
-                  </Typography>
-                  {statistics.daily_activity && statistics.daily_activity.length > 0 ? (
-                    <Box>
-                      {statistics.daily_activity.slice(-7).map((day, index) => (
-                        <Box key={day.date} sx={{ mb: 2 }}>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                            <Typography variant="body2" fontWeight="medium">
-                              {formatDateOnly(day.date)}
+                            {!log.success && log.error_message && (
+                              <Typography variant="caption" color="error.main" display="block" noWrap sx={{ fontSize: '0.7rem' }}>
+                                {log.error_message.substring(0, 30)}...
+                              </Typography>
+                            )}
+                          </TableCell>
+                          
+                          <TableCell>
+                            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                              {log.ip_address || 'Unknown'}
                             </Typography>
-                            <Chip 
-                              label={day.count} 
-                              size="small" 
-                              color="info"
-                            />
-                          </Box>
-                          <Box sx={{ width: '100%', height: 8, backgroundColor: 'grey.200', borderRadius: 1 }}>
-                            <Box 
-                              sx={{ 
-                                width: statistics.daily_activity.length > 0 
-                                  ? `${(day.count / Math.max(...statistics.daily_activity.map(d => d.count))) * 100}%` 
-                                  : '0%', 
-                                height: '100%', 
-                                backgroundColor: 'info.main', 
-                                borderRadius: 1 
-                              }} 
-                            />
-                          </Box>
-                        </Box>
-                      ))}
-                    </Box>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      No daily activity data available
-                    </Typography>
-                  )}
-                </CardContent>
-              </Card>
-            </Grid>
+                          </TableCell>
 
-            {/* System Health */}
-            <Grid item xs={12}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    System Health Overview
-                  </Typography>
-                  <Grid container spacing={3}>
-                    <Grid item xs={12} md={4}>
-                      <Box sx={{ textAlign: 'center' }}>
-                        <Typography variant="h3" color="success.main">
-                          {((statistics.total_actions - statistics.failed_actions) / statistics.total_actions * 100).toFixed(1)}%
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          System Uptime
-                        </Typography>
-                      </Box>
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                      <Box sx={{ textAlign: 'center' }}>
-                        <Typography variant="h3" color="warning.main">
-                          {statistics.security_events}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Security Events
-                        </Typography>
-                      </Box>
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                      <Box sx={{ textAlign: 'center' }}>
-                        <Typography variant="h3" color="info.main">
-                          {Math.round(statistics.total_actions / 30)}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Avg Daily Actions
-                        </Typography>
-                      </Box>
-                    </Grid>
+                          <TableCell align="center">
+                            <Button
+                              size="small"
+                              startIcon={<ViewIcon />}
+                              onClick={() => handleViewDetails(log)}
+                            >
+                              View
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+
+                <TablePagination
+                  rowsPerPageOptions={[25, 50, 100, 200]}
+                  component="div"
+                  count={totalResults}
+                  rowsPerPage={rowsPerPage}
+                  page={page}
+                  onPageChange={handlePageChange}
+                  onRowsPerPageChange={handleRowsPerPageChange}
+                  sx={{
+                    bgcolor: 'white',
+                    borderTop: '1px solid',
+                    borderColor: 'divider',
+                    flexShrink: 0,
+                    '& .MuiTablePagination-toolbar': {
+                      minHeight: '52px',
+                    },
+                    '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+                      fontSize: '0.8rem',
+                    },
+                    '& .MuiTablePagination-select': {
+                      fontSize: '0.8rem',
+                    },
+                  }}
+                />
+              </Paper>
+            </Box>
+          )}
+
+          {/* API Request Logs Tab (Middleware logs) */}
+          {activeTab === 1 && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+              {/* Filters */}
+              <Box sx={{ 
+                bgcolor: 'white', 
+                borderBottom: '1px solid', 
+                borderColor: 'divider',
+                flexShrink: 0,
+                p: 2,
+                mb: 2,
+                borderRadius: 2,
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
+              }}>
+                <Grid container spacing={2} alignItems="center">
+                  <Grid item xs={12} md={2}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Method</InputLabel>
+                      <Select
+                        value={methodFilter}
+                        onChange={(e) => setMethodFilter(e.target.value)}
+                        label="Method"
+                        sx={{
+                          '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                          '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                        }}
+                      >
+                        <MenuItem value="">All Methods</MenuItem>
+                        {HTTP_METHODS.map(method => (
+                          <MenuItem key={method.value} value={method.value}>{method.label}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
                   </Grid>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-        </Box>
-      )}
+                  
+                  <Grid item xs={12} md={3}>
+                    <TextField
+                      value={endpointFilter}
+                      onChange={(e) => setEndpointFilter(e.target.value)}
+                      fullWidth
+                      size="small"
+                      label="Endpoint Contains"
+                      placeholder="e.g. /api/v1/users"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          '& fieldset': { borderWidth: '1px' },
+                          '&:hover fieldset': { borderWidth: '1px' },
+                          '&.Mui-focused fieldset': { borderWidth: '1px' },
+                        },
+                      }}
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12} md={2}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Status Code</InputLabel>
+                      <Select
+                        value={statusCodeFilter}
+                        onChange={(e) => setStatusCodeFilter(e.target.value)}
+                        label="Status Code"
+                        sx={{
+                          '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                          '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                        }}
+                      >
+                        <MenuItem value="">All Status</MenuItem>
+                        {STATUS_CODES.map(status => (
+                          <MenuItem key={status.value} value={status.value}>{status.label}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
 
-      {/* Statistics Loading State */}
-      {activeTab === 2 && !statistics && (
-        <Box sx={{ textAlign: 'center', py: 4 }}>
-          <CircularProgress />
-          <Typography variant="h6" sx={{ mt: 2 }}>
-            Loading Statistics...
-          </Typography>
-        </Box>
-      )}
+                  <Grid item xs={12} md={2}>
+                    <TextField
+                      type="number"
+                      value={minDurationFilter}
+                      onChange={(e) => setMinDurationFilter(e.target.value)}
+                      fullWidth
+                      size="small"
+                      label="Min Duration (ms)"
+                      placeholder="0"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          '& fieldset': { borderWidth: '1px' },
+                          '&:hover fieldset': { borderWidth: '1px' },
+                          '&.Mui-focused fieldset': { borderWidth: '1px' },
+                        },
+                      }}
+                    />
+                  </Grid>
 
-      {/* Security Monitoring Tab */}
-      {activeTab === 3 && (
-        <Box>
-          {suspiciousActivity && suspiciousActivity.length > 0 ? (
-            <Grid container spacing={2}>
-              {suspiciousActivity.map((activity, index) => (
-                <Grid item xs={12} key={index}>
-                  <Card>
+                  <Grid item xs={12} md={3}>
+                    <TextField
+                      type="number"
+                      value={maxDurationFilter}
+                      onChange={(e) => setMaxDurationFilter(e.target.value)}
+                      fullWidth
+                      size="small"
+                      label="Max Duration (ms)"
+                      placeholder="5000"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          '& fieldset': { borderWidth: '1px' },
+                          '&:hover fieldset': { borderWidth: '1px' },
+                          '&.Mui-focused fieldset': { borderWidth: '1px' },
+                        },
+                      }}
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12} md={2}>
+                    <TextField
+                      type="date"
+                      value={apiStartDate}
+                      onChange={(e) => setApiStartDate(e.target.value)}
+                      fullWidth
+                      size="small"
+                      label="Start Date"
+                      InputLabelProps={{ shrink: true }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          '& fieldset': { borderWidth: '1px' },
+                          '&:hover fieldset': { borderWidth: '1px' },
+                          '&.Mui-focused fieldset': { borderWidth: '1px' },
+                        },
+                      }}
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12} md={2}>
+                    <TextField
+                      type="date"
+                      value={apiEndDate}
+                      onChange={(e) => setApiEndDate(e.target.value)}
+                      fullWidth
+                      size="small"
+                      label="End Date"
+                      InputLabelProps={{ shrink: true }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          '& fieldset': { borderWidth: '1px' },
+                          '&:hover fieldset': { borderWidth: '1px' },
+                          '&.Mui-focused fieldset': { borderWidth: '1px' },
+                        },
+                      }}
+                    />
+                  </Grid>
+                </Grid>
+              </Box>
+
+              {/* API Request Logs Table */}
+              <Paper 
+                elevation={0}
+                sx={{ 
+                  bgcolor: 'white',
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden',
+                  borderRadius: 0,
+                  boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
+                }}
+              >
+                <TableContainer sx={{ flex: 1 }}>
+                  <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Timestamp</TableCell>
+                        <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Method</TableCell>
+                        <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Endpoint</TableCell>
+                        <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
+                        <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Duration</TableCell>
+                        <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>User</TableCell>
+                        <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Response Size</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Details</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {apiRequestLogs.map((log) => (
+                        <TableRow key={log.id} hover sx={{ '& > *': { py: 0, px: 2 } }}>
+                          <TableCell>
+                            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                              {formatDate(log.created_at)}
+                            </Typography>
+                          </TableCell>
+                          
+                          <TableCell>
+                            <Chip 
+                              label={log.method}
+                              color={getMethodColor(log.method)}
+                              size="small"
+                            />
+                          </TableCell>
+                          
+                          <TableCell>
+                            <Typography variant="body2" sx={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '0.8rem' }}>
+                              {log.endpoint}
+                            </Typography>
+                            {log.query_params && (
+                              <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.7rem' }}>
+                                Query params present
+                              </Typography>
+                            )}
+                          </TableCell>
+                          
+                          <TableCell>
+                            <Chip 
+                              label={log.status_code}
+                              color={getStatusCodeColor(log.status_code)}
+                              size="small"
+                            />
+                            {log.error_message && (
+                              <Typography variant="caption" color="error.main" display="block" noWrap sx={{ fontSize: '0.7rem' }}>
+                                Error: {log.error_message.substring(0, 30)}...
+                              </Typography>
+                            )}
+                          </TableCell>
+                          
+                          <TableCell>
+                            <Typography variant="body2" fontWeight="medium" sx={{ fontSize: '0.8rem' }}>
+                              {formatDuration(log.duration_ms)}
+                            </Typography>
+                            <Typography variant="caption" color={log.duration_ms > 2000 ? 'error.main' : 'text.secondary'} sx={{ fontSize: '0.7rem' }}>
+                              {log.duration_ms > 2000 ? 'Slow' : log.duration_ms > 1000 ? 'Normal' : 'Fast'}
+                            </Typography>
+                          </TableCell>
+                          
+                          <TableCell>
+                            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                              {log.user_id ? `User ${log.user_id.substring(0, 8)}...` : 'Anonymous'}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                              {log.ip_address || 'Unknown IP'}
+                            </Typography>
+                          </TableCell>
+
+                          <TableCell>
+                            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                              {formatFileSize(log.response_size_bytes)}
+                            </Typography>
+                          </TableCell>
+
+                          <TableCell align="center">
+                            <Button
+                              size="small"
+                              startIcon={<ViewIcon />}
+                              onClick={() => handleViewApiDetails(log)}
+                            >
+                              View
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+
+                <TablePagination
+                  rowsPerPageOptions={[25, 50, 100, 200]}
+                  component="div"
+                  count={apiTotalResults}
+                  rowsPerPage={apiRowsPerPage}
+                  page={apiPage}
+                  onPageChange={handleApiPageChange}
+                  onRowsPerPageChange={handleApiRowsPerPageChange}
+                  sx={{
+                    bgcolor: 'white',
+                    borderTop: '1px solid',
+                    borderColor: 'divider',
+                    flexShrink: 0,
+                    '& .MuiTablePagination-toolbar': {
+                      minHeight: '52px',
+                    },
+                    '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+                      fontSize: '0.8rem',
+                    },
+                    '& .MuiTablePagination-select': {
+                      fontSize: '0.8rem',
+                    },
+                  }}
+                />
+              </Paper>
+            </Box>
+          )}
+
+          {/* Statistics Tab */}
+          {activeTab === 2 && statistics && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+              {/* Summary Cards */}
+              <Grid container spacing={3} sx={{ mb: 2 }}>
+                <Grid item xs={12} md={3}>
+                  <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
                     <CardContent>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Box>
-                          <Typography variant="h6">{activity.activity_type}</Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            User: {activity.username}
-                          </Typography>
-                          <Typography variant="body2">
-                            {activity.description}
-                          </Typography>
-                        </Box>
-                        <Chip 
-                          label={activity.risk_level}
-                          color={getRiskLevelColor(activity.risk_level)}
-                        />
-                      </Box>
+                      <Typography variant="h4" color="primary.main">
+                        {statistics.total_actions}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                        Total Actions
+                      </Typography>
                     </CardContent>
                   </Card>
                 </Grid>
-              ))}
-            </Grid>
-          ) : (
-            <Alert severity="success">
-              <Typography variant="h6">No Suspicious Activity Detected</Typography>
-              <Typography variant="body2">All system activity appears normal.</Typography>
-            </Alert>
+                <Grid item xs={12} md={3}>
+                  <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
+                    <CardContent>
+                      <Typography variant="h4" color="success.main">
+                        {(statistics.success_rate * 100).toFixed(1)}%
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                        Success Rate
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
+                    <CardContent>
+                      <Typography variant="h4" color="info.main">
+                        {statistics.total_users}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                        Active Users
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
+                    <CardContent>
+                      <Typography variant="h4" color="error.main">
+                        {statistics.failed_actions}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                        Failed Actions
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+          </Grid>
+
+              {/* Top Actions */}
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                        Most Common Actions
+                      </Typography>
+                      {statistics.top_actions && statistics.top_actions.length > 0 ? (
+                        <Box>
+                          {statistics.top_actions.slice(0, 10).map((action, index) => (
+                            <Box key={action.action} sx={{ mb: 2 }}>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                <Typography variant="body2" fontWeight="medium" sx={{ fontSize: '0.8rem' }}>
+                                  {getHumanReadableActionFromString(action.action)}
+                                </Typography>
+                                <Chip 
+                                  label={action.count} 
+                                  size="small" 
+                                  color="primary"
+                                />
+                              </Box>
+                              <Box sx={{ width: '100%', height: 8, backgroundColor: 'grey.200', borderRadius: 1 }}>
+                                <Box 
+                                  sx={{ 
+                                    width: `${(action.count / statistics.top_actions[0].count) * 100}%`, 
+                                    height: '100%', 
+                                    backgroundColor: 'primary.main', 
+                                    borderRadius: 1 
+                                  }} 
+                                />
+                              </Box>
+                            </Box>
+                          ))}
+                        </Box>
+                      ) : (
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                          No action data available
+                        </Typography>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+
+                {/* Daily Activity */}
+                <Grid item xs={12} md={6}>
+                  <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                        Daily Activity (Last 7 Days)
+                      </Typography>
+                      {statistics.daily_activity && statistics.daily_activity.length > 0 ? (
+                        <Box>
+                          {statistics.daily_activity.slice(-7).map((day, index) => (
+                            <Box key={day.date} sx={{ mb: 2 }}>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                <Typography variant="body2" fontWeight="medium" sx={{ fontSize: '0.8rem' }}>
+                                  {formatDateOnly(day.date)}
+                                </Typography>
+                                <Chip 
+                                  label={day.count} 
+                                  size="small" 
+                                  color="info"
+                                />
+                              </Box>
+                              <Box sx={{ width: '100%', height: 8, backgroundColor: 'grey.200', borderRadius: 1 }}>
+                                <Box 
+                                  sx={{ 
+                                    width: statistics.daily_activity.length > 0 
+                                      ? `${(day.count / Math.max(...statistics.daily_activity.map(d => d.count))) * 100}%` 
+                                      : '0%', 
+                                    height: '100%', 
+                                    backgroundColor: 'info.main', 
+                                    borderRadius: 1 
+                                  }} 
+                                />
+                              </Box>
+                            </Box>
+                          ))}
+                        </Box>
+                      ) : (
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                          No daily activity data available
+                        </Typography>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+
+                {/* System Health */}
+                <Grid item xs={12}>
+                  <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                        System Health Overview
+                      </Typography>
+                      <Grid container spacing={3}>
+                        <Grid item xs={12} md={4}>
+                          <Box sx={{ textAlign: 'center' }}>
+                            <Typography variant="h3" color="success.main">
+                              {((statistics.total_actions - statistics.failed_actions) / statistics.total_actions * 100).toFixed(1)}%
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                              System Uptime
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={12} md={4}>
+                          <Box sx={{ textAlign: 'center' }}>
+                            <Typography variant="h3" color="warning.main">
+                              {statistics.security_events}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                              Security Events
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={12} md={4}>
+                          <Box sx={{ textAlign: 'center' }}>
+                            <Typography variant="h3" color="info.main">
+                              {Math.round(statistics.total_actions / 30)}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                              Avg Daily Actions
+                            </Typography>
+                          </Box>
+                        </Grid>
+                      </Grid>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+
+          {/* Statistics Loading State */}
+          {activeTab === 2 && !statistics && (
+            <Box sx={{ textAlign: 'center', py: 4, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, alignItems: 'center', justifyContent: 'center' }}>
+              <CircularProgress />
+              <Typography variant="h6" sx={{ mt: 2, fontSize: '1.1rem', fontWeight: 600 }}>
+                Loading Statistics...
+              </Typography>
+            </Box>
+          )}
+
+          {/* Security Monitoring Tab */}
+          {activeTab === 3 && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+              {suspiciousActivity && suspiciousActivity.length > 0 ? (
+                <Grid container spacing={2}>
+                  {suspiciousActivity.map((activity, index) => (
+                    <Grid item xs={12} key={index}>
+                      <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
+                        <CardContent>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Box>
+                              <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>{activity.activity_type}</Typography>
+                              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                                User: {activity.username}
+                              </Typography>
+                              <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                {activity.description}
+                              </Typography>
+                            </Box>
+                            <Chip 
+                              label={activity.risk_level}
+                              color={getRiskLevelColor(activity.risk_level)}
+                            />
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              ) : (
+                <Alert severity="success" sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
+                  <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>No Suspicious Activity Detected</Typography>
+                  <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>All system activity appears normal.</Typography>
+                </Alert>
+              )}
+            </Box>
           )}
         </Box>
-      )}
+      </Paper>
 
       {/* Log Details Dialog */}
       <Dialog open={showLogDetails} onClose={() => setShowLogDetails(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Audit Log Details</DialogTitle>
+        <DialogTitle sx={{ fontSize: '1.1rem', fontWeight: 600 }}>Audit Log Details</DialogTitle>
         <DialogContent>
           {selectedLog && (
             <Grid container spacing={2}>
@@ -1456,7 +1623,7 @@ const AuditLogViewer: React.FC = () => {
 
       {/* API Request Log Details Dialog */}
       <Dialog open={showApiLogDetails} onClose={() => setShowApiLogDetails(false)} maxWidth="md" fullWidth>
-        <DialogTitle>API Request Log Details</DialogTitle>
+        <DialogTitle sx={{ fontSize: '1.1rem', fontWeight: 600 }}>API Request Log Details</DialogTitle>
         <DialogContent>
           {selectedApiLog && (
             <Grid container spacing={2}>
@@ -1545,7 +1712,7 @@ const AuditLogViewer: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </Container>
   );
 };
 
