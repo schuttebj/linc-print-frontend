@@ -224,6 +224,9 @@ const AuditLogViewer: React.FC = () => {
   const [showLogDetails, setShowLogDetails] = useState(false);
   const [showApiLogDetails, setShowApiLogDetails] = useState(false);
 
+  // Export tab state
+  const [exportLogType, setExportLogType] = useState<'transaction' | 'api'>('transaction');
+
   useEffect(() => {
     loadAuditData();
   }, []);
@@ -623,6 +626,12 @@ const AuditLogViewer: React.FC = () => {
               sx={{ minWidth: 120 }}
             />
             <Tab 
+              label="Export"
+              icon={<ExportIcon />}
+              iconPosition="start"
+              sx={{ minWidth: 120 }}
+            />
+            <Tab 
               label={
                 <Badge badgeContent={suspiciousActivity?.length || 0} color="error">
                   Security Monitoring
@@ -652,13 +661,9 @@ const AuditLogViewer: React.FC = () => {
                 bgcolor: 'white', 
                 borderBottom: '1px solid', 
                 borderColor: 'divider',
-                flexShrink: 0,
-                p: 2,
-                mb: 2,
-                borderRadius: 2,
-                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
+                flexShrink: 0
               }}>
-                <Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}>
+                <Grid container spacing={2} alignItems="center" sx={{ p: 2 }}>
                   <Grid item xs={12} md={3}>
                     <FormControl fullWidth size="small">
                       <InputLabel>Action</InputLabel>
@@ -701,7 +706,7 @@ const AuditLogViewer: React.FC = () => {
                     </FormControl>
                   </Grid>
                   
-                  <Grid item xs={12} md={2}>
+                  <Grid item xs={12} md={3}>
                     <TextField
                       type="date"
                       value={startDate}
@@ -720,7 +725,7 @@ const AuditLogViewer: React.FC = () => {
                     />
                   </Grid>
                   
-                  <Grid item xs={12} md={2}>
+                  <Grid item xs={12} md={3}>
                     <TextField
                       type="date"
                       value={endDate}
@@ -737,34 +742,6 @@ const AuditLogViewer: React.FC = () => {
                         },
                       }}
                     />
-                  </Grid>
-                  
-                  <Grid item xs={12} md={2}>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <Button
-                        variant="contained"
-                        startIcon={<ExportIcon />}
-                        onClick={() => handleExport('csv')}
-                        disabled={exporting}
-                        size="small"
-                        fullWidth
-                      >
-                        {exporting ? 'Exporting...' : 'CSV'}
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        startIcon={<ExportIcon />}
-                        onClick={() => handleExport('json')}
-                        disabled={exporting}
-                        size="small"
-                        sx={{
-                          borderWidth: '1px',
-                          '&:hover': { borderWidth: '1px' },
-                        }}
-                      >
-                        JSON
-                      </Button>
-                    </Box>
                   </Grid>
                 </Grid>
               </Box>
@@ -959,13 +936,9 @@ const AuditLogViewer: React.FC = () => {
                 bgcolor: 'white', 
                 borderBottom: '1px solid', 
                 borderColor: 'divider',
-                flexShrink: 0,
-                p: 2,
-                mb: 2,
-                borderRadius: 2,
-                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
+                flexShrink: 0
               }}>
-                <Grid container spacing={2} alignItems="center">
+                <Grid container spacing={2} alignItems="center" sx={{ p: 2 }}>
                   <Grid item xs={12} md={2}>
                     <FormControl fullWidth size="small">
                       <InputLabel>Method</InputLabel>
@@ -1429,6 +1402,240 @@ const AuditLogViewer: React.FC = () => {
             </Box>
           )}
 
+          {/* Export Tab */}
+          {activeTab === 3 && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+              {/* Export Filters */}
+              <Box sx={{ 
+                bgcolor: 'white', 
+                borderBottom: '1px solid', 
+                borderColor: 'divider',
+                flexShrink: 0
+              }}>
+                <Grid container spacing={2} alignItems="center" sx={{ p: 2 }}>
+                  <Grid item xs={12} md={2}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Log Type</InputLabel>
+                      <Select
+                        value={exportLogType}
+                        onChange={(e) => setExportLogType(e.target.value as 'transaction' | 'api')}
+                        label="Log Type"
+                        sx={{
+                          '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                          '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                        }}
+                      >
+                        <MenuItem value="transaction">Transaction Logs</MenuItem>
+                        <MenuItem value="api">API Request Logs</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  
+                  {exportLogType === 'transaction' ? (
+                    <>
+                      <Grid item xs={12} md={2}>
+                        <FormControl fullWidth size="small">
+                          <InputLabel>Action</InputLabel>
+                          <Select
+                            value={actionFilter}
+                            onChange={(e) => setActionFilter(e.target.value)}
+                            label="Action"
+                            sx={{
+                              '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                              '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                            }}
+                          >
+                            <MenuItem value="">All Actions</MenuItem>
+                            {ACTION_TYPES.map(action => (
+                              <MenuItem key={action.value} value={action.value}>{action.label}</MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      
+                      <Grid item xs={12} md={2}>
+                        <FormControl fullWidth size="small">
+                          <InputLabel>Resource</InputLabel>
+                          <Select
+                            value={resourceFilter}
+                            onChange={(e) => setResourceFilter(e.target.value)}
+                            label="Resource"
+                            sx={{
+                              '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                              '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                            }}
+                          >
+                            <MenuItem value="">All Resources</MenuItem>
+                            {RESOURCE_TYPES.map(resource => (
+                              <MenuItem key={resource.value} value={resource.value}>{resource.label}</MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                    </>
+                  ) : (
+                    <>
+                      <Grid item xs={12} md={2}>
+                        <FormControl fullWidth size="small">
+                          <InputLabel>Method</InputLabel>
+                          <Select
+                            value={methodFilter}
+                            onChange={(e) => setMethodFilter(e.target.value)}
+                            label="Method"
+                            sx={{
+                              '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                              '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                            }}
+                          >
+                            <MenuItem value="">All Methods</MenuItem>
+                            {HTTP_METHODS.map(method => (
+                              <MenuItem key={method.value} value={method.value}>{method.label}</MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      
+                      <Grid item xs={12} md={2}>
+                        <FormControl fullWidth size="small">
+                          <InputLabel>Status Code</InputLabel>
+                          <Select
+                            value={statusCodeFilter}
+                            onChange={(e) => setStatusCodeFilter(e.target.value)}
+                            label="Status Code"
+                            sx={{
+                              '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                              '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                            }}
+                          >
+                            <MenuItem value="">All Status</MenuItem>
+                            {STATUS_CODES.map(status => (
+                              <MenuItem key={status.value} value={status.value}>{status.label}</MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                    </>
+                  )}
+                  
+                  <Grid item xs={12} md={2}>
+                    <TextField
+                      type="date"
+                      value={exportLogType === 'transaction' ? startDate : apiStartDate}
+                      onChange={(e) => exportLogType === 'transaction' ? setStartDate(e.target.value) : setApiStartDate(e.target.value)}
+                      fullWidth
+                      size="small"
+                      label="Start Date"
+                      InputLabelProps={{ shrink: true }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          '& fieldset': { borderWidth: '1px' },
+                          '&:hover fieldset': { borderWidth: '1px' },
+                          '&.Mui-focused fieldset': { borderWidth: '1px' },
+                        },
+                      }}
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12} md={2}>
+                    <TextField
+                      type="date"
+                      value={exportLogType === 'transaction' ? endDate : apiEndDate}
+                      onChange={(e) => exportLogType === 'transaction' ? setEndDate(e.target.value) : setApiEndDate(e.target.value)}
+                      fullWidth
+                      size="small"
+                      label="End Date"
+                      InputLabelProps={{ shrink: true }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          '& fieldset': { borderWidth: '1px' },
+                          '&:hover fieldset': { borderWidth: '1px' },
+                          '&.Mui-focused fieldset': { borderWidth: '1px' },
+                        },
+                      }}
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12} md={2}>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button
+                        variant="contained"
+                        startIcon={<ExportIcon />}
+                        onClick={() => handleExport('csv')}
+                        disabled={exporting}
+                        size="small"
+                        fullWidth
+                      >
+                        {exporting ? 'Exporting...' : 'CSV'}
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<ExportIcon />}
+                        onClick={() => handleExport('json')}
+                        disabled={exporting}
+                        size="small"
+                        sx={{
+                          borderWidth: '1px',
+                          '&:hover': { borderWidth: '1px' },
+                        }}
+                      >
+                        JSON
+                      </Button>
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Box>
+
+              {/* Export Information */}
+              <Box sx={{ 
+                flex: 1, 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                bgcolor: 'white'
+              }}>
+                <Box sx={{ textAlign: 'center', maxWidth: 600 }}>
+                  <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                    Export Audit Logs
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', mb: 3 }}>
+                    Configure your filters above and choose your preferred export format. 
+                    The export will include all logs matching your current filter criteria.
+                  </Typography>
+                  
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} md={6}>
+                      <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px', p: 2 }}>
+                        <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, mb: 1 }}>
+                          CSV Export
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                          Ideal for spreadsheet analysis and reporting. 
+                          Includes all log fields in a structured format.
+                        </Typography>
+                      </Card>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px', p: 2 }}>
+                        <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, mb: 1 }}>
+                          JSON Export
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                          Perfect for technical analysis and data processing. 
+                          Preserves all metadata and nested structures.
+                        </Typography>
+                      </Card>
+                    </Grid>
+                  </Grid>
+                </Box>
+              </Box>
+            </Box>
+          )}
+
           {/* Statistics Loading State */}
           {activeTab === 2 && !statistics && (
             <Box sx={{ textAlign: 'center', py: 4, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, alignItems: 'center', justifyContent: 'center' }}>
@@ -1440,7 +1647,7 @@ const AuditLogViewer: React.FC = () => {
           )}
 
           {/* Security Monitoring Tab */}
-          {activeTab === 3 && (
+          {activeTab === 4 && (
             <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
               {suspiciousActivity && suspiciousActivity.length > 0 ? (
                 <Grid container spacing={2}>
