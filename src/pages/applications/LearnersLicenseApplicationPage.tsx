@@ -1186,7 +1186,7 @@ const LearnersLicenseApplicationPage: React.FC = () => {
         {/* Tab Content - Scrollable Area */}
         <Box sx={{ 
           flex: 1, 
-          overflow: 'auto', // Allow scrolling when content exceeds height
+          overflow: 'hidden', // Let components scroll internally
           p: (activeStep === 0 || activeStep === 2 || activeStep === 3) ? 0 : 2,
           minHeight: 0, // Allow flex shrinking
           display: 'flex',

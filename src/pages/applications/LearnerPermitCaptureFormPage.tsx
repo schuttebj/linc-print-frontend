@@ -720,7 +720,7 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
         {/* Tab Content - Scrollable Area */}
         <Box sx={{ 
           flex: 1, 
-          overflow: 'auto', // Allow scrolling when content exceeds height
+          overflow: 'hidden', // Let components scroll internally
           p: activeStep === 0 ? 0 : 2,
           minHeight: 0, // Allow flex shrinking
           display: 'flex',
