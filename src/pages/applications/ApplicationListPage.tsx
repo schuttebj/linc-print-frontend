@@ -410,14 +410,14 @@ const ApplicationListPage: React.FC = () => {
                                 <LicenseChip
                                   key={index}
                                   category={license.license_category}
-                                  variant="license"
+                                  chipType="license"
                                 />
                               ))}
                             </Box>
                           ) : application.license_category ? (
                             <LicenseChip
                               category={application.license_category}
-                              variant="license"
+                              chipType="license"
                             />
                           ) : (
                             <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>

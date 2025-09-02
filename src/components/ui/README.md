@@ -39,12 +39,12 @@ import { StatusChip } from '../components/ui/StatusChip';
 import { LicenseChip } from '../components/ui/StatusChip';
 
 // License categories
-<LicenseChip category="B" variant="license" />
-<LicenseChip category="C1" variant="license" />
+<LicenseChip category="B" chipType="license" />
+<LicenseChip category="C1" chipType="license" />
 
-// Other variants
-<LicenseChip category="Tag" variant="tag" />
-<LicenseChip category="Info" variant="info" />
+// Other chip types
+<LicenseChip category="Tag" chipType="tag" />
+<LicenseChip category="Info" chipType="info" />
 ```
 
 ### Standard MUI Chips
@@ -85,7 +85,7 @@ The chip styling is integrated into the MUI theme, so:
 ```tsx
 import { getChipVariant, createChipStyle } from '../theme/chipTheme';
 
-// Predefined variants
+// Predefined chip types
 const chipProps = getChipVariant('license');
 
 // Custom colors

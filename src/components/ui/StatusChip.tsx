@@ -122,8 +122,8 @@ export const getStatusChipProps = (status: ApplicationStatus, statusLabel: strin
 };
 
 // Generic chip variants for other use cases
-export const getChipVariant = (variant: 'license' | 'category' | 'tag' | 'info') => {
-  switch (variant) {
+export const getChipVariant = (chipType: 'license' | 'category' | 'tag' | 'info') => {
+  switch (chipType) {
     case 'license': {
       const textColor = '#1565c0';
       const bgColor = '#ffffff';
@@ -203,16 +203,16 @@ export const StatusChip: React.FC<StatusChipProps> = ({
 // LicenseChip component for license categories
 interface LicenseChipProps extends Omit<ChipProps, 'color'> {
   category: string;
-  variant?: 'license' | 'category' | 'tag' | 'info';
+  chipType?: 'license' | 'category' | 'tag' | 'info';
 }
 
 export const LicenseChip: React.FC<LicenseChipProps> = ({ 
   category, 
-  variant = 'license',
+  chipType = 'license',
   size = 'small',
   ...props 
 }) => {
-  const chipProps = getChipVariant(variant);
+  const chipProps = getChipVariant(chipType);
   
   return (
     <Chip
