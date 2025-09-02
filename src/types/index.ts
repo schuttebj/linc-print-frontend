@@ -211,6 +211,9 @@ export interface Application {
   // New biometric data structure from backend
   biometric_data?: BiometricDataItem[];
   
+  // License capture data (for DRIVERS_LICENSE_CAPTURE and LEARNERS_PERMIT_CAPTURE)
+  license_capture?: LicenseCaptureData;
+  
   // Status workflow
   submitted_at?: string;
   approved_at?: string;

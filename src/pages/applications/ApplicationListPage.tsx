@@ -254,14 +254,14 @@ const ApplicationListPage: React.FC = () => {
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     '& fieldset': {
-                      borderWidth: '2px',
+                      borderWidth: '1px',
                       transition: 'border-color 0.2s ease-in-out',
                     },
                     '&:hover fieldset': {
-                      borderWidth: '2px',
+                      borderWidth: '1px',
                     },
                     '&.Mui-focused fieldset': {
-                      borderWidth: '2px',
+                      borderWidth: '1px',
                     },
                   },
                 }}
@@ -277,13 +277,13 @@ const ApplicationListPage: React.FC = () => {
                   disabled={lookupsLoading}
                   sx={{
                     '& .MuiOutlinedInput-notchedOutline': {
-                      borderWidth: '2px',
+                      borderWidth: '1px',
                     },
                     '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderWidth: '2px',
+                      borderWidth: '1px',
                     },
                     '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderWidth: '2px',
+                      borderWidth: '1px',
                     },
                   }}
                 >
@@ -306,13 +306,13 @@ const ApplicationListPage: React.FC = () => {
                   disabled={lookupsLoading}
                   sx={{
                     '& .MuiOutlinedInput-notchedOutline': {
-                      borderWidth: '2px',
+                      borderWidth: '1px',
                     },
                     '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderWidth: '2px',
+                      borderWidth: '1px',
                     },
                     '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderWidth: '2px',
+                      borderWidth: '1px',
                     },
                   }}
                 >
@@ -328,16 +328,10 @@ const ApplicationListPage: React.FC = () => {
             <Grid item xs={12} md={2}>
               <Button
                 fullWidth
-                variant="outlined"
+                variant="contained"
                 startIcon={<FilterIcon />}
                 onClick={loadApplications}
                 size="small"
-                sx={{
-                  borderWidth: '2px',
-                  '&:hover': {
-                    borderWidth: '2px',
-                  },
-                }}
               >
                 Refresh
               </Button>
@@ -364,12 +358,11 @@ const ApplicationListPage: React.FC = () => {
             }}
           >
             <TableContainer sx={{ flex: 1 }}>
-              <Table stickyHeader>
+              <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Application ID</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Applicant</TableCell>
                     <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Type</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Applicant</TableCell>
                     <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>License Category</TableCell>
                     <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Status</TableCell>
                     <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Date Created</TableCell>
@@ -379,7 +372,7 @@ const ApplicationListPage: React.FC = () => {
                 <TableBody>
                   {applications.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} align="center">
+                      <TableCell colSpan={6} align="center">
                         <Typography variant="body1" color="text.secondary" sx={{ py: 4 }}>
                           No applications found. 
                           {hasPermission('applications.create') && (
@@ -395,10 +388,10 @@ const ApplicationListPage: React.FC = () => {
                     </TableRow>
                   ) : (
                     applications.map((application) => (
-                      <TableRow key={application.id} hover sx={{ '& > *': { py: 1 } }}>
+                      <TableRow key={application.id} hover sx={{ '& > *': { py: 0, px: 2 } }}>
                         <TableCell>
-                          <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>
-                            {application.id?.substring(0, 8)}...
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                            {getApplicationTypeLabel(application.application_type)}
                           </Typography>
                         </TableCell>
                         <TableCell>
@@ -408,21 +401,36 @@ const ApplicationListPage: React.FC = () => {
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                            {getApplicationTypeLabel(application.application_type)}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                            {application.license_category || 'N/A'}
-                          </Typography>
+                          {application.license_capture?.captured_licenses ? (
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                              {application.license_capture.captured_licenses.map((license, index) => (
+                                <Chip
+                                  key={index}
+                                  label={license.license_category}
+                                  size="small"
+                                  variant="outlined"
+                                  color="primary"
+                                  sx={{ fontSize: '0.7rem', height: '20px' }}
+                                />
+                              ))}
+                            </Box>
+                          ) : (
+                            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                              {application.license_category || 'N/A'}
+                            </Typography>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Chip
                             label={getApplicationStatusLabel(application.status)}
                             color={getStatusColor(application.status)}
                             size="small"
-                            sx={{ fontSize: '0.7rem', height: '20px' }}
+                            sx={{ 
+                              fontSize: '0.7rem', 
+                              height: '24px',
+                              borderRadius: '12px',
+                              fontWeight: 500
+                            }}
                           />
                         </TableCell>
                         <TableCell>
@@ -463,18 +471,16 @@ const ApplicationListPage: React.FC = () => {
         }}>
           <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
             Showing {applications.length} application{applications.length !== 1 ? 's' : ''}
-            {totalPages > 1 && ` (Page ${page} of ${totalPages})`}
+            {` (Page ${page} of ${Math.max(totalPages, 10)})`}
           </Typography>
           
-          {totalPages > 1 && (
-            <Pagination
-              count={totalPages}
-              page={page}
-              onChange={(event, newPage) => setPage(newPage)}
-              color="primary"
-              size="small"
-            />
-          )}
+          <Pagination
+            count={Math.max(totalPages, 10)} // Always show at least 10 pages for testing
+            page={page}
+            onChange={(event, newPage) => setPage(newPage)}
+            color="primary"
+            size="small"
+          />
         </Box>
       </Paper>
     </Container>
