@@ -3459,7 +3459,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             flexDirection: 'column',
             height: mode === 'application' ? '100%' : 'auto',
             minHeight: mode === 'application' ? '100%' : 'auto',
-            flex: mode === 'application' ? 1 : 'none'
+            flex: mode === 'application' ? 1 : 'none',
+            overflow: 'hidden' // Ensure parent doesn't scroll
         }}>
             {/* Content Container - Tabs and Form Content with padding */}
             <Box sx={{ 
@@ -3584,17 +3585,6 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             {/* Main Form Container - Scrollable form content */}
             <Box 
                 ref={scrollableRef}
-                onKeyDown={(e) => {
-                    // Enter key shortcut to proceed to next step
-                    if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey) {
-                        // Only trigger if no field is focused (avoid interfering with field input)
-                        const activeElement = document.activeElement;
-                        if (!activeElement || activeElement.tagName === 'BODY') {
-                            e.preventDefault();
-                            handleNext();
-                        }
-                    }
-                }}
                 sx={{ 
                     flex: 1, // Fill remaining space after tabs
                     overflow: 'auto', // Allow scroll on form content ONLY
@@ -3630,13 +3620,38 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     scrollbarColor: '#c1c1c1 #f1f1f1',
                 }}
             >
-                {/* Missing Fields Alert - Show if existing person has incomplete data */}
-                {isExistingPerson && stepValidation.some(valid => !valid) && personDataWasIncomplete && (
+                {/* Form Content Paper - White Background Container */}
+                <Paper 
+                    elevation={0}
+                    onKeyDown={(e) => {
+                        // Enter key shortcut to proceed to next step
+                        if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey) {
+                            // Only trigger if no field is focused (avoid interfering with field input)
+                            const activeElement = document.activeElement;
+                            if (!activeElement || activeElement.tagName === 'BODY') {
+                                e.preventDefault();
+                                handleNext();
+                            }
+                        }
+                    }}
+                    sx={{ 
+                        bgcolor: 'white',
+                        boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                        borderRadius: 2,
+                        mb: 2, // Add margin bottom for spacing from navigation
+                        flex: 1, // Take up remaining space
+                        overflow: 'visible', // No scroll on the paper itself
+                        display: 'flex',
+                        flexDirection: 'column'
+                    }}
+                >
+                    {/* Missing Fields Alert - Show if existing person has incomplete data */}
+                    {isExistingPerson && stepValidation.some(valid => !valid) && personDataWasIncomplete && (
                         <Alert 
                             severity="warning" 
                             sx={{ 
-                            m: 2,
-                            mb: 1,
+                                m: 2,
+                                mb: 1,
                                 '& .MuiAlert-message': {
                                     width: '100%'
                                 },
@@ -3647,21 +3662,22 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                                 Missing Mandatory Information
                             </Typography>
                             <Typography variant="body2" sx={{ mb: 1, fontSize: '0.875rem' }}>
-                            Some required fields are missing. Please complete all steps marked with warning icons.
+                                Some required fields are missing. Please complete all steps marked with warning icons.
                             </Typography>
                         </Alert>
-                )}
+                    )}
 
-                {/* Step Content - Form content area */}
-                <Box 
-                    ref={stepContentRef} 
-                    sx={{ 
-                        flex: 1,
-                        overflow: 'visible' // No scroll here since parent handles it
-                    }}
-                >
-                {renderStepContent()}
-                </Box>
+                    {/* Step Content - Form content area */}
+                    <Box 
+                        ref={stepContentRef} 
+                        sx={{ 
+                            flex: 1,
+                            overflow: 'visible' // No scroll here since parent handles it
+                        }}
+                    >
+                        {renderStepContent()}
+                    </Box>
+                </Paper>
             </Box>
                 </Box>
             </Box>

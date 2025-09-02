@@ -22,9 +22,13 @@ body {
   height: 100%;
 }
 
-/* Custom scrollbar for webkit browsers */
+/* Custom scrollbar for webkit browsers - NO ARROWS */
 ::-webkit-scrollbar {
   width: 8px;
+}
+
+::-webkit-scrollbar-button {
+  display: none; /* Remove arrows/buttons globally */
 }
 
 ::-webkit-scrollbar-track {
@@ -38,6 +42,10 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+::-webkit-scrollbar-corner {
+  display: none; /* Remove corner element globally */
 }
 
 /* Print styles */
