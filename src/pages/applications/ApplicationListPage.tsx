@@ -390,20 +390,20 @@ const ApplicationListPage: React.FC = () => {
                     </TableRow>
                   ) : (
                     applications.map((application) => (
-                      <TableRow key={application.id} hover sx={{ '& > *': { py: 0, px: 0.5 } }}>
-                        <TableCell>
+                      <TableRow key={application.id} hover>
+                        <TableCell sx={{ py: 1, px: 2 }}>
                           <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                             {getApplicationTypeLabel(application.application_type)}
                           </Typography>
                         </TableCell>
-                        <TableCell>
+                        <TableCell sx={{ py: 1, px: 2 }}>
                           <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                             {application.person ? 
                               `${application.person.first_name || ''} ${application.person.surname || ''}`.trim() || 'N/A'
                               : application.person_id ? 'Person data not available' : 'N/A'}
                           </Typography>
                         </TableCell>
-                        <TableCell>
+                        <TableCell sx={{ py: 1, px: 2 }}>
                           {application.license_capture?.captured_licenses ? (
                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                               {application.license_capture.captured_licenses.map((license, index) => (
@@ -425,18 +425,18 @@ const ApplicationListPage: React.FC = () => {
                             </Typography>
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell sx={{ py: 1, px: 2 }}>
                           <StatusChip
                             status={application.status}
                             statusLabel={getApplicationStatusLabel(application.status)}
                           />
                         </TableCell>
-                        <TableCell>
+                        <TableCell sx={{ py: 1, px: 2 }}>
                           <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                             {application.created_at ? new Date(application.created_at).toLocaleDateString() : 'N/A'}
                           </Typography>
                         </TableCell>
-                        <TableCell>
+                        <TableCell sx={{ py: 1, px: 2 }}>
                           <Stack direction="row" spacing={1}>
                             <IconButton
                               size="small"

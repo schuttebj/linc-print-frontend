@@ -745,14 +745,14 @@ const AuditLogViewer: React.FC = () => {
               </TableHead>
               <TableBody>
                 {auditLogs.map((log) => (
-                        <TableRow key={log.id} hover sx={{ '& > *': { py: 0, px: 2 } }}>
-                    <TableCell>
+                                                <TableRow key={log.id} hover>
+                          <TableCell sx={{ py: 1, px: 2 }}>
                             <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                        {formatDate(log.timestamp)}
-                      </Typography>
-                    </TableCell>
+                              {formatDate(log.timestamp)}
+                            </Typography>
+                          </TableCell>
                     
-                    <TableCell>
+                    <TableCell sx={{ py: 1, px: 2 }}>
                             <Typography variant="body2" fontWeight="medium" sx={{ fontSize: '0.8rem' }}>
                         {log.username || 'System'}
                       </Typography>
@@ -764,7 +764,7 @@ const AuditLogViewer: React.FC = () => {
                     </TableCell>
                     
                     
-                    <TableCell>
+                    <TableCell sx={{ py: 1, px: 2 }}>
                       <Box>
                         <Chip 
                           label={getHumanReadableAction(log)}
@@ -779,7 +779,7 @@ const AuditLogViewer: React.FC = () => {
                       </Box>
                     </TableCell>
                     
-                    <TableCell>
+                    <TableCell sx={{ py: 1, px: 2 }}>
                       {log.resource && (
                         <Box>
                                 <Typography variant="body2" fontWeight="medium" sx={{ fontSize: '0.8rem' }}>
@@ -795,7 +795,7 @@ const AuditLogViewer: React.FC = () => {
                     </TableCell>
 
                     {/* Changes Column - Show changed fields for CRUD operations */}
-                    <TableCell>
+                    <TableCell sx={{ py: 1, px: 2 }}>
                       <Box>
                         {log.changed_fields && log.changed_fields.length > 0 ? (
                           <Box>
@@ -836,7 +836,7 @@ const AuditLogViewer: React.FC = () => {
                       </Box>
                     </TableCell>
                     
-                    <TableCell>
+                    <TableCell sx={{ py: 1, px: 2 }}>
                       <Chip 
                         label={log.success ? 'Success' : 'Failed'}
                         color={log.success ? 'success' : 'error'}
@@ -849,13 +849,13 @@ const AuditLogViewer: React.FC = () => {
                       )}
                     </TableCell>
                     
-                    <TableCell>
+                    <TableCell sx={{ py: 1, px: 2 }}>
                             <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                         {log.ip_address || 'Unknown'}
                       </Typography>
                     </TableCell>
 
-                    <TableCell align="center">
+                    <TableCell align="center" sx={{ py: 1, px: 2 }}>
                       <Button
                         size="small"
                         startIcon={<ViewIcon />}
@@ -1076,14 +1076,14 @@ const AuditLogViewer: React.FC = () => {
               </TableHead>
               <TableBody>
                 {apiRequestLogs.map((log) => (
-                        <TableRow key={log.id} hover sx={{ '& > *': { py: 0, px: 2 } }}>
-                    <TableCell>
+                        <TableRow key={log.id} hover>
+                    <TableCell sx={{ py: 1, px: 2 }}>
                             <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                         {formatDate(log.created_at)}
                       </Typography>
                     </TableCell>
                     
-                    <TableCell>
+                    <TableCell sx={{ py: 1, px: 2 }}>
                       <Chip 
                         label={log.method}
                         color={getMethodColor(log.method)}
@@ -1091,7 +1091,7 @@ const AuditLogViewer: React.FC = () => {
                       />
                     </TableCell>
                     
-                    <TableCell>
+                    <TableCell sx={{ py: 1, px: 2 }}>
                             <Typography variant="body2" sx={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '0.8rem' }}>
                         {log.endpoint}
                       </Typography>
@@ -1102,7 +1102,7 @@ const AuditLogViewer: React.FC = () => {
                       )}
                     </TableCell>
                     
-                    <TableCell>
+                    <TableCell sx={{ py: 1, px: 2 }}>
                       <Chip 
                         label={log.status_code}
                         color={getStatusCodeColor(log.status_code)}
@@ -1115,7 +1115,7 @@ const AuditLogViewer: React.FC = () => {
                       )}
                     </TableCell>
                     
-                    <TableCell>
+                    <TableCell sx={{ py: 1, px: 2 }}>
                             <Typography variant="body2" fontWeight="medium" sx={{ fontSize: '0.8rem' }}>
                         {formatDuration(log.duration_ms)}
                       </Typography>
@@ -1124,7 +1124,7 @@ const AuditLogViewer: React.FC = () => {
                       </Typography>
                     </TableCell>
                     
-                    <TableCell>
+                    <TableCell sx={{ py: 1, px: 2 }}>
                             <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                         {log.user_id ? `User ${log.user_id.substring(0, 8)}...` : 'Anonymous'}
                       </Typography>
@@ -1133,13 +1133,13 @@ const AuditLogViewer: React.FC = () => {
                       </Typography>
                     </TableCell>
 
-                    <TableCell>
+                    <TableCell sx={{ py: 1, px: 2 }}>
                             <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                         {formatFileSize(log.response_size_bytes)}
                       </Typography>
                     </TableCell>
 
-                    <TableCell align="center">
+                    <TableCell align="center" sx={{ py: 1, px: 2 }}>
                       <Button
                         size="small"
                         startIcon={<ViewIcon />}
