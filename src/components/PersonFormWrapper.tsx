@@ -3464,7 +3464,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             {/* Content Container - Tabs and Form Content with padding */}
             <Box sx={{ 
                 flex: 1,
-                overflow: 'hidden', // No scroll on outer container
+                overflow: 'auto', // Allow scrolling when content exceeds height
                 p: 2, // Padding for content area
                 display: 'flex',
                 flexDirection: 'column',
@@ -3476,7 +3476,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     display: 'flex',
                     flexDirection: 'column',
                     flex: 1,
-                    overflow: 'hidden' // Prevent this container from scrolling
+                    overflow: 'visible' // Allow content to be visible
                 }}>
                 {showHeader && (
                     <Paper 

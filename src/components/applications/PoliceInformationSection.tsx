@@ -5,7 +5,8 @@
  * Similar to MedicalInformationSection but focused on police clearance requirements
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useScrollbarDetection } from '../../hooks/useScrollbarDetection';
 import {
   Box,
   Card,
@@ -79,6 +80,32 @@ const PoliceInformationSection: React.FC<PoliceInformationSectionProps> = ({
   // Internal tab state (only used if using tabbed interface)
   const [internalStep, setInternalStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  
+  // Scrollbar detection
+  const scrollableRef = useRef<HTMLElement>(null);
+  const hasScrollbar = useScrollbarDetection(scrollableRef);
+
+  // Custom scrollbar styling
+  const customScrollbarStyling = {
+    '&::-webkit-scrollbar': {
+      width: '8px',
+    },
+    '&::-webkit-scrollbar-track': {
+      background: '#f1f1f1',
+      borderRadius: '4px',
+      marginRight: '2px',
+    },
+    '&::-webkit-scrollbar-thumb': {
+      background: '#c1c1c1',
+      borderRadius: '4px',
+      '&:hover': {
+        background: '#a8a8a8',
+      },
+    },
+    // Firefox scrollbar
+    scrollbarWidth: 'thin',
+    scrollbarColor: '#c1c1c1 #f1f1f1',
+  };
   
   // Police clearance steps for tabbed interface
   const policeSteps = [
@@ -399,13 +426,13 @@ const PoliceInformationSection: React.FC<PoliceInformationSectionProps> = ({
         borderRadius: 2,
         display: 'flex',
         flexDirection: 'column',
-        height: 'calc(100vh - 200px)',
-        minHeight: '600px'
+        flex: 1,
+        minHeight: 0
       }}>
         {/* Step content - p:0 */}
         <Box sx={{ 
           flex: 1,
-          overflow: 'hidden',
+          overflow: 'auto',
           p: 0, // Step content - p:0
           display: 'flex',
           flexDirection: 'column'
@@ -444,19 +471,24 @@ const PoliceInformationSection: React.FC<PoliceInformationSectionProps> = ({
           {/* Inner tab container - P:2 */}
           <Box sx={{ 
             flex: 1,
-            overflow: 'hidden',
+            overflow: 'auto',
             p: 2, // Inner tab container - P:2
             display: 'flex',
             flexDirection: 'column'
           }}>
             {/* Tab content - p:0 */}
-            <Box sx={{ 
-              flex: 1,
-              overflow: 'auto',
-              display: 'flex',
-              flexDirection: 'column',
-              p: 0 // Tab content - p:0
-            }}>
+            <Box 
+              ref={scrollableRef}
+              sx={{ 
+                flex: 1,
+                overflow: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                p: 0, // Tab content - p:0
+                pr: hasScrollbar ? 1 : 0, // Conditional padding based on scrollbar presence
+                ...customScrollbarStyling
+              }}
+            >
               {/* Step Content - Aligned at top */}
               <Box sx={{ flex: 1, overflow: 'visible' }}>
                 {renderPoliceClearanceContent()}
