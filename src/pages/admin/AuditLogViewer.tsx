@@ -1184,7 +1184,7 @@ const AuditLogViewer: React.FC = () => {
 
           {/* Statistics Tab */}
           {activeTab === 2 && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, p: 2 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, p: 2, pb: 4 }}>
               <Typography variant="h5" gutterBottom sx={{ fontSize: '1.25rem', fontWeight: 600, mb: 1 }}>
                 System Statistics
               </Typography>
@@ -1508,14 +1508,11 @@ const AuditLogViewer: React.FC = () => {
             </Box>
           )}
 
-          {/* Bottom padding for proper scrolling */}
-          {activeTab === 2 && (
-            <Box sx={{ height: 24 }} />
-          )}
+
 
           {/* Export Tab */}
           {activeTab === 3 && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, p: 2 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, p: 2, pb: 4 }}>
                             
               {/* Export Configuration */}
               <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px', mb: 3 }}>
@@ -1744,7 +1741,7 @@ const AuditLogViewer: React.FC = () => {
 
           {/* Security Monitoring Tab */}
           {activeTab === 4 && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, p: 2 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, p: 2, pb: 4 }}>
               {suspiciousActivity && suspiciousActivity.length > 0 ? (
                 <Grid container spacing={2}>
                   {suspiciousActivity.map((activity, index) => (
