@@ -220,7 +220,7 @@ const ApplicationListPage: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column', pb: 3 }}>
+    <Container maxWidth="lg" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Paper 
         elevation={0}
         sx={{ 
