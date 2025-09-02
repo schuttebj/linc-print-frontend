@@ -1502,48 +1502,6 @@ const AuditLogViewer: React.FC = () => {
                       </>
                     )}
 
-                    {/* System Health */}
-                    <Grid item xs={12}>
-                      <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
-                        <CardContent>
-                          <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-                            System Health Overview
-                          </Typography>
-                          <Grid container spacing={3}>
-                            <Grid item xs={12} md={4}>
-                              <Box sx={{ textAlign: 'center' }}>
-                                <Typography variant="h3" color="success.main">
-                                  {comprehensiveStats.transaction_logs?.summary?.success_rate ? comprehensiveStats.transaction_logs.summary.success_rate.toFixed(1) : '0'}%
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
-                                  Transaction Success Rate
-                                </Typography>
-                              </Box>
-                            </Grid>
-                            <Grid item xs={12} md={4}>
-                              <Box sx={{ textAlign: 'center' }}>
-                                <Typography variant="h3" color="warning.main">
-                                  {comprehensiveStats.transaction_logs?.summary?.security_events || 0}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
-                                  Security Events
-                                </Typography>
-                              </Box>
-                            </Grid>
-                            <Grid item xs={12} md={4}>
-                              <Box sx={{ textAlign: 'center' }}>
-                                <Typography variant="h3" color="info.main">
-                                  {comprehensiveStats.api_requests?.summary?.avg_response_time_ms || 0}ms
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
-                                  Avg API Response Time
-                                </Typography>
-                              </Box>
-                            </Grid>
-                          </Grid>
-                        </CardContent>
-                      </Card>
-                    </Grid>
                   </Grid>
                 </>
               )}
