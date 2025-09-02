@@ -2082,16 +2082,18 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     };
 
     const renderLookupStep = () => (
-        <Paper 
-            key="lookup-step"
-            elevation={0}
-            sx={{ 
-                bgcolor: 'transparent',
-                boxShadow: 'none',
-                border: 'none'
-            }}
-        >
-            <Box sx={{ p: 2 }}>
+        <Box sx={{ p: 0 }}>
+            <Box sx={{ 
+                backgroundColor: 'rgb(255, 255, 255)',
+                color: 'rgb(33, 33, 33)',
+                backgroundImage: 'none',
+                mb: 2,
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                transition: 'box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+                overflow: 'hidden',
+                borderRadius: '12px',
+                p: 2
+            }}>
                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
                     Document Lookup
                 </Typography>
@@ -2202,7 +2204,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                         </Grid>
                 </Box>
             </Box>
-        </Paper>
+        </Box>
     );
 
     const renderPersonalInformationStep = () => (
@@ -2849,27 +2851,28 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     Add Additional Document
                 </Button>
             </Box>
-        </Paper>
+        </Box>
     );
 
     const renderAddressStep = () => (
-        <Paper 
-            key="address-step"
-            elevation={0}
-            sx={{ 
-                bgcolor: 'transparent',
-                boxShadow: 'none',
-                border: 'none'
+        <Box sx={{ p: 0 }}>
+            <Box sx={{ 
+                backgroundColor: 'rgb(255, 255, 255)',
+                color: 'rgb(33, 33, 33)',
+                backgroundImage: 'none',
+                mb: 2,
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                transition: 'box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+                overflow: 'hidden',
+                borderRadius: '12px',
+                p: 2
             }}
-        >
-            <Box 
-                sx={{ p: 2 }}
-                onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleNext();
-                    }
-                }}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleNext();
+                }
+            }}
             >
                 <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, fontSize: '1rem', mb: 2 }}>
                     Address Information
@@ -3271,23 +3274,25 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     Add Additional Address
                 </Button>
             </Box>
-        </Paper>
+        </Box>
     );
 
     const renderReviewStep = () => {
         const formData = personForm.getValues();
 
         return (
-            <Paper 
-                key="review-step"
-                elevation={0}
-                sx={{ 
-                    bgcolor: 'transparent',
-                    boxShadow: 'none',
-                    border: 'none'
-                }}
-            >
-                <Box sx={{ p: 1.5 }}>
+            <Box sx={{ p: 0 }}>
+                <Box sx={{ 
+                    backgroundColor: 'rgb(255, 255, 255)',
+                    color: 'rgb(33, 33, 33)',
+                    backgroundImage: 'none',
+                    mb: 2,
+                    boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                    transition: 'box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+                    overflow: 'hidden',
+                    borderRadius: '12px',
+                    p: 2
+                }}>
                     <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, fontSize: '1rem', mb: 1 }}>
                         Review & Submit
                     </Typography>
@@ -3437,7 +3442,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
 
 
                 </Box>
-            </Paper>
+            </Box>
         );
     };
 
