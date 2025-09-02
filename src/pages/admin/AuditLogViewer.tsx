@@ -745,7 +745,7 @@ const AuditLogViewer: React.FC = () => {
                     </TableHead>
                     <TableBody>
                       {auditLogs.map((log) => (
-                        <TableRow key={log.id} hover sx={{ '& > *': { py: 0, px: 2 } }}>
+                        <TableRow key={log.id} hover sx={{ '& > *': { py: 0, px: 0.5 } }}>
                           <TableCell>
                             <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                               {formatDate(log.timestamp)}
@@ -1076,7 +1076,7 @@ const AuditLogViewer: React.FC = () => {
                     </TableHead>
                     <TableBody>
                       {apiRequestLogs.map((log) => (
-                        <TableRow key={log.id} hover sx={{ '& > *': { py: 0, px: 2 } }}>
+                        <TableRow key={log.id} hover sx={{ '& > *': { py: 0, px: 0.5 } }}>
                           <TableCell>
                             <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                               {formatDate(log.created_at)}
@@ -1506,6 +1506,11 @@ const AuditLogViewer: React.FC = () => {
                 </>
               )}
             </Box>
+          )}
+
+          {/* Bottom padding for proper scrolling */}
+          {activeTab === 2 && (
+            <Box sx={{ height: 24 }} />
           )}
 
           {/* Export Tab */}

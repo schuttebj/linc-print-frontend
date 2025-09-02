@@ -390,7 +390,7 @@ const ApplicationListPage: React.FC = () => {
                     </TableRow>
                   ) : (
                     applications.map((application) => (
-                      <TableRow key={application.id} hover sx={{ '& > *': { py: 0, px: 2 } }}>
+                      <TableRow key={application.id} hover sx={{ '& > *': { py: 0, px: 0.5 } }}>
                         <TableCell>
                           <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                             {getApplicationTypeLabel(application.application_type)}
