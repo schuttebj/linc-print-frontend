@@ -3650,10 +3650,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     </Alert>
                 )}
 
-                {/* Step Content - Scrollable Area with Content-Sized White Background */}
-                <Box sx={{ flex: 1, overflow: 'visible' }}>
-                    {renderStepContent()}
-                </Box>
+                {/* Step Content - Direct content like medical form */}
+                {renderStepContent()}
             </Box>
                 </Box>
             </Box>
