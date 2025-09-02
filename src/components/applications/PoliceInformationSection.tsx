@@ -85,10 +85,13 @@ const PoliceInformationSection: React.FC<PoliceInformationSectionProps> = ({
   const scrollableRef = useRef<HTMLElement>(null);
   const hasScrollbar = useScrollbarDetection(scrollableRef);
 
-  // Custom scrollbar styling
+  // Custom scrollbar styling - NO ARROWS
   const customScrollbarStyling = {
     '&::-webkit-scrollbar': {
       width: '8px',
+    },
+    '&::-webkit-scrollbar-button': {
+      display: 'none', // Remove arrows/buttons
     },
     '&::-webkit-scrollbar-track': {
       background: '#f1f1f1',
@@ -101,6 +104,9 @@ const PoliceInformationSection: React.FC<PoliceInformationSectionProps> = ({
       '&:hover': {
         background: '#a8a8a8',
       },
+    },
+    '&::-webkit-scrollbar-corner': {
+      display: 'none', // Remove corner element
     },
     // Firefox scrollbar
     scrollbarWidth: 'thin',

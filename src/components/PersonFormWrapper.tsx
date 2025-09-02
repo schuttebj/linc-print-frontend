@@ -3464,7 +3464,7 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             {/* Content Container - Tabs and Form Content with padding */}
             <Box sx={{ 
                 flex: 1,
-                overflow: 'auto', // Allow scrolling when content exceeds height
+                overflow: 'hidden', // Prevent outer container from scrolling
                 p: 2, // Padding for content area
                 display: 'flex',
                 flexDirection: 'column',
@@ -3527,12 +3527,12 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             {/* Person Form Tabs */}
             <Paper 
                 elevation={0}
-                                    sx={{
+                sx={{
                     mb: 2,
                     bgcolor: 'white',
                     boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
                     borderRadius: 2,
-                    flexShrink: 0 // Prevent tabs from shrinking
+                    flexShrink: 0 // Prevent tabs from shrinking - KEEP TABS FIXED
                 }}
             >
                 <Tabs
@@ -3582,9 +3582,8 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             </Paper>
 
             {/* Main Form Container - Scrollable form content */}
-            <Paper 
+            <Box 
                 ref={scrollableRef}
-                elevation={0}
                 onKeyDown={(e) => {
                     // Enter key shortcut to proceed to next step
                     if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey) {
@@ -3597,19 +3596,19 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     }
                 }}
                 sx={{ 
-                    bgcolor: 'white',
-                    boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-                    borderRadius: 2,
-                    mb: 2, // Add margin bottom for spacing from navigation
-                    flex: 'none', // Use content height instead of filling space
-                    overflow: 'auto', // Allow scroll on form content
+                    flex: 1, // Fill remaining space after tabs
+                    overflow: 'auto', // Allow scroll on form content ONLY
                     display: 'flex',
                     flexDirection: 'column',
+                    p: 0, // No padding on scrollable container
                     // Conditional padding based on scrollbar presence
                     pr: hasScrollbar ? 1 : 0,
-                    // Custom scrollbar styling
+                    // Custom scrollbar styling - NO ARROWS
                     '&::-webkit-scrollbar': {
                         width: '8px',
+                    },
+                    '&::-webkit-scrollbar-button': {
+                        display: 'none', // Remove arrows/buttons
                     },
                     '&::-webkit-scrollbar-track': {
                         background: '#f1f1f1',
@@ -3622,6 +3621,9 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                         '&:hover': {
                             background: '#a8a8a8',
                         },
+                    },
+                    '&::-webkit-scrollbar-corner': {
+                        display: 'none', // Remove corner element
                     },
                     // Firefox scrollbar
                     scrollbarWidth: 'thin',
@@ -3660,20 +3662,20 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                 >
                 {renderStepContent()}
                 </Box>
-            </Paper>
+            </Box>
                 </Box>
             </Box>
 
-            {/* Navigation - Full width at bottom */}
+            {/* Navigation - Full width at bottom - STAYS FIXED */}
             <Box sx={{ 
-                        bgcolor: 'white',
+                bgcolor: 'white',
                 borderTop: '1px solid', 
                 borderColor: 'divider', 
                 display: 'flex', 
                 justifyContent: 'flex-end', 
                 gap: 1,
                 p: 2,
-                flexShrink: 0,
+                flexShrink: 0, // KEEP NAVIGATION FIXED AT BOTTOM
                 // Full width navigation styling
                 width: '100%',
                 borderRadius: '0 0 8px 8px' // Only round bottom corners

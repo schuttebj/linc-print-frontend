@@ -926,9 +926,12 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
                 p: 0, // Tab content - p:0
                 // Conditional padding based on scrollbar presence
                 pr: hasScrollbar ? 1 : 0,
-                // Custom scrollbar styling
+                // Custom scrollbar styling - NO ARROWS
                 '&::-webkit-scrollbar': {
                     width: '8px',
+                },
+                '&::-webkit-scrollbar-button': {
+                    display: 'none', // Remove arrows/buttons
                 },
                 '&::-webkit-scrollbar-track': {
                     background: '#f1f1f1',
@@ -941,6 +944,9 @@ const MedicalInformationSection: React.FC<MedicalInformationSectionProps> = ({
                     '&:hover': {
                         background: '#a8a8a8',
                     },
+                },
+                '&::-webkit-scrollbar-corner': {
+                    display: 'none', // Remove corner element
                 },
                 // Firefox scrollbar
                 scrollbarWidth: 'thin',
