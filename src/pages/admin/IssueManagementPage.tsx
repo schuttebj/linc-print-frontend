@@ -788,7 +788,7 @@ const IssueManagementPage: React.FC = () => {
 
   return (
     <>
-      <Container maxWidth="lg" sx={{ py: 1, height: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column' }}>
+      <Container maxWidth="lg" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
         <Paper 
           elevation={0}
           sx={{ 
