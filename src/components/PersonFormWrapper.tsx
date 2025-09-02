@@ -3650,8 +3650,10 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     </Alert>
                 )}
 
-                {/* Step Content - Direct content like medical form */}
-                {renderStepContent()}
+                {/* Step Content - Aligned at top (like medical form) */}
+                <Box sx={{ flex: 1, overflow: 'visible' }}>
+                    {renderStepContent()}
+                </Box>
             </Box>
                 </Box>
             </Box>
