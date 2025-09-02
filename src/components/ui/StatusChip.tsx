@@ -17,6 +17,21 @@ const getBaseChipStyles = (textColor: string, bgColor: string, borderColor: stri
   },
 });
 
+// Define outlined chip styling (no background, border matches text)
+const getOutlinedChipStyles = (textColor: string) => ({
+  fontSize: '0.7rem',
+  height: '24px',
+  borderRadius: '5px',
+  fontWeight: 500,
+  bgcolor: 'transparent',
+  color: textColor,
+  border: `1px solid ${textColor}`, // Border matches text for outlined chips
+  '&:hover': {
+    bgcolor: 'transparent',
+    opacity: 0.9,
+  },
+});
+
 // Status-specific color mappings
 export const getStatusChipProps = (status: ApplicationStatus, statusLabel: string) => {
   // Special handling for "Possible Fraud"
@@ -133,19 +148,14 @@ export const getStatusChipProps = (status: ApplicationStatus, statusLabel: strin
 };
 
 // Generic chip variants for other use cases
-export const getChipVariant = (chipType: 'license' | 'category' | 'tag' | 'info') => {
+export const getChipVariant = (chipType: 'license' | 'category' | 'tag' | 'info' | 'code') => {
   switch (chipType) {
     case 'license': {
       const textColor = '#1565c0';
-      const bgColor = '#ffffff';
-      const borderColor = '#90caf9'; // Medium blue for outlined style
       return {
         color: 'primary' as const,
         variant: 'outlined' as const,
-        sx: {
-          ...getBaseChipStyles(textColor, bgColor, borderColor),
-          bgcolor: 'transparent',
-        }
+        sx: getOutlinedChipStyles(textColor) // Use outlined style with text-matching border
       };
     }
     case 'category': {
@@ -175,6 +185,14 @@ export const getChipVariant = (chipType: 'license' | 'category' | 'tag' | 'info'
         sx: getBaseChipStyles(textColor, bgColor, borderColor)
       };
     }
+    case 'code': {
+      const textColor = '#424242';
+      return {
+        color: 'default' as const,
+        variant: 'outlined' as const,
+        sx: getOutlinedChipStyles(textColor) // Use outlined style with text-matching border for codes
+      };
+    }
     default: {
       const textColor = '#424242';
       const bgColor = '#f5f5f5';
@@ -193,7 +211,7 @@ interface StatusChipProps extends Omit<ChipProps, 'color'> {
   statusLabel: string;
 }
 
-export const StatusChip: React.FC<StatusChipProps> = ({ 
+const StatusChip: React.FC<StatusChipProps> = ({ 
   status, 
   statusLabel, 
   size = 'small',
@@ -218,10 +236,10 @@ export const StatusChip: React.FC<StatusChipProps> = ({
 // LicenseChip component for license categories
 interface LicenseChipProps extends Omit<ChipProps, 'color'> {
   category: string;
-  chipType?: 'license' | 'category' | 'tag' | 'info';
+  chipType?: 'license' | 'category' | 'tag' | 'info' | 'code';
 }
 
-export const LicenseChip: React.FC<LicenseChipProps> = ({ 
+const LicenseChip: React.FC<LicenseChipProps> = ({ 
   category, 
   chipType = 'license',
   size = 'small',
@@ -243,4 +261,43 @@ export const LicenseChip: React.FC<LicenseChipProps> = ({
   );
 };
 
+// CodeChip component specifically for codes/license categories (outlined style)
+interface CodeChipProps extends Omit<ChipProps, 'color'> {
+  code: string;
+  color?: 'primary' | 'secondary' | 'default' | 'info';
+}
+
+const CodeChip: React.FC<CodeChipProps> = ({ 
+  code, 
+  color = 'primary',
+  size = 'small',
+  ...props 
+}) => {
+  // Define colors for different code types
+  const getCodeColor = (colorType: string) => {
+    switch (colorType) {
+      case 'primary': return '#1565c0';
+      case 'secondary': return '#6a1b9a'; 
+      case 'info': return '#0277bd';
+      default: return '#424242';
+    }
+  };
+
+  const textColor = getCodeColor(color);
+  
+  return (
+    <Chip
+      label={code}
+      size={size}
+      variant="outlined"
+      {...props}
+      sx={{
+        ...getOutlinedChipStyles(textColor),
+        ...props.sx, // Allow override if needed
+      }}
+    />
+  );
+};
+
+export { StatusChip, LicenseChip, CodeChip };
 export default StatusChip;

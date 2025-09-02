@@ -43,7 +43,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { applicationService } from '../../services/applicationService';
 import { Application, ApplicationStatus, ApplicationType } from '../../types';
 import { lookupService, ApplicationStatus as LookupApplicationStatus, ApplicationType as LookupApplicationType } from '../../services/lookupService';
-import { StatusChip, LicenseChip } from '../../components/ui/StatusChip';
+import { StatusChip, LicenseChip, CodeChip } from '../../components/ui/StatusChip';
 
 const ApplicationListPage: React.FC = () => {
   const { hasPermission } = useAuth();

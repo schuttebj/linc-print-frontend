@@ -79,35 +79,35 @@ export const chipThemeOverrides = {
           opacity: 0.9,
         },
       },
-      // Outlined variant adjustments with softer borders
+      // Outlined variant adjustments - border matches text for no-background chips
       outlined: {
         backgroundColor: 'transparent',
         '&.MuiChip-colorDefault': {
-          borderColor: '#9e9e9e', // Softer gray
+          borderColor: '#424242', // Text-matching border for outlined chips
           color: '#424242',
         },
         '&.MuiChip-colorPrimary': {
-          borderColor: '#90caf9', // Softer blue
+          borderColor: '#1565c0', // Text-matching border for outlined chips
           color: '#1565c0',
         },
         '&.MuiChip-colorSecondary': {
-          borderColor: '#ce93d8', // Softer purple
+          borderColor: '#6a1b9a', // Text-matching border for outlined chips
           color: '#6a1b9a',
         },
         '&.MuiChip-colorError': {
-          borderColor: '#ef9a9a', // Softer red
+          borderColor: '#c62828', // Text-matching border for outlined chips
           color: '#c62828',
         },
         '&.MuiChip-colorInfo': {
-          borderColor: '#4fc3f7', // Softer light blue
+          borderColor: '#0277bd', // Text-matching border for outlined chips
           color: '#0277bd',
         },
         '&.MuiChip-colorSuccess': {
-          borderColor: '#a6e8ab', // Softer green as specified
+          borderColor: '#1b5e20', // Text-matching border for outlined chips
           color: '#1b5e20',
         },
         '&.MuiChip-colorWarning': {
-          borderColor: '#ffb74d', // Softer orange
+          borderColor: '#e65100', // Text-matching border for outlined chips
           color: '#e65100',
         },
       },
@@ -145,8 +145,11 @@ export const chipColorSchemes = {
   onHold: { text: '#e65100', bg: '#fff3e0', border: '#ffb74d' },
   fraud: { text: '#e65100', bg: '#fff8e1', border: '#ffb74d' },
   
-  // License category colors
-  license: { text: '#1565c0', bg: '#ffffff', border: '#90caf9' },
+  // License category colors (outlined style - text-matching borders)
+  license: { text: '#1565c0', bg: 'transparent', border: '#1565c0' },
+  code: { text: '#424242', bg: 'transparent', border: '#424242' },
+  
+  // Filled style chips (softer borders)
   category: { text: '#6a1b9a', bg: '#f3e5f5', border: '#ce93d8' },
   
   // General purpose colors

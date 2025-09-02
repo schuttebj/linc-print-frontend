@@ -2,16 +2,19 @@
 
 This directory contains standardized UI components for the LINC Print Frontend, ensuring consistent styling across the application.
 
-## StatusChip & LicenseChip Components
+## StatusChip, LicenseChip & CodeChip Components
 
 ### Overview
-- **StatusChip**: For application statuses with predefined color schemes
-- **LicenseChip**: For license categories and general-purpose chips
+- **StatusChip**: For application statuses with predefined color schemes (filled style with softer borders)
+- **LicenseChip**: For license categories and general-purpose chips (configurable style)
+- **CodeChip**: For codes/categories without backgrounds (outlined style with text-matching borders)
 - **Global Theme**: All MUI Chip components are styled consistently
 
 ### Key Features
 - **5px border radius** (not round)
-- **1px softer borders** (medium tone between text and background)
+- **Smart Border Strategy**: 
+  - **Filled chips** (with backgrounds): Softer borders (medium tone between text and background)
+  - **Outlined chips** (no backgrounds): Text-matching borders for clear definition
 - **Consistent colors** across the application
 - **Compact sizing** for better space utilization
 
@@ -38,13 +41,30 @@ import { StatusChip } from '../components/ui/StatusChip';
 ```tsx
 import { LicenseChip } from '../components/ui/StatusChip';
 
-// License categories
+// License categories (outlined style)
 <LicenseChip category="B" chipType="license" />
 <LicenseChip category="C1" chipType="license" />
 
-// Other chip types
+// Other chip types (filled style)
 <LicenseChip category="Tag" chipType="tag" />
 <LicenseChip category="Info" chipType="info" />
+
+// Code chips (outlined style)
+<LicenseChip category="CODE123" chipType="code" />
+```
+
+### CodeChip (Recommended for Codes)
+```tsx
+import { CodeChip } from '../components/ui/StatusChip';
+
+// License codes with text-matching borders
+<CodeChip code="B" color="primary" />
+<CodeChip code="C1" color="primary" />
+<CodeChip code="A" color="secondary" />
+
+// General codes
+<CodeChip code="REF123" color="default" />
+<CodeChip code="CAT456" color="info" />
 ```
 
 ### Standard MUI Chips
@@ -67,7 +87,12 @@ All standard MUI Chip components automatically inherit the global styling:
 - **Error States**: Red (`#c62828` text, `#ffebee` bg, `#ef9a9a` border)
 
 ### License Colors
-- **License Categories**: Blue outlined (`#1565c0` text, transparent bg, `#90caf9` border)
+
+#### Outlined Style (No Background)
+- **License Categories**: Blue (`#1565c0` text, transparent bg, `#1565c0` border)
+- **Code Chips**: Various colors (`text color` matches `border color`)
+
+#### Filled Style (With Background)  
 - **General Tags**: Purple (`#6a1b9a` text, `#f3e5f5` bg, `#ce93d8` border)
 - **Info Chips**: Light blue (`#0277bd` text, `#e1f5fe` bg, `#4fc3f7` border)
 
