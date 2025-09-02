@@ -27,8 +27,35 @@ body {
   width: 8px;
 }
 
+/* AGGRESSIVE ARROW REMOVAL - Multiple selectors to ensure arrows are gone */
 ::-webkit-scrollbar-button {
-  display: none; /* Remove arrows/buttons globally */
+  display: none !important; /* Remove arrows/buttons globally */
+  width: 0 !important;
+  height: 0 !important;
+}
+
+::-webkit-scrollbar-button:single-button {
+  display: none !important;
+}
+
+::-webkit-scrollbar-button:double-button {
+  display: none !important;
+}
+
+::-webkit-scrollbar-button:start {
+  display: none !important;
+}
+
+::-webkit-scrollbar-button:end {
+  display: none !important;
+}
+
+::-webkit-scrollbar-button:vertical {
+  display: none !important;
+}
+
+::-webkit-scrollbar-button:horizontal {
+  display: none !important;
 }
 
 ::-webkit-scrollbar-track {
@@ -45,7 +72,7 @@ body {
 }
 
 ::-webkit-scrollbar-corner {
-  display: none; /* Remove corner element globally */
+  display: none !important; /* Remove corner element globally */
 }
 
 /* Print styles */

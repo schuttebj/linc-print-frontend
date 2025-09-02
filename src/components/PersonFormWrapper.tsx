@@ -2206,23 +2206,24 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
     );
 
     const renderPersonalInformationStep = () => (
-        <Paper 
-            key="personal-info-step"
-            elevation={0}
-            sx={{ 
-                bgcolor: 'transparent',
-                boxShadow: 'none',
-                border: 'none'
+        <Box sx={{ p: 0 }}>
+            <Box sx={{ 
+                backgroundColor: 'rgb(255, 255, 255)',
+                color: 'rgb(33, 33, 33)',
+                backgroundImage: 'none',
+                mb: 2,
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                transition: 'box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+                overflow: 'hidden',
+                borderRadius: '12px',
+                p: 2
             }}
-        >
-            <Box 
-                sx={{ p: 2 }}
-                onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleNext();
-                    }
-                }}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleNext();
+                }
+            }}
             >
                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
                     Personal Information
@@ -2400,27 +2401,28 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     </Grid>
                 </Grid>
             </Box>
-        </Paper>
+        </Box>
     );
 
     const renderContactDetailsStep = () => (
-        <Paper 
-            key="contact-details-step"
-            elevation={0}
-            sx={{ 
-                bgcolor: 'transparent',
-                boxShadow: 'none',
-                border: 'none'
+        <Box sx={{ p: 0 }}>
+            <Box sx={{ 
+                backgroundColor: 'rgb(255, 255, 255)',
+                color: 'rgb(33, 33, 33)',
+                backgroundImage: 'none',
+                mb: 2,
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                transition: 'box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+                overflow: 'hidden',
+                borderRadius: '12px',
+                p: 2
             }}
-        >
-            <Box 
-                sx={{ p: 2 }}
-                onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleNext();
-                    }
-                }}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleNext();
+                }
+            }}
             >
                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
                     Contact Information
@@ -2569,27 +2571,28 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     </Grid>
                 </Grid>
             </Box>
-        </Paper>
+        </Box>
     );
 
     const renderIdDocumentsStep = () => (
-        <Paper 
-            key="id-documents-step"
-            elevation={0}
-            sx={{ 
-                bgcolor: 'transparent',
-                boxShadow: 'none',
-                border: 'none'
+        <Box sx={{ p: 0 }}>
+            <Box sx={{ 
+                backgroundColor: 'rgb(255, 255, 255)',
+                color: 'rgb(33, 33, 33)',
+                backgroundImage: 'none',
+                mb: 2,
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                transition: 'box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+                overflow: 'hidden',
+                borderRadius: '12px',
+                p: 2
             }}
-        >
-            <Box 
-                sx={{ p: 2 }}
-                onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleNext();
-                    }
-                }}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleNext();
+                }
+            }}
             >
                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
                     Identification Documents
@@ -3620,64 +3623,32 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
                     scrollbarColor: '#c1c1c1 #f1f1f1',
                 }}
             >
-                {/* Form Content Paper - White Background Container */}
-                <Paper 
-                    elevation={0}
-                    onKeyDown={(e) => {
-                        // Enter key shortcut to proceed to next step
-                        if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey) {
-                            // Only trigger if no field is focused (avoid interfering with field input)
-                            const activeElement = document.activeElement;
-                            if (!activeElement || activeElement.tagName === 'BODY') {
-                                e.preventDefault();
-                                handleNext();
-                            }
-                        }
-                    }}
-                    sx={{ 
-                        bgcolor: 'white',
-                        boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-                        borderRadius: 2,
-                        mb: 2, // Add margin bottom for spacing from navigation
-                        flex: 1, // Take up remaining space
-                        overflow: 'visible', // No scroll on the paper itself
-                        display: 'flex',
-                        flexDirection: 'column'
-                    }}
-                >
-                    {/* Missing Fields Alert - Show if existing person has incomplete data */}
-                    {isExistingPerson && stepValidation.some(valid => !valid) && personDataWasIncomplete && (
-                        <Alert 
-                            severity="warning" 
-                            sx={{ 
-                                m: 2,
-                                mb: 1,
-                                '& .MuiAlert-message': {
-                                    width: '100%'
-                                },
-                                flexShrink: 0 // Prevent alert from shrinking
-                            }}
-                        >
-                            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                                Missing Mandatory Information
-                            </Typography>
-                            <Typography variant="body2" sx={{ mb: 1, fontSize: '0.875rem' }}>
-                                Some required fields are missing. Please complete all steps marked with warning icons.
-                            </Typography>
-                        </Alert>
-                    )}
-
-                    {/* Step Content - Form content area */}
-                    <Box 
-                        ref={stepContentRef} 
+                {/* Missing Fields Alert - Show if existing person has incomplete data */}
+                {isExistingPerson && stepValidation.some(valid => !valid) && personDataWasIncomplete && (
+                    <Alert 
+                        severity="warning" 
                         sx={{ 
-                            flex: 1,
-                            overflow: 'visible' // No scroll here since parent handles it
+                            m: 2,
+                            mb: 1,
+                            '& .MuiAlert-message': {
+                                width: '100%'
+                            },
+                            flexShrink: 0 // Prevent alert from shrinking
                         }}
                     >
-                        {renderStepContent()}
-                    </Box>
-                </Paper>
+                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                            Missing Mandatory Information
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 1, fontSize: '0.875rem' }}>
+                            Some required fields are missing. Please complete all steps marked with warning icons.
+                        </Typography>
+                    </Alert>
+                )}
+
+                {/* Step Content - Scrollable Area with Content-Sized White Background */}
+                <Box sx={{ flex: 1, overflow: 'visible' }}>
+                    {renderStepContent()}
+                </Box>
             </Box>
                 </Box>
             </Box>
