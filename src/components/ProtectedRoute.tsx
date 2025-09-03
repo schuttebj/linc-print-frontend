@@ -94,7 +94,7 @@ const MainContentSkeleton: React.FC = () => (
     height: 'calc(100vh - 64px)', 
     overflow: 'auto' 
   }}>
-    {/* Main Container Skeleton */}
+    {/* Universal Content Block Skeleton */}
     <Box maxWidth="lg" sx={{ 
       py: 1, 
       height: '100%', 
@@ -107,91 +107,54 @@ const MainContentSkeleton: React.FC = () => (
         display: 'flex',
         flexDirection: 'column',
         bgcolor: '#f8f9fa',
+        background: 'linear-gradient(135deg, #f8f9fa 0%, #f1f3f5 100%)',
         boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
         borderRadius: 2,
-        overflow: 'hidden'
+        overflow: 'hidden',
+        position: 'relative'
       }}>
-        {/* Top Section Skeleton */}
-        <Box sx={{ 
-          bgcolor: 'white', 
-          borderBottom: '1px solid #e0e0e0',
-          p: 2
-        }}>
-          <Skeleton variant="text" width={200} height={28} sx={{ mb: 1 }} />
-          <Skeleton variant="text" width={400} height={20} sx={{ mb: 2 }} />
-          
-          {/* Filter Row Skeleton */}
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <Skeleton variant="rectangular" width={120} height={40} sx={{ borderRadius: 1 }} />
-            <Skeleton variant="rectangular" width={120} height={40} sx={{ borderRadius: 1 }} />
-            <Skeleton variant="rectangular" width={200} height={40} sx={{ borderRadius: 1 }} />
-            <Skeleton variant="rectangular" width={100} height={40} sx={{ borderRadius: 1 }} />
-          </Box>
-        </Box>
+        {/* Subtle animated gradient overlay */}
+        <Box sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%)',
+          animation: 'shimmer 2s infinite',
+          '@keyframes shimmer': {
+            '0%': { transform: 'translateX(-100%)' },
+            '100%': { transform: 'translateX(100%)' }
+          }
+        }} />
         
-        {/* Content Area Skeleton */}
-        <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
-          <Box sx={{ 
-            bgcolor: 'white',
-            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-            borderRadius: 2,
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden'
-          }}>
-            {/* Table Header Skeleton */}
-            <Box sx={{ 
-              display: 'flex', 
-              bgcolor: '#f8f9fa',
-              borderBottom: '1px solid #e0e0e0',
-              p: 2 
-            }}>
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Box key={i} sx={{ flex: 1, px: 1 }}>
-                  <Skeleton variant="text" width="80%" height={20} />
-                </Box>
-              ))}
-            </Box>
-            
-            {/* Table Rows Skeleton */}
-            <Box sx={{ flex: 1 }}>
-              {Array.from({ length: 8 }).map((_, i) => (
-                <Box key={i} sx={{ 
-                  display: 'flex', 
-                  borderBottom: '1px solid #f0f0f0',
-                  p: 2,
-                  '&:hover': { bgcolor: '#fafafa' }
-                }}>
-                  {Array.from({ length: 5 }).map((_, j) => (
-                    <Box key={j} sx={{ flex: 1, px: 1 }}>
-                      <Skeleton 
-                        variant="text" 
-                        width={`${50 + Math.random() * 40}%`} 
-                        height={16} 
-                      />
-                    </Box>
-                  ))}
-                </Box>
-              ))}
-            </Box>
-            
-            {/* Pagination Skeleton */}
-            <Box sx={{ 
-              p: 2, 
-              borderTop: '1px solid #e0e0e0', 
-              bgcolor: 'white',
-              display: 'flex', 
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <Skeleton variant="text" width={120} height={20} />
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Skeleton variant="circular" width={32} height={32} />
-                <Skeleton variant="circular" width={32} height={32} />
-                <Skeleton variant="circular" width={32} height={32} />
-              </Box>
-            </Box>
+        {/* Simple content placeholder */}
+        <Box sx={{ 
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100%',
+          position: 'relative',
+          zIndex: 1
+        }}>
+          <Box sx={{ textAlign: 'center', opacity: 0.3 }}>
+            <CircularProgress 
+              size={40} 
+              sx={{ 
+                color: '#1976d2',
+                opacity: 0.7,
+                mb: 2
+              }} 
+            />
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                color: '#666',
+                fontSize: '0.875rem'
+              }}
+            >
+              Loading content...
+            </Typography>
           </Box>
         </Box>
       </Box>
