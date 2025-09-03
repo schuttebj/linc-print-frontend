@@ -122,12 +122,23 @@ const PersonManagementPage: React.FC = () => {
           display: 'flex',
           flexDirection: 'column'
         }}>
-          <PersonFormWrapper
-            mode="standalone"
-            onSuccess={handleFormSuccess}
-            title="Person Management"
-            showHeader={false}
-          />
+          <Box sx={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            '& > div:first-of-type': {
+              height: '100% !important',
+              minHeight: '100% !important',
+              flex: '1 !important'
+            }
+          }}>
+            <PersonFormWrapper
+              mode="standalone"
+              onSuccess={handleFormSuccess}
+              title="Person Management"
+              showHeader={false}
+            />
+          </Box>
         </Box>
       </Paper>
 
