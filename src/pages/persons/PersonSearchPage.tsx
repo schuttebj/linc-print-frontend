@@ -8,11 +8,7 @@ import {
   Box,
   Container,
   Typography,
-  Card,
-  CardContent,
-  TextField,
   Button,
-  Grid,
   Table,
   TableBody,
   TableCell,
@@ -21,11 +17,6 @@ import {
   TableRow,
   Paper,
   Chip,
-  InputAdornment,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Alert,
   TablePagination,
   IconButton,
@@ -33,30 +24,21 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Divider,
-  Stack,
   CircularProgress,
   Tooltip,
   Snackbar,
 } from '@mui/material';
 import {
-  Search as SearchIcon,
-  Clear as ClearIcon,
   Visibility as VisibilityIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Person as PersonIcon,
-  Phone as PhoneIcon,
-  Email as EmailIcon,
-  LocationOn as LocationIcon,
-  Description as DocumentIcon,
-  CalendarToday as CalendarIcon,
 } from '@mui/icons-material';
-import { useForm, Controller } from 'react-hook-form';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useAuth } from '../../contexts/AuthContext';
 import { API_BASE_URL } from '../../config/api';
+import FilterBar, { FilterConfig, FilterValues } from '../../components/common/FilterBar';
 
 // Types for Madagascar person search
 interface PersonSearchForm {
@@ -127,6 +109,51 @@ const LANGUAGES = [
   { value: 'en', label: 'ENGLISH' },
 ];
 
+// Filter configurations for PersonSearchPage
+const PERSON_FILTER_CONFIGS: FilterConfig[] = [
+  {
+    key: 'document_number',
+    label: 'Document Number',
+    type: 'text',
+    placeholder: 'Enter exact document number',
+  },
+  {
+    key: 'surname',
+    label: 'Surname',
+    type: 'text',
+    placeholder: 'Family name',
+  },
+  {
+    key: 'first_name',
+    label: 'First Name',
+    type: 'text',
+    placeholder: 'Given name',
+  },
+  {
+    key: 'locality',
+    label: 'Locality',
+    type: 'text',
+    placeholder: 'Village, quartier, city',
+  },
+  {
+    key: 'phone_number',
+    label: 'Phone Number',
+    type: 'text',
+    placeholder: 'Cell or work phone',
+  },
+  {
+    key: 'document_type',
+    label: 'Document Type',
+    type: 'select',
+    options: DOCUMENT_TYPES,
+  },
+  {
+    key: 'is_active',
+    label: 'Active Status',
+    type: 'boolean',
+  },
+];
+
 const PersonSearchPage: React.FC = () => {
   const { hasPermission, accessToken } = useAuth();
   const navigate = useNavigate();
@@ -140,12 +167,14 @@ const PersonSearchPage: React.FC = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   
+  // Filter state management
+  const [searchValue, setSearchValue] = useState('');
+  const [filterValues, setFilterValues] = useState<FilterValues>({});
+  
   // Delete dialog states
   const [selectedPerson, setSelectedPerson] = useState<PersonSearchResult | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  
-
   
   // Snackbar state
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
@@ -165,8 +194,10 @@ const PersonSearchPage: React.FC = () => {
         const restoredPage = urlPage ? parseInt(urlPage) : 0;
         const restoredRowsPerPage = urlRowsPerPage ? parseInt(urlRowsPerPage) : 10;
         
-        // Restore form values
-        searchForm.reset(filters);
+        // Restore filter values
+        const { search_text, ...otherFilters } = filters;
+        setSearchValue(search_text || '');
+        setFilterValues(otherFilters);
         
         // Restore pagination state
         setPage(restoredPage);
@@ -213,8 +244,10 @@ const PersonSearchPage: React.FC = () => {
       if (hasParams) {
         console.log('Restoring search from direct URL parameters:', directParams);
         
-        // Restore form values
-        searchForm.reset(directParams);
+        // Restore filter values
+        const { search_text, ...otherFilters } = directParams;
+        setSearchValue(search_text || '');
+        setFilterValues(otherFilters);
         
         // Perform search with direct parameters
         performSearchWithPagination(directParams, 0, 10);
@@ -285,41 +318,36 @@ const PersonSearchPage: React.FC = () => {
     }
   };
 
-  // Search form
-  const searchForm = useForm<PersonSearchForm>({
-    defaultValues: {
-      search_text: '',
-      document_number: '',
-      surname: '',
-      first_name: '',
-      locality: '',
-      phone_number: '',
-      document_type: '',
-      is_active: true,
-    },
-  });
-
-  // Perform search with API integration
-  const onSearch = async (data: PersonSearchForm) => {
-    await performSearchWithPagination(data, page, rowsPerPage);
+  // Combine search and filter values for API calls
+  const getCombinedSearchData = (): PersonSearchForm => {
+    return {
+      search_text: searchValue,
+      ...filterValues,
+    };
   };
 
-  // Clear search
+  // Perform search with API integration
+  const onSearch = async () => {
+    const searchData = getCombinedSearchData();
+    await performSearchWithPagination(searchData, page, rowsPerPage);
+  };
+
+  // Clear search and filters
   const clearSearch = () => {
-    searchForm.reset({
-      search_text: '',
-      document_number: '',
-      surname: '',
-      first_name: '',
-      locality: '',
-      phone_number: '',
-      document_type: '',
-      is_active: true,
-    });
+    setSearchValue('');
+    setFilterValues({});
     setSearchResults([]);
     setHasSearched(false);
     setTotalResults(0);
     setPage(0);
+  };
+
+  // Handle filter value changes
+  const handleFilterChange = (key: string, value: any) => {
+    setFilterValues(prev => ({
+      ...prev,
+      [key]: value,
+    }));
   };
 
   // Handle pagination
@@ -327,7 +355,8 @@ const PersonSearchPage: React.FC = () => {
     setPage(newPage);
     // Re-run search with new page
     if (hasSearched) {
-      performSearchWithPagination(searchForm.getValues(), newPage, rowsPerPage);
+      const searchData = getCombinedSearchData();
+      performSearchWithPagination(searchData, newPage, rowsPerPage);
     }
   };
 
@@ -337,14 +366,15 @@ const PersonSearchPage: React.FC = () => {
     setPage(0);
     // Re-run search with new page size
     if (hasSearched) {
-      performSearchWithPagination(searchForm.getValues(), 0, newRowsPerPage);
+      const searchData = getCombinedSearchData();
+      performSearchWithPagination(searchData, 0, newRowsPerPage);
     }
   };
 
   // View person details - navigate to full page
   const viewPersonDetails = (person: PersonSearchResult) => {
     // Encode current search state to preserve when returning
-    const currentFilters = searchForm.getValues();
+    const currentFilters = getCombinedSearchData();
     const searchState = {
       filters: encodeURIComponent(JSON.stringify(currentFilters)),
       query: currentFilters.search_text || '',
@@ -359,7 +389,7 @@ const PersonSearchPage: React.FC = () => {
   // Edit person - navigate to PersonManagementPage
   const editPerson = (person: PersonSearchResult) => {
     // Encode current search state to preserve when returning
-    const currentFilters = searchForm.getValues();
+    const currentFilters = getCombinedSearchData();
     const searchState = {
       filters: encodeURIComponent(JSON.stringify(currentFilters)),
       query: currentFilters.search_text || '',
@@ -474,7 +504,7 @@ const PersonSearchPage: React.FC = () => {
           overflow: 'hidden'
         }}
       >
-        {/* Search Form Section */}
+        {/* Search and Filter Section */}
         <Box sx={{ 
           bgcolor: 'white', 
           borderBottom: '1px solid', 
@@ -484,7 +514,7 @@ const PersonSearchPage: React.FC = () => {
         }}>
           <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-              Search Criteria
+              Search Persons
             </Typography>
             {hasPermission('persons.create') && (
               <Button
@@ -498,252 +528,17 @@ const PersonSearchPage: React.FC = () => {
             )}
           </Box>
           
-          <form onSubmit={searchForm.handleSubmit(onSearch)}>
-            <Grid container spacing={2} alignItems="center">
-              {/* Quick Search */}
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="search_text"
-                  control={searchForm.control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      size="small"
-                      label="Quick Search"
-                      placeholder="Search by name, document number, or phone"
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          '& fieldset': { borderWidth: '1px' },
-                          '&:hover fieldset': { borderWidth: '1px' },
-                          '&.Mui-focused fieldset': { borderWidth: '1px' },
-                        },
-                      }}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <SearchIcon />
-                          </InputAdornment>
-                        ),
-                        endAdornment: field.value && (
-                          <InputAdornment position="end">
-                            <IconButton onClick={() => searchForm.setValue('search_text', '')} size="small">
-                              <ClearIcon />
-                            </IconButton>
-                          </InputAdornment>
-                        ),
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
-
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="document_number"
-                  control={searchForm.control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      size="small"
-                      label="Document Number"
-                      placeholder="Enter exact document number"
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          '& fieldset': { borderWidth: '1px' },
-                          '&:hover fieldset': { borderWidth: '1px' },
-                          '&.Mui-focused fieldset': { borderWidth: '1px' },
-                        },
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
-
-              {/* Advanced Search Fields */}
-              <Grid item xs={12} md={4}>
-                <Controller
-                  name="surname"
-                  control={searchForm.control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      size="small"
-                      label="Surname"
-                      placeholder="Family name"
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          '& fieldset': { borderWidth: '1px' },
-                          '&:hover fieldset': { borderWidth: '1px' },
-                          '&.Mui-focused fieldset': { borderWidth: '1px' },
-                        },
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
-
-              <Grid item xs={12} md={4}>
-                <Controller
-                  name="first_name"
-                  control={searchForm.control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      size="small"
-                      label="First Name"
-                      placeholder="Given name"
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          '& fieldset': { borderWidth: '1px' },
-                          '&:hover fieldset': { borderWidth: '1px' },
-                          '&.Mui-focused fieldset': { borderWidth: '1px' },
-                        },
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
-
-              <Grid item xs={12} md={4}>
-                <Controller
-                  name="locality"
-                  control={searchForm.control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      size="small"
-                      label="Locality"
-                      placeholder="Village, quartier, city"
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          '& fieldset': { borderWidth: '1px' },
-                          '&:hover fieldset': { borderWidth: '1px' },
-                          '&.Mui-focused fieldset': { borderWidth: '1px' },
-                        },
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
-
-              <Grid item xs={12} md={4}>
-                <Controller
-                  name="phone_number"
-                  control={searchForm.control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      size="small"
-                      label="Phone Number"
-                      placeholder="Cell or work phone"
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          '& fieldset': { borderWidth: '1px' },
-                          '&:hover fieldset': { borderWidth: '1px' },
-                          '&.Mui-focused fieldset': { borderWidth: '1px' },
-                        },
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
-
-              <Grid item xs={12} md={4}>
-                <Controller
-                  name="document_type"
-                  control={searchForm.control}
-                  render={({ field }) => (
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Document Type</InputLabel>
-                      <Select 
-                        {...field} 
-                        label="Document Type"
-                        sx={{
-                          '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-                          '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-                        }}
-                      >
-                        <MenuItem value="">ALL TYPES</MenuItem>
-                        {DOCUMENT_TYPES.map((option) => (
-                          <MenuItem key={option.value} value={option.value}>
-                            {option.label}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  )}
-                />
-              </Grid>
-
-              <Grid item xs={12} md={4}>
-                <Controller
-                  name="is_active"
-                  control={searchForm.control}
-                  render={({ field }) => (
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Status</InputLabel>
-                      <Select 
-                        {...field} 
-                        label="Status"
-                        value={field.value === undefined ? "" : String(field.value)}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          if (value === "") {
-                            field.onChange(undefined);
-                          } else {
-                            field.onChange(value === "true");
-                          }
-                        }}
-                        sx={{
-                          '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-                          '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-                        }}
-                      >
-                        <MenuItem value="">ALL STATUSES</MenuItem>
-                        <MenuItem value="true">ACTIVE ONLY</MenuItem>
-                        <MenuItem value="false">INACTIVE ONLY</MenuItem>
-                      </Select>
-                    </FormControl>
-                  )}
-                />
-              </Grid>
-
-              {/* Search Actions */}
-              <Grid item xs={12}>
-                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-                  <Button
-                    variant="outlined"
-                    onClick={clearSearch}
-                    startIcon={<ClearIcon />}
-                    size="small"
-                    sx={{
-                      borderWidth: '1px',
-                      '&:hover': { borderWidth: '1px' },
-                    }}
-                  >
-                    Clear
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    disabled={searching}
-                    startIcon={searching ? <CircularProgress size={20} /> : <SearchIcon />}
-                    size="small"
-                  >
-                    {searching ? 'Searching...' : 'Search'}
-                  </Button>
-                </Box>
-              </Grid>
-            </Grid>
-          </form>
+          <FilterBar
+            searchValue={searchValue}
+            searchPlaceholder="Search by name, document number, or phone"
+            onSearchChange={setSearchValue}
+            filterConfigs={PERSON_FILTER_CONFIGS}
+            filterValues={filterValues}
+            onFilterChange={handleFilterChange}
+            onSearch={onSearch}
+            onClear={clearSearch}
+            searching={searching}
+          />
         </Box>
 
         {/* Content Area */}
