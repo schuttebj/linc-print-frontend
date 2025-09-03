@@ -84,34 +84,6 @@ const PoliceInformationSection: React.FC<PoliceInformationSectionProps> = ({
   // Scrollbar detection
   const scrollableRef = useRef<HTMLElement>(null);
   const hasScrollbar = useScrollbarDetection(scrollableRef);
-
-  // Custom scrollbar styling - NO ARROWS
-  const customScrollbarStyling = {
-    '&::-webkit-scrollbar': {
-      width: '8px',
-    },
-    '&::-webkit-scrollbar-button': {
-      display: 'none', // Remove arrows/buttons
-    },
-    '&::-webkit-scrollbar-track': {
-      background: '#f1f1f1',
-      borderRadius: '4px',
-      marginRight: '2px',
-    },
-    '&::-webkit-scrollbar-thumb': {
-      background: '#c1c1c1',
-      borderRadius: '4px',
-      '&:hover': {
-        background: '#a8a8a8',
-      },
-    },
-    '&::-webkit-scrollbar-corner': {
-      display: 'none', // Remove corner element
-    },
-    // Firefox scrollbar
-    scrollbarWidth: 'thin',
-    scrollbarColor: '#c1c1c1 #f1f1f1',
-  };
   
   // Police clearance steps for tabbed interface
   const policeSteps = [
@@ -487,12 +459,11 @@ const PoliceInformationSection: React.FC<PoliceInformationSectionProps> = ({
               ref={scrollableRef}
               sx={{ 
                 flex: 1,
-                overflow: 'auto',
+                overflow: 'auto', // Use global scrollbar styling
                 display: 'flex',
                 flexDirection: 'column',
                 p: 0, // Tab content - p:0
                 pr: hasScrollbar ? 1 : 0, // Conditional padding based on scrollbar presence
-                ...customScrollbarStyling
               }}
             >
               {/* Step Content - Aligned at top */}
