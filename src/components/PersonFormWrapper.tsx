@@ -3585,8 +3585,15 @@ const PersonFormWrapper: React.FC<PersonFormWrapperProps> = ({
             </Paper>
             </Box>
 
-            {/* Tab content - p:0 (match medical component exactly) */}
-            <Box sx={{ p: 2 }}>
+            {/* Tab content - Enable scrolling for PersonFormWrapper content */}
+            <Box sx={{ 
+                flex: 1,
+                minHeight: 0, // Allow flex shrinking
+                overflow: 'hidden', // Let child handle scrolling
+                display: 'flex',
+                flexDirection: 'column',
+                p: 2
+            }}>
                 <Box 
                     ref={scrollableRef}
                     sx={{ 
