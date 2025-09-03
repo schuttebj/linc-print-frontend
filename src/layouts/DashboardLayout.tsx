@@ -26,6 +26,7 @@ import {
   Chip,
   Badge,
   Breadcrumbs,
+  Skeleton,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -69,7 +70,7 @@ import CommandPalette from '../components/CommandPalette';
 const DRAWER_WIDTH = 300;
 
 const DashboardLayout: React.FC = () => {
-  const { user, logout, hasPermission } = useAuth();
+  const { user, logout, hasPermission, userDataLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
@@ -1289,58 +1290,73 @@ const DashboardLayout: React.FC = () => {
           </Box>
 
           {/* User Profile */}
-          <Box 
-            onClick={handleProfileMenuOpen}
-            sx={{ 
+          {userDataLoading ? (
+            <Box sx={{ 
               display: 'flex', 
               alignItems: 'center', 
               gap: 1.5,
-              cursor: 'pointer',
               p: 1,
-              borderRadius: '6px',
-              '&:hover': {
-                backgroundColor: '#f0f0f0',
-              },
-            }}
-          >
-            <Avatar sx={{ 
-              width: 32, 
-              height: 32, 
-              backgroundColor: '#1976d2',
-              fontSize: '0.875rem'
             }}>
-              {user?.first_name?.[0]}{user?.last_name?.[0]}
-            </Avatar>
-            <Box sx={{ minWidth: 0, display: { xs: 'none', sm: 'block' } }}>
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  fontWeight: 500,
-                  fontSize: '0.875rem',
-                  color: '#1a1a1a',
-                  lineHeight: 1.2,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                {user?.first_name} {user?.last_name}
-              </Typography>
-              <Typography 
-                variant="caption" 
-                sx={{ 
-                  color: '#666',
-                  fontSize: '0.75rem',
-                  lineHeight: 1.2,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                {getUserLocationText()}
-              </Typography>
+              <Skeleton variant="circular" width={32} height={32} />
+              <Box sx={{ minWidth: 0, display: { xs: 'none', sm: 'block' } }}>
+                <Skeleton variant="text" width={100} height={20} />
+                <Skeleton variant="text" width={80} height={16} />
+              </Box>
             </Box>
-          </Box>
+          ) : (
+            <Box 
+              onClick={handleProfileMenuOpen}
+              sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 1.5,
+                cursor: 'pointer',
+                p: 1,
+                borderRadius: '6px',
+                '&:hover': {
+                  backgroundColor: '#f0f0f0',
+                },
+              }}
+            >
+              <Avatar sx={{ 
+                width: 32, 
+                height: 32, 
+                backgroundColor: '#1976d2',
+                fontSize: '0.875rem'
+              }}>
+                {user?.first_name?.[0]}{user?.last_name?.[0]}
+              </Avatar>
+              <Box sx={{ minWidth: 0, display: { xs: 'none', sm: 'block' } }}>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontWeight: 500,
+                    fontSize: '0.875rem',
+                    color: '#1a1a1a',
+                    lineHeight: 1.2,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {user?.first_name} {user?.last_name}
+                </Typography>
+                <Typography 
+                  variant="caption" 
+                  sx={{ 
+                    color: '#666',
+                    fontSize: '0.75rem',
+                    lineHeight: 1.2,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {getUserLocationText()}
+                </Typography>
+              </Box>
+            </Box>
+          )}
         </Toolbar>
       </AppBar>
 

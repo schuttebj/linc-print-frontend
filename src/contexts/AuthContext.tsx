@@ -11,7 +11,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { API_ENDPOINTS, setAuthToken } from '../config/api';
+import { API_ENDPOINTS, setAuthToken, getAuthToken } from '../config/api';
 
 // Import types from our main types file
 import { User } from '../types';
@@ -21,6 +21,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   accessToken: string | null;
+  userDataLoading: boolean; // New: Track user data loading separately from auth loading
 }
 
 interface LoginCredentials {
@@ -32,6 +33,7 @@ interface AuthContextType extends AuthState {
   login: (credentials: LoginCredentials) => Promise<boolean>;
   logout: () => Promise<void>;
   refreshToken: () => Promise<boolean>;
+  loadUserDataAsync: () => Promise<void>; // New: Async user data loading method
   hasPermission: (permission: string) => boolean;
   hasRole: (role: string) => boolean;
   hasAnyPermission: (permissions: string[]) => boolean;
@@ -48,6 +50,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     isAuthenticated: false,
     isLoading: true,
     accessToken: null,
+    userDataLoading: false,
   });
 
   // Simple logout protection - only allow one logout at a time
@@ -81,16 +84,128 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [authState.isAuthenticated, authState.accessToken, isLoggingOut]);
 
   /**
+   * Fast token refresh without user data loading
+   * Returns true if token refresh succeeded
+   */
+  const refreshTokenOnly = async (): Promise<boolean> => {
+    try {
+      // Don't refresh if already logging out
+      if (isLoggingOut) {
+        console.log('🔄 Skipping refresh - logout in progress');
+        return false;
+      }
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const response = await fetch(`${API_ENDPOINTS.auth}/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Include cookies for refresh token
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        // Handle 401/403 responses silently (token expired/invalid)
+        if (response.status === 401 || response.status === 403) {
+          console.log('🔒 Token expired or invalid, silent logout');
+          performSilentLogout();
+        }
+        return false;
+      }
+
+      const tokenData = await response.json();
+      const { access_token } = tokenData;
+
+      // Set auth token in memory for API calls
+      setAuthToken(access_token);
+      
+      // Also store in localStorage as fallback for page reloads
+      localStorage.setItem('access_token', access_token);
+
+      console.log('✅ Token refresh successful (user data will load async)');
+      return true;
+    } catch (error) {
+      console.error('❌ Token refresh error:', error);
+      return false;
+    }
+  };
+
+  /**
+   * Load user data asynchronously (non-blocking)
+   * Called after token refresh to populate user details
+   */
+  const loadUserDataAsync = async (): Promise<void> => {
+    try {
+      console.log('🔄 Loading user data asynchronously...');
+      setAuthState(prev => ({ ...prev, userDataLoading: true }));
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const response = await fetch(`${API_ENDPOINTS.auth}/me`, {
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+        },
+        credentials: 'include',
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        // Don't logout on user data failure - user can still use the app with JWT permissions
+        console.warn('⚠️ User data fetch failed, continuing with JWT permissions only');
+        setAuthState(prev => ({ ...prev, userDataLoading: false }));
+        return;
+      }
+
+      const userData = await response.json();
+      
+      setAuthState(prev => ({ 
+        ...prev, 
+        user: enhanceUserWithLocationAccess(userData),
+        userDataLoading: false
+      }));
+
+      console.log('✅ User data loaded successfully');
+    } catch (error) {
+      console.warn('⚠️ Failed to load user data:', error);
+      // Don't logout - user can still use app with permissions from JWT
+      setAuthState(prev => ({ ...prev, userDataLoading: false }));
+    }
+  };
+
+  /**
    * Initialize authentication state
-   * Attempts to refresh token to restore session
+   * Fast token refresh + async user data loading for better performance
    */
   const initializeAuth = async () => {
     try {
       console.log('🔄 Initializing authentication...');
       setAuthState(prev => ({ ...prev, isLoading: true }));
-      const refreshSuccess = await refreshToken();
+      
+      // STEP 1: Fast token refresh (just verify token)
+      const refreshSuccess = await refreshTokenOnly();
       console.log('🔄 Refresh token result:', refreshSuccess);
-      if (!refreshSuccess) {
+      
+      if (refreshSuccess) {
+        // STEP 2: Show authenticated layout immediately
+        setAuthState(prev => ({ 
+          ...prev, 
+          isAuthenticated: true, 
+          isLoading: false,
+          accessToken: getAuthToken(),
+          user: null  // User data loads async
+        }));
+        
+        // STEP 3: Load user data asynchronously (non-blocking)
+        loadUserDataAsync();
+      } else {
         console.log('❌ Refresh failed, clearing auth state');
         performSilentLogout();
       }
@@ -175,6 +290,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isAuthenticated: true,
         isLoading: false,
         accessToken: access_token,
+        userDataLoading: false, // User data is already loaded from login response
       });
 
       console.log('✅ Login successful');
@@ -247,6 +363,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       isAuthenticated: false,
       isLoading: false,
       accessToken: null,
+      userDataLoading: false,
     });
 
     // Clear any stored data
@@ -261,80 +378,59 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   /**
    * Refresh access token using httpOnly refresh token
+   * Legacy method that includes user data loading (used by interval refresh)
    */
   const refreshToken = async (): Promise<boolean> => {
     try {
-      // Don't refresh if already logging out
-      if (isLoggingOut) {
-        console.log('🔄 Skipping refresh - logout in progress');
+      // Use the fast token refresh
+      const tokenSuccess = await refreshTokenOnly();
+      if (!tokenSuccess) {
         return false;
       }
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-      
-      const response = await fetch(`${API_ENDPOINTS.auth}/refresh`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // Include cookies for refresh token
-        signal: controller.signal,
-      });
+      // For interval refresh, we want to update user data as well
+      try {
+        const userController = new AbortController();
+        const userTimeoutId = setTimeout(() => userController.abort(), 10000);
+        
+        const userResponse = await fetch(`${API_ENDPOINTS.auth}/me`, {
+          headers: {
+            'Authorization': `Bearer ${getAuthToken()}`,
+          },
+          credentials: 'include',
+          signal: userController.signal,
+        });
 
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {
-        // Handle 401/403 responses silently (token expired/invalid)
-        if (response.status === 401 || response.status === 403) {
-          console.log('🔒 Token expired or invalid, silent logout');
-          performSilentLogout();
+        clearTimeout(userTimeoutId);
+
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          
+          // Update auth state with new token and user data
+          setAuthState(prev => ({
+            ...prev,
+            user: enhanceUserWithLocationAccess(userData),
+            isAuthenticated: true,
+            isLoading: false,
+            accessToken: getAuthToken(),
+            userDataLoading: false,
+          }));
+        } else {
+          // Token is valid but user data failed - continue without user data
+          setAuthState(prev => ({
+            ...prev,
+            isAuthenticated: true,
+            isLoading: false,
+            accessToken: getAuthToken(),
+            userDataLoading: false,
+          }));
         }
-        return false;
+      } catch (userError) {
+        console.warn('⚠️ User data update failed during interval refresh:', userError);
+        // Continue with just token - user data will be available from JWT claims
       }
 
-      const tokenData = await response.json();
-      const { access_token } = tokenData;
-
-      // Get updated user info with new token
-      const userController = new AbortController();
-      const userTimeoutId = setTimeout(() => userController.abort(), 10000);
-      
-      const userResponse = await fetch(`${API_ENDPOINTS.auth}/me`, {
-        headers: {
-          'Authorization': `Bearer ${access_token}`,
-        },
-        credentials: 'include',
-        signal: userController.signal,
-      });
-
-      clearTimeout(userTimeoutId);
-
-      if (!userResponse.ok) {
-        if (userResponse.status === 401 || userResponse.status === 403) {
-          console.log('🔒 User info fetch failed, silent logout');
-          performSilentLogout();
-        }
-        return false;
-      }
-
-      const userData = await userResponse.json();
-
-      // Set auth token in memory for API calls
-      setAuthToken(access_token);
-      
-      // Also store in localStorage as fallback for page reloads
-      localStorage.setItem('access_token', access_token);
-
-      // Update auth state with new token and user data
-      setAuthState({
-        user: enhanceUserWithLocationAccess(userData),
-        isAuthenticated: true,
-        isLoading: false,
-        accessToken: access_token,
-      });
-
-      console.log('✅ Token refresh successful');
+      console.log('✅ Token refresh successful (interval)');
       return true;
     } catch (error) {
       console.error('❌ Token refresh error:', error);
@@ -383,6 +479,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     login,
     logout,
     refreshToken,
+    loadUserDataAsync,
     hasPermission,
     hasRole,
     hasAnyPermission,
