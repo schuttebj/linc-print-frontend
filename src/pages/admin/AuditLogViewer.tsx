@@ -34,7 +34,9 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  InputLabel
+  InputLabel,
+  Skeleton,
+  Stack
 } from '@mui/material';
 import {
   GetApp as ExportIcon,
@@ -180,6 +182,269 @@ const STATUS_CODES = [
   { value: 404, label: '404 - Not Found' },
   { value: 500, label: '500 - Server Error' }
 ];
+
+// Skeleton Loading Components
+const AuditTableSkeleton: React.FC = () => (
+  <TableContainer>
+    <Table>
+      <TableHead>
+        <TableRow>
+          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Timestamp</TableCell>
+          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>User</TableCell>
+          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Action</TableCell>
+          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Resource</TableCell>
+          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Changes</TableCell>
+          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
+          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>IP Address</TableCell>
+          <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Details</TableCell>
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {[...Array(8)].map((_, index) => (
+          <TableRow key={index}>
+            <TableCell sx={{ py: 1, px: 2 }}>
+              <Skeleton variant="text" width="120px" height={20} />
+            </TableCell>
+            <TableCell sx={{ py: 1, px: 2 }}>
+              <Skeleton variant="text" width="100px" height={20} />
+              <Skeleton variant="text" width="80px" height={16} />
+            </TableCell>
+            <TableCell sx={{ py: 1, px: 2 }}>
+              <Skeleton variant="rectangular" width="80px" height={24} sx={{ borderRadius: '12px' }} />
+              <Skeleton variant="text" width="40px" height={16} />
+            </TableCell>
+            <TableCell sx={{ py: 1, px: 2 }}>
+              <Skeleton variant="text" width="90px" height={20} />
+              <Skeleton variant="text" width="60px" height={16} />
+            </TableCell>
+            <TableCell sx={{ py: 1, px: 2 }}>
+              <Skeleton variant="text" width="70px" height={16} />
+              <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }}>
+                <Skeleton variant="rectangular" width="50px" height={18} sx={{ borderRadius: '9px' }} />
+                <Skeleton variant="rectangular" width="45px" height={18} sx={{ borderRadius: '9px' }} />
+              </Stack>
+            </TableCell>
+            <TableCell sx={{ py: 1, px: 2 }}>
+              <Skeleton variant="rectangular" width="70px" height={24} sx={{ borderRadius: '12px' }} />
+            </TableCell>
+            <TableCell sx={{ py: 1, px: 2 }}>
+              <Skeleton variant="text" width="100px" height={20} />
+            </TableCell>
+            <TableCell align="center" sx={{ py: 1, px: 2 }}>
+              <Skeleton variant="rectangular" width="60px" height={32} sx={{ borderRadius: '4px' }} />
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  </TableContainer>
+);
+
+const ApiTableSkeleton: React.FC = () => (
+  <TableContainer>
+    <Table>
+      <TableHead>
+        <TableRow>
+          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Timestamp</TableCell>
+          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Method</TableCell>
+          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Endpoint</TableCell>
+          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
+          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Duration</TableCell>
+          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>User</TableCell>
+          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Response Size</TableCell>
+          <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Details</TableCell>
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {[...Array(8)].map((_, index) => (
+          <TableRow key={index}>
+            <TableCell sx={{ py: 1, px: 2 }}>
+              <Skeleton variant="text" width="120px" height={20} />
+            </TableCell>
+            <TableCell sx={{ py: 1, px: 2 }}>
+              <Skeleton variant="rectangular" width="60px" height={24} sx={{ borderRadius: '12px' }} />
+            </TableCell>
+            <TableCell sx={{ py: 1, px: 2 }}>
+              <Skeleton variant="text" width="200px" height={20} />
+              <Skeleton variant="text" width="80px" height={16} />
+            </TableCell>
+            <TableCell sx={{ py: 1, px: 2 }}>
+              <Skeleton variant="rectangular" width="50px" height={24} sx={{ borderRadius: '12px' }} />
+            </TableCell>
+            <TableCell sx={{ py: 1, px: 2 }}>
+              <Skeleton variant="text" width="70px" height={20} />
+              <Skeleton variant="text" width="40px" height={16} />
+            </TableCell>
+            <TableCell sx={{ py: 1, px: 2 }}>
+              <Skeleton variant="text" width="90px" height={20} />
+              <Skeleton variant="text" width="80px" height={16} />
+            </TableCell>
+            <TableCell sx={{ py: 1, px: 2 }}>
+              <Skeleton variant="text" width="60px" height={20} />
+            </TableCell>
+            <TableCell align="center" sx={{ py: 1, px: 2 }}>
+              <Skeleton variant="rectangular" width="60px" height={32} sx={{ borderRadius: '4px' }} />
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  </TableContainer>
+);
+
+const StatisticsSkeleton: React.FC = () => (
+  <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, p: 2 }}>
+    <Skeleton variant="text" width="200px" height={40} sx={{ mb: 1 }} />
+    <Skeleton variant="text" width="300px" height={20} sx={{ mb: 3 }} />
+    
+    <Skeleton variant="text" width="150px" height={32} sx={{ mb: 2 }} />
+    <Grid container spacing={3} sx={{ mb: 4 }}>
+      {[...Array(4)].map((_, index) => (
+        <Grid item xs={12} md={3} key={index}>
+          <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
+            <CardContent>
+              <Skeleton variant="text" width="80px" height={48} />
+              <Skeleton variant="text" width="100px" height={20} />
+            </CardContent>
+          </Card>
+        </Grid>
+      ))}
+    </Grid>
+
+    <Skeleton variant="text" width="180px" height={32} sx={{ mb: 2 }} />
+    <Grid container spacing={3} sx={{ mb: 4 }}>
+      {[...Array(4)].map((_, index) => (
+        <Grid item xs={12} md={3} key={index}>
+          <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
+            <CardContent>
+              <Skeleton variant="text" width="70px" height={48} />
+              <Skeleton variant="text" width="120px" height={20} />
+            </CardContent>
+          </Card>
+        </Grid>
+      ))}
+    </Grid>
+
+    <Skeleton variant="text" width="140px" height={32} sx={{ mb: 2 }} />
+    <Grid container spacing={3}>
+      <Grid item xs={12} md={6}>
+        <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
+          <CardContent>
+            <Skeleton variant="text" width="160px" height={28} sx={{ mb: 2 }} />
+            <Stack spacing={2}>
+              {[...Array(5)].map((_, index) => (
+                <Box key={index}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Skeleton variant="text" width="100px" height={20} />
+                    <Skeleton variant="rectangular" width="40px" height={24} sx={{ borderRadius: '12px' }} />
+                  </Box>
+                  <Skeleton variant="rectangular" width="100%" height={8} sx={{ borderRadius: 1 }} />
+                </Box>
+              ))}
+            </Stack>
+          </CardContent>
+        </Card>
+      </Grid>
+      <Grid item xs={12} md={6}>
+        <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
+          <CardContent>
+            <Skeleton variant="text" width="180px" height={28} sx={{ mb: 2 }} />
+            <Stack spacing={2}>
+              {[...Array(7)].map((_, index) => (
+                <Box key={index}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Skeleton variant="text" width="80px" height={20} />
+                    <Skeleton variant="rectangular" width="35px" height={24} sx={{ borderRadius: '12px' }} />
+                  </Box>
+                  <Skeleton variant="rectangular" width="100%" height={8} sx={{ borderRadius: 1 }} />
+                </Box>
+              ))}
+            </Stack>
+          </CardContent>
+        </Card>
+      </Grid>
+    </Grid>
+  </Box>
+);
+
+const ExportSkeleton: React.FC = () => (
+  <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, p: 2 }}>
+    <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px', mb: 3 }}>
+      <CardContent>
+        <Skeleton variant="text" width="180px" height={32} sx={{ mb: 2 }} />
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <Skeleton variant="text" width="80px" height={24} sx={{ mb: 1 }} />
+            <Skeleton variant="rectangular" width="100%" height={40} sx={{ borderRadius: '4px', mb: 2 }} />
+          </Grid>
+          <Grid item xs={12}>
+            <Skeleton variant="text" width="60px" height={24} sx={{ mb: 2 }} />
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <Skeleton variant="rectangular" width="100%" height={40} sx={{ borderRadius: '4px' }} />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Skeleton variant="rectangular" width="100%" height={40} sx={{ borderRadius: '4px' }} />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Skeleton variant="rectangular" width="100%" height={40} sx={{ borderRadius: '4px' }} />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Skeleton variant="rectangular" width="100%" height={40} sx={{ borderRadius: '4px' }} />
+              </Grid>
+            </Grid>
+          </Grid>
+        </Grid>
+      </CardContent>
+    </Card>
+
+    <Grid container spacing={3}>
+      <Grid item xs={12} md={6}>
+        <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px', height: '100%' }}>
+          <CardContent>
+            <Skeleton variant="text" width="100px" height={32} sx={{ mb: 2 }} />
+            <Skeleton variant="text" width="100%" height={20} sx={{ mb: 1 }} />
+            <Skeleton variant="text" width="80%" height={20} sx={{ mb: 3 }} />
+            <Skeleton variant="rectangular" width="100%" height={48} sx={{ borderRadius: '4px' }} />
+          </CardContent>
+        </Card>
+      </Grid>
+      <Grid item xs={12} md={6}>
+        <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px', height: '100%' }}>
+          <CardContent>
+            <Skeleton variant="text" width="120px" height={32} sx={{ mb: 2 }} />
+            <Skeleton variant="text" width="100%" height={20} sx={{ mb: 1 }} />
+            <Skeleton variant="text" width="90%" height={20} sx={{ mb: 3 }} />
+            <Skeleton variant="rectangular" width="100%" height={48} sx={{ borderRadius: '4px' }} />
+          </CardContent>
+        </Card>
+      </Grid>
+    </Grid>
+  </Box>
+);
+
+const SecuritySkeleton: React.FC = () => (
+  <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, p: 2 }}>
+    <Grid container spacing={2}>
+      {[...Array(3)].map((_, index) => (
+        <Grid item xs={12} key={index}>
+          <Card sx={{ boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px' }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box sx={{ flex: 1 }}>
+                  <Skeleton variant="text" width="180px" height={32} sx={{ mb: 1 }} />
+                  <Skeleton variant="text" width="120px" height={20} sx={{ mb: 1 }} />
+                  <Skeleton variant="text" width="300px" height={20} />
+                </Box>
+                <Skeleton variant="rectangular" width="80px" height={32} sx={{ borderRadius: '16px' }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      ))}
+    </Grid>
+  </Box>
+);
 
 const AuditLogViewer: React.FC = () => {
   // State management - Transaction audit logs (CRUD)
@@ -532,14 +797,6 @@ const AuditLogViewer: React.FC = () => {
     return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
   };
 
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress size={48} />
-      </Box>
-    );
-  }
-
   if (error) {
     return (
       <Alert severity="error">
@@ -641,6 +898,7 @@ const AuditLogViewer: React.FC = () => {
                       value={actionFilter}
                       onChange={(e) => setActionFilter(e.target.value)}
                       label="Action"
+                      disabled={loading}
                         sx={{
                           '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
                           '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
@@ -662,6 +920,7 @@ const AuditLogViewer: React.FC = () => {
                       value={resourceFilter}
                       onChange={(e) => setResourceFilter(e.target.value)}
                       label="Resource"
+                      disabled={loading}
                         sx={{
                           '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
                           '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
@@ -684,6 +943,7 @@ const AuditLogViewer: React.FC = () => {
                     fullWidth
                     size="small"
                     label="Start Date"
+                    disabled={loading}
                     InputLabelProps={{ shrink: true }}
                       sx={{
                         '& .MuiOutlinedInput-root': {
@@ -703,6 +963,7 @@ const AuditLogViewer: React.FC = () => {
                     fullWidth
                     size="small"
                     label="End Date"
+                    disabled={loading}
                     InputLabelProps={{ shrink: true }}
                       sx={{
                         '& .MuiOutlinedInput-root': {
@@ -729,146 +990,156 @@ const AuditLogViewer: React.FC = () => {
                   boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
                 }}
               >
-                <TableContainer sx={{ flex: 1 }}>
-                  <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
-              <TableHead>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Timestamp</TableCell>
-                        <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>User</TableCell>
-                        <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Action</TableCell>
-                        <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Resource</TableCell>
-                        <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Changes</TableCell>
-                        <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
-                        <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>IP Address</TableCell>
-                        <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Details</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {auditLogs.map((log) => (
-                                                <TableRow key={log.id} hover>
-                          <TableCell sx={{ py: 1, px: 2 }}>
-                            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                              {formatDate(log.timestamp)}
-                            </Typography>
-                          </TableCell>
-                    
-                    <TableCell sx={{ py: 1, px: 2 }}>
-                            <Typography variant="body2" fontWeight="medium" sx={{ fontSize: '0.8rem' }}>
-                        {log.username || 'System'}
-                      </Typography>
-                      {log.user_agent && (
-                              <Typography variant="caption" color="text.secondary" noWrap sx={{ fontSize: '0.7rem' }}>
-                          {log.user_agent.substring(0, 30)}...
+                {loading ? (
+                  <AuditTableSkeleton />
+                ) : auditLogs.length === 0 ? (
+                  <Box sx={{ p: 2 }}>
+                    <Alert severity="info">
+                      No audit logs found matching your search criteria. Try adjusting your search terms.
+                    </Alert>
+                  </Box>
+                ) : (
+                  <TableContainer sx={{ flex: 1 }}>
+                    <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+                <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Timestamp</TableCell>
+                          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>User</TableCell>
+                          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Action</TableCell>
+                          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Resource</TableCell>
+                          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Changes</TableCell>
+                          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
+                          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>IP Address</TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Details</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {auditLogs.map((log) => (
+                                                  <TableRow key={log.id} hover>
+                            <TableCell sx={{ py: 1, px: 2 }}>
+                              <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                {formatDate(log.timestamp)}
+                              </Typography>
+                            </TableCell>
+                      
+                      <TableCell sx={{ py: 1, px: 2 }}>
+                              <Typography variant="body2" fontWeight="medium" sx={{ fontSize: '0.8rem' }}>
+                          {log.username || 'System'}
                         </Typography>
-                      )}
-                    </TableCell>
-                    
-                    
-                    <TableCell sx={{ py: 1, px: 2 }}>
-                      <Box>
-                        <Chip 
-                          label={getHumanReadableAction(log)}
-                          color={getActionColor(log.action)}
-                          size="small"
-                        />
-                        {log.method && (
-                                <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.7rem' }}>
-                            {log.method}
+                        {log.user_agent && (
+                                <Typography variant="caption" color="text.secondary" noWrap sx={{ fontSize: '0.7rem' }}>
+                            {log.user_agent.substring(0, 30)}...
                           </Typography>
                         )}
-                      </Box>
-                    </TableCell>
-                    
-                    <TableCell sx={{ py: 1, px: 2 }}>
-                      {log.resource && (
+                      </TableCell>
+                      
+                      
+                      <TableCell sx={{ py: 1, px: 2 }}>
                         <Box>
-                                <Typography variant="body2" fontWeight="medium" sx={{ fontSize: '0.8rem' }}>
-                            {RESOURCE_TYPES.find(r => r.value === log.resource)?.label || log.resource}
-                          </Typography>
-                          {log.resource_id && (
-                                  <Typography variant="caption" color="text.secondary" noWrap sx={{ fontSize: '0.7rem' }}>
-                              ID: {log.resource_id.substring(0, 8)}...
+                          <Chip 
+                            label={getHumanReadableAction(log)}
+                            color={getActionColor(log.action)}
+                            size="small"
+                          />
+                          {log.method && (
+                                  <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.7rem' }}>
+                              {log.method}
                             </Typography>
                           )}
                         </Box>
-                      )}
-                    </TableCell>
-
-                    {/* Changes Column - Show changed fields for CRUD operations */}
-                    <TableCell sx={{ py: 1, px: 2 }}>
-                      <Box>
-                        {log.changed_fields && log.changed_fields.length > 0 ? (
+                      </TableCell>
+                      
+                      <TableCell sx={{ py: 1, px: 2 }}>
+                        {log.resource && (
                           <Box>
-                                  <Typography variant="caption" color="primary" fontWeight="medium" sx={{ fontSize: '0.7rem' }}>
-                              {log.changed_fields.length} field{log.changed_fields.length > 1 ? 's' : ''} changed
+                                  <Typography variant="body2" fontWeight="medium" sx={{ fontSize: '0.8rem' }}>
+                              {RESOURCE_TYPES.find(r => r.value === log.resource)?.label || log.resource}
                             </Typography>
-                            <Box sx={{ mt: 0.5 }}>
-                              {log.changed_fields.slice(0, 2).map((field, index) => (
-                                <Chip 
-                                  key={index}
-                                  label={field} 
-                                  size="small" 
-                                  color="primary" 
-                                  variant="outlined"
-                                  sx={{ mr: 0.5, mb: 0.5, fontSize: '0.6rem', height: '18px' }}
-                                />
-                              ))}
-                              {log.changed_fields.length > 2 && (
-                                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                                  +{log.changed_fields.length - 2} more
-                                </Typography>
-                              )}
-                            </Box>
+                            {log.resource_id && (
+                                    <Typography variant="caption" color="text.secondary" noWrap sx={{ fontSize: '0.7rem' }}>
+                                ID: {log.resource_id.substring(0, 8)}...
+                              </Typography>
+                            )}
                           </Box>
-                        ) : log.action === 'CREATE' ? (
-                                <Typography variant="caption" color="success.main" sx={{ fontSize: '0.7rem' }}>
-                            New record
-                          </Typography>
-                        ) : log.action === 'DELETE' ? (
-                                <Typography variant="caption" color="error.main" sx={{ fontSize: '0.7rem' }}>
-                            Record deleted
-                          </Typography>
-                        ) : (
-                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                            -
+                        )}
+                      </TableCell>
+
+                      {/* Changes Column - Show changed fields for CRUD operations */}
+                      <TableCell sx={{ py: 1, px: 2 }}>
+                        <Box>
+                          {log.changed_fields && log.changed_fields.length > 0 ? (
+                            <Box>
+                                    <Typography variant="caption" color="primary" fontWeight="medium" sx={{ fontSize: '0.7rem' }}>
+                                {log.changed_fields.length} field{log.changed_fields.length > 1 ? 's' : ''} changed
+                              </Typography>
+                              <Box sx={{ mt: 0.5 }}>
+                                {log.changed_fields.slice(0, 2).map((field, index) => (
+                                  <Chip 
+                                    key={index}
+                                    label={field} 
+                                    size="small" 
+                                    color="primary" 
+                                    variant="outlined"
+                                    sx={{ mr: 0.5, mb: 0.5, fontSize: '0.6rem', height: '18px' }}
+                                  />
+                                ))}
+                                {log.changed_fields.length > 2 && (
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                    +{log.changed_fields.length - 2} more
+                                  </Typography>
+                                )}
+                              </Box>
+                            </Box>
+                          ) : log.action === 'CREATE' ? (
+                                  <Typography variant="caption" color="success.main" sx={{ fontSize: '0.7rem' }}>
+                              New record
+                            </Typography>
+                          ) : log.action === 'DELETE' ? (
+                                  <Typography variant="caption" color="error.main" sx={{ fontSize: '0.7rem' }}>
+                              Record deleted
+                            </Typography>
+                          ) : (
+                                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                              -
+                            </Typography>
+                          )}
+                        </Box>
+                      </TableCell>
+                      
+                      <TableCell sx={{ py: 1, px: 2 }}>
+                        <Chip 
+                          label={log.success ? 'Success' : 'Failed'}
+                          color={log.success ? 'success' : 'error'}
+                          size="small"
+                        />
+                        {!log.success && log.error_message && (
+                                <Typography variant="caption" color="error.main" display="block" noWrap sx={{ fontSize: '0.7rem' }}>
+                            {log.error_message.substring(0, 30)}...
                           </Typography>
                         )}
-                      </Box>
-                    </TableCell>
-                    
-                    <TableCell sx={{ py: 1, px: 2 }}>
-                      <Chip 
-                        label={log.success ? 'Success' : 'Failed'}
-                        color={log.success ? 'success' : 'error'}
-                        size="small"
-                      />
-                      {!log.success && log.error_message && (
-                              <Typography variant="caption" color="error.main" display="block" noWrap sx={{ fontSize: '0.7rem' }}>
-                          {log.error_message.substring(0, 30)}...
+                      </TableCell>
+                      
+                      <TableCell sx={{ py: 1, px: 2 }}>
+                              <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                          {log.ip_address || 'Unknown'}
                         </Typography>
-                      )}
-                    </TableCell>
-                    
-                    <TableCell sx={{ py: 1, px: 2 }}>
-                            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                        {log.ip_address || 'Unknown'}
-                      </Typography>
-                    </TableCell>
+                      </TableCell>
 
-                    <TableCell align="center" sx={{ py: 1, px: 2 }}>
-                      <Button
-                        size="small"
-                        startIcon={<ViewIcon />}
-                        onClick={() => handleViewDetails(log)}
-                      >
-                        View
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                      <TableCell align="center" sx={{ py: 1, px: 2 }}>
+                        <Button
+                          size="small"
+                          startIcon={<ViewIcon />}
+                          onClick={() => handleViewDetails(log)}
+                        >
+                          View
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+                )}
 
           <TablePagination
             rowsPerPageOptions={[25, 50, 100, 200]}
@@ -878,6 +1149,7 @@ const AuditLogViewer: React.FC = () => {
             page={page}
             onPageChange={handlePageChange}
             onRowsPerPageChange={handleRowsPerPageChange}
+            disabled={loading}
                   sx={{
                     bgcolor: 'white',
                     borderTop: '1px solid',
@@ -916,6 +1188,7 @@ const AuditLogViewer: React.FC = () => {
                       value={methodFilter}
                       onChange={(e) => setMethodFilter(e.target.value)}
                       label="Method"
+                      disabled={loading}
                         sx={{
                           '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
                           '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
@@ -938,6 +1211,7 @@ const AuditLogViewer: React.FC = () => {
                     size="small"
                     label="Endpoint Contains"
                     placeholder="e.g. /api/v1/users"
+                    disabled={loading}
                       sx={{
                         '& .MuiOutlinedInput-root': {
                           '& fieldset': { borderWidth: '1px' },
@@ -955,6 +1229,7 @@ const AuditLogViewer: React.FC = () => {
                       value={statusCodeFilter}
                       onChange={(e) => setStatusCodeFilter(e.target.value)}
                       label="Status Code"
+                      disabled={loading}
                         sx={{
                           '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
                           '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
@@ -978,6 +1253,7 @@ const AuditLogViewer: React.FC = () => {
                     size="small"
                     label="Min Duration (ms)"
                     placeholder="0"
+                    disabled={loading}
                       sx={{
                         '& .MuiOutlinedInput-root': {
                           '& fieldset': { borderWidth: '1px' },
@@ -997,6 +1273,7 @@ const AuditLogViewer: React.FC = () => {
                     size="small"
                     label="Max Duration (ms)"
                     placeholder="5000"
+                    disabled={loading}
                       sx={{
                         '& .MuiOutlinedInput-root': {
                           '& fieldset': { borderWidth: '1px' },
@@ -1015,6 +1292,7 @@ const AuditLogViewer: React.FC = () => {
                     fullWidth
                     size="small"
                     label="Start Date"
+                    disabled={loading}
                     InputLabelProps={{ shrink: true }}
                       sx={{
                         '& .MuiOutlinedInput-root': {
@@ -1034,6 +1312,7 @@ const AuditLogViewer: React.FC = () => {
                     fullWidth
                     size="small"
                     label="End Date"
+                    disabled={loading}
                     InputLabelProps={{ shrink: true }}
                       sx={{
                         '& .MuiOutlinedInput-root': {
@@ -1060,99 +1339,109 @@ const AuditLogViewer: React.FC = () => {
                   boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
                 }}
               >
-                <TableContainer sx={{ flex: 1 }}>
-                  <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
-              <TableHead>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Timestamp</TableCell>
-                        <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Method</TableCell>
-                        <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Endpoint</TableCell>
-                        <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
-                        <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Duration</TableCell>
-                        <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>User</TableCell>
-                        <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Response Size</TableCell>
-                        <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Details</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {apiRequestLogs.map((log) => (
-                        <TableRow key={log.id} hover>
-                    <TableCell sx={{ py: 1, px: 2 }}>
-                            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                        {formatDate(log.created_at)}
-                      </Typography>
-                    </TableCell>
-                    
-                    <TableCell sx={{ py: 1, px: 2 }}>
-                      <Chip 
-                        label={log.method}
-                        color={getMethodColor(log.method)}
-                        size="small"
-                      />
-                    </TableCell>
-                    
-                    <TableCell sx={{ py: 1, px: 2 }}>
-                            <Typography variant="body2" sx={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '0.8rem' }}>
-                        {log.endpoint}
-                      </Typography>
-                      {log.query_params && (
-                              <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.7rem' }}>
-                          Query params present
-                        </Typography>
-                      )}
-                    </TableCell>
-                    
-                    <TableCell sx={{ py: 1, px: 2 }}>
-                      <Chip 
-                        label={log.status_code}
-                        color={getStatusCodeColor(log.status_code)}
-                        size="small"
-                      />
-                      {log.error_message && (
-                              <Typography variant="caption" color="error.main" display="block" noWrap sx={{ fontSize: '0.7rem' }}>
-                          Error: {log.error_message.substring(0, 30)}...
-                        </Typography>
-                      )}
-                    </TableCell>
-                    
-                    <TableCell sx={{ py: 1, px: 2 }}>
-                            <Typography variant="body2" fontWeight="medium" sx={{ fontSize: '0.8rem' }}>
-                        {formatDuration(log.duration_ms)}
-                      </Typography>
-                            <Typography variant="caption" color={log.duration_ms > 2000 ? 'error.main' : 'text.secondary'} sx={{ fontSize: '0.7rem' }}>
-                        {log.duration_ms > 2000 ? 'Slow' : log.duration_ms > 1000 ? 'Normal' : 'Fast'}
-                      </Typography>
-                    </TableCell>
-                    
-                    <TableCell sx={{ py: 1, px: 2 }}>
-                            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                        {log.user_id ? `User ${log.user_id.substring(0, 8)}...` : 'Anonymous'}
-                      </Typography>
-                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                        {log.ip_address || 'Unknown IP'}
-                      </Typography>
-                    </TableCell>
-
-                    <TableCell sx={{ py: 1, px: 2 }}>
-                            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                        {formatFileSize(log.response_size_bytes)}
-                      </Typography>
-                    </TableCell>
-
-                    <TableCell align="center" sx={{ py: 1, px: 2 }}>
-                      <Button
-                        size="small"
-                        startIcon={<ViewIcon />}
-                        onClick={() => handleViewApiDetails(log)}
-                      >
-                        View
-                      </Button>
-                    </TableCell>
+                {loading ? (
+                  <ApiTableSkeleton />
+                ) : apiRequestLogs.length === 0 ? (
+                  <Box sx={{ p: 2 }}>
+                    <Alert severity="info">
+                      No API request logs found matching your search criteria. Try adjusting your search terms.
+                    </Alert>
+                  </Box>
+                ) : (
+                  <TableContainer sx={{ flex: 1 }}>
+                    <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+                <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Timestamp</TableCell>
+                          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Method</TableCell>
+                          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Endpoint</TableCell>
+                          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
+                          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Duration</TableCell>
+                          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>User</TableCell>
+                          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Response Size</TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Details</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {apiRequestLogs.map((log) => (
+                          <TableRow key={log.id} hover>
+                      <TableCell sx={{ py: 1, px: 2 }}>
+                              <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                          {formatDate(log.created_at)}
+                        </Typography>
+                      </TableCell>
+                      
+                      <TableCell sx={{ py: 1, px: 2 }}>
+                        <Chip 
+                          label={log.method}
+                          color={getMethodColor(log.method)}
+                          size="small"
+                        />
+                      </TableCell>
+                      
+                      <TableCell sx={{ py: 1, px: 2 }}>
+                              <Typography variant="body2" sx={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '0.8rem' }}>
+                          {log.endpoint}
+                        </Typography>
+                        {log.query_params && (
+                                <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.7rem' }}>
+                            Query params present
+                          </Typography>
+                        )}
+                      </TableCell>
+                      
+                      <TableCell sx={{ py: 1, px: 2 }}>
+                        <Chip 
+                          label={log.status_code}
+                          color={getStatusCodeColor(log.status_code)}
+                          size="small"
+                        />
+                        {log.error_message && (
+                                <Typography variant="caption" color="error.main" display="block" noWrap sx={{ fontSize: '0.7rem' }}>
+                            Error: {log.error_message.substring(0, 30)}...
+                          </Typography>
+                        )}
+                      </TableCell>
+                      
+                      <TableCell sx={{ py: 1, px: 2 }}>
+                              <Typography variant="body2" fontWeight="medium" sx={{ fontSize: '0.8rem' }}>
+                          {formatDuration(log.duration_ms)}
+                        </Typography>
+                              <Typography variant="caption" color={log.duration_ms > 2000 ? 'error.main' : 'text.secondary'} sx={{ fontSize: '0.7rem' }}>
+                          {log.duration_ms > 2000 ? 'Slow' : log.duration_ms > 1000 ? 'Normal' : 'Fast'}
+                        </Typography>
+                      </TableCell>
+                      
+                      <TableCell sx={{ py: 1, px: 2 }}>
+                              <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                          {log.user_id ? `User ${log.user_id.substring(0, 8)}...` : 'Anonymous'}
+                        </Typography>
+                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                          {log.ip_address || 'Unknown IP'}
+                        </Typography>
+                      </TableCell>
+
+                      <TableCell sx={{ py: 1, px: 2 }}>
+                              <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                          {formatFileSize(log.response_size_bytes)}
+                        </Typography>
+                      </TableCell>
+
+                      <TableCell align="center" sx={{ py: 1, px: 2 }}>
+                        <Button
+                          size="small"
+                          startIcon={<ViewIcon />}
+                          onClick={() => handleViewApiDetails(log)}
+                        >
+                          View
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+                )}
 
           <TablePagination
             rowsPerPageOptions={[25, 50, 100, 200]}
@@ -1162,6 +1451,7 @@ const AuditLogViewer: React.FC = () => {
             page={apiPage}
             onPageChange={handleApiPageChange}
             onRowsPerPageChange={handleApiRowsPerPageChange}
+            disabled={loading}
                   sx={{
                     bgcolor: 'white',
                     borderTop: '1px solid',
@@ -1184,6 +1474,10 @@ const AuditLogViewer: React.FC = () => {
 
       {/* Statistics Tab */}
           {activeTab === 2 && (
+            <>
+              {loading ? (
+                <StatisticsSkeleton />
+              ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, p: 2 }}>
               <Typography variant="h5" gutterBottom sx={{ fontSize: '1.25rem', fontWeight: 600, mb: 1 }}>
                 System Statistics
@@ -1506,12 +1800,18 @@ const AuditLogViewer: React.FC = () => {
                 </>
               )}
             </Box>
+              )}
+            </>
           )}
 
 
 
           {/* Export Tab */}
           {activeTab === 3 && (
+            <>
+              {loading ? (
+                <ExportSkeleton />
+              ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, p: 2 }}>
                             
               {/* Export Configuration */}
@@ -1735,12 +2035,18 @@ const AuditLogViewer: React.FC = () => {
                 </Grid>
               </Grid>
         </Box>
+              )}
+            </>
       )}
 
 
 
       {/* Security Monitoring Tab */}
           {activeTab === 4 && (
+            <>
+              {loading ? (
+                <SecuritySkeleton />
+              ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, p: 2 }}>
                         {suspiciousActivity && suspiciousActivity.length > 0 ? (
                 <Grid container spacing={2} sx={{ pb: 4 }}>
@@ -1775,6 +2081,8 @@ const AuditLogViewer: React.FC = () => {
             </Alert>
           )}
         </Box>
+              )}
+            </>
       )}
         </Box>
       </Paper>
