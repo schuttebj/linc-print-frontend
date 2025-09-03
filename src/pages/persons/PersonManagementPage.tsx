@@ -55,9 +55,7 @@ const PersonManagementPage: React.FC = () => {
 
   const handleStartApplication = () => {
     setShowSuccessDialog(false);
-    if (createdPerson) {
-      navigate(`/dashboard/applications/create?personId=${createdPerson.id}`);
-    }
+    navigate('/dashboard/applications/dashboard');
   };
 
   const handleContinueEditing = () => {
@@ -222,7 +220,7 @@ const PersonManagementPage: React.FC = () => {
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       • Create another person for additional citizens<br/>
-                      • Start application process for license requests
+                      • Go to applications dashboard to start license applications
                     </Typography>
                   </Box>
                 </Grid>
@@ -247,7 +245,7 @@ const PersonManagementPage: React.FC = () => {
               size="large"
               sx={{ minWidth: 200 }}
             >
-              Start Application
+              Go to Applications
             </Button>
           </Box>
         </DialogActions>
