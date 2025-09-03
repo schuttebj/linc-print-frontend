@@ -185,8 +185,8 @@ const STATUS_CODES = [
 
 // Skeleton Loading Components
 const AuditTableSkeleton: React.FC = () => (
-  <TableContainer>
-    <Table>
+  <TableContainer sx={{ flex: 1 }}>
+    <Table stickyHeader>
       <TableHead>
         <TableRow>
           <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Timestamp</TableCell>
@@ -241,8 +241,8 @@ const AuditTableSkeleton: React.FC = () => (
 );
 
 const ApiTableSkeleton: React.FC = () => (
-  <TableContainer>
-    <Table>
+  <TableContainer sx={{ flex: 1 }}>
+    <Table stickyHeader>
       <TableHead>
         <TableRow>
           <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Timestamp</TableCell>
@@ -455,7 +455,11 @@ const AuditLogViewer: React.FC = () => {
   // State management - API request logs (Middleware)
   const [apiRequestLogs, setApiRequestLogs] = useState<ApiRequestLog[]>([]);
   
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // General loading (not used anymore)
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [apiLoading, setApiLoading] = useState(false);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [securityLoading, setSecurityLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   
@@ -495,6 +499,9 @@ const AuditLogViewer: React.FC = () => {
   // State for backend-calculated comprehensive statistics
   const [comprehensiveStats, setComprehensiveStats] = useState<any>(null);
 
+  // Track which tabs have been loaded to avoid re-loading
+  const [loadedTabs, setLoadedTabs] = useState<Set<number>>(new Set([0])); // Start with tab 0 (Transaction Logs)
+
   // Load comprehensive statistics from backend
   const loadComprehensiveStatistics = async () => {
     try {
@@ -505,41 +512,59 @@ const AuditLogViewer: React.FC = () => {
     }
   };
 
+  // Load initial tab (Transaction Logs) on mount
   useEffect(() => {
-    loadAuditData();
+    loadAuditLogs();
   }, []);
 
+  // Load data when tab changes (lazy loading)
   useEffect(() => {
-    if (activeTab === 0) {
+    if (!loadedTabs.has(activeTab)) {
+      setLoadedTabs(prev => new Set([...prev, activeTab]));
+      
+      if (activeTab === 1) {
+        loadApiRequestLogs();
+      } else if (activeTab === 2) {
+        loadStatisticsAndSecurity();
+      } else if (activeTab === 4) {
+        loadStatisticsAndSecurity();
+      }
+    }
+  }, [activeTab]);
+
+  // Handle filter/pagination changes for Transaction Logs
+  useEffect(() => {
+    if (activeTab === 0 && loadedTabs.has(0)) {
       loadAuditLogs();
-    } else if (activeTab === 1) {
-      loadApiRequestLogs();
     }
-  }, [page, rowsPerPage, actionFilter, resourceFilter, startDate, endDate, activeTab]);
+  }, [page, rowsPerPage, actionFilter, resourceFilter, startDate, endDate]);
 
+  // Handle filter/pagination changes for API Request Logs
   useEffect(() => {
-    if (activeTab === 1) {
+    if (activeTab === 1 && loadedTabs.has(1)) {
       loadApiRequestLogs();
     }
-  }, [apiPage, apiRowsPerPage, methodFilter, endpointFilter, statusCodeFilter, minDurationFilter, maxDurationFilter, apiStartDate, apiEndDate, activeTab]);
+  }, [apiPage, apiRowsPerPage, methodFilter, endpointFilter, statusCodeFilter, minDurationFilter, maxDurationFilter, apiStartDate, apiEndDate]);
 
-  const loadAuditData = async () => {
+  const loadStatisticsAndSecurity = async () => {
     try {
-      setLoading(true);
+      setStatsLoading(true);
+      setSecurityLoading(true);
       await Promise.all([
-        loadAuditLogs(),
         loadComprehensiveStatistics(),
         loadSuspiciousActivity()
       ]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load audit data');
+      setError(err instanceof Error ? err.message : 'Failed to load statistics and security data');
     } finally {
-      setLoading(false);
+      setStatsLoading(false);
+      setSecurityLoading(false);
     }
   };
 
   const loadAuditLogs = async () => {
     try {
+      setAuditLoading(true);
       const params = new URLSearchParams({
         log_type: 'transaction', // Explicitly request transaction logs only
         page: (page + 1).toString(), // Convert from 0-based to 1-based
@@ -555,6 +580,9 @@ const AuditLogViewer: React.FC = () => {
       setTotalResults(response.total || 0);
     } catch (err) {
       console.error('Failed to load audit logs:', err);
+      setError('Failed to load audit logs');
+    } finally {
+      setAuditLoading(false);
     }
   };
 
@@ -578,6 +606,7 @@ const AuditLogViewer: React.FC = () => {
 
   const loadApiRequestLogs = async () => {
     try {
+      setApiLoading(true);
       const params = new URLSearchParams({
         log_type: 'api', // Explicitly request API logs only
         page: (apiPage + 1).toString(), // Convert from 0-based to 1-based
@@ -596,6 +625,9 @@ const AuditLogViewer: React.FC = () => {
       setApiTotalResults(response.total || 0);
     } catch (err) {
       console.error('Failed to load API request logs:', err);
+      setError('Failed to load API request logs');
+    } finally {
+      setApiLoading(false);
     }
   };
 
@@ -898,7 +930,7 @@ const AuditLogViewer: React.FC = () => {
                       value={actionFilter}
                       onChange={(e) => setActionFilter(e.target.value)}
                       label="Action"
-                      disabled={loading}
+                      disabled={auditLoading}
                         sx={{
                           '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
                           '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
@@ -920,7 +952,7 @@ const AuditLogViewer: React.FC = () => {
                       value={resourceFilter}
                       onChange={(e) => setResourceFilter(e.target.value)}
                       label="Resource"
-                      disabled={loading}
+                      disabled={auditLoading}
                         sx={{
                           '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
                           '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
@@ -943,7 +975,7 @@ const AuditLogViewer: React.FC = () => {
                     fullWidth
                     size="small"
                     label="Start Date"
-                    disabled={loading}
+                    disabled={auditLoading}
                     InputLabelProps={{ shrink: true }}
                       sx={{
                         '& .MuiOutlinedInput-root': {
@@ -963,7 +995,7 @@ const AuditLogViewer: React.FC = () => {
                     fullWidth
                     size="small"
                     label="End Date"
-                    disabled={loading}
+                    disabled={auditLoading}
                     InputLabelProps={{ shrink: true }}
                       sx={{
                         '& .MuiOutlinedInput-root': {
@@ -990,7 +1022,7 @@ const AuditLogViewer: React.FC = () => {
                   boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
                 }}
               >
-                {loading ? (
+                {auditLoading ? (
                   <AuditTableSkeleton />
                 ) : auditLogs.length === 0 ? (
                   <Box sx={{ p: 2 }}>
@@ -1149,7 +1181,7 @@ const AuditLogViewer: React.FC = () => {
             page={page}
             onPageChange={handlePageChange}
             onRowsPerPageChange={handleRowsPerPageChange}
-            disabled={loading}
+            disabled={auditLoading}
                   sx={{
                     bgcolor: 'white',
                     borderTop: '1px solid',
@@ -1188,7 +1220,7 @@ const AuditLogViewer: React.FC = () => {
                       value={methodFilter}
                       onChange={(e) => setMethodFilter(e.target.value)}
                       label="Method"
-                      disabled={loading}
+                      disabled={apiLoading}
                         sx={{
                           '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
                           '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
@@ -1211,7 +1243,7 @@ const AuditLogViewer: React.FC = () => {
                     size="small"
                     label="Endpoint Contains"
                     placeholder="e.g. /api/v1/users"
-                    disabled={loading}
+                    disabled={apiLoading}
                       sx={{
                         '& .MuiOutlinedInput-root': {
                           '& fieldset': { borderWidth: '1px' },
@@ -1229,7 +1261,7 @@ const AuditLogViewer: React.FC = () => {
                       value={statusCodeFilter}
                       onChange={(e) => setStatusCodeFilter(e.target.value)}
                       label="Status Code"
-                      disabled={loading}
+                      disabled={apiLoading}
                         sx={{
                           '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
                           '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
@@ -1253,7 +1285,7 @@ const AuditLogViewer: React.FC = () => {
                     size="small"
                     label="Min Duration (ms)"
                     placeholder="0"
-                    disabled={loading}
+                    disabled={apiLoading}
                       sx={{
                         '& .MuiOutlinedInput-root': {
                           '& fieldset': { borderWidth: '1px' },
@@ -1273,7 +1305,7 @@ const AuditLogViewer: React.FC = () => {
                     size="small"
                     label="Max Duration (ms)"
                     placeholder="5000"
-                    disabled={loading}
+                    disabled={apiLoading}
                       sx={{
                         '& .MuiOutlinedInput-root': {
                           '& fieldset': { borderWidth: '1px' },
@@ -1292,7 +1324,7 @@ const AuditLogViewer: React.FC = () => {
                     fullWidth
                     size="small"
                     label="Start Date"
-                    disabled={loading}
+                    disabled={apiLoading}
                     InputLabelProps={{ shrink: true }}
                       sx={{
                         '& .MuiOutlinedInput-root': {
@@ -1312,7 +1344,7 @@ const AuditLogViewer: React.FC = () => {
                     fullWidth
                     size="small"
                     label="End Date"
-                    disabled={loading}
+                    disabled={apiLoading}
                     InputLabelProps={{ shrink: true }}
                       sx={{
                         '& .MuiOutlinedInput-root': {
@@ -1339,7 +1371,7 @@ const AuditLogViewer: React.FC = () => {
                   boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
                 }}
               >
-                {loading ? (
+                {apiLoading ? (
                   <ApiTableSkeleton />
                 ) : apiRequestLogs.length === 0 ? (
                   <Box sx={{ p: 2 }}>
@@ -1451,7 +1483,7 @@ const AuditLogViewer: React.FC = () => {
             page={apiPage}
             onPageChange={handleApiPageChange}
             onRowsPerPageChange={handleApiRowsPerPageChange}
-            disabled={loading}
+            disabled={apiLoading}
                   sx={{
                     bgcolor: 'white',
                     borderTop: '1px solid',
@@ -1475,7 +1507,7 @@ const AuditLogViewer: React.FC = () => {
       {/* Statistics Tab */}
           {activeTab === 2 && (
             <>
-              {loading ? (
+              {statsLoading ? (
                 <StatisticsSkeleton />
               ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, p: 2 }}>
@@ -1809,7 +1841,7 @@ const AuditLogViewer: React.FC = () => {
           {/* Export Tab */}
           {activeTab === 3 && (
             <>
-              {loading ? (
+              {false ? (
                 <ExportSkeleton />
               ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, p: 2 }}>
@@ -2044,7 +2076,7 @@ const AuditLogViewer: React.FC = () => {
       {/* Security Monitoring Tab */}
           {activeTab === 4 && (
             <>
-              {loading ? (
+              {securityLoading ? (
                 <SecuritySkeleton />
               ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, p: 2 }}>
