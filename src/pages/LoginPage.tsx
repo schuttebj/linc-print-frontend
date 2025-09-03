@@ -141,7 +141,7 @@ const LoginPage: React.FC = () => {
                     color: 'primary.main',
                   }}
                 >
-                  Madagascar License System
+                  LINC License System
                 </Typography>
                 <Typography
                   variant="body1"
