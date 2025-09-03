@@ -403,15 +403,6 @@ const ApplicationListPage: React.FC = () => {
               <Box sx={{ p: 2 }}>
                 <Alert severity="info">
                   No applications found matching your search criteria. Try adjusting your search terms.
-                  {hasPermission('applications.create') && (
-                    <>
-                      {' Or '}
-                      <Button variant="text" onClick={handleCreateNew} sx={{ textTransform: 'none' }}>
-                        go to Applications Dashboard
-                      </Button>
-                      {' to create a new application.'}
-                    </>
-                  )}
                 </Alert>
               </Box>
             ) : (

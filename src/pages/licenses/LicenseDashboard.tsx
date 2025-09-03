@@ -376,7 +376,7 @@ const LicenseDashboard: React.FC = () => {
                   variant="outlined"
                   fullWidth
                   startIcon={<Add />}
-                  onClick={() => navigate('/dashboard/applications/create')}
+                  onClick={() => navigate('/dashboard/applications/dashboard')}
                 >
                   New Application
                 </Button>

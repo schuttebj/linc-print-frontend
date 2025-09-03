@@ -53,7 +53,7 @@ const PersonEditPage: React.FC = () => {
   const handleCreateApplication = () => {
     setShowEditSuccess(false);
     // Navigate to application creation with the person
-    navigate(`/dashboard/applications/create?personId=${editedPerson.id}`);
+    navigate('/dashboard/applications/dashboard');
   };
 
   const handleReturnToSearch = () => {

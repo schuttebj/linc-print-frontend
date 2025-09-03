@@ -359,7 +359,7 @@ const DashboardLayout: React.FC = () => {
         {
           text: 'Other Applications',
           icon: <AddIcon />,
-          path: '/dashboard/applications/create',
+          path: '/dashboard/applications/dashboard',
           permission: 'applications.create',
         },
       ]
