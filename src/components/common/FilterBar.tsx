@@ -23,7 +23,6 @@ import {
   Stack,
   InputAdornment,
   Grid,
-  Collapse,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -31,7 +30,6 @@ import {
   FilterList as FilterIcon,
   Close as CloseIcon,
   ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
 } from '@mui/icons-material';
 
 // Filter configuration types
@@ -87,7 +85,8 @@ const FilterBar: React.FC<FilterBarProps> = ({
   searching = false,
   className,
 }) => {
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [advancedFiltersAnchorEl, setAdvancedFiltersAnchorEl] = useState<HTMLElement | null>(null);
+  const showAdvancedFilters = Boolean(advancedFiltersAnchorEl);
   
   // Handle Enter key in search field
   const handleSearchKeyPress = (event: React.KeyboardEvent) => {
@@ -127,9 +126,13 @@ const FilterBar: React.FC<FilterBarProps> = ({
     return String(value);
   };
 
-  // Toggle advanced filters
-  const toggleAdvancedFilters = () => {
-    setShowAdvancedFilters(!showAdvancedFilters);
+  // Handle advanced filters popup
+  const handleAdvancedFiltersClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAdvancedFiltersAnchorEl(event.currentTarget);
+  };
+
+  const handleAdvancedFiltersClose = () => {
+    setAdvancedFiltersAnchorEl(null);
   };
 
   return (
@@ -141,7 +144,24 @@ const FilterBar: React.FC<FilterBarProps> = ({
         alignItems: 'center',
         mb: 2,
       }}>
-        {/* Search Field - Half Width */}
+        {/* Advanced Search Button - Left Side */}
+        <Button
+          variant="outlined"
+          onClick={handleAdvancedFiltersClick}
+          endIcon={<ExpandMoreIcon />}
+          sx={{
+            borderRadius: 1,
+            flexShrink: 0,
+            whiteSpace: 'nowrap',
+            '& .MuiButton-endIcon': {
+              ml: 1,
+            }
+          }}
+        >
+          Advanced Search
+        </Button>
+
+        {/* Search Field - Fills Remaining Space */}
         <TextField
           value={searchValue}
           onChange={(e) => onSearchChange(e.target.value)}
@@ -149,8 +169,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
           placeholder={searchPlaceholder}
           size="small"
           sx={{ 
-            width: '50%',
-            maxWidth: 400,
+            flexGrow: 1,
             '& .MuiOutlinedInput-root': {
               '& fieldset': { borderWidth: '1px' },
               '&:hover fieldset': { borderWidth: '1px' },
@@ -177,23 +196,8 @@ const FilterBar: React.FC<FilterBarProps> = ({
           }}
         />
 
-        {/* Advanced Search Button */}
-        <Button
-          variant="outlined"
-          onClick={toggleAdvancedFilters}
-          endIcon={showAdvancedFilters ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-          sx={{
-            borderRadius: 1,
-            '& .MuiButton-endIcon': {
-              ml: 1,
-            }
-          }}
-        >
-          Advanced Search
-        </Button>
-
         {/* Action Buttons */}
-        <Box sx={{ display: 'flex', gap: 1, ml: 'auto' }}>
+        <Box sx={{ display: 'flex', gap: 1, flexShrink: 0 }}>
           <IconButton
             onClick={onSearch}
             disabled={searching}
@@ -257,25 +261,52 @@ const FilterBar: React.FC<FilterBarProps> = ({
         </Box>
       )}
 
-      {/* Advanced Filters Panel */}
-      <Collapse in={showAdvancedFilters}>
+      {/* Advanced Filters Popover */}
+      <Popover
+        open={showAdvancedFilters}
+        anchorEl={advancedFiltersAnchorEl}
+        onClose={handleAdvancedFiltersClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        PaperProps={{
+          sx: {
+            width: 600,
+            maxWidth: '90vw',
+            maxHeight: '80vh',
+            overflow: 'auto',
+          }
+        }}
+      >
         <Paper 
           sx={{ 
-            p: 3, 
-            mt: 2, 
-            border: 1, 
-            borderColor: 'divider',
+            p: 1.5,
+            border: 0,
             borderRadius: 2,
-            bgcolor: '#f8f9fa'
+            bgcolor: 'white'
           }}
         >
-          <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
-            Advanced Search Filters
-          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5, px: 0.5 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '1rem' }}>
+              Advanced Search Filters
+            </Typography>
+            <IconButton
+              onClick={handleAdvancedFiltersClose}
+              size="small"
+              sx={{ color: 'text.secondary' }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </Box>
           
-          <Grid container spacing={2}>
+          <Grid container spacing={1.5}>
             {filterConfigs.map((config) => (
-              <Grid item xs={12} sm={6} md={4} key={config.key}>
+              <Grid item xs={12} sm={6} key={config.key}>
                 {config.type === 'text' && (
                   <TextField
                     fullWidth
@@ -286,7 +317,6 @@ const FilterBar: React.FC<FilterBarProps> = ({
                     onChange={(e) => onFilterChange(config.key, e.target.value)}
                     sx={{
                       '& .MuiOutlinedInput-root': {
-                        bgcolor: 'white',
                         '& fieldset': { borderWidth: '1px' },
                         '&:hover fieldset': { borderWidth: '1px' },
                         '&.Mui-focused fieldset': { borderWidth: '1px' },
@@ -303,7 +333,6 @@ const FilterBar: React.FC<FilterBarProps> = ({
                       onChange={(e) => onFilterChange(config.key, e.target.value)}
                       label={config.label}
                       sx={{
-                        bgcolor: 'white',
                         '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
                         '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
                         '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
@@ -322,7 +351,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
                 )}
 
                 {config.type === 'boolean' && (
-                  <Box sx={{ pt: 1 }}>
+                  <Box sx={{ pt: 0.5 }}>
                     <FormControlLabel
                       control={
                         <Switch
@@ -341,11 +370,12 @@ const FilterBar: React.FC<FilterBarProps> = ({
             ))}
           </Grid>
 
-          <Divider sx={{ my: 2 }} />
+          <Divider sx={{ my: 1.5 }} />
           
-          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+          <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'flex-end', px: 0.5 }}>
             <Button 
               variant="outlined"
+              size="small"
               onClick={onClear}
               startIcon={<ClearIcon />}
               sx={{ borderRadius: 1 }}
@@ -354,9 +384,10 @@ const FilterBar: React.FC<FilterBarProps> = ({
             </Button>
             <Button 
               variant="contained"
+              size="small"
               onClick={() => {
                 onSearch();
-                setShowAdvancedFilters(false);
+                handleAdvancedFiltersClose();
               }}
               startIcon={<SearchIcon />}
               sx={{ borderRadius: 1 }}
@@ -365,7 +396,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
             </Button>
           </Box>
         </Paper>
-      </Collapse>
+      </Popover>
     </Box>
   );
 };

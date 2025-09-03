@@ -562,12 +562,6 @@ const PersonSearchPage: React.FC = () => {
                 borderRadius: 0
               }}
             >
-              <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
-                <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-                  Search Results ({totalResults} found)
-                </Typography>
-              </Box>
-
               {searchResults.length === 0 ? (
                 <Box sx={{ p: 2 }}>
                   <Alert severity="info">
