@@ -102,17 +102,54 @@ const MainContentSkeleton: React.FC = () => (
         flexDirection: 'column',
         mx: 'auto'
       }}>
-        <Skeleton 
-          variant="rounded" 
-          width="100%" 
-          height="100%" 
-          sx={{
-            flexGrow: 1,
-            
-            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-            borderRadius: 2
-          }}
-        />
+        <Box sx={{ 
+          flexGrow: 1,
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          <Skeleton 
+            variant="rounded" 
+            width="100%" 
+            height="100%" 
+            sx={{
+              boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+              borderRadius: 2
+            }}
+          />
+          
+          {/* Loading indicator overlay */}
+          <Box sx={{ 
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <Box sx={{ textAlign: 'center' }}>
+              <CircularProgress 
+                size={40} 
+                sx={{ 
+                  color: '#1976d2',
+                  mb: 2
+                }} 
+              />
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  color: '#666',
+                  fontSize: '0.875rem',
+                  fontWeight: 500
+                }}
+              >
+                Loading content...
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
       </Box>
     </Box>
   </Box>
