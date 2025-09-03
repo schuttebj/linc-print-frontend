@@ -393,14 +393,6 @@ const LocationManagementPage: React.FC = () => {
     </TableContainer>
   );
 
-  if (loading && locations.length === 0) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
   return (
     <>
     <Container maxWidth="lg" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
