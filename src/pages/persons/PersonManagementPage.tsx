@@ -77,7 +77,7 @@ const PersonManagementPage: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 1, height: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column' }}>
+    <Container maxWidth="lg" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Paper 
         elevation={0}
         sx={{ 
@@ -91,17 +91,17 @@ const PersonManagementPage: React.FC = () => {
         }}
       >
         {/* Header */}
-        <Box sx={{ p: 2, bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
+        <Box sx={{ 
+          bgcolor: 'white', 
+          borderBottom: '1px solid', 
+          borderColor: 'divider',
+          flexShrink: 0,
+          p: 2
+        }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Box>
-              <Typography variant="h4" component="h1" sx={{ mb: 1 }}>
-                Person Management
-              </Typography>
-              <Typography variant="body1" color="text.secondary">
-                Register new Madagascar citizens for driver's license applications.
-              </Typography>
-            </Box>
-            
+            <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+              Person Management
+            </Typography>
             <Button
               variant="outlined"
               onClick={() => window.location.reload()}
@@ -115,8 +115,9 @@ const PersonManagementPage: React.FC = () => {
 
         {/* PersonFormWrapper Component */}
         <Box sx={{ 
-          flexGrow: 1, 
+          flex: 1, 
           overflow: 'hidden',
+          minHeight: 0,
           p: 0,
           display: 'flex',
           flexDirection: 'column'
@@ -125,7 +126,6 @@ const PersonManagementPage: React.FC = () => {
             mode="standalone"
             onSuccess={handleFormSuccess}
             title="Person Management"
-            subtitle="Register new Madagascar citizens for driver's license applications."
             showHeader={false}
           />
         </Box>
