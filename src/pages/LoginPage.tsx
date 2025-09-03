@@ -273,7 +273,7 @@ const LoginPage: React.FC = () => {
                 color="text.secondary"
                 sx={{ textAlign: 'center', mt: 2 }}
               >
-                © 2024 Madagascar Driver's License System
+                © 2025 LINC Driver's License System
                 <br />
                 Secure • Modern • Efficient
               </Typography>

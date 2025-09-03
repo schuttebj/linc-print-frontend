@@ -9,15 +9,15 @@ export const theme = createTheme({
   palette: {
     mode: 'light' as const,
     primary: {
-      main: '#1A81E8', // Your specified main blue
-      light: '#1AA0E8', // Your specified variant (lighter blue)
-      dark: '#2F495E', // Your specified dark color
+      main: '#10367d', // Madagascar blue
+      light: '#4a5f9a',
+      dark: '#0b2557',
       contrastText: '#fff',
     },
     secondary: {
-      main: '#4A90E2', // Complementary blue tone
-      light: '#7BB3F0', // Lighter variant
-      dark: '#2F495E', // Using your specified dark color for consistency
+      main: '#74b4da', // Light blue accent
+      light: '#a3c7e4',
+      dark: '#4f7e98',
       contrastText: '#fff',
     },
     background: {
