@@ -23,7 +23,8 @@ import {
   Container,
   Divider,
   LinearProgress,
-  Stack
+  Stack,
+  Skeleton
 } from '@mui/material';
 import {
   Person as PersonIcon,
@@ -52,7 +53,9 @@ import {
   VerifiedUser as VerifiedUserIcon,
   CloudDone as CloudDoneIcon,
   SyncProblem as SyncProblemIcon,
-  LocationOn as LocationIcon
+  LocationOn as LocationIcon,
+  AccountCircle as ProfileIcon,
+  FlashOn as FlashIcon
 } from '@mui/icons-material';
 import { API_ENDPOINTS, api } from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -410,15 +413,13 @@ const HomePage: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Container maxWidth="lg" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Paper 
         elevation={0}
         sx={{ 
           flexGrow: 1,
           display: 'flex',
           flexDirection: 'column',
-          bgcolor: '#f8f9fa',
-          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
           borderRadius: 2,
           overflow: 'hidden'
         }}
@@ -439,12 +440,12 @@ const HomePage: React.FC = () => {
             {/* Row 1: Announcements (Large), User Context (Medium), System Status (Medium) */}
             <Grid item xs={12} lg={6}>
               {/* Announcements & Alerts Widget */}
-              <Card sx={{ height: '400px', display: 'flex', flexDirection: 'column' }}>
-                <CardContent sx={{ p: 2, pb: 1 }}>
+              <Card sx={{ minHeight: '400px', display: 'flex', flexDirection: 'column' }}>
+                <CardContent sx={{ p: 2, pb: 0 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <NotificationsIcon color="primary" />
-                      <Typography variant="h6" fontWeight={600}>
+                      <Typography variant="h6" fontWeight={600} sx={{ fontSize: '1.1rem' }}>
                         Announcements & Alerts
                       </Typography>
                       <Badge badgeContent={filteredAnnouncements.length} color="error" />
@@ -462,9 +463,20 @@ const HomePage: React.FC = () => {
                       ))}
                     </Box>
                   </Box>
+                  <Divider />
                 </CardContent>
-                <CardContent sx={{ flex: 1, overflow: 'auto', pt: 0 }}>
-                  {filteredAnnouncements.length === 0 ? (
+                <CardContent sx={{ flex: 1, overflow: 'auto', pt: 2 }}>
+                  {loading ? (
+                    <Stack spacing={2}>
+                      {Array.from({ length: 3 }).map((_, index) => (
+                        <Box key={index} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                          <Skeleton variant="text" width="60%" height={20} sx={{ mb: 1 }} />
+                          <Skeleton variant="text" width="100%" height={16} sx={{ mb: 1 }} />
+                          <Skeleton variant="text" width="80%" height={16} />
+                        </Box>
+                      ))}
+                    </Stack>
+                  ) : filteredAnnouncements.length === 0 ? (
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'text.secondary' }}>
                       <Typography variant="body2">No announcements to display</Typography>
                     </Box>
@@ -508,14 +520,17 @@ const HomePage: React.FC = () => {
 
             <Grid item xs={12} lg={3}>
               {/* User & Location Context Widget */}
-              <Card sx={{ height: '190px', mb: 3 }}>
-                <CardContent sx={{ p: 2 }}>
+              <Card sx={{ minHeight: '190px', mb: 3 }}>
+                <CardContent sx={{ p: 2, pb: 0 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                     <PersonIcon color="primary" />
-                    <Typography variant="h6" fontWeight={600}>
+                    <Typography variant="h6" fontWeight={600} sx={{ fontSize: '1.1rem' }}>
                       Your Context
                     </Typography>
                   </Box>
+                  <Divider />
+                </CardContent>
+                <CardContent sx={{ p: 2, pt: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                     <Avatar sx={{ width: 48, height: 48, bgcolor: 'primary.main' }}>
                       {user?.first_name?.[0]}{user?.last_name?.[0]}
@@ -543,14 +558,17 @@ const HomePage: React.FC = () => {
               </Card>
 
               {/* System Status Widget */}
-              <Card sx={{ height: '190px' }}>
-                <CardContent sx={{ p: 2 }}>
+              <Card sx={{ minHeight: '190px' }}>
+                <CardContent sx={{ p: 2, pb: 0 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                     <MonitorHeartIcon color="primary" />
-                    <Typography variant="h6" fontWeight={600}>
+                    <Typography variant="h6" fontWeight={600} sx={{ fontSize: '1.1rem' }}>
                       System Status
                     </Typography>
                   </Box>
+                  <Divider />
+                </CardContent>
+                <CardContent sx={{ p: 2, pt: 2 }}>
                   {systemStatus && (
                     <>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
@@ -588,14 +606,17 @@ const HomePage: React.FC = () => {
 
             <Grid item xs={12} lg={3}>
               {/* Personal Productivity Widget */}
-              <Card sx={{ height: '400px' }}>
-                <CardContent sx={{ p: 2 }}>
+              <Card sx={{ minHeight: '400px', display: 'flex', flexDirection: 'column' }}>
+                <CardContent sx={{ p: 2, pb: 0 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                     <TrendingUpIcon color="primary" />
-                    <Typography variant="h6" fontWeight={600}>
+                    <Typography variant="h6" fontWeight={600} sx={{ fontSize: '1.1rem' }}>
                       Your Productivity
                     </Typography>
                   </Box>
+                  <Divider />
+                </CardContent>
+                <CardContent sx={{ flex: 1, overflow: 'auto', pt: 2 }}>
                   {productivityStats && (
                     <>
                       <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
@@ -692,12 +713,12 @@ const HomePage: React.FC = () => {
             {/* Row 2: Quick Actions (Large), Generic Stats (Medium), Support (Small) */}
             <Grid item xs={12} lg={6}>
               {/* Enhanced Quick Actions Widget */}
-              <Card sx={{ height: '300px' }}>
-                <CardContent sx={{ p: 2 }}>
+              <Card sx={{ minHeight: '300px', display: 'flex', flexDirection: 'column' }}>
+                <CardContent sx={{ p: 2, pb: 0 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <SpeedIcon color="primary" />
-                      <Typography variant="h6" fontWeight={600}>
+                      <Typography variant="h6" fontWeight={600} sx={{ fontSize: '1.1rem' }}>
                         Quick Actions
                       </Typography>
                     </Box>
@@ -705,6 +726,9 @@ const HomePage: React.FC = () => {
                       {pinnedActions.size} pinned
                     </Typography>
                   </Box>
+                  <Divider />
+                </CardContent>
+                <CardContent sx={{ flex: 1, overflow: 'auto', pt: 2 }}>
                   <Grid container spacing={2}>
                     {displayActions.slice(0, 6).map((action) => (
                       <Grid item xs={12} sm={6} md={4} key={action.title}>
@@ -761,61 +785,86 @@ const HomePage: React.FC = () => {
             </Grid>
 
             <Grid item xs={12} lg={4}>
-              {/* Generic Stats Widget */}
-              <Card sx={{ height: '150px', mb: 3 }}>
-                <CardContent sx={{ p: 2 }}>
+              {/* Quick Actions Widget */}
+              <Card sx={{ minHeight: '150px', mb: 3 }}>
+                <CardContent sx={{ p: 2, pb: 0 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                    <AssessmentIcon color="primary" />
-                    <Typography variant="h6" fontWeight={600}>
-                      System Overview
+                    <SpeedIcon color="primary" />
+                    <Typography variant="h6" fontWeight={600} sx={{ fontSize: '1.1rem' }}>
+                      Quick Actions
                     </Typography>
                   </Box>
+                  <Divider />
+                </CardContent>
+                <CardContent sx={{ p: 2, pt: 2 }}>
                   <Grid container spacing={2}>
                     <Grid item xs={6}>
-                      <Typography variant="h5" color="primary.main" fontWeight="bold">
-                        {stats?.users.total || 0}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Total Users
-                      </Typography>
+                      <Button
+                        variant="contained"
+                        startIcon={<DashboardIcon />}
+                        fullWidth
+                        size="small"
+                        onClick={() => navigate('/dashboard/applications/dashboard')}
+                        sx={{ fontSize: '0.75rem' }}
+                      >
+                        Applications
+                      </Button>
                     </Grid>
                     <Grid item xs={6}>
-                      <Typography variant="h5" color="success.main" fontWeight="bold">
-                        {stats?.locations.operational || 0}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Active Locations
-                      </Typography>
+                      <Button
+                        variant="outlined"
+                        startIcon={<ProfileIcon />}
+                        fullWidth
+                        size="small"
+                        disabled={true}
+                        sx={{ fontSize: '0.75rem' }}
+                      >
+                        Profile
+                      </Button>
                     </Grid>
                     <Grid item xs={6}>
-                      <Typography variant="h5" color="warning.main" fontWeight="bold">
-                        {stats?.audit.security_events || 0}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Security Alerts
-                      </Typography>
+                      <Button
+                        variant="contained"
+                        startIcon={<PersonIcon />}
+                        fullWidth
+                        size="small"
+                        onClick={() => navigate('/dashboard/persons')}
+                        sx={{ fontSize: '0.75rem' }}
+                      >
+                        Persons
+                      </Button>
                     </Grid>
                     <Grid item xs={6}>
-                      <Typography variant="h5" color="info.main" fontWeight="bold">
-                        {((stats?.audit.success_rate || 0) * 100).toFixed(0)}%
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Success Rate
-                      </Typography>
+                      <Button
+                        variant="contained"
+                        startIcon={<FlashIcon />}
+                        fullWidth
+                        size="small"
+                        onClick={() => {
+                          // TODO: Open quick action modal
+                          console.log('Quick actions modal to be implemented');
+                        }}
+                        sx={{ fontSize: '0.75rem' }}
+                      >
+                        Quick Actions
+                      </Button>
                     </Grid>
                   </Grid>
                 </CardContent>
               </Card>
 
               {/* Support & Resources Widget */}
-              <Card sx={{ height: '130px' }}>
-                <CardContent sx={{ p: 2 }}>
+              <Card sx={{ minHeight: '130px' }}>
+                <CardContent sx={{ p: 2, pb: 0 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                     <HelpIcon color="primary" />
-                    <Typography variant="h6" fontWeight={600}>
+                    <Typography variant="h6" fontWeight={600} sx={{ fontSize: '1.1rem' }}>
                       Support & Resources
                     </Typography>
                   </Box>
+                  <Divider />
+                </CardContent>
+                <CardContent sx={{ p: 2, pt: 2 }}>
                   <Grid container spacing={1}>
                     <Grid item xs={6}>
                       <Button
@@ -860,14 +909,17 @@ const HomePage: React.FC = () => {
 
             <Grid item xs={12} lg={2}>
               {/* Compliance & Notices Widget */}
-              <Card sx={{ height: '300px' }}>
-                <CardContent sx={{ p: 2 }}>
+              <Card sx={{ minHeight: '300px', display: 'flex', flexDirection: 'column' }}>
+                <CardContent sx={{ p: 2, pb: 0 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                     <SecurityIcon color="primary" />
-                    <Typography variant="h6" fontWeight={600}>
+                    <Typography variant="h6" fontWeight={600} sx={{ fontSize: '1.1rem' }}>
                       Compliance
                     </Typography>
                   </Box>
+                  <Divider />
+                </CardContent>
+                <CardContent sx={{ flex: 1, overflow: 'auto', pt: 2 }}>
                   <Alert severity="info" sx={{ mb: 2, fontSize: '0.75rem' }}>
                     <Typography variant="caption" fontWeight={600}>
                       Document Verification
