@@ -47,17 +47,25 @@ const LICENSE_FILTER_CONFIGS: FilterConfig[] = [
     label: 'License Category',
     type: 'select',
     options: [
+      // Learner's Permits
+      { value: '1', label: '1 - Learner\'s Permit (Motorcycles)' },
+      { value: '2', label: '2 - Learner\'s Permit (Light Vehicles)' },
+      { value: '3', label: '3 - Learner\'s Permit (Any Vehicle)' },
+      // Motorcycles
       { value: 'A1', label: 'A1 - Small Motorcycles' },
       { value: 'A2', label: 'A2 - Mid-range Motorcycles' },
       { value: 'A', label: 'A - Unlimited Motorcycles' },
+      // Light Vehicles
       { value: 'B1', label: 'B1 - Light Quadricycles' },
       { value: 'B', label: 'B - Standard Cars' },
       { value: 'B2', label: 'B2 - Commercial Passenger' },
       { value: 'BE', label: 'BE - Car with Trailer' },
+      // Heavy Goods Vehicles
       { value: 'C1', label: 'C1 - Medium Goods' },
       { value: 'C', label: 'C - Heavy Goods' },
       { value: 'C1E', label: 'C1E - Medium with Trailer' },
       { value: 'CE', label: 'CE - Heavy with Trailer' },
+      // Passenger Transport
       { value: 'D1', label: 'D1 - Small Buses' },
       { value: 'D', label: 'D - Standard Buses' },
       { value: 'D2', label: 'D2 - Specialized Transport' },
