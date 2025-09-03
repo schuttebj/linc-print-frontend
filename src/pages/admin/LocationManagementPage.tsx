@@ -27,6 +27,7 @@ import {
   TablePagination,
   IconButton,
   Stack,
+  Skeleton,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -333,6 +334,65 @@ const LocationManagementPage: React.FC = () => {
     navigate(`/dashboard/admin/locations/edit/${location.id}`);
   };
 
+  // Skeleton loader component for location results
+  const LocationResultsSkeleton = () => (
+    <TableContainer sx={{ flex: 1 }}>
+      <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+        <TableHead>
+          <TableRow>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Code</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Location Name</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Office Type</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Province</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Contact Info</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Capacity</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
+            <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Actions</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {Array.from({ length: rowsPerPage }).map((_, index) => (
+            <TableRow key={index}>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="text" width="60%" height={20} />
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="text" width="100%" height={20} />
+                <Skeleton variant="text" width="80%" height={16} />
+                <Skeleton variant="text" width="70%" height={16} />
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="rounded" width={80} height={24} />
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="text" width="100%" height={20} />
+                <Skeleton variant="text" width="60%" height={16} />
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="text" width="100%" height={20} />
+                <Skeleton variant="text" width="90%" height={16} />
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="text" width="60%" height={20} />
+                <Skeleton variant="text" width="80%" height={16} />
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="rounded" width={70} height={24} />
+              </TableCell>
+              <TableCell align="right" sx={{ py: 1, px: 2 }}>
+                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                  <Skeleton variant="circular" width={32} height={32} />
+                  <Skeleton variant="circular" width={32} height={32} />
+                  <Skeleton variant="circular" width={32} height={32} />
+                </Box>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+
   if (loading && locations.length === 0) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
@@ -418,165 +478,208 @@ const LocationManagementPage: React.FC = () => {
               borderRadius: 0
             }}
           >
-            <TableContainer sx={{ flex: 1 }}>
-              <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Code</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Location Name</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Office Type</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Province</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Contact Info</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Capacity</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {locations.map((location) => (
-                    <TableRow key={location.id} hover>
-                      <TableCell sx={{ py: 1, px: 2 }}>
-                        <Typography variant="body2" color="primary.main" sx={{ fontFamily: 'monospace', fontWeight: 600, fontSize: '0.8rem' }}>
-                          {location.display_code}
-                        </Typography>
-                      </TableCell>
+            {/* Show skeleton while loading */}
+            {loading ? (
+              <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                <LocationResultsSkeleton />
+                <TablePagination
+                  component="div"
+                  count={0}
+                  page={page}
+                  onPageChange={() => {}}
+                  rowsPerPage={rowsPerPage}
+                  onRowsPerPageChange={() => {}}
+                  rowsPerPageOptions={[10, 20, 50, { value: -1, label: 'All' }]}
+                  sx={{
+                    bgcolor: 'white',
+                    borderTop: '1px solid',
+                    borderColor: 'divider',
+                    flexShrink: 0,
+                    '& .MuiTablePagination-toolbar': {
+                      minHeight: '52px',
+                    },
+                    '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+                      fontSize: '0.8rem',
+                    },
+                    '& .MuiTablePagination-select': {
+                      fontSize: '0.8rem',
+                    },
+                  }}
+                />
+              </Box>
+            ) : (
+              /* Show results or no results message only after loading is complete */
+              <>
+                {locations.length === 0 ? (
+                  <Box sx={{ p: 2 }}>
+                    <Alert severity="info">
+                      No locations found matching your search criteria. Try adjusting your search terms.
+                    </Alert>
+                  </Box>
+                ) : (
+                  <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                    <TableContainer sx={{ flex: 1 }}>
+                      <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Code</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Location Name</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Office Type</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Province</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Contact Info</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Capacity</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Actions</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {locations.map((location) => (
+                            <TableRow key={location.id} hover>
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                <Typography variant="body2" color="primary.main" sx={{ fontFamily: 'monospace', fontWeight: 600, fontSize: '0.8rem' }}>
+                                  {location.display_code}
+                                </Typography>
+                              </TableCell>
 
-                      <TableCell sx={{ py: 1, px: 2 }}>
-                        <Box>
-                          <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
-                            {location.name}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                            {location.street_address}
-                          </Typography>
-                          {location.locality && (
-                            <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.7rem' }}>
-                              {location.locality}
-                            </Typography>
-                          )}
-                        </Box>
-                      </TableCell>
-                      
-                      <TableCell sx={{ py: 1, px: 2 }}>
-                        <Chip
-                          label={getOfficeTypeDisplay(location.office_type).label}
-                          color={getOfficeTypeDisplay(location.office_type).color}
-                          size="small"
-                        />
-                      </TableCell>
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                <Box>
+                                  <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
+                                    {location.name}
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                    {location.street_address}
+                                  </Typography>
+                                  {location.locality && (
+                                    <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.7rem' }}>
+                                      {location.locality}
+                                    </Typography>
+                                  )}
+                                </Box>
+                              </TableCell>
+                              
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                <Chip
+                                  label={getOfficeTypeDisplay(location.office_type).label}
+                                  color={getOfficeTypeDisplay(location.office_type).color}
+                                  size="small"
+                                />
+                              </TableCell>
 
-                      <TableCell sx={{ py: 1, px: 2 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                          {location.province_name}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                          ({location.province_code})
-                        </Typography>
-                      </TableCell>
-                      
-                      <TableCell sx={{ py: 1, px: 2 }}>
-                        <Stack spacing={0.5}>
-                          {location.phone_number ? (
-                            <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                              {location.phone_number}
-                            </Typography>
-                          ) : (
-                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>No phone</Typography>
-                          )}
-                          {location.email ? (
-                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                              {location.email}
-                            </Typography>
-                          ) : (
-                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                              No email
-                            </Typography>
-                          )}
-                        </Stack>
-                      </TableCell>
-                      
-                      <TableCell sx={{ py: 1, px: 2 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
-                          {location.max_daily_capacity}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                          Daily Capacity
-                        </Typography>
-                      </TableCell>
-                      
-                      <TableCell sx={{ py: 1, px: 2 }}>
-                        <Chip
-                          label={location.is_operational ? 'Operational' : 'Closed'}
-                          color={getStatusColor(location.is_operational)}
-                          size="small"
-                        />
-                      </TableCell>
-                      
-                      <TableCell align="right" sx={{ py: 1, px: 2 }}>
-                        <Box sx={{ display: 'flex', gap: 0.5 }}>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleEditLocation(location)}
-                            title="Edit Location"
-                          >
-                            <EditIcon />
-                          </IconButton>
-                          
-                          <IconButton
-                            size="small"
-                            color={location.is_operational ? 'warning' : 'success'}
-                            onClick={() => handleToggleOperational(location)}
-                            title={location.is_operational ? 'Close Location' : 'Open Location'}
-                          >
-                            {location.is_operational ? <CloseIcon /> : <OpenIcon />}
-                          </IconButton>
-                          
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => {
-                              setSelectedLocation(location);
-                              setShowDeleteModal(true);
-                            }}
-                            title="Delete Location"
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                                  {location.province_name}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                  ({location.province_code})
+                                </Typography>
+                              </TableCell>
+                              
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                <Stack spacing={0.5}>
+                                  {location.phone_number ? (
+                                    <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                                      {location.phone_number}
+                                    </Typography>
+                                  ) : (
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>No phone</Typography>
+                                  )}
+                                  {location.email ? (
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                      {location.email}
+                                    </Typography>
+                                  ) : (
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                      No email
+                                    </Typography>
+                                  )}
+                                </Stack>
+                              </TableCell>
+                              
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
+                                  {location.max_daily_capacity}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                  Daily Capacity
+                                </Typography>
+                              </TableCell>
+                              
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                <Chip
+                                  label={location.is_operational ? 'Operational' : 'Closed'}
+                                  color={getStatusColor(location.is_operational)}
+                                  size="small"
+                                />
+                              </TableCell>
+                              
+                              <TableCell align="right" sx={{ py: 1, px: 2 }}>
+                                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleEditLocation(location)}
+                                    title="Edit Location"
+                                  >
+                                    <EditIcon />
+                                  </IconButton>
+                                  
+                                  <IconButton
+                                    size="small"
+                                    color={location.is_operational ? 'warning' : 'success'}
+                                    onClick={() => handleToggleOperational(location)}
+                                    title={location.is_operational ? 'Close Location' : 'Open Location'}
+                                  >
+                                    {location.is_operational ? <CloseIcon /> : <OpenIcon />}
+                                  </IconButton>
+                                  
+                                  <IconButton
+                                    size="small"
+                                    color="error"
+                                    onClick={() => {
+                                      setSelectedLocation(location);
+                                      setShowDeleteModal(true);
+                                    }}
+                                    title="Delete Location"
+                                  >
+                                    <DeleteIcon />
+                                  </IconButton>
+                                </Box>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+
+                    <TablePagination
+                      component="div"
+                      count={totalResults}
+                      page={page}
+                      onPageChange={handlePageChange}
+                      rowsPerPage={rowsPerPage}
+                      onRowsPerPageChange={handleRowsPerPageChange}
+                      rowsPerPageOptions={[10, 20, 50, { value: -1, label: 'All' }]}
+                      sx={{
+                        bgcolor: 'white',
+                        borderTop: '1px solid',
+                        borderColor: 'divider',
+                        flexShrink: 0,
+                        '& .MuiTablePagination-toolbar': {
+                          minHeight: '52px',
+                        },
+                        '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+                          fontSize: '0.8rem',
+                        },
+                        '& .MuiTablePagination-select': {
+                          fontSize: '0.8rem',
+                        },
+                      }}
+                    />
+                  </Box>
+                )}
+              </>
+            )}
           </Paper>
         </Box>
-
-        {/* Pagination */}
-        <TablePagination
-          component="div"
-          count={totalResults}
-          page={page}
-          onPageChange={handlePageChange}
-          rowsPerPage={rowsPerPage}
-          onRowsPerPageChange={handleRowsPerPageChange}
-          rowsPerPageOptions={[10, 20, 50, { value: -1, label: 'All' }]}
-          sx={{
-            bgcolor: 'white',
-            borderTop: '1px solid',
-            borderColor: 'divider',
-            flexShrink: 0,
-            '& .MuiTablePagination-toolbar': {
-              minHeight: '52px',
-            },
-            '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
-              fontSize: '0.8rem',
-            },
-            '& .MuiTablePagination-select': {
-              fontSize: '0.8rem',
-            },
-          }}
-        />
       </Paper>
     </Container>
 

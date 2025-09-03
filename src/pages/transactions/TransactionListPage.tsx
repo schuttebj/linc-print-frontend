@@ -25,7 +25,8 @@ import {
   List,
   ListItem,
   ListItemText,
-  Divider
+  Divider,
+  Skeleton,
 } from '@mui/material';
 import {
   Receipt as ReceiptIcon,
@@ -472,7 +473,63 @@ const TransactionListPage: React.FC = () => {
     return true;
   });
 
-
+  // Skeleton loader component for transaction results
+  const TransactionResultsSkeleton = () => (
+    <TableContainer sx={{ flex: 1 }}>
+      <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+        <TableHead>
+          <TableRow>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Transaction #</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Date</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Person</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Amount</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Payment Method</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Receipt</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Actions</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {Array.from({ length: rowsPerPage }).map((_, index) => (
+            <React.Fragment key={index}>
+              <TableRow>
+                <TableCell sx={{ py: 1, px: 2 }}>
+                  <Box display="flex" alignItems="center">
+                    <Skeleton variant="circular" width={24} height={24} sx={{ mr: 1 }} />
+                    <Skeleton variant="text" width="100%" height={20} />
+                  </Box>
+                </TableCell>
+                <TableCell sx={{ py: 1, px: 2 }}>
+                  <Skeleton variant="text" width="100%" height={20} />
+                </TableCell>
+                <TableCell sx={{ py: 1, px: 2 }}>
+                  <Skeleton variant="text" width="100%" height={20} />
+                </TableCell>
+                <TableCell sx={{ py: 1, px: 2 }}>
+                  <Skeleton variant="text" width="80%" height={20} />
+                </TableCell>
+                <TableCell sx={{ py: 1, px: 2 }}>
+                  <Skeleton variant="rounded" width={80} height={24} />
+                </TableCell>
+                <TableCell sx={{ py: 1, px: 2 }}>
+                  <Skeleton variant="rounded" width={60} height={24} />
+                </TableCell>
+                <TableCell sx={{ py: 1, px: 2 }}>
+                  <Skeleton variant="rounded" width={70} height={24} />
+                </TableCell>
+                <TableCell sx={{ py: 1, px: 2 }}>
+                  <Box display="flex" gap={1}>
+                    <Skeleton variant="circular" width={32} height={32} />
+                    <Skeleton variant="circular" width={32} height={32} />
+                  </Box>
+                </TableCell>
+              </TableRow>
+            </React.Fragment>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
 
   const renderTransactionDialog = () => (
     <Dialog
@@ -786,185 +843,214 @@ const TransactionListPage: React.FC = () => {
               borderRadius: 0
             }}
           >
-            <TableContainer sx={{ flex: 1 }}>
-              <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Transaction #</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Date</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Person</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Amount</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Payment Method</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Receipt</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={8} align="center" sx={{ py: 1, px: 2 }}>
-                        Loading transactions...
-                      </TableCell>
-                    </TableRow>
-                  ) : filteredTransactions.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={8} align="center" sx={{ py: 1, px: 2 }}>
-                        No transactions found
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredTransactions.map((transaction) => (
-                      <React.Fragment key={transaction.id}>
-                        <TableRow hover>
-                          <TableCell sx={{ py: 1, px: 2 }}>
-                            <Box display="flex" alignItems="center">
-                              <IconButton
-                                size="small"
-                                onClick={() => toggleRowExpansion(transaction.id)}
-                              >
-                                {expandedRows.has(transaction.id) ? 
-                                  <ExpandLessIcon /> : <ExpandMoreIcon />
-                                }
-                              </IconButton>
-                              <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                                {transaction.transaction_number}
-                              </Typography>
-                            </Box>
-                          </TableCell>
-                          <TableCell sx={{ py: 1, px: 2 }}>
-                            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                              {format(parseISO(transaction.created_at), 'yyyy-MM-dd HH:mm')}
-                            </Typography>
-                          </TableCell>
-                          <TableCell sx={{ py: 1, px: 2 }}>
-                            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                              Person #{transaction.person_id.slice(0, 8)}...
-                            </Typography>
-                          </TableCell>
-                          <TableCell sx={{ py: 1, px: 2 }}>
-                            <Typography variant="body2" fontWeight="bold" color="primary" sx={{ fontSize: '0.8rem' }}>
-                              {formatCurrency(transaction.total_amount)}
-                            </Typography>
-                          </TableCell>
-                          <TableCell sx={{ py: 1, px: 2 }}>
-                            {transaction.payment_method && (
-                              <Chip
-                                label={transactionService.formatPaymentMethod(transaction.payment_method)}
-                                color={getPaymentMethodColor(transaction.payment_method) as any}
-                                size="small"
-                              />
-                            )}
-                          </TableCell>
-                          <TableCell sx={{ py: 1, px: 2 }}>
-                            <Chip
-                              label={transactionService.formatTransactionStatus(transaction.status)}
-                              color={getStatusColor(transaction.status) as any}
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell sx={{ py: 1, px: 2 }}>
-                            {transaction.receipt_number && (
-                              <Chip
-                                label={transaction.receipt_printed ? 'Printed' : 'Available'}
-                                color={transaction.receipt_printed ? 'success' : 'warning'}
-                                size="small"
-                              />
-                            )}
-                          </TableCell>
-                          <TableCell sx={{ py: 1, px: 2 }}>
-                            <Box display="flex" gap={1}>
-                              <Tooltip title="View Details">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => handleViewTransaction(transaction)}
-                                >
-                                  <ViewIcon />
-                                </IconButton>
-                              </Tooltip>
-                              {transaction.receipt_number && (
-                                <Tooltip title="View Receipt">
-                                  <IconButton
+            {/* Show skeleton while loading */}
+            {loading ? (
+              <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                <TransactionResultsSkeleton />
+                <TablePagination
+                  component="div"
+                  count={0}
+                  page={page}
+                  onPageChange={() => {}}
+                  rowsPerPage={rowsPerPage}
+                  onRowsPerPageChange={() => {}}
+                  rowsPerPageOptions={[10, 25, 50, { value: -1, label: 'All' }]}
+                  sx={{
+                    bgcolor: 'white',
+                    borderTop: '1px solid',
+                    borderColor: 'divider',
+                    flexShrink: 0,
+                    '& .MuiTablePagination-toolbar': {
+                      minHeight: '52px',
+                    },
+                    '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+                      fontSize: '0.8rem',
+                    },
+                    '& .MuiTablePagination-select': {
+                      fontSize: '0.8rem',
+                    },
+                  }}
+                />
+              </Box>
+            ) : (
+              /* Show results or no results message only after loading is complete */
+              <>
+                {filteredTransactions.length === 0 ? (
+                  <Box sx={{ p: 2 }}>
+                    <Alert severity="info">
+                      No transactions found matching your search criteria. Try adjusting your search terms.
+                    </Alert>
+                  </Box>
+                ) : (
+                  <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                    <TableContainer sx={{ flex: 1 }}>
+                      <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Transaction #</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Date</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Person</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Amount</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Payment Method</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Receipt</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Actions</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {filteredTransactions.map((transaction) => (
+                            <React.Fragment key={transaction.id}>
+                              <TableRow hover>
+                                <TableCell sx={{ py: 1, px: 2 }}>
+                                  <Box display="flex" alignItems="center">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => toggleRowExpansion(transaction.id)}
+                                    >
+                                      {expandedRows.has(transaction.id) ? 
+                                        <ExpandLessIcon /> : <ExpandMoreIcon />
+                                      }
+                                    </IconButton>
+                                    <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                      {transaction.transaction_number}
+                                    </Typography>
+                                  </Box>
+                                </TableCell>
+                                <TableCell sx={{ py: 1, px: 2 }}>
+                                  <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                    {format(parseISO(transaction.created_at), 'yyyy-MM-dd HH:mm')}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell sx={{ py: 1, px: 2 }}>
+                                  <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                    Person #{transaction.person_id.slice(0, 8)}...
+                                  </Typography>
+                                </TableCell>
+                                <TableCell sx={{ py: 1, px: 2 }}>
+                                  <Typography variant="body2" fontWeight="bold" color="primary" sx={{ fontSize: '0.8rem' }}>
+                                    {formatCurrency(transaction.total_amount)}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell sx={{ py: 1, px: 2 }}>
+                                  {transaction.payment_method && (
+                                    <Chip
+                                      label={transactionService.formatPaymentMethod(transaction.payment_method)}
+                                      color={getPaymentMethodColor(transaction.payment_method) as any}
+                                      size="small"
+                                    />
+                                  )}
+                                </TableCell>
+                                <TableCell sx={{ py: 1, px: 2 }}>
+                                  <Chip
+                                    label={transactionService.formatTransactionStatus(transaction.status)}
+                                    color={getStatusColor(transaction.status) as any}
                                     size="small"
-                                    onClick={() => handleViewReceipt(transaction)}
-                                  >
-                                    <ReceiptIcon />
-                                  </IconButton>
-                                </Tooltip>
-                              )}
-                            </Box>
-                          </TableCell>
-                      </TableRow>
-                        
-                        {/* Expanded row with transaction items */}
-                        <TableRow>
-                          <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
-                            <Collapse in={expandedRows.has(transaction.id)} timeout="auto" unmountOnExit>
-                              <Box margin={1}>
-                                <Typography variant="h6" gutterBottom component="div" sx={{ fontSize: '0.875rem' }}>
-                                  Transaction Items
-                                </Typography>
-                                <Table size="small">
-                                  <TableHead>
-                                    <TableRow>
-                                      <TableCell sx={{ fontSize: '0.75rem' }}>Description</TableCell>
-                                      <TableCell sx={{ fontSize: '0.75rem' }}>Type</TableCell>
-                                      <TableCell align="right" sx={{ fontSize: '0.75rem' }}>Amount</TableCell>
-                                    </TableRow>
-                                  </TableHead>
-                                  <TableBody>
-                                    {transaction.items?.map((item) => (
-                                      <TableRow key={item.id}>
-                                        <TableCell sx={{ fontSize: '0.75rem' }}>{item.description}</TableCell>
-                                        <TableCell sx={{ fontSize: '0.75rem' }}>{item.item_type.replace('_', ' ')}</TableCell>
-                                        <TableCell align="right" sx={{ fontSize: '0.75rem' }}>
-                                          {formatCurrency(item.amount)}
-                                        </TableCell>
-                                      </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
-                              </Box>
-                            </Collapse>
-                          </TableCell>
-                        </TableRow>
-                      </React.Fragment>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                                  />
+                                </TableCell>
+                                <TableCell sx={{ py: 1, px: 2 }}>
+                                  {transaction.receipt_number && (
+                                    <Chip
+                                      label={transaction.receipt_printed ? 'Printed' : 'Available'}
+                                      color={transaction.receipt_printed ? 'success' : 'warning'}
+                                      size="small"
+                                    />
+                                  )}
+                                </TableCell>
+                                <TableCell sx={{ py: 1, px: 2 }}>
+                                  <Box display="flex" gap={1}>
+                                    <Tooltip title="View Details">
+                                      <IconButton
+                                        size="small"
+                                        onClick={() => handleViewTransaction(transaction)}
+                                      >
+                                        <ViewIcon />
+                                      </IconButton>
+                                    </Tooltip>
+                                    {transaction.receipt_number && (
+                                      <Tooltip title="View Receipt">
+                                        <IconButton
+                                          size="small"
+                                          onClick={() => handleViewReceipt(transaction)}
+                                        >
+                                          <ReceiptIcon />
+                                        </IconButton>
+                                      </Tooltip>
+                                    )}
+                                  </Box>
+                                </TableCell>
+                            </TableRow>
+                              
+                              {/* Expanded row with transaction items */}
+                              <TableRow>
+                                <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
+                                  <Collapse in={expandedRows.has(transaction.id)} timeout="auto" unmountOnExit>
+                                    <Box margin={1}>
+                                      <Typography variant="h6" gutterBottom component="div" sx={{ fontSize: '0.875rem' }}>
+                                        Transaction Items
+                                      </Typography>
+                                      <Table size="small">
+                                        <TableHead>
+                                          <TableRow>
+                                            <TableCell sx={{ fontSize: '0.75rem' }}>Description</TableCell>
+                                            <TableCell sx={{ fontSize: '0.75rem' }}>Type</TableCell>
+                                            <TableCell align="right" sx={{ fontSize: '0.75rem' }}>Amount</TableCell>
+                                          </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                          {transaction.items?.map((item) => (
+                                            <TableRow key={item.id}>
+                                              <TableCell sx={{ fontSize: '0.75rem' }}>{item.description}</TableCell>
+                                              <TableCell sx={{ fontSize: '0.75rem' }}>{item.item_type.replace('_', ' ')}</TableCell>
+                                              <TableCell align="right" sx={{ fontSize: '0.75rem' }}>
+                                                {formatCurrency(item.amount)}
+                                              </TableCell>
+                                            </TableRow>
+                                          ))}
+                                        </TableBody>
+                                      </Table>
+                                    </Box>
+                                  </Collapse>
+                                </TableCell>
+                              </TableRow>
+                            </React.Fragment>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+
+                    <TablePagination
+                      component="div"
+                      count={totalResults}
+                      page={page}
+                      onPageChange={(_event: unknown, newPage: number) => setPage(newPage)}
+                      rowsPerPage={rowsPerPage}
+                      onRowsPerPageChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                        setRowsPerPage(parseInt(event.target.value, 10));
+                        setPage(0);
+                      }}
+                      rowsPerPageOptions={[10, 25, 50, { value: -1, label: 'All' }]}
+                      sx={{
+                        bgcolor: 'white',
+                        borderTop: '1px solid',
+                        borderColor: 'divider',
+                        flexShrink: 0,
+                        '& .MuiTablePagination-toolbar': {
+                          minHeight: '52px',
+                        },
+                        '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+                          fontSize: '0.8rem',
+                        },
+                        '& .MuiTablePagination-select': {
+                          fontSize: '0.8rem',
+                        },
+                      }}
+                    />
+                  </Box>
+                )}
+              </>
+            )}
           </Paper>
         </Box>
-
-        {/* Pagination */}
-        <TablePagination
-          component="div"
-          count={totalResults}
-          page={page}
-          onPageChange={(_event: unknown, newPage: number) => setPage(newPage)}
-          rowsPerPage={rowsPerPage}
-          onRowsPerPageChange={(event: React.ChangeEvent<HTMLInputElement>) => {
-            setRowsPerPage(parseInt(event.target.value, 10));
-            setPage(0);
-          }}
-          rowsPerPageOptions={[10, 25, 50, { value: -1, label: 'All' }]}
-          sx={{
-            bgcolor: 'white',
-            borderTop: '1px solid',
-            borderColor: 'divider',
-            flexShrink: 0,
-            '& .MuiTablePagination-toolbar': {
-              minHeight: '52px',
-            },
-            '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
-              fontSize: '0.8rem',
-            },
-            '& .MuiTablePagination-select': {
-              fontSize: '0.8rem',
-            },
-          }}
-        />
       </Paper>
     </Container>
 

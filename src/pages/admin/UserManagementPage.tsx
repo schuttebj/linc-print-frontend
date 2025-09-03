@@ -29,6 +29,7 @@ import {
   Alert,
   CircularProgress,
   Stack,
+  Skeleton,
 } from '@mui/material';
 import {
   Person as PersonIcon,
@@ -315,6 +316,68 @@ const UserManagementPage: React.FC = () => {
     });
   };
 
+  // Skeleton loader component for user results
+  const UserResultsSkeleton = () => (
+    <TableContainer sx={{ flex: 1 }}>
+      <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+        <TableHead>
+          <TableRow>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>User</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Type</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Assignment</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Roles</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Last Login</TableCell>
+            <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Actions</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {Array.from({ length: rowsPerPage }).map((_, index) => (
+            <TableRow key={index}>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Skeleton variant="circular" width={32} height={32} />
+                  <Box>
+                    <Skeleton variant="text" width="120px" height={20} />
+                    <Skeleton variant="text" width="80px" height={16} />
+                    <Skeleton variant="text" width="140px" height={16} />
+                  </Box>
+                </Box>
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="rounded" width={70} height={24} />
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="text" width="100%" height={20} />
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Stack direction="row" spacing={0.5}>
+                  <Skeleton variant="rounded" width={60} height={24} />
+                  <Skeleton variant="rounded" width={80} height={24} />
+                </Stack>
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="rounded" width={60} height={24} />
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="text" width="100%" height={20} />
+              </TableCell>
+              <TableCell align="right" sx={{ py: 1, px: 2 }}>
+                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                  <Skeleton variant="circular" width={32} height={32} />
+                  <Skeleton variant="circular" width={32} height={32} />
+                  <Skeleton variant="circular" width={32} height={32} />
+                  <Skeleton variant="circular" width={32} height={32} />
+                  <Skeleton variant="circular" width={32} height={32} />
+                </Box>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+
   // Check for success message from navigation state
   useEffect(() => {
     if (location.state?.successMessage) {
@@ -432,162 +495,205 @@ const UserManagementPage: React.FC = () => {
               borderRadius: 0
             }}
           >
-            <TableContainer sx={{ flex: 1 }}>
-              <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>User</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Type</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Assignment</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Roles</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Last Login</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {users.map((user) => (
-                    <TableRow key={user.id} hover>
-                      <TableCell sx={{ py: 1, px: 2 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Avatar sx={{ bgcolor: 'primary.main', width: 32, height: 32 }}>
-                            <PersonIcon sx={{ fontSize: '1rem' }} />
-                          </Avatar>
-                          <Box>
-                            <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
-                              {user.first_name} {user.last_name}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace', fontSize: '0.7rem' }}>
-                              {user.username}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.7rem' }}>
-                              {user.email}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </TableCell>
-                      
-                      <TableCell sx={{ py: 1, px: 2 }}>
-                        <Chip
-                          label={getUserTypeDisplay(user.user_type).label}
-                          color={getUserTypeDisplay(user.user_type).color}
-                          size="small"
-                        />
-                      </TableCell>
-                      
-                      <TableCell sx={{ py: 1, px: 2 }}>
-                        <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                          {getLocationInfo(user)}
-                        </Typography>
-                      </TableCell>
-                      
-                      <TableCell sx={{ py: 1, px: 2 }}>
-                        <Stack direction="row" spacing={0.5} flexWrap="wrap">
-                          {user.roles?.map((role) => (
-                            <Chip
-                              key={role.id}
-                              label={`${role.display_name || role.name}${role.hierarchy_level ? ` (${role.hierarchy_level})` : ''}`}
-                              size="small"
-                              variant="outlined"
-                            />
+            {/* Show skeleton while loading */}
+            {loading ? (
+              <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                <UserResultsSkeleton />
+                <TablePagination
+                  component="div"
+                  count={0}
+                  page={page}
+                  onPageChange={() => {}}
+                  rowsPerPage={rowsPerPage}
+                  onRowsPerPageChange={() => {}}
+                  rowsPerPageOptions={[10, 20, 50, { value: -1, label: 'All' }]}
+                  sx={{
+                    bgcolor: 'white',
+                    borderTop: '1px solid',
+                    borderColor: 'divider',
+                    flexShrink: 0,
+                    '& .MuiTablePagination-toolbar': {
+                      minHeight: '52px',
+                    },
+                    '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+                      fontSize: '0.8rem',
+                    },
+                    '& .MuiTablePagination-select': {
+                      fontSize: '0.8rem',
+                    },
+                  }}
+                />
+              </Box>
+            ) : (
+              /* Show results or no results message only after loading is complete */
+              <>
+                {users.length === 0 ? (
+                  <Box sx={{ p: 2 }}>
+                    <Alert severity="info">
+                      No users found matching your search criteria. Try adjusting your search terms.
+                    </Alert>
+                  </Box>
+                ) : (
+                  <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                    <TableContainer sx={{ flex: 1 }}>
+                      <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>User</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Type</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Assignment</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Roles</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Last Login</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Actions</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {users.map((user) => (
+                            <TableRow key={user.id} hover>
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                  <Avatar sx={{ bgcolor: 'primary.main', width: 32, height: 32 }}>
+                                    <PersonIcon sx={{ fontSize: '1rem' }} />
+                                  </Avatar>
+                                  <Box>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
+                                      {user.first_name} {user.last_name}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace', fontSize: '0.7rem' }}>
+                                      {user.username}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.7rem' }}>
+                                      {user.email}
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                              </TableCell>
+                              
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                <Chip
+                                  label={getUserTypeDisplay(user.user_type).label}
+                                  color={getUserTypeDisplay(user.user_type).color}
+                                  size="small"
+                                />
+                              </TableCell>
+                              
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                  {getLocationInfo(user)}
+                                </Typography>
+                              </TableCell>
+                              
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                                  {user.roles?.map((role) => (
+                                    <Chip
+                                      key={role.id}
+                                      label={`${role.display_name || role.name}${role.hierarchy_level ? ` (${role.hierarchy_level})` : ''}`}
+                                      size="small"
+                                      variant="outlined"
+                                    />
+                                  ))}
+                                </Stack>
+                              </TableCell>
+                              
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                <Chip
+                                  label={user.status}
+                                  color={getStatusColor(user.status)}
+                                  size="small"
+                                />
+                              </TableCell>
+                              
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                  {user.last_login ? formatDate(user.last_login) : 'Never'}
+                                </Typography>
+                              </TableCell>
+                              
+                              <TableCell align="right" sx={{ py: 1, px: 2 }}>
+                                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => {
+                                      setSelectedUser(user);
+                                      setShowViewModal(true);
+                                    }}
+                                  >
+                                    <ViewIcon />
+                                  </IconButton>
+                                  
+                                  {hasPermission('users.update') && (
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => navigate(`/dashboard/admin/users/edit/${user.id}`)}
+                                    >
+                                      <EditIcon />
+                                    </IconButton>
+                                  )}
+                                  
+                                  {hasPermission('users.update') && (
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => handleToggleActivation(user)}
+                                      color={user.status === 'ACTIVE' ? 'warning' : 'success'}
+                                      title={user.status === 'ACTIVE' ? 'Deactivate User' : 'Activate User'}
+                                    >
+                                      {user.status === 'ACTIVE' ? <DeactivateIcon /> : <ActivateIcon />}
+                                    </IconButton>
+                                  )}
+                                  
+                                  {hasPermission('users.delete') && (
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => {
+                                        setSelectedUser(user);
+                                        setShowDeleteModal(true);
+                                      }}
+                                      color="error"
+                                      title="Delete User"
+                                    >
+                                      <DeleteIcon />
+                                    </IconButton>
+                                  )}
+                                </Box>
+                              </TableCell>
+                            </TableRow>
                           ))}
-                        </Stack>
-                      </TableCell>
-                      
-                      <TableCell sx={{ py: 1, px: 2 }}>
-                        <Chip
-                          label={user.status}
-                          color={getStatusColor(user.status)}
-                          size="small"
-                        />
-                      </TableCell>
-                      
-                      <TableCell sx={{ py: 1, px: 2 }}>
-                        <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                          {user.last_login ? formatDate(user.last_login) : 'Never'}
-                        </Typography>
-                      </TableCell>
-                      
-                      <TableCell align="right" sx={{ py: 1, px: 2 }}>
-                        <Box sx={{ display: 'flex', gap: 0.5 }}>
-                          <IconButton
-                            size="small"
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setShowViewModal(true);
-                            }}
-                          >
-                            <ViewIcon />
-                          </IconButton>
-                          
-                          {hasPermission('users.update') && (
-                            <IconButton
-                              size="small"
-                              onClick={() => navigate(`/dashboard/admin/users/edit/${user.id}`)}
-                            >
-                              <EditIcon />
-                            </IconButton>
-                          )}
-                          
-                          {hasPermission('users.update') && (
-                            <IconButton
-                              size="small"
-                              onClick={() => handleToggleActivation(user)}
-                              color={user.status === 'ACTIVE' ? 'warning' : 'success'}
-                              title={user.status === 'ACTIVE' ? 'Deactivate User' : 'Activate User'}
-                            >
-                              {user.status === 'ACTIVE' ? <DeactivateIcon /> : <ActivateIcon />}
-                            </IconButton>
-                          )}
-                          
-                          {hasPermission('users.delete') && (
-                            <IconButton
-                              size="small"
-                              onClick={() => {
-                                setSelectedUser(user);
-                                setShowDeleteModal(true);
-                              }}
-                              color="error"
-                              title="Delete User"
-                            >
-                              <DeleteIcon />
-                            </IconButton>
-                          )}
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+
+                    <TablePagination
+                      component="div"
+                      count={totalResults}
+                      page={page}
+                      onPageChange={handlePageChange}
+                      rowsPerPage={rowsPerPage}
+                      onRowsPerPageChange={handleRowsPerPageChange}
+                      rowsPerPageOptions={[10, 20, 50, { value: -1, label: 'All' }]}
+                      sx={{
+                        bgcolor: 'white',
+                        borderTop: '1px solid',
+                        borderColor: 'divider',
+                        flexShrink: 0,
+                        '& .MuiTablePagination-toolbar': {
+                          minHeight: '52px',
+                        },
+                        '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+                          fontSize: '0.8rem',
+                        },
+                        '& .MuiTablePagination-select': {
+                          fontSize: '0.8rem',
+                        },
+                      }}
+                    />
+                  </Box>
+                )}
+              </>
+            )}
           </Paper>
         </Box>
-
-        {/* Pagination */}
-        <TablePagination
-          component="div"
-          count={totalResults}
-          page={page}
-          onPageChange={handlePageChange}
-          rowsPerPage={rowsPerPage}
-          onRowsPerPageChange={handleRowsPerPageChange}
-          rowsPerPageOptions={[10, 20, 50, { value: -1, label: 'All' }]}
-          sx={{
-            bgcolor: 'white',
-            borderTop: '1px solid',
-            borderColor: 'divider',
-            flexShrink: 0,
-            '& .MuiTablePagination-toolbar': {
-              minHeight: '52px',
-            },
-            '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
-              fontSize: '0.8rem',
-            },
-            '& .MuiTablePagination-select': {
-              fontSize: '0.8rem',
-            },
-          }}
-        />
       </Paper>
     </Container>
 
