@@ -127,218 +127,197 @@ const LoginPage: React.FC = () => {
   return (
     <Box sx={{ 
       minHeight: '100vh',
-      backgroundColor: '#f5f5f5',
+      background: 'linear-gradient(135deg, #10367d 0%, #74b4da 100%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       p: 2
     }}>
-      <Container maxWidth="sm" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Container maxWidth="sm">
         <Paper 
           elevation={0}
           sx={{ 
-            flexGrow: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            bgcolor: '#f8f9fa',
-            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-            borderRadius: 2,
+            bgcolor: 'white',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+            borderRadius: 3,
             overflow: 'hidden',
-            maxHeight: '600px'
+            maxWidth: '400px',
+            mx: 'auto'
           }}
         >
-          {/* Header Section */}
-          <Box sx={{ 
-            bgcolor: 'white', 
-            borderBottom: '1px solid', 
-            borderColor: 'divider',
-            flexShrink: 0,
-            p: 3,
-            textAlign: 'center'
-          }}>
-            <LincLogo size={48} />
-            <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600, mt: 1.5, mb: 0.5 }}>
-              LINC License System
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
-              Driver's License Management Portal
-            </Typography>
-          </Box>
+          {/* Header and Form Section */}
+          <Box sx={{ p: 3 }}>
+            {/* Logo and Title */}
+            <Box sx={{ textAlign: 'center', mb: 3 }}>
+              <LincLogo size={48} />
+              <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600, mt: 1.5, mb: 0.5 }}>
+                LINC License System
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                Driver's License Management Portal
+              </Typography>
+            </Box>
 
-          {/* Content Area */}
-          <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
-            <Paper 
-              elevation={0}
-              sx={{ 
-                bgcolor: 'white',
-                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-                borderRadius: 2,
-                p: 2
-              }}
-            >
-              <form onSubmit={handleSubmit(onSubmit)}>
-                {/* Error Alert */}
-                {loginError && (
-                  <Alert severity="error" sx={{ mb: 2, fontSize: '0.875rem' }}>
-                    {loginError}
-                  </Alert>
-                )}
+            {/* Login Form */}
+            <form onSubmit={handleSubmit(onSubmit)}>
+              {/* Error Alert */}
+              {loginError && (
+                <Alert severity="error" sx={{ mb: 2, fontSize: '0.875rem' }}>
+                  {loginError}
+                </Alert>
+              )}
 
-                {/* Username Field */}
-                <Box sx={{ mb: 2 }}>
-                  <Controller
-                    name="username"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
+              {/* Username Field */}
+              <Box sx={{ mb: 2 }}>
+                <Controller
+                  name="username"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="Username"
+                      variant="outlined"
+                      fullWidth
+                      size="small"
+                      error={!!errors.username}
+                      helperText={errors.username?.message}
+                      disabled={isSubmitting}
+                      autoComplete="username"
+                      autoFocus
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          '& fieldset': {
+                            borderWidth: '1px',
+                            transition: 'border-color 0.2s ease-in-out',
+                          },
+                          '&:hover fieldset': {
+                            borderWidth: '1px',
+                          },
+                          '&.Mui-focused fieldset': {
+                            borderWidth: '1px',
+                          },
+                        },
+                      }}
+                    />
+                  )}
+                />
+              </Box>
+
+              {/* Password Field */}
+              <Box sx={{ mb: 2 }}>
+                <Controller
+                  name="password"
+                  control={control}
+                  render={({ field }) => (
+                    <FormControl fullWidth size="small" variant="outlined">
+                      <InputLabel error={!!errors.password}>Password</InputLabel>
+                      <OutlinedInput
                         {...field}
-                        label="Username"
-                        variant="outlined"
-                        fullWidth
-                        size="small"
-                        error={!!errors.username}
-                        helperText={errors.username?.message}
+                        type={showPassword ? 'text' : 'password'}
+                        error={!!errors.password}
                         disabled={isSubmitting}
-                        autoComplete="username"
-                        autoFocus
+                        autoComplete="current-password"
+                        label="Password"
+                        endAdornment={
+                          <InputAdornment position="end">
+                            <IconButton
+                              onClick={togglePasswordVisibility}
+                              edge="end"
+                              disabled={isSubmitting}
+                              size="small"
+                            >
+                              {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                            </IconButton>
+                          </InputAdornment>
+                        }
                         sx={{
-                          '& .MuiOutlinedInput-root': {
-                            '& fieldset': {
-                              borderWidth: '1px',
-                              transition: 'border-color 0.2s ease-in-out',
-                            },
-                            '&:hover fieldset': {
-                              borderWidth: '1px',
-                            },
-                            '&.Mui-focused fieldset': {
-                              borderWidth: '1px',
-                            },
+                          '& fieldset': {
+                            borderWidth: '1px',
+                            transition: 'border-color 0.2s ease-in-out',
+                          },
+                          '&:hover fieldset': {
+                            borderWidth: '1px',
+                          },
+                          '&.Mui-focused fieldset': {
+                            borderWidth: '1px',
                           },
                         }}
                       />
-                    )}
-                  />
-                </Box>
-
-                {/* Password Field */}
-                <Box sx={{ mb: 2 }}>
-                  <Controller
-                    name="password"
-                    control={control}
-                    render={({ field }) => (
-                      <FormControl fullWidth size="small" variant="outlined">
-                        <InputLabel error={!!errors.password}>Password</InputLabel>
-                        <OutlinedInput
-                          {...field}
-                          type={showPassword ? 'text' : 'password'}
-                          error={!!errors.password}
-                          disabled={isSubmitting}
-                          autoComplete="current-password"
-                          label="Password"
-                          endAdornment={
-                            <InputAdornment position="end">
-                              <IconButton
-                                onClick={togglePasswordVisibility}
-                                edge="end"
-                                disabled={isSubmitting}
-                                size="small"
-                              >
-                                {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
-                              </IconButton>
-                            </InputAdornment>
-                          }
-                          sx={{
-                            '& fieldset': {
-                              borderWidth: '1px',
-                              transition: 'border-color 0.2s ease-in-out',
-                            },
-                            '&:hover fieldset': {
-                              borderWidth: '1px',
-                            },
-                            '&.Mui-focused fieldset': {
-                              borderWidth: '1px',
-                            },
-                          }}
-                        />
-                        {errors.password && (
-                          <Typography variant="caption" color="error" sx={{ mt: 0.5, fontSize: '0.75rem' }}>
-                            {errors.password.message}
-                          </Typography>
-                        )}
-                      </FormControl>
-                    )}
-                  />
-                </Box>
-
-                {/* Login Button */}
-                <Button
-                  type="submit"
-                  variant="contained"
-                  fullWidth
-                  size="small"
-                  disabled={isSubmitting}
-                  sx={{
-                    py: 1,
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
-                    mt: 1,
-                  }}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <CircularProgress size={16} sx={{ mr: 1 }} />
-                      Signing In...
-                    </>
-                  ) : (
-                    'Sign In'
+                      {errors.password && (
+                        <Typography variant="caption" color="error" sx={{ mt: 0.5, fontSize: '0.75rem' }}>
+                          {errors.password.message}
+                        </Typography>
+                      )}
+                    </FormControl>
                   )}
-                </Button>
-              </form>
+                />
+              </Box>
 
-              {/* Demo Credentials */}
-              <Box
+              {/* Login Button */}
+              <Button
+                type="submit"
+                variant="contained"
+                fullWidth
+                size="small"
+                disabled={isSubmitting}
                 sx={{
-                  mt: 2,
-                  p: 1.5,
-                  backgroundColor: '#f8f9fa',
-                  borderRadius: 1,
-                  border: '1px solid #e0e0e0',
+                  py: 1,
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  mt: 1,
                 }}
               >
-                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem', mb: 1 }}>
-                  Demo Credentials:
-                </Typography>
-                <Typography variant="body2" sx={{ fontSize: '0.75rem', mb: 0.25 }}>
-                  <strong>Admin:</strong> admin1 / password123
-                </Typography>
-                <Typography variant="body2" sx={{ fontSize: '0.75rem', mb: 0.25 }}>
-                  <strong>Clerk:</strong> clerk1 / password123
-                </Typography>
-                <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
-                  <strong>Supervisor:</strong> supervisor1 / password123
-                </Typography>
-              </Box>
-            </Paper>
-          </Box>
+                {isSubmitting ? (
+                  <>
+                    <CircularProgress size={16} sx={{ mr: 1 }} />
+                    Signing In...
+                  </>
+                ) : (
+                  'Sign In'
+                )}
+              </Button>
+            </form>
 
-          {/* Footer */}
-          <Box sx={{ 
-            bgcolor: 'white', 
-            borderTop: '1px solid', 
-            borderColor: 'divider',
-            flexShrink: 0,
-            p: 1.5,
-            textAlign: 'center'
-          }}>
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{ fontSize: '0.7rem' }}
+            {/* Demo Credentials */}
+            <Box
+              sx={{
+                mt: 2,
+                p: 1.5,
+                backgroundColor: '#f8f9fa',
+                borderRadius: 1,
+                border: '1px solid #e0e0e0',
+              }}
             >
-              © 2025 LINC Driver's License System
-              <br />
-              Secure • Modern • Efficient
-            </Typography>
+              <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem', mb: 1 }}>
+                Demo Credentials:
+              </Typography>
+              <Typography variant="body2" sx={{ fontSize: '0.75rem', mb: 0.25 }}>
+                <strong>Admin:</strong> admin1 / password123
+              </Typography>
+              <Typography variant="body2" sx={{ fontSize: '0.75rem', mb: 0.25 }}>
+                <strong>Clerk:</strong> clerk1 / password123
+              </Typography>
+              <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
+                <strong>Supervisor:</strong> supervisor1 / password123
+              </Typography>
+            </Box>
+
+            {/* Footer */}
+            <Box sx={{ 
+              textAlign: 'center',
+              mt: 2,
+              pt: 2
+            }}>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ fontSize: '0.7rem' }}
+              >
+                © 2025 LINC Driver's License System
+                <br />
+                Secure • Modern • Efficient
+              </Typography>
+            </Box>
           </Box>
         </Paper>
       </Container>
