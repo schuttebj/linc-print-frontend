@@ -113,36 +113,19 @@ const MainContentSkeleton: React.FC = () => (
           overflow: 'hidden',
           position: 'relative'
         }}>
-          {/* Subtle animated gradient overlay */}
-          <Box sx={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%)',
-            animation: 'shimmer 2s infinite',
-            '@keyframes shimmer': {
-              '0%': { transform: 'translateX(-100%)' },
-              '100%': { transform: 'translateX(100%)' }
-            }
-          }} />
-          
           {/* Simple content placeholder */}
           <Box sx={{ 
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             height: '100%',
-            position: 'relative',
-            zIndex: 1
+            position: 'relative'
           }}>
-            <Box sx={{ textAlign: 'center', opacity: 0.3 }}>
+            <Box sx={{ textAlign: 'center' }}>
               <CircularProgress 
                 size={40} 
                 sx={{ 
                   color: '#1976d2',
-                  opacity: 0.7,
                   mb: 2
                 }} 
               />
@@ -150,7 +133,8 @@ const MainContentSkeleton: React.FC = () => (
                 variant="body2" 
                 sx={{ 
                   color: '#666',
-                  fontSize: '0.875rem'
+                  fontSize: '0.875rem',
+                  fontWeight: 500
                 }}
               >
                 Loading content...
