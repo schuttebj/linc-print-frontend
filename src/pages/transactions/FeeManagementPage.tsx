@@ -21,9 +21,17 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  IconButton
+  IconButton,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
 } from '@mui/material';
-import { Edit, Save, Cancel } from '@mui/icons-material';
+import { 
+  Edit, 
+  Save, 
+  Cancel,
+  ExpandMore as ExpandMoreIcon 
+} from '@mui/icons-material';
 import { transactionService } from '../../services/transactionService';
 import { formatCurrency } from '../../utils/currency';
 
@@ -54,6 +62,7 @@ const FeeManagementPage: React.FC = () => {
   const [editingFee, setEditingFee] = useState<FeeData | null>(null);
   const [editAmount, setEditAmount] = useState<string>('');
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [expandedAccordions, setExpandedAccordions] = useState<string[]>([]);
 
   const loadFeeData = async () => {
     try {
@@ -109,15 +118,32 @@ const FeeManagementPage: React.FC = () => {
     setEditAmount('');
   };
 
+  const handleAccordionChange = (appType: string) => (
+    event: React.SyntheticEvent,
+    isExpanded: boolean
+  ) => {
+    setExpandedAccordions(prev => 
+      isExpanded 
+        ? [...prev, appType]
+        : prev.filter(type => type !== appType)
+    );
+  };
+
+  const isAccordionExpanded = (appType: string) => expandedAccordions.includes(appType);
+
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ py: 1 }}>
+      <Container maxWidth="lg" sx={{ py: 1, height: '100vh', display: 'flex', flexDirection: 'column' }}>
         <Paper 
           elevation={0}
           sx={{ 
+            flexGrow: 1,
+            display: 'flex',
+            flexDirection: 'column',
             bgcolor: '#f8f9fa',
             boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-            borderRadius: 2
+            borderRadius: 2,
+            overflow: 'hidden'
           }}
         >
           <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px" p={4}>
@@ -129,13 +155,17 @@ const FeeManagementPage: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 1 }}>
+    <Container maxWidth="lg" sx={{ py: 1, height: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Paper 
         elevation={0}
         sx={{ 
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
           bgcolor: '#f8f9fa',
           boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-          borderRadius: 2
+          borderRadius: 2,
+          overflow: 'hidden'
         }}
       >
         {/* Top Section - Header */}
@@ -143,6 +173,7 @@ const FeeManagementPage: React.FC = () => {
           bgcolor: 'white', 
           borderBottom: '1px solid', 
           borderColor: 'divider',
+          flexShrink: 0,
           p: 2
         }}>
           <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
@@ -153,28 +184,100 @@ const FeeManagementPage: React.FC = () => {
           </Typography>
         </Box>
 
-        {/* Content Area - Single Column Fee Cards */}
+        {/* Content Area - Scrollable Accordion Fee Cards */}
         <Box sx={{ 
+          flex: 1,
+          overflow: 'auto',
           p: 2,
+          minHeight: 0,
           display: 'flex',
           flexDirection: 'column',
           gap: 2
         }}>
           {Object.entries(feeData).length > 0 ? (
-            Object.entries(feeData).map(([appType, data]) => (
-                <Card 
+            Object.entries(feeData).map(([appType, data]) => {
+              const isExpanded = isAccordionExpanded(appType);
+              return (
+                <Accordion 
                   key={appType}
+                  expanded={isExpanded}
+                  onChange={handleAccordionChange(appType)}
                   elevation={0}
                   sx={{ 
                     bgcolor: 'white',
                     boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-                    borderRadius: 2
+                    borderRadius: 2,
+                    '&:before': {
+                      display: 'none',
+                    },
+                    '&.Mui-expanded': {
+                      margin: 0,
+                    }
                   }}
                 >
-                  <CardContent sx={{ p: 2 }}>
-                    <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-                      {data.name}
-                    </Typography>
+                  <AccordionSummary
+                    expandIcon={<ExpandMoreIcon />}
+                    sx={{
+                      bgcolor: 'white',
+                      borderRadius: 2,
+                      '&.Mui-expanded': {
+                        minHeight: 48,
+                      },
+                      '& .MuiAccordionSummary-content': {
+                        margin: '12px 0',
+                        '&.Mui-expanded': {
+                          margin: '12px 0',
+                        },
+                      }
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', pr: 2 }}>
+                      <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                        {data.name}
+                      </Typography>
+                      {!isExpanded && (
+                        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                          {data.fees.total_light !== undefined && (
+                            <Chip 
+                              label={`Light: ${formatCurrency(data.fees.total_light)}`}
+                              color="primary" 
+                              size="small"
+                              sx={{ 
+                                fontSize: '0.7rem',
+                                height: '24px',
+                                borderRadius: '5px'
+                              }}
+                            />
+                          )}
+                          {data.fees.total_heavy !== undefined && (
+                            <Chip 
+                              label={`Heavy: ${formatCurrency(data.fees.total_heavy)}`}
+                              color="secondary" 
+                              size="small"
+                              sx={{ 
+                                fontSize: '0.7rem',
+                                height: '24px',
+                                borderRadius: '5px'
+                              }}
+                            />
+                          )}
+                          {data.fees.total !== undefined && !data.fees.total_light && !data.fees.total_heavy && (
+                            <Chip 
+                              label={`Total: ${formatCurrency(data.fees.total)}`}
+                              color="primary" 
+                              size="small"
+                              sx={{ 
+                                fontSize: '0.7rem',
+                                height: '24px',
+                                borderRadius: '5px'
+                              }}
+                            />
+                          )}
+                        </Box>
+                      )}
+                    </Box>
+                  </AccordionSummary>
+                  <AccordionDetails sx={{ p: 2, pt: 0 }}>
 
                 {/* Test Fees Table */}
                 {data.fees.test_fees && data.fees.test_fees.length > 0 && (
@@ -299,60 +402,10 @@ const FeeManagementPage: React.FC = () => {
                   </Box>
                 )}
 
-                {/* Totals */}
-                <Box mt={2} pt={2} borderTop="1px solid" borderColor="divider">
-                  <Typography variant="subtitle2" gutterBottom sx={{ fontSize: '0.875rem', fontWeight: 600 }}>
-                    Total Costs
-                  </Typography>
-                  {data.fees.total_light !== undefined && (
-                    <Box display="flex" justifyContent="space-between" mb={1}>
-                      <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>Light Vehicles:</Typography>
-                      <Chip 
-                        label={formatCurrency(data.fees.total_light)} 
-                        color="primary" 
-                        size="small"
-                        sx={{ 
-                          fontSize: '0.7rem',
-                          height: '24px',
-                          borderRadius: '5px'
-                        }}
-                      />
-                    </Box>
-                  )}
-                  {data.fees.total_heavy !== undefined && (
-                    <Box display="flex" justifyContent="space-between" mb={1}>
-                      <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>Heavy Vehicles:</Typography>
-                      <Chip 
-                        label={formatCurrency(data.fees.total_heavy)} 
-                        color="secondary" 
-                        size="small"
-                        sx={{ 
-                          fontSize: '0.7rem',
-                          height: '24px',
-                          borderRadius: '5px'
-                        }}
-                      />
-                    </Box>
-                  )}
-                  {data.fees.total !== undefined && (
-                    <Box display="flex" justifyContent="space-between" mb={1}>
-                      <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>Total:</Typography>
-                      <Chip 
-                        label={formatCurrency(data.fees.total)} 
-                        color="primary" 
-                        size="small"
-                        sx={{ 
-                          fontSize: '0.7rem',
-                          height: '24px',
-                          borderRadius: '5px'
-                        }}
-                      />
-                    </Box>
-                  )}
-                    </Box>
-                  </CardContent>
-                </Card>
-            ))
+                  </AccordionDetails>
+                </Accordion>
+              );
+            })
           ) : (
             <Box sx={{ 
               display: 'flex', 
