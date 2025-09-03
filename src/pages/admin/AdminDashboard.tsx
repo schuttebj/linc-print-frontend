@@ -425,39 +425,6 @@ const AdminDashboard: React.FC = () => {
       >
     <Box sx={{ p: 3 }}>
       {/* Header */}
-      <Paper 
-        sx={{ 
-          background: 'linear-gradient(135deg, #1976d2 0%, #7b1fa2 100%)',
-          color: 'white',
-          p: 4,
-          mb: 3,
-          borderRadius: 2
-        }}
-      >
-        <Typography variant="h3" component="h1" gutterBottom fontWeight="bold">
-          Madagascar LINC Print - Admin Dashboard
-        </Typography>
-        <Typography variant="h6" sx={{ opacity: 0.9, mb: 2 }}>
-          System administration for the Madagascar Driver's License Print System
-        </Typography>
-        <Box sx={{ mt: 2 }}>
-          <Chip 
-            label={`Version ${stats?.system.version}`} 
-            sx={{ 
-              backgroundColor: 'rgba(255, 255, 255, 0.2)', 
-              color: 'white',
-              mr: 2 
-            }} 
-          />
-          <Chip 
-            label={`Uptime: ${stats?.system.uptime}`} 
-            sx={{ 
-              backgroundColor: 'rgba(255, 255, 255, 0.2)', 
-              color: 'white' 
-            }} 
-          />
-        </Box>
-      </Paper>
 
           {/* Bento Grid Layout */}
           <Grid container spacing={3}>
