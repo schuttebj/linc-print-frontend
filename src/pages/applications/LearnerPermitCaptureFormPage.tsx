@@ -246,7 +246,7 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
     if (selectedPerson && !licenseCaptureData) {
       const newLicense: CapturedLicense = {
         id: `license-${Date.now()}`,
-        license_category: LicenseCategory.LEARNERS_1, // Default to LEARNERS_1 (only valid database value)
+        license_category: LicenseCategory.L1, // Default to L1 (only valid database value)
         issue_date: '',
         restrictions: {
           driver_restrictions: ['00'], // Default to "00 - None"
@@ -318,11 +318,11 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
       }
 
       // Create application with capture data
-      // Note: Backend expects enum values ('1', '2', '3') not enum keys ('LEARNERS_1')
+      // Note: Backend expects enum values ('1', '2', '3') not enum keys ('L1')
       const firstCapturedCategory = licenseCaptureData.captured_licenses[0]?.license_category;
       
-      // Use the enum value directly (LEARNERS_1 = '1', LEARNERS_2 = '2', LEARNERS_3 = '3')
-      const categoryValue = firstCapturedCategory || LicenseCategory.LEARNERS_1;
+      // Use the enum value directly (L1 = '1', L2 = '2', L3 = '3')
+      const categoryValue = firstCapturedCategory || LicenseCategory.L1;
 
       const applicationData = {
         person_id: selectedPerson.id,

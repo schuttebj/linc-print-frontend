@@ -142,7 +142,7 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
       const initialLicense: CapturedLicense = {
         id: `license-${Date.now()}`,
         license_category: applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE 
-          ? LicenseCategory.LEARNERS_1 
+          ? LicenseCategory.L1 
           : LicenseCategory.B,
         issue_date: '',
         restrictions: {
@@ -510,17 +510,17 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
       // Show all learner permit categories
       return [
         {
-          value: LicenseCategory.LEARNERS_1,
+          value: LicenseCategory.L1,
           label: 'Code 1',
           disabled: systemCategories.has('1')
         },
         {
-          value: LicenseCategory.LEARNERS_2,
+          value: LicenseCategory.L2,
           label: 'Code 2',
           disabled: systemCategories.has('2')
         },
         {
-          value: LicenseCategory.LEARNERS_3,
+          value: LicenseCategory.L3,
           label: 'Code 3',
           disabled: systemCategories.has('3')
         }
@@ -570,7 +570,7 @@ const LicenseCaptureForm: React.FC<LicenseCaptureFormProps> = ({
     const newLicense: CapturedLicense = {
       id: `license-${Date.now()}`,
       license_category: applicationtype === ApplicationType.LEARNERS_PERMIT_CAPTURE 
-        ? LicenseCategory.LEARNERS_1 
+        ? LicenseCategory.L1 
         : LicenseCategory.B,
       issue_date: '',
       restrictions: {

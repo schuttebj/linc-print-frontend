@@ -296,19 +296,19 @@ const LearnersLicenseApplicationPage: React.FC = () => {
   const getAvailableLearnerCategories = () => {
     return [
       {
-        value: LicenseCategory.LEARNERS_1,
+        value: LicenseCategory.L1,
         label: `Code 1 - ${LEARNERS_PERMIT_RULES['1']?.description || 'Learner\'s permit for motorcycles'}`,
         minAge: LEARNERS_PERMIT_RULES['1']?.minimum_age || 16,
         description: 'Motor cycle without a sidecar, motor tricycle or motor quadrucycle, with engine of any capacity'
       },
       {
-        value: LicenseCategory.LEARNERS_2,
+        value: LicenseCategory.L2,
         label: `Code 2 - ${LEARNERS_PERMIT_RULES['2']?.description || 'Learner\'s permit for light vehicles'}`,
         minAge: LEARNERS_PERMIT_RULES['2']?.minimum_age || 17,
         description: 'Light motor vehicle, other than a motor cycle, motor tricycle or motor quadrucycle'
       },
       {
-        value: LicenseCategory.LEARNERS_3,
+        value: LicenseCategory.L3,
         label: `Code 3 - ${LEARNERS_PERMIT_RULES['3']?.description || 'Learner\'s permit for any motor vehicle'}`,
         minAge: LEARNERS_PERMIT_RULES['3']?.minimum_age || 18,
         description: 'Any motor vehicle other than a motor cycle, motor tricycle or motor quadrucycle'

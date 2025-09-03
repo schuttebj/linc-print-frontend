@@ -532,7 +532,7 @@ const DuplicateLearnersLicensePage: React.FC = () => {
       }
 
       // For duplicate, use the primary learner's permit category from existing licenses
-      const primaryCategory = existingLicenses[0].categories?.find((cat: string) => ['1', '2', '3'].includes(cat)) as LicenseCategory || LicenseCategory.LEARNERS_1;
+      const primaryCategory = existingLicenses[0].categories?.find((cat: string) => ['1', '2', '3'].includes(cat)) as LicenseCategory || LicenseCategory.L1;
 
       // Check if medical is mandatory for duplicate
       const age = selectedPerson?.birth_date ? calculateAge(selectedPerson.birth_date) : 0;
