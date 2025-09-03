@@ -186,36 +186,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { isAuthenticated, isLoading, user, userDataLoading, hasPermission } = useAuth();
   const location = useLocation();
 
-  // Show loading spinner while checking authentication (initial token verification)
-  if (isLoading) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '100vh',
-          gap: 2,
-          bgcolor: '#f8f9fa'
-        }}
-      >
-        <CircularProgress size={48} />
-        <Typography variant="h6" color="text.secondary">
-          Verifying authentication...
-        </Typography>
-      </Box>
-    );
-  }
-
-  // Redirect to login if not authenticated
-  if (!isAuthenticated) {
+  // Redirect to login if not authenticated (after auth verification completes)
+  if (!isLoading && !isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Show layout skeleton while user data is loading asynchronously
-  // This prevents the "Access Denied" flash during async user loading
-  if (isAuthenticated && (!user || userDataLoading)) {
+  // Show layout skeleton during authentication verification OR user data loading
+  // This provides a smooth, professional loading experience throughout
+  if (isLoading || (isAuthenticated && (!user || userDataLoading))) {
     return <LayoutSkeleton />;
   }
 
