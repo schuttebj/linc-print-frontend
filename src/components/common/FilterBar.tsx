@@ -142,7 +142,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
         display: 'flex', 
         gap: 2, 
         alignItems: 'center',
-        mb: 2,
+        mb: 1,
       }}>
         {/* Advanced Search Button - Left Side */}
         <Button
@@ -236,7 +236,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
 
       {/* Applied Filters Chips */}
       {appliedFilters.length > 0 && (
-        <Box sx={{ mb: 2 }}>
+        <Box sx={{ mb: 1 }}>
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
             {appliedFilters.map((config) => {
               const value = filterValues[config.key];

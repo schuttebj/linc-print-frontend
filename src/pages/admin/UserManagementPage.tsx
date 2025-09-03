@@ -9,11 +9,6 @@ import {
   Box,
   Container,
   Typography,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Button,
   Table,
   TableBody,
@@ -23,8 +18,6 @@ import {
   TableRow,
   Paper,
   Chip,
-  Card,
-  CardContent,
   Grid,
   Avatar,
   IconButton,
@@ -35,7 +28,6 @@ import {
   DialogActions,
   Alert,
   CircularProgress,
-  InputAdornment,
   Stack,
 } from '@mui/material';
 import {
@@ -44,8 +36,6 @@ import {
   Visibility as ViewIcon,
   Delete as DeleteIcon,
   Add as AddIcon,
-  Search as SearchIcon,
-  FilterList as FilterIcon,
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon,
   PlayArrow as ActivateIcon,
@@ -54,6 +44,45 @@ import {
 
 import { useAuth } from '../../contexts/AuthContext';
 import { API_BASE_URL } from '../../config/api';
+import FilterBar, { FilterConfig, FilterValues } from '../../components/common/FilterBar';
+
+// Filter configurations for UserManagementPage
+const USER_FILTER_CONFIGS: FilterConfig[] = [
+  {
+    key: 'status',
+    label: 'Status',
+    type: 'select',
+    options: [
+      { value: 'ACTIVE', label: 'Active' },
+      { value: 'INACTIVE', label: 'Inactive' },
+      { value: 'SUSPENDED', label: 'Suspended' }
+    ],
+  },
+  {
+    key: 'user_type',
+    label: 'User Type',
+    type: 'select',
+    options: [
+      { value: 'SYSTEM_USER', label: 'System User' },
+      { value: 'NATIONAL_ADMIN', label: 'National Admin' },
+      { value: 'PROVINCIAL_ADMIN', label: 'Provincial Admin' },
+      { value: 'LOCATION_USER', label: 'Location User' }
+    ],
+  },
+  {
+    key: 'province',
+    label: 'Province',
+    type: 'select',
+    options: [
+      { value: 'T', label: 'Antananarivo' },
+      { value: 'A', label: 'Toamasina' },
+      { value: 'D', label: 'Antsiranana' },
+      { value: 'F', label: 'Fianarantsoa' },
+      { value: 'M', label: 'Mahajanga' },
+      { value: 'U', label: 'Toliara' }
+    ],
+  },
+];
 
 // Enhanced user interface with new fields
 interface User {
@@ -106,10 +135,11 @@ const UserManagementPage: React.FC = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [totalResults, setTotalResults] = useState(0);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('');
-  const [userTypeFilter, setUserTypeFilter] = useState<string>('');
-  const [provinceFilter, setProvinceFilter] = useState<string>('');
+
+  // Filter state management for FilterBar
+  const [searchValue, setSearchValue] = useState('');
+  const [filterValues, setFilterValues] = useState<FilterValues>({});
+  const [filterConfigs] = useState<FilterConfig[]>(USER_FILTER_CONFIGS);
 
   // Modal states (keeping only view, delete, and success dialogs)
   const [showViewModal, setShowViewModal] = useState(false);
@@ -121,7 +151,7 @@ const UserManagementPage: React.FC = () => {
   // Load users
   useEffect(() => {
     loadUsers();
-  }, [page, rowsPerPage, searchTerm, statusFilter, userTypeFilter, provinceFilter]);
+  }, [page, rowsPerPage, searchValue, filterValues]);
 
   const loadUsers = async () => {
     try {
@@ -131,10 +161,10 @@ const UserManagementPage: React.FC = () => {
       const params = new URLSearchParams({
         page: (page + 1).toString(),
         per_page: rowsPerPage.toString(),
-        ...(searchTerm && { search: searchTerm }),
-        ...(statusFilter && { status: statusFilter }),
-        ...(userTypeFilter && { user_type: userTypeFilter }),
-        ...(provinceFilter && { province: provinceFilter }),
+        ...(searchValue && { search: searchValue }),
+        ...(filterValues.status && { status: filterValues.status }),
+        ...(filterValues.user_type && { user_type: filterValues.user_type }),
+        ...(filterValues.province && { province: filterValues.province }),
       });
 
       const response = await fetch(`${API_BASE_URL}/api/v1/users?${params}`, {
@@ -156,6 +186,27 @@ const UserManagementPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Handle FilterBar filter changes
+  const handleFilterChange = (key: string, value: any) => {
+    setFilterValues(prev => ({
+      ...prev,
+      [key]: value,
+    }));
+    setPage(0); // Reset to first page when filters change
+  };
+
+  // Handle search and clear for FilterBar
+  const handleSearch = async () => {
+    setPage(0);
+    await loadUsers();
+  };
+
+  const handleClear = () => {
+    setSearchValue('');
+    setFilterValues({});
+    setPage(0);
   };
 
   const handleDeleteUser = async () => {
@@ -317,7 +368,7 @@ const UserManagementPage: React.FC = () => {
           overflow: 'hidden'
         }}
       >
-        {/* Filter Section */}
+        {/* Search and Filter Section */}
         <Box sx={{ 
           bgcolor: 'white', 
           borderBottom: '1px solid', 
@@ -327,7 +378,7 @@ const UserManagementPage: React.FC = () => {
         }}>
           <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-              Search & Filters
+              Search Users
             </Typography>
             {hasPermission('users.create') && (
               <Button
@@ -341,99 +392,17 @@ const UserManagementPage: React.FC = () => {
             )}
           </Box>
           
-          <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                size="small"
-                label="Search Users"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Username, name, or email"
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    '& fieldset': { borderWidth: '1px' },
-                    '&:hover fieldset': { borderWidth: '1px' },
-                    '&.Mui-focused fieldset': { borderWidth: '1px' },
-                  },
-                }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={2}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Status</InputLabel>
-                <Select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  label="Status"
-                  sx={{
-                    '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-                    '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-                  }}
-                >
-                  <MenuItem value="">All Statuses</MenuItem>
-                  <MenuItem value="ACTIVE">Active</MenuItem>
-                  <MenuItem value="INACTIVE">Inactive</MenuItem>
-                  <MenuItem value="SUSPENDED">Suspended</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>User Type</InputLabel>
-                <Select
-                  value={userTypeFilter}
-                  onChange={(e) => setUserTypeFilter(e.target.value)}
-                  label="User Type"
-                  sx={{
-                    '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-                    '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-                  }}
-                >
-                  <MenuItem value="">All Types</MenuItem>
-                  <MenuItem value="SYSTEM_USER">System User</MenuItem>
-                  <MenuItem value="NATIONAL_ADMIN">National Admin</MenuItem>
-                  <MenuItem value="PROVINCIAL_ADMIN">Provincial Admin</MenuItem>
-                  <MenuItem value="LOCATION_USER">Location User</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Province</InputLabel>
-                <Select
-                  value={provinceFilter}
-                  onChange={(e) => setProvinceFilter(e.target.value)}
-                  label="Province"
-                  sx={{
-                    '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-                    '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-                  }}
-                >
-                  <MenuItem value="">All Provinces</MenuItem>
-                  <MenuItem value="T">Antananarivo</MenuItem>
-                  <MenuItem value="A">Toamasina</MenuItem>
-                  <MenuItem value="D">Antsiranana</MenuItem>
-                  <MenuItem value="F">Fianarantsoa</MenuItem>
-                  <MenuItem value="M">Mahajanga</MenuItem>
-                  <MenuItem value="U">Toliara</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
+          <FilterBar
+            searchValue={searchValue}
+            searchPlaceholder="Search by username, name, or email"
+            onSearchChange={setSearchValue}
+            filterConfigs={filterConfigs}
+            filterValues={filterValues}
+            onFilterChange={handleFilterChange}
+            onSearch={handleSearch}
+            onClear={handleClear}
+            searching={loading}
+          />
         </Box>
 
         {/* Content Area */}
