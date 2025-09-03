@@ -111,20 +111,16 @@ const FeeManagementPage: React.FC = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Container maxWidth="lg" sx={{ py: 1 }}>
         <Paper 
           elevation={0}
           sx={{ 
-            flexGrow: 1,
-            display: 'flex',
-            flexDirection: 'column',
             bgcolor: '#f8f9fa',
             boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-            borderRadius: 2,
-            overflow: 'hidden'
+            borderRadius: 2
           }}
         >
-          <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+          <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px" p={4}>
             <Typography>Loading fee data...</Typography>
           </Box>
         </Paper>
@@ -133,17 +129,13 @@ const FeeManagementPage: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Container maxWidth="lg" sx={{ py: 1 }}>
       <Paper 
         elevation={0}
         sx={{ 
-          flexGrow: 1,
-          display: 'flex',
-          flexDirection: 'column',
           bgcolor: '#f8f9fa',
           boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-          borderRadius: 2,
-          overflow: 'hidden'
+          borderRadius: 2
         }}
       >
         {/* Top Section - Header */}
@@ -151,7 +143,6 @@ const FeeManagementPage: React.FC = () => {
           bgcolor: 'white', 
           borderBottom: '1px solid', 
           borderColor: 'divider',
-          flexShrink: 0,
           p: 2
         }}>
           <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
@@ -164,28 +155,26 @@ const FeeManagementPage: React.FC = () => {
 
         {/* Content Area - Single Column Fee Cards */}
         <Box sx={{ 
-          flex: 1, 
-          overflow: 'auto',
           p: 2,
-          minHeight: 0,
           display: 'flex',
           flexDirection: 'column',
           gap: 2
         }}>
-          {Object.entries(feeData).map(([appType, data]) => (
-            <Card 
-              key={appType}
-              elevation={0}
-              sx={{ 
-                bgcolor: 'white',
-                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-                borderRadius: 2
-              }}
-            >
-              <CardContent sx={{ p: 2 }}>
-                <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-                  {data.name}
-                </Typography>
+          {Object.entries(feeData).length > 0 ? (
+            Object.entries(feeData).map(([appType, data]) => (
+                <Card 
+                  key={appType}
+                  elevation={0}
+                  sx={{ 
+                    bgcolor: 'white',
+                    boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                    borderRadius: 2
+                  }}
+                >
+                  <CardContent sx={{ p: 2 }}>
+                    <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                      {data.name}
+                    </Typography>
 
                 {/* Test Fees Table */}
                 {data.fees.test_fees && data.fees.test_fees.length > 0 && (
@@ -199,7 +188,8 @@ const FeeManagementPage: React.FC = () => {
                       sx={{
                         borderRadius: 1,
                         border: '1px solid',
-                        borderColor: 'divider'
+                        borderColor: 'divider',
+                        maxHeight: 'none'
                       }}
                     >
                       <Table size="small">
@@ -235,29 +225,39 @@ const FeeManagementPage: React.FC = () => {
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {data.fees.test_fees.map((fee) => (
-                            <TableRow key={fee.id} hover>
-                              <TableCell sx={{ py: 1, px: 2 }}>
-                                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                                  {fee.display_name}
+                          {data.fees.test_fees.length > 0 ? (
+                            data.fees.test_fees.map((fee) => (
+                              <TableRow key={fee.id} hover>
+                                <TableCell sx={{ py: 1, px: 2 }}>
+                                  <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                    {fee.display_name}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell align="right" sx={{ py: 1, px: 2 }}>
+                                  <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>
+                                    {formatCurrency(fee.amount)}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell align="center" sx={{ py: 1, px: 2 }}>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleEditFee(fee)}
+                                    color="primary"
+                                  >
+                                    <Edit fontSize="small" />
+                                  </IconButton>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={3} align="center" sx={{ py: 2, px: 2 }}>
+                                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                                  No test fees configured for this application type
                                 </Typography>
-                              </TableCell>
-                              <TableCell align="right" sx={{ py: 1, px: 2 }}>
-                                <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>
-                                  {formatCurrency(fee.amount)}
-                                </Typography>
-                              </TableCell>
-                              <TableCell align="center" sx={{ py: 1, px: 2 }}>
-                                <IconButton
-                                  size="small"
-                                  onClick={() => handleEditFee(fee)}
-                                  color="primary"
-                                >
-                                  <Edit fontSize="small" />
-                                </IconButton>
                               </TableCell>
                             </TableRow>
-                          ))}
+                          )}
                         </TableBody>
                       </Table>
                     </TableContainer>
@@ -349,10 +349,25 @@ const FeeManagementPage: React.FC = () => {
                       />
                     </Box>
                   )}
-                </Box>
-              </CardContent>
-            </Card>
-          ))}
+                    </Box>
+                  </CardContent>
+                </Card>
+            ))
+          ) : (
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              alignItems: 'center', 
+              minHeight: 200,
+              bgcolor: 'white',
+              borderRadius: 2,
+              boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
+            }}>
+              <Typography variant="body1" color="text.secondary">
+                No fee data available. Please check your connection or contact support.
+              </Typography>
+            </Box>
+          )}
         </Box>
       </Paper>
 
