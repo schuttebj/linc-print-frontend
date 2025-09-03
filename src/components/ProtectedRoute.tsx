@@ -108,7 +108,7 @@ const MainContentSkeleton: React.FC = () => (
           height="100%" 
           sx={{
             flexGrow: 1,
-            bgcolor: '#f8f9fa',
+            
             boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
             borderRadius: 2
           }}
