@@ -1,6 +1,6 @@
 /**
  * Reusable FilterBar Component
- * Provides a clean search and filter interface for list pages
+ * Provides a clean search and filter interface with advanced search panel
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -22,12 +22,16 @@ import {
   Divider,
   Stack,
   InputAdornment,
+  Grid,
+  Collapse,
 } from '@mui/material';
 import {
   Search as SearchIcon,
   Clear as ClearIcon,
   FilterList as FilterIcon,
   Close as CloseIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
 } from '@mui/icons-material';
 
 // Filter configuration types
@@ -83,21 +87,8 @@ const FilterBar: React.FC<FilterBarProps> = ({
   searching = false,
   className,
 }) => {
-  const [filterAnchorEl, setFilterAnchorEl] = useState<HTMLElement | null>(null);
-  const [activeFilterKey, setActiveFilterKey] = useState<string | null>(null);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   
-  // Handle opening filter popover
-  const handleFilterClick = (event: React.MouseEvent<HTMLElement>, filterKey: string) => {
-    setFilterAnchorEl(event.currentTarget);
-    setActiveFilterKey(filterKey);
-  };
-
-  // Handle closing filter popover
-  const handleFilterClose = () => {
-    setFilterAnchorEl(null);
-    setActiveFilterKey(null);
-  };
-
   // Handle Enter key in search field
   const handleSearchKeyPress = (event: React.KeyboardEvent) => {
     if (event.key === 'Enter') {
@@ -105,9 +96,6 @@ const FilterBar: React.FC<FilterBarProps> = ({
       onSearch();
     }
   };
-
-  // Get active filter config
-  const activeFilterConfig = filterConfigs.find(config => config.key === activeFilterKey);
 
   // Get applied filters (non-empty values)
   const appliedFilters = filterConfigs.filter(config => {
@@ -139,17 +127,21 @@ const FilterBar: React.FC<FilterBarProps> = ({
     return String(value);
   };
 
+  // Toggle advanced filters
+  const toggleAdvancedFilters = () => {
+    setShowAdvancedFilters(!showAdvancedFilters);
+  };
+
   return (
     <Box className={className}>
-      {/* Main Search and Filter Bar */}
+      {/* Main Search Bar */}
       <Box sx={{ 
         display: 'flex', 
         gap: 2, 
         alignItems: 'center',
         mb: 2,
-        flexWrap: 'wrap'
       }}>
-        {/* Search Field */}
+        {/* Search Field - Half Width */}
         <TextField
           value={searchValue}
           onChange={(e) => onSearchChange(e.target.value)}
@@ -157,8 +149,8 @@ const FilterBar: React.FC<FilterBarProps> = ({
           placeholder={searchPlaceholder}
           size="small"
           sx={{ 
-            flexGrow: 1,
-            minWidth: 300,
+            width: '50%',
+            maxWidth: 400,
             '& .MuiOutlinedInput-root': {
               '& fieldset': { borderWidth: '1px' },
               '&:hover fieldset': { borderWidth: '1px' },
@@ -185,41 +177,30 @@ const FilterBar: React.FC<FilterBarProps> = ({
           }}
         />
 
-        {/* Filter Chips */}
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-          {filterConfigs.map((config) => {
-            const isActive = filterValues[config.key] !== undefined && 
-                           filterValues[config.key] !== null && 
-                           filterValues[config.key] !== '';
-            
-            return (
-              <Chip
-                key={config.key}
-                label={config.label}
-                variant={isActive ? "filled" : "outlined"}
-                color={isActive ? "primary" : "default"}
-                icon={<FilterIcon />}
-                onClick={(e) => handleFilterClick(e, config.key)}
-                sx={{ 
-                  cursor: 'pointer',
-                  '&:hover': {
-                    backgroundColor: isActive ? 'primary.dark' : 'action.hover',
-                  }
-                }}
-              />
-            );
-          })}
-        </Box>
+        {/* Advanced Search Button */}
+        <Button
+          variant="outlined"
+          onClick={toggleAdvancedFilters}
+          endIcon={showAdvancedFilters ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+          sx={{
+            borderRadius: 1,
+            '& .MuiButton-endIcon': {
+              ml: 1,
+            }
+          }}
+        >
+          Advanced Search
+        </Button>
 
         {/* Action Buttons */}
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 1, ml: 'auto' }}>
           <IconButton
             onClick={onSearch}
             disabled={searching}
-            color="primary"
             sx={{
               bgcolor: 'primary.main',
               color: 'white',
+              borderRadius: 1,
               '&:hover': {
                 bgcolor: 'primary.dark',
               },
@@ -235,10 +216,10 @@ const FilterBar: React.FC<FilterBarProps> = ({
           <IconButton
             onClick={onClear}
             disabled={searching}
-            color="default"
             sx={{
               border: 1,
               borderColor: 'divider',
+              borderRadius: 1,
               '&:hover': {
                 bgcolor: 'action.hover',
               }
@@ -249,12 +230,9 @@ const FilterBar: React.FC<FilterBarProps> = ({
         </Box>
       </Box>
 
-      {/* Applied Filters */}
+      {/* Applied Filters Chips */}
       {appliedFilters.length > 0 && (
         <Box sx={{ mb: 2 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-            Applied Filters:
-          </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
             {appliedFilters.map((config) => {
               const value = filterValues[config.key];
@@ -266,9 +244,12 @@ const FilterBar: React.FC<FilterBarProps> = ({
                   label={`${config.label}: ${displayValue}`}
                   size="small"
                   variant="filled"
-                  color="secondary"
+                  color="primary"
                   onDelete={() => clearFilter(config.key)}
                   deleteIcon={<CloseIcon />}
+                  sx={{
+                    borderRadius: 1,
+                  }}
                 />
               );
             })}
@@ -276,101 +257,115 @@ const FilterBar: React.FC<FilterBarProps> = ({
         </Box>
       )}
 
-      {/* Filter Popover */}
-      <Popover
-        open={Boolean(filterAnchorEl && activeFilterConfig)}
-        anchorEl={filterAnchorEl}
-        onClose={handleFilterClose}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'left',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'left',
-        }}
-      >
-        <Paper sx={{ p: 2, minWidth: 250 }}>
-          {activeFilterConfig && (
-            <Box>
-              <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
-                Filter by {activeFilterConfig.label}
-              </Typography>
-              
-              {activeFilterConfig.type === 'text' && (
-                <TextField
-                  fullWidth
-                  size="small"
-                  placeholder={activeFilterConfig.placeholder || `Enter ${activeFilterConfig.label.toLowerCase()}`}
-                  value={filterValues[activeFilterConfig.key] || ''}
-                  onChange={(e) => onFilterChange(activeFilterConfig.key, e.target.value)}
-                  autoFocus
-                />
-              )}
-
-              {activeFilterConfig.type === 'select' && activeFilterConfig.options && (
-                <FormControl fullWidth size="small">
-                  <InputLabel>Select {activeFilterConfig.label}</InputLabel>
-                  <Select
-                    value={filterValues[activeFilterConfig.key] || ''}
-                    onChange={(e) => onFilterChange(activeFilterConfig.key, e.target.value)}
-                    label={`Select ${activeFilterConfig.label}`}
-                    autoFocus
-                  >
-                    <MenuItem value="">
-                      <em>All {activeFilterConfig.label}</em>
-                    </MenuItem>
-                    {activeFilterConfig.options.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        {option.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              )}
-
-              {activeFilterConfig.type === 'boolean' && (
-                <Box>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={filterValues[activeFilterConfig.key] === true}
-                        onChange={(e) => {
-                          const newValue = e.target.checked ? true : undefined;
-                          onFilterChange(activeFilterConfig.key, newValue);
-                        }}
-                      />
-                    }
-                    label="Yes"
+      {/* Advanced Filters Panel */}
+      <Collapse in={showAdvancedFilters}>
+        <Paper 
+          sx={{ 
+            p: 3, 
+            mt: 2, 
+            border: 1, 
+            borderColor: 'divider',
+            borderRadius: 2,
+            bgcolor: '#f8f9fa'
+          }}
+        >
+          <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
+            Advanced Search Filters
+          </Typography>
+          
+          <Grid container spacing={2}>
+            {filterConfigs.map((config) => (
+              <Grid item xs={12} sm={6} md={4} key={config.key}>
+                {config.type === 'text' && (
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label={config.label}
+                    placeholder={config.placeholder || `Enter ${config.label.toLowerCase()}`}
+                    value={filterValues[config.key] || ''}
+                    onChange={(e) => onFilterChange(config.key, e.target.value)}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: 'white',
+                        '& fieldset': { borderWidth: '1px' },
+                        '&:hover fieldset': { borderWidth: '1px' },
+                        '&.Mui-focused fieldset': { borderWidth: '1px' },
+                      },
+                    }}
                   />
-                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-                    Toggle to filter by this criteria, or leave off to include all.
-                  </Typography>
-                </Box>
-              )}
+                )}
 
-              <Divider sx={{ my: 2 }} />
-              
-              <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-                <Button 
-                  size="small" 
-                  onClick={() => clearFilter(activeFilterConfig.key)}
-                  color="error"
-                >
-                  Clear
-                </Button>
-                <Button 
-                  size="small" 
-                  variant="contained"
-                  onClick={handleFilterClose}
-                >
-                  Apply
-                </Button>
-              </Box>
-            </Box>
-          )}
+                {config.type === 'select' && config.options && (
+                  <FormControl fullWidth size="small">
+                    <InputLabel>{config.label}</InputLabel>
+                    <Select
+                      value={filterValues[config.key] || ''}
+                      onChange={(e) => onFilterChange(config.key, e.target.value)}
+                      label={config.label}
+                      sx={{
+                        bgcolor: 'white',
+                        '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                        '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                      }}
+                    >
+                      <MenuItem value="">
+                        <em>All {config.label}</em>
+                      </MenuItem>
+                      {config.options.map((option) => (
+                        <MenuItem key={option.value} value={option.value}>
+                          {option.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+
+                {config.type === 'boolean' && (
+                  <Box sx={{ pt: 1 }}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={filterValues[config.key] === true}
+                          onChange={(e) => {
+                            const newValue = e.target.checked ? true : undefined;
+                            onFilterChange(config.key, newValue);
+                          }}
+                        />
+                      }
+                      label={config.label}
+                    />
+                  </Box>
+                )}
+              </Grid>
+            ))}
+          </Grid>
+
+          <Divider sx={{ my: 2 }} />
+          
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+            <Button 
+              variant="outlined"
+              onClick={onClear}
+              startIcon={<ClearIcon />}
+              sx={{ borderRadius: 1 }}
+            >
+              Clear All
+            </Button>
+            <Button 
+              variant="contained"
+              onClick={() => {
+                onSearch();
+                setShowAdvancedFilters(false);
+              }}
+              startIcon={<SearchIcon />}
+              sx={{ borderRadius: 1 }}
+            >
+              Apply Filters
+            </Button>
+          </Box>
         </Paper>
-      </Popover>
+      </Collapse>
     </Box>
   );
 };

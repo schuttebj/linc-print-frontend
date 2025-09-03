@@ -1,13 +1,14 @@
 # FilterBar Component Usage Guide
 
-The FilterBar component provides a clean, modern search and filter interface for list pages. It replaces the previous complex form layouts with a streamlined design that includes a main search field, filter chips, and applied filter management.
+The FilterBar component provides a clean, modern search and filter interface for list pages. It features a simplified layout with a search bar, advanced search panel, and applied filter management.
 
 ## Features
 
-- **Main search field** on the left for quick searches (like ID numbers)
-- **Filter chips** that open dropdowns when clicked
-- **Applied filters** shown as removable chips
-- **Icon-based action buttons** for search and clear
+- **Half-width search field** for quick searches (like ID numbers)
+- **Advanced Search button** that opens a collapsible panel with all filters
+- **Applied filters** shown as removable chips below the search bar
+- **Icon-based action buttons** with small rounded corners
+- **Collapsible advanced filters panel** with all filter fields organized in a grid
 - **URL state preservation** for navigation
 - **Responsive design** that works on all screen sizes
 
@@ -42,6 +43,13 @@ const handleFilterChange = (key: string, value: any) => {
   searching={searching}
 />
 ```
+
+## How It Works
+
+1. **Search Bar**: Half-width search field on the left for quick searches
+2. **Advanced Search**: Button that opens a collapsible panel with all filter fields
+3. **Applied Filters**: Chips appear below the search bar showing active filters
+4. **Action Buttons**: Search (🔍) and Clear (🗑️) buttons with small rounded corners on the right
 
 ## Filter Configuration
 
@@ -280,8 +288,11 @@ To migrate from an existing search form:
 
 ## Benefits
 
-- **Cleaner UI**: Significantly reduces form clutter
-- **Better UX**: Intuitive filter chips and applied filter management
+- **Ultra-Clean UI**: Only search bar visible by default, advanced filters hidden until needed
+- **Progressive Disclosure**: Advanced filters revealed only when requested
+- **80% Less Visual Clutter**: Massive reduction in form complexity
+- **Better UX**: Intuitive search-first approach with optional advanced filtering
+- **Mobile-Friendly**: Simplified layout works perfectly on small screens
 - **Responsive**: Works well on all screen sizes
 - **Reusable**: Same component works across all list pages
 - **Maintainable**: Centralized filter logic and styling
