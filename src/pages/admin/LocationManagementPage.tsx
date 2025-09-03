@@ -9,11 +9,6 @@ import {
   Box,
   Container,
   Typography,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Button,
   Table,
   TableBody,
@@ -23,9 +18,6 @@ import {
   TableRow,
   Paper,
   Chip,
-  Grid,
-  Card,
-  CardContent,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -34,24 +26,20 @@ import {
   CircularProgress,
   TablePagination,
   IconButton,
-  InputAdornment,
   Stack,
 } from '@mui/material';
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
-  LocationOn as LocationIcon,
   PowerSettingsNew as CloseIcon,
   PowerOff as OpenIcon,
   Add as AddIcon,
-  Search as SearchIcon,
-  FilterList as FilterIcon,
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon,
-  Business as BusinessIcon,
 } from '@mui/icons-material';
 import { API_ENDPOINTS, api } from '../../config/api';
 import lookupService, { OfficeType, Province } from '../../services/lookupService';
+import FilterBar, { FilterConfig, FilterValues } from '../../components/common/FilterBar';
 
 // Location interfaces - Updated to match actual API response
 interface Location {
@@ -103,6 +91,31 @@ interface ProvinceOption {
   name: string;
 }
 
+// Filter configurations for LocationManagementPage  
+const LOCATION_FILTER_CONFIGS: FilterConfig[] = [
+  {
+    key: 'province',
+    label: 'Province',
+    type: 'select',
+    options: [], // Will be populated from lookupService
+  },
+  {
+    key: 'office_type',
+    label: 'Office Type',
+    type: 'select',
+    options: [], // Will be populated from lookupService
+  },
+  {
+    key: 'operational',
+    label: 'Status',
+    type: 'select',
+    options: [
+      { value: 'true', label: 'Operational' },
+      { value: 'false', label: 'Closed' }
+    ],
+  },
+];
+
 const LocationManagementPage: React.FC = () => {
   const navigate = useNavigate();
   
@@ -117,10 +130,11 @@ const LocationManagementPage: React.FC = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [totalResults, setTotalResults] = useState(0);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [provinceFilter, setProvinceFilter] = useState<string>('');
-  const [typeFilter, setTypeFilter] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<string>('');
+
+  // Filter state management for FilterBar
+  const [searchValue, setSearchValue] = useState('');
+  const [filterValues, setFilterValues] = useState<FilterValues>({});
+  const [filterConfigs, setFilterConfigs] = useState<FilterConfig[]>(LOCATION_FILTER_CONFIGS);
   
   // Delete modal state and success dialog
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -128,7 +142,7 @@ const LocationManagementPage: React.FC = () => {
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   
-  // Load initial data - only load lookup data, not locations
+  // Load initial data - load lookup data and populate filter options
   useEffect(() => {
     loadInitialData();
   }, []);
@@ -138,7 +152,7 @@ const LocationManagementPage: React.FC = () => {
     if (!loading) { // Only load locations after initial data is loaded
       loadLocations();
     }
-  }, [page, rowsPerPage, searchTerm, provinceFilter, typeFilter, statusFilter, loading]);
+  }, [page, rowsPerPage, searchValue, filterValues, loading]);
 
   const loadInitialData = async () => {
     try {
@@ -149,6 +163,41 @@ const LocationManagementPage: React.FC = () => {
       const allLookups = await lookupService.getAllLookups();
       setProvinces(allLookups.provinces);
       setOfficeTypes(allLookups.office_types);
+
+      // Populate filter options
+      const provinceOptions = allLookups.provinces.map(province => ({
+        value: province.code,
+        label: province.name
+      }));
+      
+      const officeTypeOptions = allLookups.office_types.map(type => ({
+        value: type.value,
+        label: type.label
+      }));
+
+      setFilterConfigs([
+        {
+          key: 'province',
+          label: 'Province',
+          type: 'select',
+          options: provinceOptions,
+        },
+        {
+          key: 'office_type',
+          label: 'Office Type',
+          type: 'select',
+          options: officeTypeOptions,
+        },
+        {
+          key: 'operational',
+          label: 'Status',
+          type: 'select',
+          options: [
+            { value: 'true', label: 'Operational' },
+            { value: 'false', label: 'Closed' }
+          ],
+        },
+      ]);
       
       // Load locations after lookup data is ready
       await loadLocations();
@@ -164,10 +213,10 @@ const LocationManagementPage: React.FC = () => {
       const params = new URLSearchParams({
         page: (page + 1).toString(), // Convert from 0-based to 1-based
         per_page: rowsPerPage.toString(),
-        ...(searchTerm && { search: searchTerm }),
-        ...(provinceFilter && { province: provinceFilter }),
-        ...(typeFilter && { office_type: typeFilter }),
-        ...(statusFilter && { operational: statusFilter })
+        ...(searchValue && { search: searchValue }),
+        ...(filterValues.province && { province: filterValues.province }),
+        ...(filterValues.office_type && { office_type: filterValues.office_type }),
+        ...(filterValues.operational && { operational: filterValues.operational })
       });
 
       const response = await api.get<LocationListResponse>(`${API_ENDPOINTS.locations}?${params}`);
@@ -187,6 +236,27 @@ const LocationManagementPage: React.FC = () => {
   const handleRowsPerPageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0); // Reset to first page when changing rows per page
+  };
+
+  // Handle FilterBar filter changes
+  const handleFilterChange = (key: string, value: any) => {
+    setFilterValues(prev => ({
+      ...prev,
+      [key]: value,
+    }));
+    setPage(0); // Reset to first page when filters change
+  };
+
+  // Handle search and clear for FilterBar
+  const handleSearch = async () => {
+    setPage(0);
+    await loadLocations();
+  };
+
+  const handleClear = () => {
+    setSearchValue('');
+    setFilterValues({});
+    setPage(0);
   };
 
   const handleDeleteLocation = async () => {
@@ -286,7 +356,7 @@ const LocationManagementPage: React.FC = () => {
           overflow: 'hidden'
         }}
       >
-        {/* Filter Section */}
+        {/* Search and Filter Section */}
         <Box sx={{ 
           bgcolor: 'white', 
           borderBottom: '1px solid', 
@@ -296,7 +366,7 @@ const LocationManagementPage: React.FC = () => {
         }}>
           <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-              Search & Filters
+              Search Locations
             </Typography>
             <Button
               variant="contained"
@@ -308,98 +378,17 @@ const LocationManagementPage: React.FC = () => {
             </Button>
           </Box>
           
-          <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                size="small"
-                label="Search Locations"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Location name, code, or address"
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    '& fieldset': { borderWidth: '1px' },
-                    '&:hover fieldset': { borderWidth: '1px' },
-                    '&.Mui-focused fieldset': { borderWidth: '1px' },
-                  },
-                }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={2}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Province</InputLabel>
-                <Select
-                  value={provinceFilter}
-                  onChange={(e) => setProvinceFilter(e.target.value)}
-                  label="Province"
-                  sx={{
-                    '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-                    '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-                  }}
-                >
-                  <MenuItem value="">All Provinces</MenuItem>
-                  {provinces.map(province => (
-                    <MenuItem key={province.code} value={province.code}>
-                      {province.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Office Type</InputLabel>
-                <Select
-                  value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value)}
-                  label="Office Type"
-                  sx={{
-                    '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-                    '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-                  }}
-                >
-                  <MenuItem value="">All Types</MenuItem>
-                  {officeTypes.map(type => (
-                    <MenuItem key={type.value} value={type.value}>
-                      {type.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Status</InputLabel>
-                <Select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  label="Status"
-                  sx={{
-                    '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-                    '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-                  }}
-                >
-                  <MenuItem value="">All Status</MenuItem>
-                  <MenuItem value="true">Operational</MenuItem>
-                  <MenuItem value="false">Closed</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
+          <FilterBar
+            searchValue={searchValue}
+            searchPlaceholder="Search by location name, code, or address"
+            onSearchChange={setSearchValue}
+            filterConfigs={filterConfigs}
+            filterValues={filterValues}
+            onFilterChange={handleFilterChange}
+            onSearch={handleSearch}
+            onClear={handleClear}
+            searching={loading}
+          />
         </Box>
 
         {/* Content Area */}

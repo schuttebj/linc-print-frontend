@@ -2,10 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
-  Card,
-  CardContent,
   Typography,
-  TextField,
   Button,
   Table,
   TableBody,
@@ -14,10 +11,6 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Alert,
   Chip,
   Dialog,
@@ -35,23 +28,34 @@ import {
   Divider
 } from '@mui/material';
 import {
-  Search as SearchIcon,
-  FilterList as FilterIcon,
   Receipt as ReceiptIcon,
   Visibility as ViewIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   Print as PrintIcon,
-  Download as DownloadIcon,
   Refresh as RefreshIcon
 } from '@mui/icons-material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format, parseISO } from 'date-fns';
 import { useAuth } from '../../contexts/AuthContext';
 import { transactionService, Transaction, TransactionItem } from '../../services/transactionService';
 import { formatCurrency } from '../../utils/currency';
+import FilterBar, { FilterConfig, FilterValues } from '../../components/common/FilterBar';
+
+// Filter configurations for TransactionListPage
+const TRANSACTION_FILTER_CONFIGS: FilterConfig[] = [
+  {
+    key: 'status',
+    label: 'Status',
+    type: 'select',
+    options: [], // Will be populated from transactionService
+  },
+  {
+    key: 'paymentMethod',
+    label: 'Payment Method',
+    type: 'select',
+    options: [], // Will be populated from transactionService
+  },
+];
 
 const TransactionListPage: React.FC = () => {
   const { user } = useAuth();
@@ -62,12 +66,13 @@ const TransactionListPage: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [totalResults, setTotalResults] = useState(0);
 
-  // Filters
-  const [filters, setFilters] = useState({
-    search: '',
-    status: '',
-    paymentMethod: '',
-    locationId: '',
+  // Filter state management for FilterBar
+  const [searchValue, setSearchValue] = useState('');
+  const [filterValues, setFilterValues] = useState<FilterValues>({});
+  const [filterConfigs, setFilterConfigs] = useState<FilterConfig[]>(TRANSACTION_FILTER_CONFIGS);
+
+  // Date filters (handled separately until FilterBar supports dates)
+  const [dateFilters, setDateFilters] = useState({
     dateFrom: null as Date | null,
     dateTo: null as Date | null
   });
@@ -82,9 +87,37 @@ const TransactionListPage: React.FC = () => {
   // Expanded rows for transaction items
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
+  // Initialize filter options
+  useEffect(() => {
+    const statusOptions = transactionService.getTransactionStatuses().map(status => ({
+      value: status.value,
+      label: status.label
+    }));
+    
+    const paymentMethodOptions = transactionService.getPaymentMethods().map(method => ({
+      value: method.value,
+      label: method.label
+    }));
+
+    setFilterConfigs([
+      {
+        key: 'status',
+        label: 'Status',
+        type: 'select',
+        options: statusOptions,
+      },
+      {
+        key: 'paymentMethod',
+        label: 'Payment Method',
+        type: 'select',
+        options: paymentMethodOptions,
+      },
+    ]);
+  }, []);
+
   useEffect(() => {
     loadTransactions();
-  }, [page, rowsPerPage, filters]);
+  }, [page, rowsPerPage, searchValue, filterValues, dateFilters]);
 
   const loadTransactions = async () => {
     setLoading(true);
@@ -96,8 +129,8 @@ const TransactionListPage: React.FC = () => {
         limit: rowsPerPage === -1 ? undefined : rowsPerPage
       };
 
-      if (filters.status) params.transaction_status = filters.status;
-      if (filters.locationId) params.location_id = filters.locationId;
+      if (filterValues.status) params.transaction_status = filterValues.status;
+      if (filterValues.paymentMethod) params.payment_method = filterValues.paymentMethod;
       if (user?.user_type === 'LOCATION_USER' && user.primary_location_id) {
         params.location_id = user.primary_location_id;
       }
@@ -112,9 +145,29 @@ const TransactionListPage: React.FC = () => {
     }
   };
 
-  const handleFilterChange = (field: string, value: any) => {
-    setFilters(prev => ({ ...prev, [field]: value }));
+  // Handle FilterBar filter changes
+  const handleFilterChange = (key: string, value: any) => {
+    setFilterValues(prev => ({
+      ...prev,
+      [key]: value,
+    }));
     setPage(0); // Reset to first page when filters change
+  };
+
+  // Handle search and clear for FilterBar
+  const handleSearch = async () => {
+    setPage(0);
+    await loadTransactions();
+  };
+
+  const handleClear = () => {
+    setSearchValue('');
+    setFilterValues({});
+    setDateFilters({
+      dateFrom: null,
+      dateTo: null
+    });
+    setPage(0);
   };
 
   const handleViewTransaction = (transaction: Transaction) => {
@@ -397,8 +450,8 @@ const TransactionListPage: React.FC = () => {
   };
 
   const filteredTransactions = transactions.filter(transaction => {
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
+    if (searchValue) {
+      const searchLower = searchValue.toLowerCase();
       const matchesSearch = 
         transaction.transaction_number.toLowerCase().includes(searchLower) ||
         transaction.receipt_number?.toLowerCase().includes(searchLower) ||
@@ -406,14 +459,14 @@ const TransactionListPage: React.FC = () => {
       if (!matchesSearch) return false;
     }
 
-    if (filters.paymentMethod && transaction.payment_method !== filters.paymentMethod) {
+    if (filterValues.paymentMethod && transaction.payment_method !== filterValues.paymentMethod) {
       return false;
     }
 
-    if (filters.dateFrom || filters.dateTo) {
+    if (dateFilters.dateFrom || dateFilters.dateTo) {
       const transactionDate = parseISO(transaction.created_at);
-      if (filters.dateFrom && transactionDate < filters.dateFrom) return false;
-      if (filters.dateTo && transactionDate > filters.dateTo) return false;
+      if (dateFilters.dateFrom && transactionDate < dateFilters.dateFrom) return false;
+      if (dateFilters.dateTo && transactionDate > dateFilters.dateTo) return false;
     }
 
     return true;
@@ -671,7 +724,7 @@ const TransactionListPage: React.FC = () => {
           overflow: 'hidden'
         }}
       >
-        {/* Filter Section */}
+        {/* Search and Filter Section */}
         <Box sx={{ 
           bgcolor: 'white', 
           borderBottom: '1px solid', 
@@ -681,7 +734,7 @@ const TransactionListPage: React.FC = () => {
         }}>
           <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-              Search & Filters
+              Search Transactions
             </Typography>
             <Button
               variant="contained"
@@ -693,96 +746,17 @@ const TransactionListPage: React.FC = () => {
             </Button>
           </Box>
           
-          <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} md={3}>
-              <TextField
-                fullWidth
-                size="small"
-                label="Search"
-                value={filters.search}
-                onChange={(e) => handleFilterChange('search', e.target.value)}
-                placeholder="Transaction #, Receipt #, Reference"
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    '& fieldset': { borderWidth: '1px' },
-                    '&:hover fieldset': { borderWidth: '1px' },
-                    '&.Mui-focused fieldset': { borderWidth: '1px' },
-                  },
-                }}
-                InputProps={{
-                  endAdornment: <SearchIcon />
-                }}
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={2}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Status</InputLabel>
-                <Select
-                  value={filters.status}
-                  onChange={(e) => handleFilterChange('status', e.target.value)}
-                  label="Status"
-                  sx={{
-                    '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-                    '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-                  }}
-                >
-                  <MenuItem value="">All Statuses</MenuItem>
-                  {transactionService.getTransactionStatuses().map(status => (
-                    <MenuItem key={status.value} value={status.value}>
-                      {status.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            <Grid item xs={12} md={2}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Payment Method</InputLabel>
-                <Select
-                  value={filters.paymentMethod}
-                  onChange={(e) => handleFilterChange('paymentMethod', e.target.value)}
-                  label="Payment Method"
-                  sx={{
-                    '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-                    '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-                  }}
-                >
-                  <MenuItem value="">All Methods</MenuItem>
-                  {transactionService.getPaymentMethods().map(method => (
-                    <MenuItem key={method.value} value={method.value}>
-                      {method.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            <Grid item xs={12} md={2}>
-              <Button
-                variant="outlined"
-                onClick={() => setFilters({
-                  search: '',
-                  status: '',
-                  paymentMethod: '',
-                  locationId: '',
-                  dateFrom: null,
-                  dateTo: null
-                })}
-                size="small"
-                fullWidth
-                sx={{
-                  borderWidth: '1px',
-                  '&:hover': { borderWidth: '1px' },
-                }}
-              >
-                Clear
-              </Button>
-            </Grid>
-          </Grid>
+          <FilterBar
+            searchValue={searchValue}
+            searchPlaceholder="Search by transaction #, receipt #, or reference"
+            onSearchChange={setSearchValue}
+            filterConfigs={filterConfigs}
+            filterValues={filterValues}
+            onFilterChange={handleFilterChange}
+            onSearch={handleSearch}
+            onClear={handleClear}
+            searching={loading}
+          />
         </Box>
 
         {/* Content Area */}
