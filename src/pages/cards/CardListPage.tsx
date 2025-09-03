@@ -6,17 +6,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
-  Card,
-  CardContent,
-  CardHeader,
+  Container,
   Typography,
-  Grid,
-  TextField,
   Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Table,
   TableBody,
   TableCell,
@@ -29,25 +21,62 @@ import {
   IconButton,
   Tooltip,
   Alert,
-  CircularProgress,
   Stack,
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  Grid,
+  Skeleton,
 } from '@mui/material';
 import {
-  Search as SearchIcon,
   Visibility as ViewIcon,
   Refresh as RefreshIcon,
-  Clear as ClearIcon,
-  FilterList as FilterIcon,
   CreditCard as CardIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
 
 import { useAuth } from '../../contexts/AuthContext';
 import cardService, { CardSearchFilters, CardListResponse, CardData } from '../../services/cardService';
+import FilterBar, { FilterConfig, FilterValues } from '../../components/common/FilterBar';
+
+// Filter configurations for CardListPage
+const CARD_FILTER_CONFIGS: FilterConfig[] = [
+  {
+    key: 'status',
+    label: 'Status',
+    type: 'select',
+    options: [
+      { value: 'PENDING_ORDER', label: 'Pending Order' },
+      { value: 'ORDERED', label: 'Ordered' },
+      { value: 'PENDING_PRODUCTION', label: 'Pending Production' },
+      { value: 'IN_PRODUCTION', label: 'In Production' },
+      { value: 'QUALITY_CONTROL', label: 'Quality Control' },
+      { value: 'PRODUCTION_COMPLETED', label: 'Production Completed' },
+      { value: 'READY_FOR_COLLECTION', label: 'Ready for Collection' },
+      { value: 'COLLECTED', label: 'Collected' },
+      { value: 'EXPIRED', label: 'Expired' },
+      { value: 'CANCELLED', label: 'Cancelled' },
+    ],
+  },
+  {
+    key: 'card_type',
+    label: 'Card Type',
+    type: 'select',
+    options: [
+      { value: 'STANDARD', label: 'Standard' },
+      { value: 'TEMPORARY', label: 'Temporary' },
+      { value: 'DUPLICATE', label: 'Duplicate' },
+      { value: 'REPLACEMENT', label: 'Replacement' },
+      { value: 'EMERGENCY', label: 'Emergency' },
+    ],
+  },
+  {
+    key: 'is_active',
+    label: 'Active Status',
+    type: 'boolean',
+  },
+];
 
 interface CardListPageProps {}
 
@@ -64,12 +93,11 @@ const CardListPage: React.FC<CardListPageProps> = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
 
-  // Search and filters
-  const [searchFilters, setSearchFilters] = useState<CardSearchFilters>({
-    page: 1,
-    size: 25
-  });
-  const [quickSearch, setQuickSearch] = useState('');
+  // Filter state management for FilterBar
+  const [searchValue, setSearchValue] = useState('');
+  const [filterValues, setFilterValues] = useState<FilterValues>({});
+  
+  // Dialog states
   const [selectedCard, setSelectedCard] = useState<CardData | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
@@ -79,11 +107,15 @@ const CardListPage: React.FC<CardListPageProps> = () => {
     setError(null);
 
     try {
-      const response: CardListResponse = await cardService.searchCards({
-        ...searchFilters,
+      // Combine all filter sources into searchFilters
+      const searchFilters: CardSearchFilters = {
         page: page + 1, // Backend uses 1-based pagination
-        size: rowsPerPage
-      });
+        size: rowsPerPage === -1 ? 100 : rowsPerPage, // Handle "All" option
+        ...(searchValue && { card_number: searchValue }),
+        ...filterValues,
+      };
+
+      const response: CardListResponse = await cardService.searchCards(searchFilters);
 
       setCards(response.cards);
       setTotalCount(response.total);
@@ -93,38 +125,31 @@ const CardListPage: React.FC<CardListPageProps> = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchFilters, page, rowsPerPage]);
+  }, [searchValue, filterValues, page, rowsPerPage]);
 
   // Initial load
   useEffect(() => {
     loadCards();
   }, [loadCards]);
 
-  // Handle search
-  const handleSearch = (event: React.FormEvent) => {
-    event.preventDefault();
-    setPage(0); // Reset to first page
-    loadCards();
+  // Handle FilterBar filter changes
+  const handleFilterChange = (key: string, value: any) => {
+    setFilterValues(prev => ({
+      ...prev,
+      [key]: value,
+    }));
+    setPage(0); // Reset to first page when filters change
   };
 
-  // Handle quick search
-  const handleQuickSearch = () => {
-    if (quickSearch.trim()) {
-      setSearchFilters(prev => ({
-        ...prev,
-        card_number: quickSearch.trim()
-      }));
+  // Handle search and clear for FilterBar
+  const handleSearch = async () => {
       setPage(0);
-    }
+    await loadCards();
   };
 
-  // Clear search
-  const handleClearSearch = () => {
-    setQuickSearch('');
-    setSearchFilters({
-      page: 1,
-      size: 25
-    });
+  const handleClear = () => {
+    setSearchValue('');
+    setFilterValues({});
     setPage(0);
   };
 
@@ -195,169 +220,241 @@ const CardListPage: React.FC<CardListPageProps> = () => {
     setDetailDialogOpen(true);
   };
 
+  // Handle pagination
+  const handlePageChange = (_event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleRowsPerPageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  // Skeleton loader component for card results
+  const CardResultsSkeleton = () => (
+    <TableContainer sx={{ flex: 1 }}>
+      <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+        <TableHead>
+          <TableRow>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Card Number</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Person</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Type</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Valid From</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Valid Until</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Active</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Actions</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {Array.from({ length: rowsPerPage }).map((_, index) => (
+            <TableRow key={index}>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="text" width="100%" height={20} />
+                <Skeleton variant="text" width="60%" height={16} />
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="text" width="100%" height={20} />
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="rounded" width={80} height={24} />
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="rounded" width={100} height={24} />
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="text" width="100%" height={20} />
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="text" width="100%" height={20} />
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="rounded" width={60} height={24} />
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="circular" width={32} height={32} />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+
   return (
-    <Box sx={{ p: 3 }}>
-      <Card>
-        <CardHeader
-          title="Card Management"
-          subheader={`${totalCount} cards found`}
-          action={
-            <Stack direction="row" spacing={1}>
-              <Tooltip title="Refresh">
-                <IconButton onClick={loadCards} disabled={loading}>
-                  <RefreshIcon />
-                </IconButton>
-              </Tooltip>
-            </Stack>
-          }
-        />
-        
-        <CardContent>
-          {/* Quick Search */}
-          <Box component="form" onSubmit={handleSearch} sx={{ mb: 3 }}>
-            <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  label="Search by card number"
-                  value={quickSearch}
-                  onChange={(e) => setQuickSearch(e.target.value)}
-                  InputProps={{
-                    startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <FormControl fullWidth>
-                  <InputLabel>Status</InputLabel>
-                  <Select
-                    multiple
-                    value={searchFilters.status || []}
-                    label="Status"
-                    onChange={(e) => setSearchFilters(prev => ({ ...prev, status: e.target.value as string[] }))}
-                  >
-                    <MenuItem value="PENDING_ORDER">Pending Order</MenuItem>
-                    <MenuItem value="ORDERED">Ordered</MenuItem>
-                    <MenuItem value="PENDING_PRODUCTION">Pending Production</MenuItem>
-                    <MenuItem value="IN_PRODUCTION">In Production</MenuItem>
-                    <MenuItem value="QUALITY_CONTROL">Quality Control</MenuItem>
-                    <MenuItem value="PRODUCTION_COMPLETED">Production Completed</MenuItem>
-                    <MenuItem value="READY_FOR_COLLECTION">Ready for Collection</MenuItem>
-                    <MenuItem value="COLLECTED">Collected</MenuItem>
-                    <MenuItem value="EXPIRED">Expired</MenuItem>
-                    <MenuItem value="CANCELLED">Cancelled</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <FormControl fullWidth>
-                  <InputLabel>Card Type</InputLabel>
-                  <Select
-                    value={searchFilters.card_type || ''}
-                    label="Card Type"
-                    onChange={(e) => setSearchFilters(prev => ({ ...prev, card_type: e.target.value }))}
-                  >
-                    <MenuItem value="">All Types</MenuItem>
-                    <MenuItem value="STANDARD">Standard</MenuItem>
-                    <MenuItem value="TEMPORARY">Temporary</MenuItem>
-                    <MenuItem value="DUPLICATE">Duplicate</MenuItem>
-                    <MenuItem value="REPLACEMENT">Replacement</MenuItem>
-                    <MenuItem value="EMERGENCY">Emergency</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={2}>
-                <Stack direction="row" spacing={1}>
+    <>
+    <Container maxWidth="lg" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Paper 
+        elevation={0}
+        sx={{ 
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: '#f8f9fa',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          overflow: 'hidden'
+        }}
+      >
+        {/* Search and Filter Section */}
+        <Box sx={{ 
+          bgcolor: 'white', 
+          borderBottom: '1px solid', 
+          borderColor: 'divider',
+          flexShrink: 0,
+          p: 2
+        }}>
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+              Search Cards
+            </Typography>
                   <Button 
                     variant="contained" 
-                    type="submit"
+              onClick={loadCards}
+              startIcon={<RefreshIcon />}
+              size="small"
                     disabled={loading}
-                    startIcon={<SearchIcon />}
-                  >
-                    Search
+            >
+              Refresh
                   </Button>
-                  <Button 
-                    variant="outlined" 
-                    onClick={handleClearSearch}
-                    disabled={loading}
-                    startIcon={<ClearIcon />}
-                  >
-                    Clear
-                  </Button>
-                </Stack>
-              </Grid>
-            </Grid>
           </Box>
 
-          {/* Loading */}
-          {loading && (
-            <Box display="flex" justifyContent="center" py={4}>
-              <CircularProgress />
+          <FilterBar
+            searchValue={searchValue}
+            searchPlaceholder="Search by card number"
+            onSearchChange={setSearchValue}
+            filterConfigs={CARD_FILTER_CONFIGS}
+            filterValues={filterValues}
+            onFilterChange={handleFilterChange}
+            onSearch={handleSearch}
+            onClear={handleClear}
+            searching={loading}
+          />
             </Box>
-          )}
 
-          {/* Error */}
+        {/* Content Area */}
+        <Box sx={{ 
+          flex: 1, 
+          overflow: 'hidden',
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          {/* Error Display */}
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert severity="error" sx={{ m: 2, flexShrink: 0 }}>
               {error}
             </Alert>
           )}
 
-          {/* Results Table */}
-          {!loading && (
-            <TableContainer component={Paper} variant="outlined">
-              <Table size="small">
+          {/* Card Table */}
+          <Paper 
+            elevation={0}
+            sx={{ 
+              bgcolor: 'white',
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              borderRadius: 0
+            }}
+          >
+            {/* Show skeleton while loading */}
+            {loading ? (
+              <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                <CardResultsSkeleton />
+                <TablePagination
+                  component="div"
+                  count={0}
+                  page={page}
+                  onPageChange={() => {}}
+                  rowsPerPage={rowsPerPage}
+                  onRowsPerPageChange={() => {}}
+                  rowsPerPageOptions={[10, 25, 50, { value: -1, label: 'All' }]}
+                  sx={{
+                    bgcolor: 'white',
+                    borderTop: '1px solid',
+                    borderColor: 'divider',
+                    flexShrink: 0,
+                    '& .MuiTablePagination-toolbar': {
+                      minHeight: '52px',
+                    },
+                    '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+                      fontSize: '0.8rem',
+                    },
+                    '& .MuiTablePagination-select': {
+                      fontSize: '0.8rem',
+                    },
+                  }}
+                />
+              </Box>
+            ) : (
+              /* Show results or no results message only after loading is complete */
+              <>
+                {cards.length === 0 ? (
+                  <Box sx={{ p: 2 }}>
+                    <Alert severity="info">
+                      No cards found matching your search criteria. Try adjusting your search terms.
+                    </Alert>
+                  </Box>
+                ) : (
+                  <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                    <TableContainer sx={{ flex: 1 }}>
+                      <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Card Number</TableCell>
-                    <TableCell>Person</TableCell>
-                    <TableCell>Type</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Valid From</TableCell>
-                    <TableCell>Valid Until</TableCell>
-                    <TableCell>Active</TableCell>
-                    <TableCell>Actions</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Card Number</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Person</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Type</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Valid From</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Valid Until</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Active</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {cards.map((card) => (
                     <TableRow key={card.id} hover>
-                      <TableCell>
-                        <Typography variant="body2" fontWeight="bold">
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>
                           {card.card_number}
                         </Typography>
                         {card.is_temporary && (
-                          <Typography variant="caption" color="warning.main">
+                                  <Typography variant="caption" color="warning.main" sx={{ fontSize: '0.7rem' }}>
                             Temporary
                           </Typography>
                         )}
                       </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                           {card.person_name || 'Unknown Person'}
                         </Typography>
                       </TableCell>
-                      <TableCell>
+                              <TableCell sx={{ py: 1, px: 2 }}>
                         {getCardTypeChip(card.card_type)}
                       </TableCell>
-                      <TableCell>
+                              <TableCell sx={{ py: 1, px: 2 }}>
                         {getStatusChip(card.status)}
                       </TableCell>
-                      <TableCell>
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                         {formatDate(card.valid_from)}
+                                </Typography>
                       </TableCell>
-                      <TableCell>
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                         {formatDate(card.valid_until)}
+                                </Typography>
                       </TableCell>
-                      <TableCell>
+                              <TableCell sx={{ py: 1, px: 2 }}>
                         {card.is_active ? (
                           <Chip label="Active" color="success" size="small" />
                         ) : (
                           <Chip label="Inactive" color="default" size="small" />
                         )}
                       </TableCell>
-                      <TableCell>
-                        <Stack direction="row" spacing={0.5}>
+                              <TableCell sx={{ py: 1, px: 2 }}>
                           <Tooltip title="View Details">
                             <IconButton 
                               size="small"
@@ -366,39 +463,45 @@ const CardListPage: React.FC<CardListPageProps> = () => {
                               <ViewIcon />
                             </IconButton>
                           </Tooltip>
-                        </Stack>
                       </TableCell>
                     </TableRow>
                   ))}
-                  {cards.length === 0 && !loading && (
-                    <TableRow>
-                      <TableCell colSpan={8} align="center">
-                        <Typography variant="body2" color="textSecondary" py={4}>
-                          No cards found matching your criteria
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  )}
                 </TableBody>
               </Table>
             </TableContainer>
-          )}
 
-          {/* Pagination */}
           <TablePagination
-            rowsPerPageOptions={[25, 50, 100]}
             component="div"
             count={totalCount}
+                      page={page}
+                      onPageChange={handlePageChange}
             rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={(event, newPage) => setPage(newPage)}
-            onRowsPerPageChange={(event) => {
-              setRowsPerPage(parseInt(event.target.value, 10));
-              setPage(0);
-            }}
-          />
-        </CardContent>
-      </Card>
+                      onRowsPerPageChange={handleRowsPerPageChange}
+                      rowsPerPageOptions={[10, 25, 50, { value: -1, label: 'All' }]}
+                      sx={{
+                        bgcolor: 'white',
+                        borderTop: '1px solid',
+                        borderColor: 'divider',
+                        flexShrink: 0,
+                        '& .MuiTablePagination-toolbar': {
+                          minHeight: '52px',
+                        },
+                        '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+                          fontSize: '0.8rem',
+                        },
+                        '& .MuiTablePagination-select': {
+                          fontSize: '0.8rem',
+                        },
+                      }}
+                    />
+                  </Box>
+                )}
+              </>
+            )}
+          </Paper>
+        </Box>
+      </Paper>
+    </Container>
 
       {/* Card Detail Dialog */}
       <Dialog 
@@ -465,7 +568,7 @@ const CardListPage: React.FC<CardListPageProps> = () => {
           <Button onClick={() => setDetailDialogOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </>
   );
 };
 
