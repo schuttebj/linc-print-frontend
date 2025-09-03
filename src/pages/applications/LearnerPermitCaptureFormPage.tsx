@@ -455,27 +455,9 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
             <Box
               ref={scrollableRef}
               sx={{
+                overflow: 'auto', // Use global scrollbar styling
                 // Conditional padding based on scrollbar presence
                 pr: hasScrollbar ? 1 : 0,
-                // Custom scrollbar styling
-                '&::-webkit-scrollbar': {
-                  width: '8px',
-                },
-                '&::-webkit-scrollbar-track': {
-                  background: '#f1f1f1',
-                  borderRadius: '4px',
-                  marginRight: '2px', // Small gap from content
-                },
-                '&::-webkit-scrollbar-thumb': {
-                  background: '#c1c1c1',
-                  borderRadius: '4px',
-                  '&:hover': {
-                    background: '#a8a8a8',
-                  },
-                },
-                // Firefox scrollbar
-                scrollbarWidth: 'thin',
-                scrollbarColor: '#c1c1c1 #f1f1f1',
               }}
             >
               <LicenseCaptureForm
@@ -755,26 +737,8 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
               flex: 1, 
               minHeight: 0, 
               width: '100%',
-              overflow: 'auto', // Enable scrolling for direct content
+              overflow: 'auto', // Use global scrollbar styling
               p: 2,
-              // Custom scrollbar styling
-              '&::-webkit-scrollbar': {
-                width: '8px',
-              },
-              '&::-webkit-scrollbar-track': {
-                background: '#f1f1f1',
-                borderRadius: '4px',
-              },
-              '&::-webkit-scrollbar-thumb': {
-                background: '#c1c1c1',
-                borderRadius: '4px',
-                '&:hover': {
-                  background: '#a8a8a8',
-                },
-              },
-              // Firefox scrollbar
-              scrollbarWidth: 'thin',
-              scrollbarColor: '#c1c1c1 #f1f1f1',
             }}>
               {renderStepContent(activeStep)}
             </Box>

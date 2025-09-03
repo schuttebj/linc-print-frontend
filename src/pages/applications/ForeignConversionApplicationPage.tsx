@@ -848,27 +848,9 @@ const ForeignConversionApplicationPage: React.FC = () => {
                 <Box
                   ref={scrollableRef}
                   sx={{
+                    overflow: 'auto', // Use global scrollbar styling
                     // Conditional padding based on scrollbar presence
                     pr: hasScrollbar ? 1 : 0,
-                    // Custom scrollbar styling
-                    '&::-webkit-scrollbar': {
-                      width: '8px',
-                    },
-                    '&::-webkit-scrollbar-track': {
-                      background: '#f1f1f1',
-                      borderRadius: '4px',
-                      marginRight: '2px', // Small gap from content
-                    },
-                    '&::-webkit-scrollbar-thumb': {
-                      background: '#c1c1c1',
-                      borderRadius: '4px',
-                      '&:hover': {
-                        background: '#a8a8a8',
-                      },
-                    },
-                    // Firefox scrollbar
-                    scrollbarWidth: 'thin',
-                    scrollbarColor: '#c1c1c1 #f1f1f1',
                   }}
                 >
                   <ForeignLicenseCaptureForm
