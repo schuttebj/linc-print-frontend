@@ -285,13 +285,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Reset logout flag on successful login
       setIsLoggingOut(false);
 
+      // Set authenticated state but trigger skeleton loading for consistency
       setAuthState({
-        user: enhanceUserWithLocationAccess(user),
+        user: null, // Clear user to trigger skeleton
         isAuthenticated: true,
         isLoading: false,
         accessToken: access_token,
-        userDataLoading: false, // User data is already loaded from login response
+        userDataLoading: true, // Trigger skeleton loading
       });
+
+      // Load user data asynchronously to show skeleton briefly
+      setTimeout(() => {
+        setAuthState(prev => ({
+          ...prev,
+          user: enhanceUserWithLocationAccess(user),
+          userDataLoading: false,
+        }));
+      }, 100); // Brief delay to ensure skeleton shows
 
       console.log('✅ Login successful');
       return true;
