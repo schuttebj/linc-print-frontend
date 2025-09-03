@@ -102,46 +102,17 @@ const MainContentSkeleton: React.FC = () => (
         flexDirection: 'column',
         mx: 'auto'
       }}>
-        <Box sx={{ 
-          flexGrow: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          bgcolor: '#f8f9fa',
-          background: 'linear-gradient(135deg, #f8f9fa 0%, #f1f3f5 100%)',
-          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-          borderRadius: 2,
-          overflow: 'hidden',
-          position: 'relative'
-        }}>
-          {/* Simple content placeholder */}
-          <Box sx={{ 
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100%',
-            position: 'relative'
-          }}>
-            <Box sx={{ textAlign: 'center' }}>
-              <CircularProgress 
-                size={40} 
-                sx={{ 
-                  color: '#1976d2',
-                  mb: 2
-                }} 
-              />
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  color: '#666',
-                  fontSize: '0.875rem',
-                  fontWeight: 500
-                }}
-              >
-                Loading content...
-              </Typography>
-            </Box>
-          </Box>
-        </Box>
+        <Skeleton 
+          variant="rounded" 
+          width="100%" 
+          height="100%" 
+          sx={{
+            flexGrow: 1,
+            bgcolor: '#f8f9fa',
+            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+            borderRadius: 2
+          }}
+        />
       </Box>
     </Box>
   </Box>
