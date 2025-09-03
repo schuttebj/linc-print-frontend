@@ -6,17 +6,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
-  Card,
-  CardContent,
-  CardHeader,
+  Container,
   Typography,
-  Grid,
-  TextField,
   Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Table,
   TableBody,
   TableCell,
@@ -28,28 +20,14 @@ import {
   Chip,
   IconButton,
   Tooltip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Alert,
-  CircularProgress,
   Stack,
-  Autocomplete,
-  FormControlLabel,
-  Switch,
-  Collapse
+  Skeleton,
 } from '@mui/material';
 import {
-  Search as SearchIcon,
   Visibility as ViewIcon,
-  Edit as EditIcon,
-  FilterList as FilterIcon,
   Download as ExportIcon,
   Refresh as RefreshIcon,
-  Clear as ClearIcon,
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
@@ -60,6 +38,47 @@ import licenseService, {
   LicenseListResponse 
 } from '../../services/licenseService';
 import { useAuth } from '../../contexts/AuthContext';
+import FilterBar, { FilterConfig, FilterValues } from '../../components/common/FilterBar';
+
+// Filter configurations for LicenseListPage
+const LICENSE_FILTER_CONFIGS: FilterConfig[] = [
+  {
+    key: 'category',
+    label: 'License Category',
+    type: 'select',
+    options: [
+      { value: 'A1', label: 'A1 - Small Motorcycles' },
+      { value: 'A2', label: 'A2 - Mid-range Motorcycles' },
+      { value: 'A', label: 'A - Unlimited Motorcycles' },
+      { value: 'B1', label: 'B1 - Light Quadricycles' },
+      { value: 'B', label: 'B - Standard Cars' },
+      { value: 'B2', label: 'B2 - Commercial Passenger' },
+      { value: 'BE', label: 'BE - Car with Trailer' },
+      { value: 'C1', label: 'C1 - Medium Goods' },
+      { value: 'C', label: 'C - Heavy Goods' },
+      { value: 'C1E', label: 'C1E - Medium with Trailer' },
+      { value: 'CE', label: 'CE - Heavy with Trailer' },
+      { value: 'D1', label: 'D1 - Small Buses' },
+      { value: 'D', label: 'D - Standard Buses' },
+      { value: 'D2', label: 'D2 - Specialized Transport' },
+    ],
+  },
+  {
+    key: 'status',
+    label: 'Status',
+    type: 'select',
+    options: [
+      { value: 'ACTIVE', label: 'Active' },
+      { value: 'SUSPENDED', label: 'Suspended' },
+      { value: 'CANCELLED', label: 'Cancelled' },
+    ],
+  },
+  {
+    key: 'has_professional_permit',
+    label: 'Has Professional Permit',
+    type: 'boolean',
+  },
+];
 
 interface LicenseListPageProps {}
 
@@ -77,13 +96,15 @@ const LicenseListPage: React.FC<LicenseListPageProps> = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
 
-  // Search and filters
-  const [searchFilters, setSearchFilters] = useState<LicenseSearchFilters>({
-    page: 1,
-    size: 25
+  // Filter state management for FilterBar
+  const [searchValue, setSearchValue] = useState('');
+  const [filterValues, setFilterValues] = useState<FilterValues>({});
+  
+  // Date filters (handled separately until FilterBar supports dates)
+  const [dateFilters, setDateFilters] = useState({
+    issued_after: '',
+    issued_before: '',
   });
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  const [quickSearch, setQuickSearch] = useState('');
 
   // Load licenses
   const loadLicenses = useCallback(async () => {
@@ -91,11 +112,16 @@ const LicenseListPage: React.FC<LicenseListPageProps> = () => {
     setError(null);
 
     try {
-      const response: LicenseListResponse = await licenseService.searchLicenses({
-        ...searchFilters,
+      // Combine all filter sources into searchFilters
+      const searchFilters: LicenseSearchFilters = {
         page: page + 1, // Backend uses 1-based pagination
-        size: rowsPerPage
-      });
+        size: rowsPerPage === -1 ? 100 : rowsPerPage, // Handle "All" option
+        ...(searchValue && { person_name: searchValue }),
+        ...filterValues,
+        ...dateFilters,
+      };
+
+      const response: LicenseListResponse = await licenseService.searchLicenses(searchFilters);
 
       setLicenses(response.licenses);
       setTotalCount(response.total);
@@ -105,47 +131,44 @@ const LicenseListPage: React.FC<LicenseListPageProps> = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchFilters, page, rowsPerPage]);
+  }, [searchValue, filterValues, dateFilters, page, rowsPerPage]);
 
   // Initial load
   useEffect(() => {
     loadLicenses();
   }, [loadLicenses]);
 
-  // Handle search
-  const handleSearch = (event: React.FormEvent) => {
-    event.preventDefault();
-    setPage(0); // Reset to first page
-    loadLicenses();
+  // Handle FilterBar filter changes
+  const handleFilterChange = (key: string, value: any) => {
+    setFilterValues(prev => ({
+      ...prev,
+      [key]: value,
+    }));
+    setPage(0); // Reset to first page when filters change
   };
 
-  // Handle quick search
-  const handleQuickSearch = () => {
-    if (quickSearch.trim()) {
-      setSearchFilters(prev => ({
-        ...prev,
-        person_name: quickSearch.trim()
-      }));
-      setPage(0);
-    }
+  // Handle search and clear for FilterBar
+  const handleSearch = async () => {
+    setPage(0);
+    await loadLicenses();
   };
 
-  // Clear all filters
-  const handleClearFilters = () => {
-    setSearchFilters({
-      page: 1,
-      size: rowsPerPage
+  const handleClear = () => {
+    setSearchValue('');
+    setFilterValues({});
+    setDateFilters({
+      issued_after: '',
+      issued_before: '',
     });
-    setQuickSearch('');
     setPage(0);
   };
 
   // Handle pagination
-  const handleChangePage = (event: unknown, newPage: number) => {
+  const handlePageChange = (_event: unknown, newPage: number) => {
     setPage(newPage);
   };
 
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleRowsPerPageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
@@ -193,7 +216,7 @@ const LicenseListPage: React.FC<LicenseListPageProps> = () => {
 
   const getRestrictionsDisplay = (restrictions: string[]) => {
     if (!restrictions.length) {
-      return <Typography variant="body2" color="textSecondary">None</Typography>;
+      return <Typography variant="body2" color="textSecondary" sx={{ fontSize: '0.8rem' }}>None</Typography>;
     }
 
     return (
@@ -211,312 +234,303 @@ const LicenseListPage: React.FC<LicenseListPageProps> = () => {
     );
   };
 
+  // Skeleton loader component for license results
+  const LicenseResultsSkeleton = () => (
+    <TableContainer sx={{ flex: 1 }}>
+      <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+        <TableHead>
+          <TableRow>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>License ID</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Category</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Issue Date</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Restrictions</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Professional Permit</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Current Card</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Actions</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {Array.from({ length: rowsPerPage }).map((_, index) => (
+            <TableRow key={index}>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="text" width="100%" height={20} />
+                <Skeleton variant="text" width="70%" height={16} />
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="rounded" width={40} height={24} />
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="rounded" width={60} height={24} />
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="text" width="100%" height={20} />
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                  <Skeleton variant="rounded" width={50} height={24} />
+                  <Skeleton variant="rounded" width={50} height={24} />
+                </Box>
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="rounded" width={80} height={24} />
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="rounded" width={70} height={24} />
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="circular" width={32} height={32} />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+
   return (
-    <Box sx={{ p: 3 }}>
-      <Card>
-        <CardHeader
-          title="License Management"
-          subheader={`${totalCount} licenses found`}
-          action={
+    <>
+    <Container maxWidth="lg" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Paper 
+        elevation={0}
+        sx={{ 
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: '#f8f9fa',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          overflow: 'hidden'
+        }}
+      >
+        {/* Search and Filter Section */}
+        <Box sx={{ 
+          bgcolor: 'white', 
+          borderBottom: '1px solid', 
+          borderColor: 'divider',
+          flexShrink: 0,
+          p: 2
+        }}>
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+              Search Licenses
+            </Typography>
             <Stack direction="row" spacing={1}>
-              <Tooltip title="Refresh">
-                <IconButton onClick={loadLicenses} disabled={loading}>
-                  <RefreshIcon />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Export">
-                <IconButton disabled={loading}>
-                  <ExportIcon />
-                </IconButton>
-              </Tooltip>
+              <Button
+                variant="contained"
+                onClick={loadLicenses}
+                startIcon={<RefreshIcon />}
+                size="small"
+                disabled={loading}
+              >
+                Refresh
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<ExportIcon />}
+                size="small"
+                disabled={loading}
+                sx={{
+                  borderWidth: '1px',
+                  '&:hover': { borderWidth: '1px' },
+                }}
+              >
+                Export
+              </Button>
             </Stack>
-          }
-        />
-        <CardContent>
-          {/* Quick Search */}
-          <Box component="form" onSubmit={handleSearch} sx={{ mb: 3 }}>
-            <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Quick Search (Person Name)"
-                  value={quickSearch}
-                  onChange={(e) => setQuickSearch(e.target.value)}
-                  placeholder="Enter person name..."
-                  InputProps={{
-                    endAdornment: (
-                      <IconButton 
-                        onClick={handleQuickSearch}
-                        disabled={loading || !quickSearch.trim()}
-                      >
-                        <SearchIcon />
-                      </IconButton>
-                    )
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <Button
-                  variant="outlined"
-                  onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                  startIcon={<FilterIcon />}
-                  endIcon={showAdvancedFilters ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                  fullWidth
-                >
-                  Advanced Filters
-                </Button>
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <Button
-                  variant="outlined"
-                  onClick={handleClearFilters}
-                  startIcon={<ClearIcon />}
-                  disabled={loading}
-                  fullWidth
-                >
-                  Clear Filters
-                </Button>
-              </Grid>
-            </Grid>
           </Box>
+          
+          <FilterBar
+            searchValue={searchValue}
+            searchPlaceholder="Search by person name"
+            onSearchChange={setSearchValue}
+            filterConfigs={LICENSE_FILTER_CONFIGS}
+            filterValues={filterValues}
+            onFilterChange={handleFilterChange}
+            onSearch={handleSearch}
+            onClear={handleClear}
+            searching={loading}
+          />
+        </Box>
 
-          {/* Advanced Filters */}
-          <Collapse in={showAdvancedFilters}>
-            <Card variant="outlined" sx={{ p: 2, mb: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Advanced Search Filters
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
-                  <FormControl fullWidth>
-                    <InputLabel>License Category</InputLabel>
-                    <Select
-                      value={searchFilters.category || ''}
-                      onChange={(e) => setSearchFilters(prev => ({ 
-                        ...prev, 
-                        category: e.target.value || undefined 
-                      }))}
-                      label="License Category"
-                    >
-                      <MenuItem value="">All Categories</MenuItem>
-                      <MenuItem value="A1">A1 - Small Motorcycles</MenuItem>
-                      <MenuItem value="A2">A2 - Mid-range Motorcycles</MenuItem>
-                      <MenuItem value="A">A - Unlimited Motorcycles</MenuItem>
-                      <MenuItem value="B1">B1 - Light Quadricycles</MenuItem>
-                      <MenuItem value="B">B - Standard Cars</MenuItem>
-                      <MenuItem value="B2">B2 - Commercial Passenger</MenuItem>
-                      <MenuItem value="BE">BE - Car with Trailer</MenuItem>
-                      <MenuItem value="C1">C1 - Medium Goods</MenuItem>
-                      <MenuItem value="C">C - Heavy Goods</MenuItem>
-                      <MenuItem value="C1E">C1E - Medium with Trailer</MenuItem>
-                      <MenuItem value="CE">CE - Heavy with Trailer</MenuItem>
-                      <MenuItem value="D1">D1 - Small Buses</MenuItem>
-                      <MenuItem value="D">D - Standard Buses</MenuItem>
-                      <MenuItem value="D2">D2 - Specialized Transport</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <FormControl fullWidth>
-                    <InputLabel>Status</InputLabel>
-                    <Select
-                      value={searchFilters.status || ''}
-                      onChange={(e) => setSearchFilters(prev => ({ 
-                        ...prev, 
-                        status: e.target.value || undefined 
-                      }))}
-                      label="Status"
-                    >
-                      <MenuItem value="">All Statuses</MenuItem>
-                      <MenuItem value="ACTIVE">Active</MenuItem>
-                      <MenuItem value="SUSPENDED">Suspended</MenuItem>
-                      <MenuItem value="CANCELLED">Cancelled</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Issued After"
-                    type="date"
-                    value={searchFilters.issued_after || ''}
-                    onChange={(e) => setSearchFilters(prev => ({ 
-                      ...prev, 
-                      issued_after: e.target.value || undefined 
-                    }))}
-                    InputLabelProps={{ shrink: true }}
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Issued Before"
-                    type="date"
-                    value={searchFilters.issued_before || ''}
-                    onChange={(e) => setSearchFilters(prev => ({ 
-                      ...prev, 
-                      issued_before: e.target.value || undefined 
-                    }))}
-                    InputLabelProps={{ shrink: true }}
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={searchFilters.has_professional_permit || false}
-                        onChange={(e) => setSearchFilters(prev => ({ 
-                          ...prev, 
-                          has_professional_permit: e.target.checked ? true : undefined 
-                        }))}
-                      />
-                    }
-                    label="Has Professional Permit Only"
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <Stack direction="row" spacing={2}>
-                    <Button 
-                      variant="contained" 
-                      onClick={handleSearch}
-                      disabled={loading}
-                      startIcon={<SearchIcon />}
-                    >
-                      Apply Filters
-                    </Button>
-                    <Button 
-                      variant="outlined" 
-                      onClick={handleClearFilters}
-                      disabled={loading}
-                    >
-                      Clear All
-                    </Button>
-                  </Stack>
-                </Grid>
-              </Grid>
-            </Card>
-          </Collapse>
-
+        {/* Content Area */}
+        <Box sx={{ 
+          flex: 1, 
+          overflow: 'hidden',
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
           {/* Error Display */}
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert severity="error" sx={{ m: 2, flexShrink: 0 }}>
               {error}
             </Alert>
           )}
 
-          {/* Loading State */}
-          {loading && (
-            <Box display="flex" justifyContent="center" p={3}>
-              <CircularProgress />
-            </Box>
-          )}
-
           {/* License Table */}
-          {!loading && (
-            <TableContainer component={Paper} variant="outlined">
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>License ID</TableCell>
-                    <TableCell>Category</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Issue Date</TableCell>
-                    <TableCell>Restrictions</TableCell>
-                    <TableCell>Professional Permit</TableCell>
-                    <TableCell>Current Card</TableCell>
-                    <TableCell>Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {licenses.map((license) => (
-                    <TableRow key={license.id} hover>
-                      <TableCell>
-                        <Typography variant="body2" fontWeight="bold">
-                          {licenseService.formatLicenseId(license.id)}
-                        </Typography>
-                        {license.captured_from_license_number && (
-                          <Typography variant="caption" color="textSecondary">
-                            Originally: {license.captured_from_license_number}
-                          </Typography>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Chip 
-                          label={license.category} 
-                          color="primary" 
-                          size="small"
-                          variant="outlined"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        {getStatusChip(license.status)}
-                      </TableCell>
-                      <TableCell>
-                        {formatDate(license.issue_date)}
-                      </TableCell>
-                      <TableCell>
-                        {getRestrictionsDisplay(license.restrictions)}
-                      </TableCell>
-                      <TableCell>
-                        {getProfessionalPermitChip(license)}
-                      </TableCell>
-                      <TableCell>
-                        {license.current_card ? (
-                          <Chip
-                            label={license.current_card.status}
-                            color={licenseService.getCardStatusColor(license.current_card.status)}
-                            size="small"
-                          />
-                        ) : (
-                          <Typography variant="body2" color="textSecondary">
-                            No Card
-                          </Typography>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Stack direction="row" spacing={0.5}>
-                          <Tooltip title="View License Details">
-                            <IconButton 
-                              size="small"
-                              onClick={() => handleViewLicense(license)}
-                            >
-                              <ViewIcon />
-                            </IconButton>
-                          </Tooltip>
-                        </Stack>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {licenses.length === 0 && !loading && (
-                    <TableRow>
-                      <TableCell colSpan={8} align="center">
-                        <Typography variant="body2" color="textSecondary" py={4}>
-                          No licenses found matching your criteria
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
+          <Paper 
+            elevation={0}
+            sx={{ 
+              bgcolor: 'white',
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              borderRadius: 0
+            }}
+          >
+            {/* Show skeleton while loading */}
+            {loading ? (
+              <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                <LicenseResultsSkeleton />
+                <TablePagination
+                  component="div"
+                  count={0}
+                  page={page}
+                  onPageChange={() => {}}
+                  rowsPerPage={rowsPerPage}
+                  onRowsPerPageChange={() => {}}
+                  rowsPerPageOptions={[10, 25, 50, { value: -1, label: 'All' }]}
+                  sx={{
+                    bgcolor: 'white',
+                    borderTop: '1px solid',
+                    borderColor: 'divider',
+                    flexShrink: 0,
+                    '& .MuiTablePagination-toolbar': {
+                      minHeight: '52px',
+                    },
+                    '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+                      fontSize: '0.8rem',
+                    },
+                    '& .MuiTablePagination-select': {
+                      fontSize: '0.8rem',
+                    },
+                  }}
+                />
+              </Box>
+            ) : (
+              /* Show results or no results message only after loading is complete */
+              <>
+                {licenses.length === 0 ? (
+                  <Box sx={{ p: 2 }}>
+                    <Alert severity="info">
+                      No licenses found matching your search criteria. Try adjusting your search terms.
+                    </Alert>
+                  </Box>
+                ) : (
+                  <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                    <TableContainer sx={{ flex: 1 }}>
+                      <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>License ID</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Category</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Issue Date</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Restrictions</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Professional Permit</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Current Card</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Actions</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {licenses.map((license) => (
+                            <TableRow key={license.id} hover>
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>
+                                  {licenseService.formatLicenseId(license.id)}
+                                </Typography>
+                                {license.captured_from_license_number && (
+                                  <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
+                                    Originally: {license.captured_from_license_number}
+                                  </Typography>
+                                )}
+                              </TableCell>
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                <Chip 
+                                  label={license.category} 
+                                  color="primary" 
+                                  size="small"
+                                  variant="outlined"
+                                />
+                              </TableCell>
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                {getStatusChip(license.status)}
+                              </TableCell>
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                  {formatDate(license.issue_date)}
+                                </Typography>
+                              </TableCell>
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                {getRestrictionsDisplay(license.restrictions)}
+                              </TableCell>
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                {getProfessionalPermitChip(license)}
+                              </TableCell>
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                {license.current_card ? (
+                                  <Chip
+                                    label={license.current_card.status}
+                                    color={licenseService.getCardStatusColor(license.current_card.status)}
+                                    size="small"
+                                  />
+                                ) : (
+                                  <Typography variant="body2" color="textSecondary" sx={{ fontSize: '0.8rem' }}>
+                                    No Card
+                                  </Typography>
+                                )}
+                              </TableCell>
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                <Tooltip title="View License Details">
+                                  <IconButton 
+                                    size="small"
+                                    onClick={() => handleViewLicense(license)}
+                                  >
+                                    <ViewIcon />
+                                  </IconButton>
+                                </Tooltip>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
 
-          {/* Pagination */}
-          {!loading && totalCount > 0 && (
-            <TablePagination
-              component="div"
-              count={totalCount}
-              page={page}
-              onPageChange={handleChangePage}
-              rowsPerPage={rowsPerPage}
-              onRowsPerPageChange={handleChangeRowsPerPage}
-              rowsPerPageOptions={[10, 25, 50, 100]}
-              labelRowsPerPage="Licenses per page:"
-            />
-          )}
-        </CardContent>
-      </Card>
-    </Box>
+                    <TablePagination
+                      component="div"
+                      count={totalCount}
+                      page={page}
+                      onPageChange={handlePageChange}
+                      rowsPerPage={rowsPerPage}
+                      onRowsPerPageChange={handleRowsPerPageChange}
+                      rowsPerPageOptions={[10, 25, 50, { value: -1, label: 'All' }]}
+                      sx={{
+                        bgcolor: 'white',
+                        borderTop: '1px solid',
+                        borderColor: 'divider',
+                        flexShrink: 0,
+                        '& .MuiTablePagination-toolbar': {
+                          minHeight: '52px',
+                        },
+                        '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+                          fontSize: '0.8rem',
+                        },
+                        '& .MuiTablePagination-select': {
+                          fontSize: '0.8rem',
+                        },
+                      }}
+                    />
+                  </Box>
+                )}
+              </>
+            )}
+          </Paper>
+        </Box>
+      </Paper>
+    </Container>
+    </>
   );
 };
 
