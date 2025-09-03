@@ -5,6 +5,8 @@
 
 import React, { useState } from 'react';
 import {
+  Container,
+  Paper,
   Box,
   Typography,
   Button,
@@ -75,36 +77,59 @@ const PersonManagementPage: React.FC = () => {
   }
 
   return (
-    <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, px: 3, pt: 3 }}>
-        <Typography variant="h4" component="h1">
-          Person Management
-        </Typography>
-        
-        <Button
-          variant="outlined"
-          onClick={() => window.location.reload()}
-          startIcon={<ClearIcon />}
-        >
-          Start Over
-        </Button>
-      </Box>
+    <Container maxWidth="lg" sx={{ py: 1, height: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column' }}>
+      <Paper 
+        elevation={0}
+        sx={{ 
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: '#f8f9fa',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          overflow: 'hidden'
+        }}
+      >
+        {/* Header */}
+        <Box sx={{ p: 2, bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box>
+              <Typography variant="h4" component="h1" sx={{ mb: 1 }}>
+                Person Management
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                Register new Madagascar citizens for driver's license applications.
+              </Typography>
+            </Box>
+            
+            <Button
+              variant="outlined"
+              onClick={() => window.location.reload()}
+              startIcon={<ClearIcon />}
+              size="small"
+            >
+              Start Over
+            </Button>
+          </Box>
+        </Box>
 
-      <Typography variant="body1" color="text.secondary" gutterBottom sx={{ px: 3 }}>
-        Register new Madagascar citizens for driver's license applications.
-      </Typography>
-
-      {/* PersonFormWrapper Component */}
-      <Box sx={{ px: 3, pb: 3 }}>
-        <PersonFormWrapper
-          mode="standalone"
-          onSuccess={handleFormSuccess}
-          title="Person Management"
-          subtitle="Register new Madagascar citizens for driver's license applications."
-          showHeader={false}
-        />
-      </Box>
+        {/* PersonFormWrapper Component */}
+        <Box sx={{ 
+          flexGrow: 1, 
+          overflow: 'hidden',
+          p: 0,
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          <PersonFormWrapper
+            mode="standalone"
+            onSuccess={handleFormSuccess}
+            title="Person Management"
+            subtitle="Register new Madagascar citizens for driver's license applications."
+            showHeader={false}
+          />
+        </Box>
+      </Paper>
 
       {/* Success Dialog - Blue Corporate Style matching search edit */}
       <Dialog 
@@ -216,7 +241,7 @@ const PersonManagementPage: React.FC = () => {
           </Box>
         </DialogActions>
       </Dialog>
-    </Box>
+    </Container>
   );
 };
 
