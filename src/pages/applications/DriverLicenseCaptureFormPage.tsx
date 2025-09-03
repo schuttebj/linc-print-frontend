@@ -55,7 +55,6 @@ import {
 } from '../../types';
 import { CapturedLicense, validateCapturedDataForAuthorization } from '../../components/applications/LicenseCaptureForm';
 import { API_ENDPOINTS, getAuthToken } from '../../config/api';
-import { useScrollbarDetection } from '../../hooks/useScrollbarDetection';
 
 const DriverLicenseCaptureFormPage: React.FC = () => {
   const { user } = useAuth();
@@ -75,10 +74,6 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
 
   // Person form validation state
   const [personFormValid, setPersonFormValid] = useState(false);
-
-  // Scrollbar detection for LicenseCaptureForm
-  const scrollableRef = useRef<HTMLDivElement>(null);
-  const hasScrollbar = useScrollbarDetection(scrollableRef);
 
   // Steps for driver's license capture
   const steps = [
@@ -443,40 +438,14 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
               </Card>
             )}
 
-            <Box
-              ref={scrollableRef}
-              sx={{
-                // Conditional padding based on scrollbar presence
-                pr: hasScrollbar ? 1 : 0,
-                // Custom scrollbar styling
-                '&::-webkit-scrollbar': {
-                  width: '8px',
-                },
-                '&::-webkit-scrollbar-track': {
-                  background: '#f1f1f1',
-                  borderRadius: '4px',
-                  marginRight: '2px', // Small gap from content
-                },
-                '&::-webkit-scrollbar-thumb': {
-                  background: '#c1c1c1',
-                  borderRadius: '4px',
-                  '&:hover': {
-                    background: '#a8a8a8',
-                  },
-                },
-                // Firefox scrollbar
-                scrollbarWidth: 'thin',
-                scrollbarColor: '#c1c1c1 #f1f1f1',
-              }}
-            >
-              <LicenseCaptureForm
-                applicationtype={ApplicationType.DRIVERS_LICENSE_CAPTURE}
-                value={licenseCaptureData}
-                onChange={handleLicenseCaptureChange}
-                personBirthDate={selectedPerson?.birth_date}
-                personId={selectedPerson?.id}
-              />
-            </Box>
+            {/* License Capture Form - scrolling handled by parent container */}
+            <LicenseCaptureForm
+              applicationtype={ApplicationType.DRIVERS_LICENSE_CAPTURE}
+              value={licenseCaptureData}
+              onChange={handleLicenseCaptureChange}
+              personBirthDate={selectedPerson?.birth_date}
+              personId={selectedPerson?.id}
+            />
           </Box>
         );
 
@@ -711,8 +680,7 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
         {/* Tab Content - Scrollable Area */}
         <Box sx={{ 
           flex: 1, 
-          overflow: 'hidden', // Let components scroll internally
-          p: activeStep === 0 ? 0 : 2,
+          overflow: 'hidden', // Let wrapper components scroll internally
           minHeight: 0, // Allow flex shrinking
           display: 'flex',
           flexDirection: 'column'
@@ -741,9 +709,33 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
             />
           </Box>
           
-          {/* Other step content */}
+          {/* Other step content - Enable scrolling for direct content */}
           {activeStep !== 0 && (
-            <Box sx={{ flex: 1, minHeight: 0, width: '100%' }}>
+            <Box sx={{ 
+              flex: 1, 
+              minHeight: 0, 
+              width: '100%',
+              overflow: 'auto', // Enable scrolling for direct content
+              p: 2,
+              // Custom scrollbar styling
+              '&::-webkit-scrollbar': {
+                width: '8px',
+              },
+              '&::-webkit-scrollbar-track': {
+                background: '#f1f1f1',
+                borderRadius: '4px',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                background: '#c1c1c1',
+                borderRadius: '4px',
+                '&:hover': {
+                  background: '#a8a8a8',
+                },
+              },
+              // Firefox scrollbar
+              scrollbarWidth: 'thin',
+              scrollbarColor: '#c1c1c1 #f1f1f1',
+            }}>
               {renderStepContent(activeStep)}
             </Box>
           )}

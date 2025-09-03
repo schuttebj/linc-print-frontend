@@ -1348,7 +1348,7 @@ const InternationalPermitApplicationPage: React.FC = () => {
         <Box sx={{ 
           flex: 1, 
           overflow: 'hidden', // Let components scroll internally
-          p: (activeStep === 0 || activeStep === 2 || activeStep === 3) ? 0 : 2,
+
           minHeight: 0, // Allow flex shrinking
           display: 'flex',
           flexDirection: 'column'
@@ -1421,8 +1421,36 @@ const InternationalPermitApplicationPage: React.FC = () => {
             />
           </Box>
           
-          {/* Other step content */}
-          {activeStep !== 0 && activeStep !== 2 && activeStep !== 3 && renderStepContent(activeStep)}
+          {/* Other step content - Enable scrolling for direct content */}
+          {activeStep !== 0 && activeStep !== 2 && activeStep !== 3 && (
+            <Box sx={{ 
+              flex: 1, 
+              minHeight: 0, 
+              width: '100%',
+              overflow: 'auto', // Enable scrolling for direct content
+              p: 2,
+              // Custom scrollbar styling
+              '&::-webkit-scrollbar': {
+                width: '8px',
+              },
+              '&::-webkit-scrollbar-track': {
+                background: '#f1f1f1',
+                borderRadius: '4px',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                background: '#c1c1c1',
+                borderRadius: '4px',
+                '&:hover': {
+                  background: '#a8a8a8',
+                },
+              },
+              // Firefox scrollbar
+              scrollbarWidth: 'thin',
+              scrollbarColor: '#c1c1c1 #f1f1f1',
+            }}>
+              {renderStepContent(activeStep)}
+            </Box>
+          )}
         </Box>
 
         {/* Navigation Footer - Only shown when not on person, medical, or biometric step */}
