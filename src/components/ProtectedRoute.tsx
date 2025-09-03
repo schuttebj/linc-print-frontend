@@ -88,73 +88,74 @@ const HeaderSkeleton: React.FC = () => (
 
 const MainContentSkeleton: React.FC = () => (
   <Box sx={{ 
-    flexGrow: 1, 
-    paddingTop: '64px',
-    p: 2, 
-    height: 'calc(100vh - 64px)', 
-    overflow: 'auto' 
+    flexGrow: 1,
+    minHeight: '100vh',
+    backgroundColor: '#f5f5f5',
+    paddingTop: '64px', // Account for fixed header
   }}>
-    {/* Universal Content Block Skeleton */}
-    <Box maxWidth="lg" sx={{ 
-      py: 1, 
-      height: '100%', 
-      display: 'flex', 
-      flexDirection: 'column',
-      mx: 'auto'
-    }}>
-      <Box sx={{ 
-        flexGrow: 1,
-        display: 'flex',
+    <Box sx={{ p: 2, height: 'calc(100vh - 64px)', overflow: 'auto' }}>
+      {/* Universal Content Block Skeleton - matches real content structure */}
+      <Box maxWidth="lg" sx={{ 
+        py: 1, 
+        height: '100%', 
+        display: 'flex', 
         flexDirection: 'column',
-        bgcolor: '#f8f9fa',
-        background: 'linear-gradient(135deg, #f8f9fa 0%, #f1f3f5 100%)',
-        boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-        borderRadius: 2,
-        overflow: 'hidden',
-        position: 'relative'
+        mx: 'auto'
       }}>
-        {/* Subtle animated gradient overlay */}
-        <Box sx={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%)',
-          animation: 'shimmer 2s infinite',
-          '@keyframes shimmer': {
-            '0%': { transform: 'translateX(-100%)' },
-            '100%': { transform: 'translateX(100%)' }
-          }
-        }} />
-        
-        {/* Simple content placeholder */}
         <Box sx={{ 
+          flexGrow: 1,
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          position: 'relative',
-          zIndex: 1
+          flexDirection: 'column',
+          bgcolor: '#f8f9fa',
+          background: 'linear-gradient(135deg, #f8f9fa 0%, #f1f3f5 100%)',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          overflow: 'hidden',
+          position: 'relative'
         }}>
-          <Box sx={{ textAlign: 'center', opacity: 0.3 }}>
-            <CircularProgress 
-              size={40} 
-              sx={{ 
-                color: '#1976d2',
-                opacity: 0.7,
-                mb: 2
-              }} 
-            />
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                color: '#666',
-                fontSize: '0.875rem'
-              }}
-            >
-              Loading content...
-            </Typography>
+          {/* Subtle animated gradient overlay */}
+          <Box sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%)',
+            animation: 'shimmer 2s infinite',
+            '@keyframes shimmer': {
+              '0%': { transform: 'translateX(-100%)' },
+              '100%': { transform: 'translateX(100%)' }
+            }
+          }} />
+          
+          {/* Simple content placeholder */}
+          <Box sx={{ 
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+            position: 'relative',
+            zIndex: 1
+          }}>
+            <Box sx={{ textAlign: 'center', opacity: 0.3 }}>
+              <CircularProgress 
+                size={40} 
+                sx={{ 
+                  color: '#1976d2',
+                  opacity: 0.7,
+                  mb: 2
+                }} 
+              />
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  color: '#666',
+                  fontSize: '0.875rem'
+                }}
+              >
+                Loading content...
+              </Typography>
+            </Box>
           </Box>
         </Box>
       </Box>
