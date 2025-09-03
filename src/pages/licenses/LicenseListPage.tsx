@@ -118,7 +118,9 @@ const LicenseListPage: React.FC<LicenseListPageProps> = () => {
         size: rowsPerPage === -1 ? 100 : rowsPerPage, // Handle "All" option
         ...(searchValue && { person_name: searchValue }),
         ...filterValues,
-        ...dateFilters,
+        // Only include date filters if they have actual values (not empty strings)
+        ...(dateFilters.issued_after && { issued_after: dateFilters.issued_after }),
+        ...(dateFilters.issued_before && { issued_before: dateFilters.issued_before }),
       };
 
       const response: LicenseListResponse = await licenseService.searchLicenses(searchFilters);

@@ -30,7 +30,8 @@ import {
   Alert,
   CircularProgress,
   TablePagination,
-  Stack
+  Stack,
+  Skeleton
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -44,6 +45,51 @@ import { applicationService } from '../../services/applicationService';
 import { Application, ApplicationStatus, ApplicationType } from '../../types';
 import { lookupService, ApplicationStatus as LookupApplicationStatus, ApplicationType as LookupApplicationType } from '../../services/lookupService';
 import { StatusChip, LicenseChip, CodeChip } from '../../components/ui/StatusChip';
+
+// Skeleton Loading Component
+const ApplicationsSkeleton: React.FC = () => (
+  <TableContainer sx={{ flex: 1 }}>
+    <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+      <TableHead>
+        <TableRow>
+          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Type</TableCell>
+          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Applicant</TableCell>
+          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>License Category</TableCell>
+          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
+          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Date Created</TableCell>
+          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Actions</TableCell>
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {[...Array(8)].map((_, index) => (
+          <TableRow key={index} hover>
+            <TableCell sx={{ py: 1, px: 2 }}>
+              <Skeleton variant="text" width="120px" height={20} />
+            </TableCell>
+            <TableCell sx={{ py: 1, px: 2 }}>
+              <Skeleton variant="text" width="140px" height={20} />
+            </TableCell>
+            <TableCell sx={{ py: 1, px: 2 }}>
+              <Stack direction="row" spacing={0.5}>
+                <Skeleton variant="rectangular" width="50px" height={24} sx={{ borderRadius: '12px' }} />
+                <Skeleton variant="rectangular" width="45px" height={24} sx={{ borderRadius: '12px' }} />
+              </Stack>
+            </TableCell>
+            <TableCell sx={{ py: 1, px: 2 }}>
+              <Skeleton variant="rectangular" width="80px" height={24} sx={{ borderRadius: '12px' }} />
+            </TableCell>
+            <TableCell sx={{ py: 1, px: 2 }}>
+              <Skeleton variant="text" width="100px" height={20} />
+            </TableCell>
+            <TableCell sx={{ py: 1, px: 2 }}>
+              <Skeleton variant="circular" width={32} height={32} />
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  </TableContainer>
+);
 
 const ApplicationListPage: React.FC = () => {
   const { hasPermission } = useAuth();
@@ -191,16 +237,6 @@ const ApplicationListPage: React.FC = () => {
     setPage(0); // Reset to first page when changing rows per page
   };
 
-  if (loading) {
-    return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-          <CircularProgress size={48} />
-        </Box>
-      </Container>
-    );
-  }
-
   if (error) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -249,6 +285,7 @@ const ApplicationListPage: React.FC = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 size="small"
+                disabled={loading}
                 InputProps={{
                   startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
                 }}
@@ -275,7 +312,7 @@ const ApplicationListPage: React.FC = () => {
                   value={statusFilter}
                   label="Status"
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  disabled={lookupsLoading}
+                  disabled={loading || lookupsLoading}
                   sx={{
                     '& .MuiOutlinedInput-notchedOutline': {
                       borderWidth: '1px',
@@ -304,7 +341,7 @@ const ApplicationListPage: React.FC = () => {
                   value={typeFilter}
                   label="Type"
                   onChange={(e) => setTypeFilter(e.target.value)}
-                  disabled={lookupsLoading}
+                  disabled={loading || lookupsLoading}
                   sx={{
                     '& .MuiOutlinedInput-notchedOutline': {
                       borderWidth: '1px',
@@ -333,6 +370,7 @@ const ApplicationListPage: React.FC = () => {
                 startIcon={<FilterIcon />}
                 onClick={loadApplications}
                 size="small"
+                disabled={loading}
               >
                 Refresh
               </Button>
@@ -359,37 +397,38 @@ const ApplicationListPage: React.FC = () => {
               borderRadius: 0
             }}
           >
-            <TableContainer sx={{ flex: 1 }}>
-              <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Type</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Applicant</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>License Category</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Date Created</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {applications.length === 0 ? (
+            {loading ? (
+              <ApplicationsSkeleton />
+            ) : applications.length === 0 ? (
+              <Box sx={{ p: 2 }}>
+                <Alert severity="info">
+                  No applications found matching your search criteria. Try adjusting your search terms.
+                  {hasPermission('applications.create') && (
+                    <>
+                      {' Or '}
+                      <Button variant="text" onClick={handleCreateNew} sx={{ textTransform: 'none' }}>
+                        go to Applications Dashboard
+                      </Button>
+                      {' to create a new application.'}
+                    </>
+                  )}
+                </Alert>
+              </Box>
+            ) : (
+              <TableContainer sx={{ flex: 1 }}>
+                <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+                  <TableHead>
                     <TableRow>
-                      <TableCell colSpan={6} align="center">
-                        <Typography variant="body1" color="text.secondary" sx={{ py: 4 }}>
-                          No applications found. 
-                          {hasPermission('applications.create') && (
-                            <>
-                              {' '}
-                              <Button variant="text" onClick={handleCreateNew}>
-                                Go to Applications Dashboard
-                              </Button>
-                            </>
-                          )}
-                        </Typography>
-                      </TableCell>
+                      <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Type</TableCell>
+                      <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Applicant</TableCell>
+                      <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>License Category</TableCell>
+                      <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
+                      <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Date Created</TableCell>
+                      <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Actions</TableCell>
                     </TableRow>
-                  ) : (
-                    applications.map((application) => (
+                  </TableHead>
+                  <TableBody>
+                    {applications.map((application) => (
                       <TableRow key={application.id} hover>
                         <TableCell sx={{ py: 1, px: 2 }}>
                           <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
@@ -448,11 +487,11 @@ const ApplicationListPage: React.FC = () => {
                           </Stack>
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
           </Paper>
         </Box>
 
@@ -465,6 +504,7 @@ const ApplicationListPage: React.FC = () => {
           rowsPerPage={rowsPerPage}
           onRowsPerPageChange={handleChangeRowsPerPage}
           rowsPerPageOptions={[10, 50, { value: -1, label: 'All' }]}
+          disabled={loading}
           sx={{
             bgcolor: 'white',
             borderTop: '1px solid',
