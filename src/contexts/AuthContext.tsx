@@ -440,38 +440,83 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   /**
    * Check if user has specific permission
+   * Falls back to JWT claims during async user loading for better UX
    */
   const hasPermission = (permission: string): boolean => {
-    if (!authState.user) return false;
-    if (authState.user.is_superuser) return true;
-    return authState.user.permissions.includes(permission);
+    // If user data is loaded, use it for permission checks
+    if (authState.user) {
+      if (authState.user.is_superuser) return true;
+      return authState.user.permissions.includes(permission);
+    }
+    
+    // During async user loading, try to get permissions from JWT token claims
+    // This provides better UX by avoiding "Access Denied" flashes
+    if (authState.isAuthenticated && authState.accessToken) {
+      try {
+        // Parse JWT payload (basic client-side parsing for permissions)
+        const token = authState.accessToken;
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const permissions = payload.permissions || [];
+        
+        // Check if user is superuser from JWT
+        if (payload.is_superuser) return true;
+        
+        return permissions.includes(permission);
+      } catch (error) {
+        // If JWT parsing fails, fall back to false during loading
+        console.warn('Failed to parse JWT for permissions during loading:', error);
+        return false;
+      }
+    }
+    
+    return false;
   };
 
   /**
    * Check if user has specific role
+   * Falls back to JWT claims during async user loading for better UX
    */
   const hasRole = (role: string): boolean => {
-    if (!authState.user) return false;
-    if (authState.user.is_superuser) return true;
-    return authState.user.roles.some(userRole => userRole.name === role || userRole.display_name === role);
+    // If user data is loaded, use it for role checks
+    if (authState.user) {
+      if (authState.user.is_superuser) return true;
+      return authState.user.roles.some(userRole => userRole.name === role || userRole.display_name === role);
+    }
+    
+    // During async user loading, try to get roles from JWT token claims
+    if (authState.isAuthenticated && authState.accessToken) {
+      try {
+        // Parse JWT payload (basic client-side parsing for roles)
+        const token = authState.accessToken;
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const roles = payload.roles || [];
+        
+        // Check if user is superuser from JWT
+        if (payload.is_superuser) return true;
+        
+        return roles.includes(role);
+      } catch (error) {
+        // If JWT parsing fails, fall back to false during loading
+        console.warn('Failed to parse JWT for roles during loading:', error);
+        return false;
+      }
+    }
+    
+    return false;
   };
 
   /**
    * Check if user has any of the specified permissions
    */
   const hasAnyPermission = (permissions: string[]): boolean => {
-    if (!authState.user) return false;
-    if (authState.user.is_superuser) return true;
-    return permissions.some(permission => authState.user!.permissions.includes(permission));
+    return permissions.some(permission => hasPermission(permission));
   };
 
   /**
    * Check if user has any of the specified roles
    */
   const hasAnyRole = (roles: string[]): boolean => {
-    if (!authState.user) return false;
-    if (authState.user.is_superuser) return true;
-    return roles.some(role => authState.user!.roles.some(userRole => userRole.name === role || userRole.display_name === role));
+    return roles.some(role => hasRole(role));
   };
 
   const contextValue: AuthContextType = {
