@@ -193,8 +193,6 @@ const TransactionPOSPage: React.FC = () => {
       
       if (summary.payable_applications.length === 0 && summary.payable_card_orders.length === 0) {
         setError('No payable items found for this person');
-      } else {
-        setActiveStep(1);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to search for person');
