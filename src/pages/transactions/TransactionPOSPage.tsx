@@ -124,19 +124,15 @@ const TransactionPOSPage: React.FC = () => {
 
   const steps = [
     {
-      label: 'Search Person',
+      label: 'Search & Select',
       icon: <PersonIcon />
-    },
-    {
-      label: 'Select Items',
-      icon: <AssessmentIcon />
     },
     {
       label: 'Payment Details',
       icon: <CreditCardIcon />
     },
     {
-      label: 'Process Payment',
+      label: 'Complete',
       icon: <CheckCircleIcon />
     }
   ];
@@ -291,13 +287,13 @@ const TransactionPOSPage: React.FC = () => {
   // Step validation
   const isStepValid = (step: number): boolean => {
     switch (step) {
-      case 0: // Search Person
-        return !!personSummary && (personSummary.payable_applications.length > 0 || personSummary.payable_card_orders.length > 0);
-      case 1: // Select Items
-        return selectedApplications.length > 0 || selectedCardOrders.length > 0;
-      case 2: // Payment Details
+      case 0: // Search & Select
+        return !!personSummary && 
+               (personSummary.payable_applications.length > 0 || personSummary.payable_card_orders.length > 0) &&
+               (selectedApplications.length > 0 || selectedCardOrders.length > 0);
+      case 1: // Payment Details
         return !!paymentMethod && isLocationValid();
-      case 3: // Process Payment
+      case 2: // Complete
         return !!transaction;
       default:
         return false;
@@ -344,7 +340,7 @@ const TransactionPOSPage: React.FC = () => {
       setError('Please select at least one item to pay for');
       return;
     }
-    setActiveStep(2);
+    setActiveStep(1);
   };
 
   const handleProcessPayment = async () => {
@@ -380,7 +376,7 @@ const TransactionPOSPage: React.FC = () => {
       const response = await transactionService.processPayment(paymentData);
       setTransaction(response.transaction);
       setSuccess(response.success_message);
-      setActiveStep(3);
+      setActiveStep(2);
     } catch (err: any) {
       setError(err.message || 'Failed to process payment');
     } finally {
@@ -655,80 +651,104 @@ const TransactionPOSPage: React.FC = () => {
     }
   };
 
-  const renderSearchStep = () => (
-    <Box>
-      <Box display="flex" alignItems="center" mb={2}>
-        <PersonIcon sx={{ mr: 1, color: 'primary.main' }} />
-        <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-          Search Person by ID Number
-        </Typography>
-      </Box>
-      
-      <Box display="flex" gap={2} alignItems="flex-start" mb={2}>
-        <TextField
-          label="ID Number"
-          value={searchIdNumber}
-          onChange={(e) => setSearchIdNumber(e.target.value)}
-          placeholder="Enter Madagascar ID or passport number"
-          disabled={isSearching}
-          onKeyPress={(e) => e.key === 'Enter' && handleSearchPerson()}
-          size="small"
-          error={!!error && !searchIdNumber.trim()}
-          sx={{ 
-            flexGrow: 1,
-            '& .MuiOutlinedInput-root': {
-              '& fieldset': {
-                borderWidth: '1px',
-                borderColor: !!error && !searchIdNumber.trim() ? '#ff9800' : undefined,
-                transition: 'border-color 0.2s ease-in-out',
-              },
-              '&:hover fieldset': {
-                borderWidth: '1px',
-                borderColor: !!error && !searchIdNumber.trim() ? '#f57c00' : undefined,
-              },
-              '&.Mui-focused fieldset': {
-                borderWidth: '1px',
-                borderColor: !!error && !searchIdNumber.trim() ? '#ff9800' : undefined,
-              },
-            },
-          }}
-        />
-        <Button
-          variant="contained"
-          onClick={handleSearchPerson}
-          disabled={isSearching || !searchIdNumber.trim()}
-          startIcon={isSearching ? <CircularProgress size={16} /> : <SearchIcon />}
-          size="small"
-        >
-          {isSearching ? 'Searching...' : 'Search'}
-        </Button>
-      </Box>
-
-      {error && (
-        <Alert severity="error" sx={{ mt: 2, fontSize: '0.8rem' }}>
-          {error}
-        </Alert>
-      )}
-
-      {isSearching && (
-        <Box sx={{ mt: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-            <Skeleton variant="circular" width={24} height={24} />
-            <Skeleton variant="text" width="40%" height={20} />
-          </Box>
-          <Skeleton variant="rectangular" width="100%" height={60} sx={{ borderRadius: 1 }} />
+  const renderSearchAndSelectStep = () => (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {/* Search Section */}
+      <Paper 
+        elevation={0}
+        sx={{ 
+          bgcolor: 'white',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          flex: '0 0 auto',
+          p: 2
+        }}
+      >
+        <Box display="flex" alignItems="center" mb={2}>
+          <PersonIcon sx={{ mr: 1, color: 'primary.main' }} />
+          <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+            Search Person by ID Number
+          </Typography>
         </Box>
-      )}
+        
+        <Box display="flex" gap={2} alignItems="flex-start" mb={2}>
+          <TextField
+            label="ID Number"
+            value={searchIdNumber}
+            onChange={(e) => setSearchIdNumber(e.target.value)}
+            placeholder="Enter Madagascar ID or passport number"
+            disabled={isSearching}
+            onKeyPress={(e) => e.key === 'Enter' && handleSearchPerson()}
+            size="small"
+            error={!!error && !searchIdNumber.trim()}
+            sx={{ 
+              flexGrow: 1,
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                  borderWidth: '1px',
+                  borderColor: !!error && !searchIdNumber.trim() ? '#ff9800' : undefined,
+                  transition: 'border-color 0.2s ease-in-out',
+                },
+                '&:hover fieldset': {
+                  borderWidth: '1px',
+                  borderColor: !!error && !searchIdNumber.trim() ? '#f57c00' : undefined,
+                },
+                '&.Mui-focused fieldset': {
+                  borderWidth: '1px',
+                  borderColor: !!error && !searchIdNumber.trim() ? '#ff9800' : undefined,
+                },
+              },
+            }}
+          />
+          <Button
+            variant="contained"
+            onClick={handleSearchPerson}
+            disabled={isSearching || !searchIdNumber.trim()}
+            startIcon={isSearching ? <CircularProgress size={16} /> : <SearchIcon />}
+            size="small"
+          >
+            {isSearching ? 'Searching...' : 'Search'}
+          </Button>
+        </Box>
+
+        {error && (
+          <Alert severity="error" sx={{ mt: 2, fontSize: '0.8rem' }}>
+            {error}
+          </Alert>
+        )}
+
+        {isSearching && (
+          <Box sx={{ mt: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <Skeleton variant="circular" width={24} height={24} />
+              <Skeleton variant="text" width="40%" height={20} />
+            </Box>
+            <Skeleton variant="rectangular" width="100%" height={60} sx={{ borderRadius: 1 }} />
+          </Box>
+        )}
+      </Paper>
+
+      {/* Person Information & Selection */}
+      {personSummary && renderSelectionContent()}
     </Box>
   );
 
-  const renderSelectionStep = () => {
+  const renderSelectionContent = () => {
     if (!personSummary) return null;
 
     return (
-      <Box>
+      <>
         {/* Person Information */}
-        <Box sx={{ mb: 2, p: 1.5, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
+        <Paper 
+          elevation={0}
+          sx={{ 
+            bgcolor: 'white',
+            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+            borderRadius: 2,
+            flex: '0 0 auto',
+            p: 2
+          }}
+        >
           <Box display="flex" alignItems="center" mb={1}>
             <PersonIcon sx={{ mr: 1, color: 'primary.main' }} />
             <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>Person Information</Typography>
@@ -739,11 +759,20 @@ const TransactionPOSPage: React.FC = () => {
           <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
             <strong>ID Number:</strong> {personSummary.person_id_number}
           </Typography>
-        </Box>
+        </Paper>
 
         {/* Payable Applications */}
         {personSummary.payable_applications.length > 0 && (
-          <Box sx={{ mb: 2 }}>
+          <Paper 
+            elevation={0}
+            sx={{ 
+              bgcolor: 'white',
+              boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+              borderRadius: 2,
+              flex: '0 0 auto',
+              p: 2
+            }}
+          >
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5}>
               <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
                 Payable Applications
@@ -768,9 +797,8 @@ const TransactionPOSPage: React.FC = () => {
             <Paper 
               elevation={0}
               sx={{ 
-                bgcolor: 'white',
-                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-                borderRadius: 2,
+                bgcolor: '#fafafa',
+                borderRadius: 1,
                 overflow: 'hidden'
               }}
             >
@@ -869,12 +897,21 @@ const TransactionPOSPage: React.FC = () => {
                 </Table>
               </TableContainer>
             </Paper>
-          </Box>
+          </Paper>
         )}
 
         {/* Payable Card Orders */}
         {personSummary.payable_card_orders.length > 0 && (
-          <Box sx={{ mb: 2 }}>
+          <Paper 
+            elevation={0}
+            sx={{ 
+              bgcolor: 'white',
+              boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+              borderRadius: 2,
+              flex: '0 0 auto',
+              p: 2
+            }}
+          >
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5}>
               <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
                 Payable Card Orders
@@ -1002,11 +1039,20 @@ const TransactionPOSPage: React.FC = () => {
                 </Table>
               </TableContainer>
             </Paper>
-          </Box>
+          </Paper>
         )}
 
         {/* Selection Summary */}
-        <Box sx={{ p: 1.5, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
+        <Paper 
+          elevation={0}
+          sx={{ 
+            bgcolor: 'white',
+            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+            borderRadius: 2,
+            flex: '0 0 auto',
+            p: 2
+          }}
+        >
           <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
             Selection Summary
           </Typography>
@@ -1020,14 +1066,55 @@ const TransactionPOSPage: React.FC = () => {
           <Typography variant="h6" color="primary" sx={{ fontSize: '1rem', fontWeight: 600 }}>
             Total Amount: {formatCurrency(calculateSelectedTotal())}
           </Typography>
-        </Box>
-      </Box>
+        </Paper>
+      </>
     );
   };
 
   const renderPaymentStep = () => (
-    <Box>
-      <Box sx={{ mb: 2 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {/* Selected Items Summary */}
+      {personSummary && (
+        <Paper 
+          elevation={0}
+          sx={{ 
+            bgcolor: 'white',
+            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+            borderRadius: 2,
+            flex: '0 0 auto',
+            p: 2
+          }}
+        >
+          <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+            Selected Items Summary
+          </Typography>
+          <Typography variant="body2" sx={{ fontSize: '0.8rem', mb: 0.5 }}>
+            <strong>Customer:</strong> {personSummary.person_name} (ID: {personSummary.person_id_number})
+          </Typography>
+          <Typography variant="body2" sx={{ fontSize: '0.8rem', mb: 0.5 }}>
+            Selected Applications: {selectedApplications.length}
+          </Typography>
+          <Typography variant="body2" sx={{ fontSize: '0.8rem', mb: 1 }}>
+            Selected Card Orders: {selectedCardOrders.length}
+          </Typography>
+          <Divider sx={{ my: 1 }} />
+          <Typography variant="h6" color="primary" sx={{ fontSize: '1rem', fontWeight: 600 }}>
+            Total Amount: {formatCurrency(calculateSelectedTotal())}
+          </Typography>
+        </Paper>
+      )}
+
+      {/* Payment Details */}
+      <Paper 
+        elevation={0}
+        sx={{ 
+          bgcolor: 'white',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          flex: '0 0 auto',
+          p: 2
+        }}
+      >
         <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
           Payment Details
         </Typography>
@@ -1181,17 +1268,32 @@ const TransactionPOSPage: React.FC = () => {
             />
           </Grid>
         </Grid>
-      </Box>
+      </Paper>
 
       {/* Payment Summary */}
-      <Box sx={{ p: 1.5, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
+      <Paper 
+        elevation={0}
+        sx={{ 
+          bgcolor: 'white',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          flex: '0 0 auto',
+          p: 2
+        }}
+      >
         <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
           Payment Summary
         </Typography>
         <Typography variant="h6" color="primary" sx={{ fontSize: '1.2rem', fontWeight: 600 }}>
           Total Amount: {formatCurrency(calculateSelectedTotal())}
         </Typography>
-      </Box>
+        
+        <Alert severity="warning" sx={{ mt: 2, fontSize: '0.8rem' }}>
+          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+            <strong>Note:</strong> A receipt will be automatically generated and must be printed after payment completion.
+          </Typography>
+        </Alert>
+      </Paper>
 
       {error && (
         <Alert severity="error" sx={{ mt: 2, fontSize: '0.8rem' }}>
@@ -1202,84 +1304,124 @@ const TransactionPOSPage: React.FC = () => {
   );
 
   const renderSuccessStep = () => (
-    <Box textAlign="center">
-      <CheckIcon sx={{ fontSize: 60, color: 'success.main', mb: 2 }} />
-      <Typography variant="h5" gutterBottom color="success.main" sx={{ fontSize: '1.3rem', fontWeight: 600 }}>
-        Payment Successful!
-      </Typography>
-      
-      {success && (
-        <Alert severity="success" sx={{ mb: 2, fontSize: '0.8rem' }}>
-          {success}
-        </Alert>
-      )}
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Paper 
+        elevation={0}
+        sx={{ 
+          bgcolor: 'white',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          flex: '0 0 auto',
+          p: 2,
+          textAlign: 'center'
+        }}
+      >
+        <CheckIcon sx={{ fontSize: 60, color: 'success.main', mb: 2 }} />
+        <Typography variant="h5" gutterBottom color="success.main" sx={{ fontSize: '1.3rem', fontWeight: 600 }}>
+          Payment Successful!
+        </Typography>
+        
+        {success && (
+          <Alert severity="success" sx={{ mb: 2, fontSize: '0.8rem' }}>
+            {success}
+          </Alert>
+        )}
 
-      {transaction && (
-        <Box sx={{ mb: 2, p: 1.5, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
-          <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-            Transaction Details
+        {transaction && (
+          <Box sx={{ mb: 2, p: 1.5, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
+            <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+              Transaction Details
+            </Typography>
+            <Grid container spacing={1.5}>
+              <Grid item xs={6}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                  Transaction Number
+                </Typography>
+                <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>
+                  {transaction.transaction_number}
+                </Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                  Receipt Number
+                </Typography>
+                <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>
+                  {transaction.receipt_number}
+                </Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                  Amount Paid
+                </Typography>
+                <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>
+                  {formatCurrency(transaction.total_amount)}
+                </Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                  Payment Method
+                </Typography>
+                <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>
+                  {paymentMethods.find(m => m.value === transaction.payment_method)?.label}
+                </Typography>
+              </Grid>
+            </Grid>
+          </Box>
+        )}
+      </Paper>
+
+      {/* Mandatory Receipt Printing */}
+      <Paper 
+        elevation={0}
+        sx={{ 
+          bgcolor: 'white',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          flex: '0 0 auto',
+          p: 2
+        }}
+      >
+        <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+          Receipt Required
+        </Typography>
+        
+        <Alert severity="warning" sx={{ mb: 2, fontSize: '0.8rem' }}>
+          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+            <strong>Important:</strong> You must print a receipt for this transaction before proceeding.
           </Typography>
-          <Grid container spacing={1.5}>
-            <Grid item xs={6}>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                Transaction Number
-              </Typography>
-              <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>
-                {transaction.transaction_number}
-              </Typography>
-            </Grid>
-            <Grid item xs={6}>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                Receipt Number
-              </Typography>
-              <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>
-                {transaction.receipt_number}
-              </Typography>
-            </Grid>
-            <Grid item xs={6}>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                Amount Paid
-              </Typography>
-              <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>
-                {formatCurrency(transaction.total_amount)}
-              </Typography>
-            </Grid>
-            <Grid item xs={6}>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                Payment Method
-              </Typography>
-              <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>
-                {paymentMethods.find(m => m.value === transaction.payment_method)?.label}
-              </Typography>
-            </Grid>
-          </Grid>
-        </Box>
-      )}
+        </Alert>
 
-      <Box display="flex" gap={1} justifyContent="center">
-        <Button
-          variant="contained"
-          onClick={handlePrintReceipt}
-          startIcon={<PrintIcon />}
-          color="primary"
-          size="small"
-        >
-          Print Receipt
-        </Button>
-        <Button
-          variant="contained"
-          onClick={handleStartNewTransaction}
-          size="small"
-          sx={{
-            borderWidth: '1px',
-            '&:hover': {
-              borderWidth: '1px',
-            },
-          }}
-        >
-          New Transaction
-        </Button>
-      </Box>
+        <Box display="flex" gap={1} justifyContent="center" mb={2}>
+          <Button
+            variant="outlined"
+            onClick={handlePrintReceipt}
+            startIcon={<ReceiptIcon />}
+            size="small"
+          >
+            Preview Receipt
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handlePrintA4Receipt}
+            startIcon={<PrintIcon />}
+            color="primary"
+            size="small"
+          >
+            Print Receipt
+          </Button>
+        </Box>
+
+        <Box display="flex" justifyContent="center">
+          <Button
+            variant="contained"
+            onClick={handleStartNewTransaction}
+            size="small"
+            color="success"
+          >
+            New Transaction
+          </Button>
+        </Box>
+      </Paper>
     </Box>
   );
 
@@ -1352,24 +1494,65 @@ const TransactionPOSPage: React.FC = () => {
           display: 'flex',
           flexDirection: 'column'
         }}>
-          <Paper 
-            elevation={0}
-            sx={{ 
-              bgcolor: 'white',
-              boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-              borderRadius: 2,
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-              p: 2
-            }}
-          >
-            {activeStep === 0 && renderSearchStep()}
-            {activeStep === 1 && renderSelectionStep()}
-            {activeStep === 2 && renderPaymentStep()}
-            {activeStep === 3 && renderSuccessStep()}
-          </Paper>
+          {activeStep === 0 && renderSearchAndSelectStep()}
+          {activeStep === 1 && renderPaymentStep()}
+          {activeStep === 2 && renderSuccessStep()}
+        </Box>
+
+        {/* Navigation Footer */}
+        <Box sx={{ 
+          p: 2, 
+          bgcolor: 'white', 
+          borderTop: '1px solid', 
+          borderColor: 'divider',
+          flexShrink: 0,
+          display: 'flex', 
+          justifyContent: 'flex-end', 
+          gap: 1 
+        }}>
+          {activeStep > 0 && (
+            <Button
+              onClick={() => setActiveStep(activeStep - 1)}
+              disabled={isProcessing}
+              size="small"
+            >
+              Back
+            </Button>
+          )}
+          
+          {activeStep < steps.length - 1 && (
+            <Button
+              variant="contained"
+              onClick={() => setActiveStep(activeStep + 1)}
+              disabled={!isStepValid(activeStep) || isProcessing}
+              size="small"
+            >
+              {activeStep === 0 ? 'Proceed to Payment' : 'Next'}
+            </Button>
+          )}
+
+          {activeStep === 1 && (
+            <Button
+              variant="contained"
+              onClick={handleProcessPayment}
+              disabled={!isStepValid(activeStep) || isProcessing}
+              startIcon={isProcessing ? <CircularProgress size={16} /> : <PaymentIcon />}
+              color="success"
+              size="small"
+            >
+              {isProcessing ? 'Processing...' : `Process Payment`}
+            </Button>
+          )}
+
+          {activeStep === 2 && (
+            <Button
+              variant="contained"
+              onClick={handleStartNewTransaction}
+              size="small"
+            >
+              New Transaction
+            </Button>
+          )}
         </Box>
       </Paper>
 
