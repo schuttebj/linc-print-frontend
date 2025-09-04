@@ -271,9 +271,9 @@ const HomePage: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 2, height: '100%' }}>
+    <Container maxWidth="lg" sx={{ py: 2, height: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Welcome Header */}
-      <Box sx={{ mb: 3 }}>
+      <Box sx={{ mb: 3, flexShrink: 0 }}>
         <Typography variant="h4" component="h1" gutterBottom>
           Welcome, {user?.first_name || user?.username}!
         </Typography>
@@ -283,12 +283,13 @@ const HomePage: React.FC = () => {
       </Box>
 
       {/* Bento Grid Layout */}
-      <Grid container spacing={3}>
+      <Box sx={{ flex: 1, overflow: 'hidden' }}>
+        <Grid container spacing={3} sx={{ height: '100%' }}>
         {/* Row 1: Announcements (Large), System Status (Medium), User Profile (Medium) */}
         
         {/* Announcements Widget - Top Left */}
-        <Grid item xs={12} lg={6}>
-          <Card sx={{ height: '300px', display: 'flex', flexDirection: 'column' }}>
+        <Grid item xs={12} lg={6} sx={{ height: 'calc(60% - 12px)' }}>
+          <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <CardContent sx={{ pb: 0 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -367,8 +368,8 @@ const HomePage: React.FC = () => {
         </Grid>
 
         {/* System Status Widget */}
-        <Grid item xs={12} md={6} lg={3}>
-          <Card sx={{ height: '300px' }}>
+        <Grid item xs={12} md={6} lg={3} sx={{ height: 'calc(60% - 12px)' }}>
+          <Card sx={{ height: '100%' }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                 <MonitorHeartIcon color="primary" />
@@ -377,7 +378,18 @@ const HomePage: React.FC = () => {
                 </Typography>
               </Box>
               <Divider sx={{ mb: 2 }} />
-              {systemStatus && (
+              {loading ? (
+                <Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                    <Skeleton variant="circular" width={20} height={20} />
+                    <Skeleton variant="text" width="80%" height={20} />
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                    <Skeleton variant="circular" width={20} height={20} />
+                    <Skeleton variant="text" width="70%" height={20} />
+                  </Box>
+                </Box>
+              ) : systemStatus && (
                 <>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                     {systemStatus.online ? (
@@ -406,8 +418,8 @@ const HomePage: React.FC = () => {
         </Grid>
 
         {/* User Profile Widget */}
-        <Grid item xs={12} md={6} lg={3}>
-          <Card sx={{ height: '300px' }}>
+        <Grid item xs={12} md={6} lg={3} sx={{ height: 'calc(60% - 12px)' }}>
+          <Card sx={{ height: '100%' }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                 <PersonIcon color="primary" />
@@ -416,22 +428,31 @@ const HomePage: React.FC = () => {
                 </Typography>
               </Box>
               <Divider sx={{ mb: 2 }} />
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                <Avatar sx={{ width: 48, height: 48, bgcolor: 'primary.main' }}>
-                  {user?.first_name?.[0]}{user?.last_name?.[0]}
-                </Avatar>
+              {loading ? (
                 <Box>
-                  <Typography variant="subtitle1" fontWeight={600}>
-                    {user?.first_name} {user?.last_name}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {user?.roles?.[0]?.display_name || 'User'}
-                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                    <Skeleton variant="circular" width={48} height={48} />
+                    <Box>
+                      <Skeleton variant="text" width={120} height={24} sx={{ mb: 0.5 }} />
+                      <Skeleton variant="text" width={80} height={20} />
+                    </Box>
+                  </Box>
                 </Box>
-              </Box>
-              <Typography variant="body2" color="text.secondary">
-                Location: {user?.primary_location && typeof user.primary_location === 'object' ? (user.primary_location as any)?.name || 'Not assigned' : 'Not assigned'}
-              </Typography>
+              ) : (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                  <Avatar sx={{ width: 48, height: 48, bgcolor: 'primary.main' }}>
+                    {user?.first_name?.[0]}{user?.last_name?.[0]}
+                  </Avatar>
+                  <Box>
+                    <Typography variant="subtitle1" fontWeight={600}>
+                      {user?.first_name} {user?.last_name}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {user?.roles?.[0]?.display_name || 'User'}
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
             </CardContent>
           </Card>
         </Grid>
@@ -439,8 +460,8 @@ const HomePage: React.FC = () => {
         {/* Row 2: Quick Actions, Productivity, Support */}
         
         {/* Quick Actions Widget */}
-        <Grid item xs={12} md={6} lg={4}>
-          <Card sx={{ height: '250px' }}>
+        <Grid item xs={12} md={6} lg={4} sx={{ height: 'calc(40% - 12px)' }}>
+          <Card sx={{ height: '100%' }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                 <SpeedIcon color="primary" />
@@ -449,61 +470,71 @@ const HomePage: React.FC = () => {
                 </Typography>
               </Box>
               <Divider sx={{ mb: 2 }} />
-              <Grid container spacing={2}>
-                <Grid item xs={6}>
-                  <Button
-                    variant="contained"
-                    startIcon={<DashboardIcon />}
-                    fullWidth
-                    size="small"
-                    onClick={() => navigate('/dashboard/applications/dashboard')}
-                  >
-                    Applications
-                  </Button>
+              {loading ? (
+                <Grid container spacing={2}>
+                  {Array.from({ length: 4 }).map((_, index) => (
+                    <Grid item xs={6} key={index}>
+                      <Skeleton variant="rounded" width="100%" height={32} />
+                    </Grid>
+                  ))}
                 </Grid>
-                <Grid item xs={6}>
-                  <Button
-                    variant="outlined"
-                    startIcon={<ProfileIcon />}
-                    fullWidth
-                    size="small"
-                    disabled={true}
-                  >
-                    Profile
-                  </Button>
+              ) : (
+                <Grid container spacing={2}>
+                  <Grid item xs={6}>
+                    <Button
+                      variant="contained"
+                      startIcon={<DashboardIcon />}
+                      fullWidth
+                      size="small"
+                      onClick={() => navigate('/dashboard/applications/dashboard')}
+                    >
+                      Applications
+                    </Button>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Button
+                      variant="outlined"
+                      startIcon={<ProfileIcon />}
+                      fullWidth
+                      size="small"
+                      disabled={true}
+                    >
+                      Profile
+                    </Button>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Button
+                      variant="contained"
+                      startIcon={<PersonIcon />}
+                      fullWidth
+                      size="small"
+                      onClick={() => navigate('/dashboard/persons')}
+                    >
+                      Persons
+                    </Button>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Button
+                      variant="contained"
+                      startIcon={<FlashIcon />}
+                      fullWidth
+                      size="small"
+                      onClick={() => {
+                        console.log('Quick actions modal to be implemented');
+                      }}
+                    >
+                      More
+                    </Button>
+                  </Grid>
                 </Grid>
-                <Grid item xs={6}>
-                  <Button
-                    variant="contained"
-                    startIcon={<PersonIcon />}
-                    fullWidth
-                    size="small"
-                    onClick={() => navigate('/dashboard/persons')}
-                  >
-                    Persons
-                  </Button>
-                </Grid>
-                <Grid item xs={6}>
-                  <Button
-                    variant="contained"
-                    startIcon={<FlashIcon />}
-                    fullWidth
-                    size="small"
-                    onClick={() => {
-                      console.log('Quick actions modal to be implemented');
-                    }}
-                  >
-                    More
-                  </Button>
-                </Grid>
-              </Grid>
+              )}
             </CardContent>
           </Card>
         </Grid>
 
         {/* Productivity Stats Widget */}
-        <Grid item xs={12} md={6} lg={4}>
-          <Card sx={{ height: '250px' }}>
+        <Grid item xs={12} md={6} lg={4} sx={{ height: 'calc(40% - 12px)' }}>
+          <Card sx={{ height: '100%' }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                 <TrendingUpIcon color="primary" />
@@ -512,12 +543,37 @@ const HomePage: React.FC = () => {
                 </Typography>
               </Box>
               <Divider sx={{ mb: 2 }} />
-              {productivityStats && (
-                <>
+              {loading ? (
+                <Box>
                   <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
                     Today
                   </Typography>
                   <Grid container spacing={1} sx={{ mb: 2 }}>
+                    {Array.from({ length: 3 }).map((_, index) => (
+                      <Grid item xs={4} key={index}>
+                        <Skeleton variant="text" width="100%" height={32} />
+                        <Skeleton variant="text" width="60%" height={16} />
+                      </Grid>
+                    ))}
+                  </Grid>
+                  <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+                    This Week
+                  </Typography>
+                  <Grid container spacing={1}>
+                    {Array.from({ length: 3 }).map((_, index) => (
+                      <Grid item xs={4} key={index}>
+                        <Skeleton variant="text" width="100%" height={24} />
+                        <Skeleton variant="text" width="60%" height={14} />
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Box>
+              ) : productivityStats && (
+                <>
+                  <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+                    Today
+                  </Typography>
+                  <Grid container spacing={1} sx={{ mb: 1.5 }}>
                     <Grid item xs={4}>
                       <Typography variant="h5" color="primary.main" fontWeight="bold">
                         {productivityStats.today.applications_processed}
@@ -549,7 +605,7 @@ const HomePage: React.FC = () => {
                   </Typography>
                   <Grid container spacing={1}>
                     <Grid item xs={4}>
-                      <Typography variant="h6" color="primary.main" fontWeight="bold">
+                      <Typography variant="body1" color="primary.main" fontWeight="bold">
                         {productivityStats.week.applications_processed}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
@@ -557,7 +613,7 @@ const HomePage: React.FC = () => {
                       </Typography>
                     </Grid>
                     <Grid item xs={4}>
-                      <Typography variant="h6" color="success.main" fontWeight="bold">
+                      <Typography variant="body1" color="success.main" fontWeight="bold">
                         {productivityStats.week.licenses_issued}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
@@ -565,7 +621,7 @@ const HomePage: React.FC = () => {
                       </Typography>
                     </Grid>
                     <Grid item xs={4}>
-                      <Typography variant="h6" color="info.main" fontWeight="bold">
+                      <Typography variant="body1" color="info.main" fontWeight="bold">
                         {productivityStats.week.transactions_completed}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
@@ -580,8 +636,8 @@ const HomePage: React.FC = () => {
         </Grid>
 
         {/* Support & Resources Widget */}
-        <Grid item xs={12} md={6} lg={4}>
-          <Card sx={{ height: '250px' }}>
+        <Grid item xs={12} md={6} lg={4} sx={{ height: 'calc(40% - 12px)' }}>
+          <Card sx={{ height: '100%' }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                 <HelpIcon color="primary" />
@@ -590,45 +646,60 @@ const HomePage: React.FC = () => {
                 </Typography>
               </Box>
               <Divider sx={{ mb: 2 }} />
-              <Grid container spacing={2}>
-                <Grid item xs={6}>
-                  <Button
-                    variant="outlined"
-                    startIcon={<SchoolIcon />}
-                    fullWidth
-                    size="small"
-                    onClick={() => window.open('/help/training', '_blank')}
-                  >
-                    Training
-                  </Button>
+              {loading ? (
+                <Grid container spacing={2}>
+                  <Grid item xs={6}>
+                    <Skeleton variant="rounded" width="100%" height={32} />
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Skeleton variant="rounded" width="100%" height={32} />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Skeleton variant="rounded" width="100%" height={32} />
+                  </Grid>
                 </Grid>
-                <Grid item xs={6}>
-                  <Button
-                    variant="outlined"
-                    startIcon={<HelpIcon />}
-                    fullWidth
-                    size="small"
-                    onClick={() => window.open('/help/guides', '_blank')}
-                  >
-                    Guides
-                  </Button>
+              ) : (
+                <Grid container spacing={2}>
+                  <Grid item xs={6}>
+                    <Button
+                      variant="outlined"
+                      startIcon={<SchoolIcon />}
+                      fullWidth
+                      size="small"
+                      onClick={() => window.open('/help/training', '_blank')}
+                    >
+                      Training
+                    </Button>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Button
+                      variant="outlined"
+                      startIcon={<HelpIcon />}
+                      fullWidth
+                      size="small"
+                      onClick={() => window.open('/help/guides', '_blank')}
+                    >
+                      Guides
+                    </Button>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Button
+                      variant="outlined"
+                      startIcon={<SecurityIcon />}
+                      fullWidth
+                      size="small"
+                      onClick={() => navigate('/dashboard/admin/audit')}
+                    >
+                      Security & Compliance
+                    </Button>
+                  </Grid>
                 </Grid>
-                <Grid item xs={12}>
-                  <Button
-                    variant="outlined"
-                    startIcon={<SecurityIcon />}
-                    fullWidth
-                    size="small"
-                    onClick={() => navigate('/dashboard/admin/audit')}
-                  >
-                    Security & Compliance
-                  </Button>
-                </Grid>
-              </Grid>
+              )}
             </CardContent>
           </Card>
         </Grid>
-      </Grid>
+        </Grid>
+      </Box>
     </Container>
   );
 };
