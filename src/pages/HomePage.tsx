@@ -266,7 +266,7 @@ const HomePage: React.FC = () => {
 
   return (
     <Box sx={{ height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      <Container maxWidth="lg" sx={{ flex: 1, display: 'flex', flexDirection: 'column', py: 2 }}>
+      <Container maxWidth="lg" sx={{ flex: 1, display: 'flex', flexDirection: 'column', py: 2, width: '100%' }}>
         {/* Welcome Header */}
         <Box sx={{ mb: 3, flexShrink: 0 }}>
           <Typography variant="h4" component="h1" gutterBottom>
@@ -280,7 +280,7 @@ const HomePage: React.FC = () => {
         {/* Bento Grid Layout */}
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3, minHeight: 0 }}>
         {/* Row 1: Announcements (Large), System Status (Medium), User Profile (Medium) */}
-        <Box sx={{ flex: '1 1 55%', display: 'flex', gap: 3, minHeight: 0 }}>
+        <Box sx={{ flex: '1 1 55%', display: 'flex', gap: 3, minHeight: 0, width: '100%' }}>
           {/* Announcements Widget - Left Half */}
           <Box sx={{ flex: '0 0 50%', minHeight: 0 }}>
             <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -466,7 +466,7 @@ const HomePage: React.FC = () => {
         </Box>
 
         {/* Row 2: Quick Actions, Productivity, Support */}
-        <Box sx={{ flex: '1 1 45%', display: 'flex', gap: 3, minHeight: 0 }}>
+        <Box sx={{ flex: '1 1 45%', display: 'flex', gap: 3, minHeight: 0, width: '100%' }}>
           {/* Quick Actions Widget */}
           <Box sx={{ flex: 1, minHeight: 0 }}>
             <Card sx={{ height: '100%' }}>
@@ -543,16 +543,16 @@ const HomePage: React.FC = () => {
           {/* Productivity Stats Widget */}
           <Box sx={{ flex: 1, minHeight: 0 }}>
             <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-              <CardContent sx={{ pb: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+              <CardContent sx={{ pb: 0.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
                   <TrendingUpIcon color="primary" />
                   <Typography variant="h6" fontWeight={600}>
                     Your Productivity
                   </Typography>
                 </Box>
-                <Divider sx={{ mb: 2 }} />
+                <Divider sx={{ mb: 1.5 }} />
               </CardContent>
-              <CardContent sx={{ flex: 1, pt: 0, overflow: 'auto' }}>
+              <CardContent sx={{ flex: 1, pt: 0, pb: 1, overflow: 'auto' }}>
                 {loading ? (
                   <Box>
                     <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
@@ -580,61 +580,61 @@ const HomePage: React.FC = () => {
                   </Box>
                 ) : productivityStats && (
                   <>
-                    <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+                    <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
                       Today
                     </Typography>
-                    <Grid container spacing={1} sx={{ mb: 1.5 }}>
+                    <Grid container spacing={1} sx={{ mb: 0.5 }}>
                       <Grid item xs={4}>
-                        <Typography variant="h5" color="primary.main" fontWeight="bold">
+                        <Typography variant="h6" color="primary.main" fontWeight="bold">
                           {productivityStats.today.applications_processed}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
                           Apps
                         </Typography>
                       </Grid>
                       <Grid item xs={4}>
-                        <Typography variant="h5" color="success.main" fontWeight="bold">
+                        <Typography variant="h6" color="success.main" fontWeight="bold">
                           {productivityStats.today.licenses_issued}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
                           Licenses
                         </Typography>
                       </Grid>
                       <Grid item xs={4}>
-                        <Typography variant="h5" color="info.main" fontWeight="bold">
+                        <Typography variant="h6" color="info.main" fontWeight="bold">
                           {productivityStats.today.transactions_completed}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
                           Trans
                         </Typography>
                       </Grid>
                     </Grid>
                     
-                    <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+                    <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
                       This Week
                     </Typography>
                     <Grid container spacing={1}>
                       <Grid item xs={4}>
-                        <Typography variant="body1" color="primary.main" fontWeight="bold">
+                        <Typography variant="body2" color="primary.main" fontWeight="bold">
                           {productivityStats.week.applications_processed}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
                           Apps
                         </Typography>
                       </Grid>
                       <Grid item xs={4}>
-                        <Typography variant="body1" color="success.main" fontWeight="bold">
+                        <Typography variant="body2" color="success.main" fontWeight="bold">
                           {productivityStats.week.licenses_issued}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
                           Licenses
                         </Typography>
                       </Grid>
                       <Grid item xs={4}>
-                        <Typography variant="body1" color="info.main" fontWeight="bold">
+                        <Typography variant="body2" color="info.main" fontWeight="bold">
                           {productivityStats.week.transactions_completed}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
                           Trans
                         </Typography>
                       </Grid>
