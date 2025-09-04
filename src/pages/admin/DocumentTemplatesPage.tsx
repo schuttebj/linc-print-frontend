@@ -77,7 +77,8 @@ const DocumentTemplatesPage: React.FC = () => {
   const getTemplateName = (template: string): string => {
     const names: Record<string, string> = {
       'receipt': 'Payment Receipt',
-      'card_order_confirmation': 'Card Order Confirmation'
+      'card_order_confirmation': 'Card Order Confirmation',
+      'license_verification': 'License Verification Document'
     };
     return names[template] || template;
   };
@@ -85,7 +86,8 @@ const DocumentTemplatesPage: React.FC = () => {
   const getTemplateDescription = (template: string): string => {
     const descriptions: Record<string, string> = {
       'receipt': 'Official payment receipt for government transactions',
-      'card_order_confirmation': 'Card order confirmation for license applications'
+      'card_order_confirmation': 'Card order confirmation for license applications',
+      'license_verification': 'License verification document for card printing authorization'
     };
     return descriptions[template] || 'Document template';
   };

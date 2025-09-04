@@ -361,306 +361,73 @@ const CardOrderingByIdPage: React.FC = () => {
     }
   };
 
-  // Generate and print the A4 verification document
+  // Generate and print the A4 verification document using the new API
   const handlePrintVerificationDocument = async () => {
     if (!searchResult) return;
     
     try {
-      // Create the verification document content
-      const printContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>License Verification Document - ${searchResult.person.id_number}</title>
-          <meta charset="utf-8">
-          <style>
-            @page {
-              size: A4;
-              margin: 15mm;
-            }
-            
-            body {
-              font-family: Arial, sans-serif;
-              font-size: 10pt;
-              color: black;
-              background: white;
-              margin: 0;
-              padding: 0;
-              line-height: 1.3;
-            }
-            
-            .document-container {
-              width: 100%;
-              max-width: 180mm;
-              margin: 0 auto;
-            }
-            
-            .header {
-              text-align: center;
-              margin-bottom: 15px;
-            }
-            
-            .header h1 {
-              font-size: 16pt;
-              font-weight: bold;
-              margin: 3px 0;
-            }
-            
-            .header h2 {
-              font-size: 14pt;
-              margin: 3px 0;
-            }
-            
-            .header h3 {
-              font-size: 12pt;
-              margin: 3px 0;
-            }
-            
-            .document-title {
-              font-size: 14pt;
-              font-weight: bold;
-              border: 2px solid black;
-              padding: 6px;
-              background: #f5f5f5;
-              margin: 10px 0;
-              text-align: center;
-            }
-            
-            .person-info {
-              border: 1px solid black;
-              padding: 10px;
-              background: #f9f9f9;
-              margin-bottom: 12px;
-            }
-            
-            .person-info h4 {
-              font-size: 12pt;
-              margin: 0 0 8px 0;
-            }
-            
-            .person-info p {
-              margin: 3px 0;
-              font-size: 10pt;
-            }
-            
-            .license-table {
-              width: 100%;
-              border-collapse: collapse;
-              border: 1px solid black;
-              margin-bottom: 12px;
-              font-size: 9pt;
-            }
-            
-            .license-table th,
-            .license-table td {
-              border: 1px solid black;
-              padding: 6px 4px;
-              text-align: left;
-              vertical-align: top;
-            }
-            
-            .license-table th {
-              background: #e0e0e0;
-              font-weight: bold;
-              font-size: 9pt;
-            }
-            
-            .section-header {
-              background: #f0f0f0;
-              font-weight: bold;
-              font-size: 11pt;
-              padding: 6px;
-              border: 1px solid black;
-              margin-top: 10px;
-              margin-bottom: 5px;
-            }
-            
-            .signature-section {
-              border: 1px solid black;
-              padding: 12px;
-              margin-top: 15px;
-              background: #f9f9f9;
-              page-break-inside: avoid;
-            }
-            
-            .signature-line {
-              border-bottom: 1px solid black;
-              margin: 12px 0;
-              height: 25px;
-            }
-            
-            .footer {
-              text-align: center;
-              border-top: 1px solid #ccc;
-              padding-top: 8px;
-              font-size: 9pt;
-              margin-top: 15px;
-            }
-            
-            .chip {
-              display: inline-block;
-              background: #e3f2fd;
-              color: #1565c0;
-              border: 1px solid #90caf9;
-              border-radius: 4px;
-              padding: 2px 6px;
-              font-size: 9pt;
-              margin: 2px;
-            }
-            
-            .chip-secondary {
-              background: #f3e5f5;
-              color: #6a1b9a;
-              border-color: #ce93d8;
-            }
-            
-            .chip-success {
-              background: #e8f5e8;
-              color: #1b5e20;
-              border-color: #a6e8ab;
-            }
-            
-            @media print {
-              body {
-                print-color-adjust: exact;
-                -webkit-print-color-adjust: exact;
-              }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="document-container">
-            <!-- Government Headers -->
-            <div class="header">
-              <h1>🇲🇬 REPUBLIC OF MADAGASCAR</h1>
-              <h2>MINISTRY OF TRANSPORT</h2>
-              <h3>License Information Verification Document</h3>
-            </div>
+      // Prepare data for the license verification template
+      const verificationData = {
+        government_header: '🇲🇬 REPUBLIC OF MADAGASCAR',
+        department_header: 'MINISTRY OF TRANSPORT',
+        office_header: 'License Information Verification Document',
+        document_title: 'LICENSE VERIFICATION DOCUMENT',
+        person_name: `${searchResult.person.first_name} ${searchResult.person.last_name}`,
+        person_id: searchResult.person.id_number,
+        birth_date: searchResult.person.birth_date ? new Date(searchResult.person.birth_date).toLocaleDateString() : 'N/A',
+        nationality: searchResult.person.nationality || 'N/A',
+        verification_date: new Date().toLocaleDateString(),
+        card_eligible_licenses: searchResult.card_eligible_licenses.map(license => ({
+          category: license.category,
+          status: license.status,
+          issue_date: new Date(license.issue_date).toLocaleDateString(),
+          restrictions: license.restrictions || {}
+        })),
+        learners_permits: searchResult.learners_permits.map(permit => ({
+          category: permit.category,
+          status: permit.status,
+          issue_date: new Date(permit.issue_date).toLocaleDateString(),
+          expiry_date: permit.expiry_date ? new Date(permit.expiry_date).toLocaleDateString() : 'No expiry'
+        })),
+        footer: 'Ministry of Transport - Republic of Madagascar',
+        contact_info: 'For assistance: +261 20 22 123 45 | transport@gov.mg'
+      };
 
-            <div class="document-title">
-              LICENSE VERIFICATION DOCUMENT
-            </div>
+      // Generate PDF using the new document generation API
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`https://linc-print-backend.onrender.com/api/v1/document-test/sample-pdf/license_verification`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      });
 
-            <!-- Person Information -->
-            <div class="person-info">
-              <h4>License Holder Information</h4>
-              <p><strong>Full Name:</strong> ${searchResult.person.first_name} ${searchResult.person.last_name}</p>
-              <p><strong>ID Number:</strong> ${searchResult.person.id_number}</p>
-              ${searchResult.person.birth_date ? `<p><strong>Date of Birth:</strong> ${new Date(searchResult.person.birth_date).toLocaleDateString()}</p>` : ''}
-              ${searchResult.person.nationality ? `<p><strong>Nationality:</strong> ${searchResult.person.nationality}</p>` : ''}
-              ${searchResult.person.address ? `<p><strong>Address:</strong> ${searchResult.person.address}</p>` : ''}
-              ${searchResult.person.phone_number ? `<p><strong>Phone:</strong> ${searchResult.person.phone_number}</p>` : ''}
-              ${searchResult.person.email ? `<p><strong>Email:</strong> ${searchResult.person.email}</p>` : ''}
-              <p><strong>Verification Date:</strong> ${new Date().toLocaleDateString()}</p>
-            </div>
+      if (!response.ok) {
+        throw new Error(`Failed to generate verification document: ${response.status}`);
+      }
 
-            <!-- Card Eligible Licenses Section -->
-            <div class="section-header">
-              LICENSES TO BE PRINTED ON CARD (${searchResult.card_eligible_licenses.length})
-            </div>
-            
-            <table class="license-table">
-              <thead>
-                <tr>
-                  <th>Category</th>
-                  <th>Status</th>
-                  <th>Issue Date</th>
-                  <th>Restrictions</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${searchResult.card_eligible_licenses.map(license => `
-                  <tr>
-                    <td><span class="chip">${license.category}</span></td>
-                    <td><span class="chip-success">${license.status}</span></td>
-                    <td>${new Date(license.issue_date).toLocaleDateString()}</td>
-                    <td>
-                      ${license.restrictions && Object.keys(license.restrictions).length > 0 
-                        ? Object.entries(license.restrictions).map(([type, codes]) => 
-                            Array.isArray(codes) 
-                              ? codes.map(code => `<span class="chip ${type === 'driver_restrictions' ? '' : 'chip-secondary'}">${type.replace('_', ' ')}: ${code} - ${getRestrictionDisplayName(code)}</span>`).join(' ')
-                              : ''
-                          ).join(' ')
-                        : '<span class="chip-success">00 - None</span>'
-                      }
-                    </td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
+      // Get the PDF blob and open it for printing
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
 
-            ${searchResult.learners_permits.length > 0 ? `
-              <!-- Learners Permits Section -->
-              <div class="section-header">
-                LEARNER'S PERMITS (NOT PRINTED ON CARD) (${searchResult.learners_permits.length})
-              </div>
-              
-              <table class="license-table">
-                <thead>
-                  <tr>
-                    <th>Category</th>
-                    <th>Status</th>
-                    <th>Issue Date</th>
-                    <th>Expiry Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${searchResult.learners_permits.map(license => `
-                    <tr>
-                      <td><span class="chip-secondary">${license.category}</span></td>
-                      <td><span class="chip-success">${license.status}</span></td>
-                      <td>${new Date(license.issue_date).toLocaleDateString()}</td>
-                      <td>${license.expiry_date ? new Date(license.expiry_date).toLocaleDateString() : 'No expiry'}</td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
-            ` : ''}
-
-            <!-- Signature Section -->
-            <div class="signature-section">
-              <h4>License Holder Confirmation</h4>
-              <p>I confirm that all the information above is accurate and I authorize the printing of my driver's license card with the categories and restrictions listed above.</p>
-              
-              <p style="margin-top: 30px;"><strong>License Holder Signature:</strong></p>
-              <div class="signature-line"></div>
-              
-              <p style="margin-top: 20px;"><strong>Date:</strong> ____________________</p>
-              
-              <p style="margin-top: 30px;"><strong>Authorized Officer:</strong></p>
-              <div class="signature-line"></div>
-              
-              <p style="margin-top: 20px;"><strong>Officer Name & Badge:</strong> ____________________</p>
-            </div>
-
-            <!-- Footer -->
-            <div class="footer">
-              Ministry of Transport - Republic of Madagascar<br>
-              License Information System<br>
-              This document must be signed before card printing authorization
-            </div>
-          </div>
-        </body>
-        </html>
-      `;
-      
       // Open print window
-      const printWindow = window.open('', '_blank');
+      const printWindow = window.open(url, '_blank');
       if (printWindow) {
-        printWindow.document.open();
-        printWindow.document.write(printContent);
-        printWindow.document.close();
-        
-        // Wait for content to load, then print
-        printWindow.onload = () => {
+        printWindow.addEventListener('load', () => {
           setTimeout(() => {
             printWindow.print();
             printWindow.close();
             setDocumentPrinted(true);
           }, 500);
-        };
+        });
       }
+
+      // Clean up URL after a delay
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+      }, 5000);
+
     } catch (err: any) {
+      console.error('Failed to generate verification document:', err);
       setError('Failed to generate verification document for printing');
     }
   };
