@@ -130,7 +130,7 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 12,
-          boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.1)',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px;',
         },
       },
     },
