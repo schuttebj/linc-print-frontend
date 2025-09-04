@@ -266,7 +266,7 @@ const HomePage: React.FC = () => {
 
   return (
     <Box sx={{ height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      <Container maxWidth="lg" sx={{ flex: 1, display: 'flex', flexDirection: 'column', py: 2, width: '100%' }}>
+      <Container maxWidth="lg" sx={{ flex: 1, display: 'flex', flexDirection: 'column', py: 2, width: '100%', height: '100%' }}>
         {/* Welcome Header */}
         <Box sx={{ mb: 3, flexShrink: 0 }}>
           <Typography variant="h4" component="h1" gutterBottom>
@@ -282,7 +282,7 @@ const HomePage: React.FC = () => {
         {/* Row 1: Announcements (Large), System Status (Medium), User Profile (Medium) */}
         <Box sx={{ flex: '1 1 55%', display: 'flex', gap: 3, minHeight: 0, width: '100%' }}>
           {/* Announcements Widget - Left Half */}
-          <Box sx={{ flex: '0 0 50%', minHeight: 0 }}>
+          <Box sx={{ flex: '1 1 50%', minHeight: 0, maxWidth: '50%', overflow: 'hidden' }}>
             <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
               <CardContent sx={{ pb: 0 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
@@ -362,7 +362,7 @@ const HomePage: React.FC = () => {
           </Box>
 
           {/* Right Half - System Status and User Profile */}
-          <Box sx={{ flex: '0 0 50%', display: 'flex', flexDirection: 'column', gap: 3, minHeight: 0 }}>
+          <Box sx={{ flex: '1 1 50%', display: 'flex', flexDirection: 'column', gap: 3, minHeight: 0, maxWidth: '50%', overflow: 'hidden' }}>
             {/* System Status Widget */}
             <Box sx={{ flex: 1, minHeight: 0 }}>
               <Card sx={{ height: '100%' }}>
