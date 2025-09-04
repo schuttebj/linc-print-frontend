@@ -280,7 +280,7 @@ const HomePage: React.FC = () => {
         {/* Bento Grid Layout */}
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3, minHeight: 0 }}>
         {/* Row 1: Announcements (Large), System Status (Medium), User Profile (Medium) */}
-        <Box sx={{ flex: '1 1 55%', display: 'flex', gap: 3, minHeight: 0, width: '100%' }}>
+        <Box sx={{ flex: 1, display: 'flex', gap: 3, minHeight: 0, width: '100%' }}>
           {/* Announcements Widget - Left Half */}
           <Box sx={{ flex: '1 1 50%', minHeight: 0, maxWidth: '50%', overflow: 'hidden' }}>
             <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -466,10 +466,10 @@ const HomePage: React.FC = () => {
         </Box>
 
         {/* Row 2: Quick Actions, Productivity, Support */}
-        <Box sx={{ flex: '1 1 45%', display: 'flex', gap: 3, minHeight: 0, width: '100%' }}>
+        <Box sx={{ flex: '0 0 auto', display: 'flex', gap: 3, width: '100%' }}>
           {/* Quick Actions Widget */}
-          <Box sx={{ flex: 1, minHeight: 0 }}>
-            <Card sx={{ height: '100%' }}>
+          <Box sx={{ flex: 1 }}>
+            <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                   <SpeedIcon color="primary" />
@@ -541,8 +541,8 @@ const HomePage: React.FC = () => {
           </Box>
 
           {/* Productivity Stats Widget */}
-          <Box sx={{ flex: 1, minHeight: 0 }}>
-            <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <Box sx={{ flex: 1 }}>
+            <Card>
               <CardContent sx={{ pb: 0.5 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
                   <TrendingUpIcon color="primary" />
@@ -552,7 +552,7 @@ const HomePage: React.FC = () => {
                 </Box>
                 <Divider sx={{ mb: 1.5 }} />
               </CardContent>
-              <CardContent sx={{ flex: 1, pt: 0, pb: 1, overflow: 'auto' }}>
+              <CardContent sx={{ pt: 0, pb: 1 }}>
                 {loading ? (
                   <Box>
                     <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
@@ -646,8 +646,8 @@ const HomePage: React.FC = () => {
           </Box>
 
           {/* Support & Resources Widget */}
-          <Box sx={{ flex: 1, minHeight: 0 }}>
-            <Card sx={{ height: '100%' }}>
+          <Box sx={{ flex: 1 }}>
+            <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                   <HelpIcon color="primary" />
@@ -676,6 +676,7 @@ const HomePage: React.FC = () => {
                         startIcon={<SchoolIcon />}
                         fullWidth
                         size="small"
+                        disabled={true}
                         onClick={() => window.open('/help/training', '_blank')}
                       >
                         Training
@@ -687,6 +688,7 @@ const HomePage: React.FC = () => {
                         startIcon={<HelpIcon />}
                         fullWidth
                         size="small"
+                        disabled={true}
                         onClick={() => window.open('/help/guides', '_blank')}
                       >
                         Guides
@@ -698,6 +700,7 @@ const HomePage: React.FC = () => {
                         startIcon={<SecurityIcon />}
                         fullWidth
                         size="small"
+                        disabled={true}
                         onClick={() => navigate('/dashboard/admin/audit')}
                       >
                         Security & Compliance
