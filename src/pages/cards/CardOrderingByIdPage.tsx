@@ -58,6 +58,9 @@ interface PersonData {
   nationality?: string;
   photo_path?: string;
   signature_path?: string;
+  address?: string;
+  phone_number?: string;
+  email?: string;
 }
 
 interface License {
@@ -373,110 +376,125 @@ const CardOrderingByIdPage: React.FC = () => {
           <style>
             @page {
               size: A4;
-              margin: 20mm;
+              margin: 15mm;
             }
             
             body {
               font-family: Arial, sans-serif;
-              font-size: 11pt;
+              font-size: 10pt;
               color: black;
               background: white;
               margin: 0;
               padding: 0;
+              line-height: 1.3;
             }
             
             .document-container {
               width: 100%;
-              max-width: 170mm;
+              max-width: 180mm;
               margin: 0 auto;
             }
             
             .header {
               text-align: center;
-              margin-bottom: 30px;
+              margin-bottom: 15px;
             }
             
             .header h1 {
-              font-size: 18pt;
+              font-size: 16pt;
               font-weight: bold;
-              margin: 5px 0;
+              margin: 3px 0;
             }
             
             .header h2 {
-              font-size: 16pt;
-              margin: 5px 0;
+              font-size: 14pt;
+              margin: 3px 0;
+            }
+            
+            .header h3 {
+              font-size: 12pt;
+              margin: 3px 0;
             }
             
             .document-title {
-              font-size: 16pt;
+              font-size: 14pt;
               font-weight: bold;
               border: 2px solid black;
-              padding: 8px;
+              padding: 6px;
               background: #f5f5f5;
-              margin: 20px 0;
+              margin: 10px 0;
               text-align: center;
             }
             
             .person-info {
               border: 1px solid black;
-              padding: 15px;
+              padding: 10px;
               background: #f9f9f9;
-              margin-bottom: 20px;
+              margin-bottom: 12px;
             }
             
             .person-info h4 {
-              font-size: 14pt;
-              margin: 0 0 10px 0;
+              font-size: 12pt;
+              margin: 0 0 8px 0;
+            }
+            
+            .person-info p {
+              margin: 3px 0;
+              font-size: 10pt;
             }
             
             .license-table {
               width: 100%;
               border-collapse: collapse;
               border: 1px solid black;
-              margin-bottom: 20px;
+              margin-bottom: 12px;
+              font-size: 9pt;
             }
             
             .license-table th,
             .license-table td {
               border: 1px solid black;
-              padding: 10px 8px;
+              padding: 6px 4px;
               text-align: left;
+              vertical-align: top;
             }
             
             .license-table th {
               background: #e0e0e0;
               font-weight: bold;
-              font-size: 11pt;
+              font-size: 9pt;
             }
             
             .section-header {
               background: #f0f0f0;
               font-weight: bold;
-              font-size: 12pt;
-              padding: 10px;
+              font-size: 11pt;
+              padding: 6px;
               border: 1px solid black;
-              margin-top: 20px;
+              margin-top: 10px;
+              margin-bottom: 5px;
             }
             
             .signature-section {
               border: 1px solid black;
-              padding: 20px;
-              margin-top: 30px;
+              padding: 12px;
+              margin-top: 15px;
               background: #f9f9f9;
+              page-break-inside: avoid;
             }
             
             .signature-line {
               border-bottom: 1px solid black;
-              margin: 20px 0;
-              height: 40px;
+              margin: 12px 0;
+              height: 25px;
             }
             
             .footer {
               text-align: center;
               border-top: 1px solid #ccc;
-              padding-top: 15px;
-              font-size: 10pt;
-              margin-top: 30px;
+              padding-top: 8px;
+              font-size: 9pt;
+              margin-top: 15px;
             }
             
             .chip {
@@ -530,6 +548,9 @@ const CardOrderingByIdPage: React.FC = () => {
               <p><strong>ID Number:</strong> ${searchResult.person.id_number}</p>
               ${searchResult.person.birth_date ? `<p><strong>Date of Birth:</strong> ${new Date(searchResult.person.birth_date).toLocaleDateString()}</p>` : ''}
               ${searchResult.person.nationality ? `<p><strong>Nationality:</strong> ${searchResult.person.nationality}</p>` : ''}
+              ${searchResult.person.address ? `<p><strong>Address:</strong> ${searchResult.person.address}</p>` : ''}
+              ${searchResult.person.phone_number ? `<p><strong>Phone:</strong> ${searchResult.person.phone_number}</p>` : ''}
+              ${searchResult.person.email ? `<p><strong>Email:</strong> ${searchResult.person.email}</p>` : ''}
               <p><strong>Verification Date:</strong> ${new Date().toLocaleDateString()}</p>
             </div>
 
@@ -1075,26 +1096,27 @@ const CardOrderingByIdPage: React.FC = () => {
               variant="contained"
               startIcon={<PrintIcon />}
               onClick={handlePrintVerificationDocument}
-              disabled={documentPrinted}
-              sx={{ mb: 2 }}
+              sx={{ mb: 2, display: 'block' }}
             >
-              {documentPrinted ? 'Document Printed ✓' : 'Print Verification Document'}
+              {documentPrinted ? 'Print Document Again' : 'Print Verification Document'}
             </Button>
 
             {documentPrinted && (
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={signatureConfirmed}
-                    onChange={(e) => setSignatureConfirmed(e.target.checked)}
-                  />
-                }
-                label={
-                  <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                    I confirm that the license holder has signed the printed verification document
-                  </Typography>
-                }
-              />
+              <Box sx={{ mt: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'grey.50' }}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={signatureConfirmed}
+                      onChange={(e) => setSignatureConfirmed(e.target.checked)}
+                    />
+                  }
+                  label={
+                    <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                      I confirm that the license holder has signed the printed verification document
+                    </Typography>
+                  }
+                />
+              </Box>
             )}
           </Box>
         </>
@@ -1226,7 +1248,7 @@ const CardOrderingByIdPage: React.FC = () => {
   );
 
   return (
-    <Container maxWidth="lg" sx={{ py: 1, height: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column' }}>
+    <Container maxWidth="lg" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Paper 
         elevation={0}
         sx={{ 
@@ -1239,27 +1261,39 @@ const CardOrderingByIdPage: React.FC = () => {
           overflow: 'hidden'
         }}
       >
-        {/* Header */}
-        <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'white' }}>
-          <Typography variant="h4" gutterBottom sx={{ fontSize: '1.5rem', fontWeight: 600 }}>
-            Card Ordering System
-          </Typography>
-          <Typography variant="subtitle1" color="text.secondary" sx={{ fontSize: '0.9rem' }}>
-            Search by ID number, verify documents, and order driver's license cards
-          </Typography>
-        </Box>
-
         {/* Tabs Navigation */}
-        <Box sx={{ bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
+        <Box sx={{ 
+          bgcolor: 'white', 
+          borderBottom: '1px solid', 
+          borderColor: 'divider',
+          flexShrink: 0 
+        }}>
           <Tabs
             value={activeStep}
             onChange={handleTabChange}
-            variant="fullWidth"
             sx={{
+              px: 2,
               '& .MuiTab-root': {
-                minHeight: 64,
+                minHeight: 48,
+                textTransform: 'none',
                 fontSize: '0.875rem',
-                fontWeight: 500
+                color: 'text.secondary',
+                bgcolor: 'grey.100',
+                mx: 0.5,
+                borderRadius: '8px 8px 0 0',
+                '&.Mui-selected': {
+                  bgcolor: 'white',
+                  color: 'text.primary',
+                },
+                '&:hover': {
+                  bgcolor: 'grey.200',
+                  '&.Mui-selected': {
+                    bgcolor: 'white',
+                  }
+                }
+              },
+              '& .MuiTabs-indicator': {
+                display: 'none'
               }
             }}
           >
@@ -1277,7 +1311,10 @@ const CardOrderingByIdPage: React.FC = () => {
         <Box sx={{ 
           flex: 1, 
           overflow: 'auto',
-          p: 2
+          p: 2,
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column'
         }}>
           {/* Error Display */}
           {error && (
@@ -1297,6 +1334,7 @@ const CardOrderingByIdPage: React.FC = () => {
           bgcolor: 'white', 
           borderTop: '1px solid', 
           borderColor: 'divider',
+          flexShrink: 0,
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center'
