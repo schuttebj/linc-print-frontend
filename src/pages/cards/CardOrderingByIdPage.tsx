@@ -661,50 +661,83 @@ const CardOrderingByIdPage: React.FC = () => {
             </Typography>
             
             {searchResult.card_eligible_licenses.length > 0 ? (
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ py: 1, px: 2, fontSize: '0.8rem', fontWeight: 600 }}>Category</TableCell>
-                      <TableCell sx={{ py: 1, px: 2, fontSize: '0.8rem', fontWeight: 600 }}>Status</TableCell>
-                      <TableCell sx={{ py: 1, px: 2, fontSize: '0.8rem', fontWeight: 600 }}>Issue Date</TableCell>
-                      <TableCell sx={{ py: 1, px: 2, fontSize: '0.8rem', fontWeight: 600 }}>Restrictions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {searchResult.card_eligible_licenses.map((license) => (
-                      <TableRow key={license.id} hover>
-                        <TableCell sx={{ py: 1, px: 2 }}>
-                          <Chip 
-                            label={license.category} 
-                            size="small" 
-                            color="primary" 
-                            sx={{ fontSize: '0.65rem', height: '20px' }}
-                          />
-                        </TableCell>
-                        <TableCell sx={{ py: 1, px: 2 }}>
-                          <Chip 
-                            label={license.status} 
-                            size="small" 
-                            color="success" 
-                            sx={{ fontSize: '0.65rem', height: '20px' }}
-                          />
-                        </TableCell>
-                        <TableCell sx={{ py: 1, px: 2 }}>
-                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                            {new Date(license.issue_date).toLocaleDateString()}
-                          </Typography>
-                        </TableCell>
-                        <TableCell sx={{ py: 1, px: 2 }}>
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                            {renderRestrictionsChips(license.restrictions)}
-                          </Box>
-                        </TableCell>
+              <Paper 
+                elevation={0}
+                sx={{ 
+                  bgcolor: '#fafafa',
+                  borderRadius: 1,
+                  overflow: 'hidden'
+                }}
+              >
+                <TableContainer>
+                  <Table size="small" sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ 
+                          fontWeight: 600, 
+                          fontSize: '0.875rem',
+                          bgcolor: '#f8f9fa',
+                          py: 1, 
+                          px: 2
+                        }}>Category</TableCell>
+                        <TableCell sx={{ 
+                          fontWeight: 600, 
+                          fontSize: '0.875rem',
+                          bgcolor: '#f8f9fa',
+                          py: 1, 
+                          px: 2
+                        }}>Status</TableCell>
+                        <TableCell sx={{ 
+                          fontWeight: 600, 
+                          fontSize: '0.875rem',
+                          bgcolor: '#f8f9fa',
+                          py: 1, 
+                          px: 2
+                        }}>Issue Date</TableCell>
+                        <TableCell sx={{ 
+                          fontWeight: 600, 
+                          fontSize: '0.875rem',
+                          bgcolor: '#f8f9fa',
+                          py: 1, 
+                          px: 2
+                        }}>Restrictions</TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                    </TableHead>
+                    <TableBody>
+                      {searchResult.card_eligible_licenses.map((license) => (
+                        <TableRow key={license.id} hover>
+                          <TableCell sx={{ py: 1, px: 2 }}>
+                            <Chip 
+                              label={license.category} 
+                              size="small" 
+                              color="primary" 
+                              sx={{ fontSize: '0.65rem', height: '20px' }}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ py: 1, px: 2 }}>
+                            <Chip 
+                              label={license.status} 
+                              size="small" 
+                              color="success" 
+                              sx={{ fontSize: '0.65rem', height: '20px' }}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ py: 1, px: 2 }}>
+                            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                              {new Date(license.issue_date).toLocaleDateString()}
+                            </Typography>
+                          </TableCell>
+                          <TableCell sx={{ py: 1, px: 2 }}>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                              {renderRestrictionsChips(license.restrictions)}
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Paper>
             ) : (
               <Alert severity="warning" sx={{ py: 1 }}>
                 <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
@@ -737,53 +770,86 @@ const CardOrderingByIdPage: React.FC = () => {
                 />
               </Typography>
               
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ py: 1, px: 2, fontSize: '0.8rem', fontWeight: 600 }}>Category</TableCell>
-                      <TableCell sx={{ py: 1, px: 2, fontSize: '0.8rem', fontWeight: 600 }}>Status</TableCell>
-                      <TableCell sx={{ py: 1, px: 2, fontSize: '0.8rem', fontWeight: 600 }}>Issue Date</TableCell>
-                      <TableCell sx={{ py: 1, px: 2, fontSize: '0.8rem', fontWeight: 600 }}>Expiry Date</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {searchResult.learners_permits.map((license) => (
-                      <TableRow key={license.id} hover>
-                        <TableCell sx={{ py: 1, px: 2 }}>
-                          <Chip 
-                            label={license.category} 
-                            size="small" 
-                            color="secondary" 
-                            sx={{ fontSize: '0.65rem', height: '20px' }}
-                          />
-                        </TableCell>
-                        <TableCell sx={{ py: 1, px: 2 }}>
-                          <Chip 
-                            label={license.status} 
-                            size="small" 
-                            color="success" 
-                            sx={{ fontSize: '0.65rem', height: '20px' }}
-                          />
-                        </TableCell>
-                        <TableCell sx={{ py: 1, px: 2 }}>
-                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                            {new Date(license.issue_date).toLocaleDateString()}
-                          </Typography>
-                        </TableCell>
-                        <TableCell sx={{ py: 1, px: 2 }}>
-                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                            {license.expiry_date 
-                              ? new Date(license.expiry_date).toLocaleDateString()
-                              : 'No expiry'
-                            }
-                          </Typography>
-                        </TableCell>
+              <Paper 
+                elevation={0}
+                sx={{ 
+                  bgcolor: '#fafafa',
+                  borderRadius: 1,
+                  overflow: 'hidden'
+                }}
+              >
+                <TableContainer>
+                  <Table size="small" sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ 
+                          fontWeight: 600, 
+                          fontSize: '0.875rem',
+                          bgcolor: '#f8f9fa',
+                          py: 1, 
+                          px: 2
+                        }}>Category</TableCell>
+                        <TableCell sx={{ 
+                          fontWeight: 600, 
+                          fontSize: '0.875rem',
+                          bgcolor: '#f8f9fa',
+                          py: 1, 
+                          px: 2
+                        }}>Status</TableCell>
+                        <TableCell sx={{ 
+                          fontWeight: 600, 
+                          fontSize: '0.875rem',
+                          bgcolor: '#f8f9fa',
+                          py: 1, 
+                          px: 2
+                        }}>Issue Date</TableCell>
+                        <TableCell sx={{ 
+                          fontWeight: 600, 
+                          fontSize: '0.875rem',
+                          bgcolor: '#f8f9fa',
+                          py: 1, 
+                          px: 2
+                        }}>Expiry Date</TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                    </TableHead>
+                    <TableBody>
+                      {searchResult.learners_permits.map((license) => (
+                        <TableRow key={license.id} hover>
+                          <TableCell sx={{ py: 1, px: 2 }}>
+                            <Chip 
+                              label={license.category} 
+                              size="small" 
+                              color="secondary" 
+                              sx={{ fontSize: '0.65rem', height: '20px' }}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ py: 1, px: 2 }}>
+                            <Chip 
+                              label={license.status} 
+                              size="small" 
+                              color="success" 
+                              sx={{ fontSize: '0.65rem', height: '20px' }}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ py: 1, px: 2 }}>
+                            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                              {new Date(license.issue_date).toLocaleDateString()}
+                            </Typography>
+                          </TableCell>
+                          <TableCell sx={{ py: 1, px: 2 }}>
+                            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                              {license.expiry_date 
+                                ? new Date(license.expiry_date).toLocaleDateString()
+                                : 'No expiry'
+                              }
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Paper>
             </Paper>
           )}
         </>
@@ -966,16 +1032,83 @@ const CardOrderingByIdPage: React.FC = () => {
 
   // Step 1: Application Selection (formerly Order Card)
   const renderApplicationSelectionStep = () => (
-    <Paper 
-      elevation={0}
-      sx={{ 
-        bgcolor: 'white',
-        boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-        borderRadius: 2,
-        p: 2
-      }}
-    >
-      <Box sx={{ p: 1.5 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {/* Location Selection - Admin Only */}
+      {!user?.primary_location_id && searchResult && (
+        <Card 
+          elevation={0}
+          sx={{ 
+            bgcolor: 'white',
+            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+            borderRadius: 2
+          }}
+        >
+          <CardHeader 
+            sx={{ p: 1.5 }}
+            title={
+              <Box display="flex" alignItems="center" gap={1}>
+                <LocationOnIcon color="primary" fontSize="small" />
+                <Typography variant="subtitle1" sx={{ fontSize: '1rem', fontWeight: 600 }}>
+                  Print Location
+                </Typography>
+              </Box>
+            }
+          />
+          <CardContent sx={{ p: 1.5, pt: 0 }}>
+            {searchResult.accessible_print_locations.length > 1 ? (
+              <FormControl 
+                fullWidth 
+                required 
+                size="small" 
+                error={!!error && !selectedLocation}
+              >
+                <InputLabel>Select Print Location</InputLabel>
+                <Select
+                  value={selectedLocation}
+                  onChange={(e) => setSelectedLocation(e.target.value)}
+                  label="Select Print Location"
+                  size="small"
+                >
+                  {searchResult.accessible_print_locations.map((location) => (
+                    <MenuItem key={location.id} value={location.id}>
+                      {location.name} ({location.code})
+                    </MenuItem>
+                  ))}
+                </Select>
+                {!!error && !selectedLocation && (
+                  <FormHelperText>Please select a print location</FormHelperText>
+                )}
+                {!selectedLocation && (
+                  <FormHelperText sx={{ color: '#ff9800' }}>This field is required</FormHelperText>
+                )}
+              </FormControl>
+            ) : (
+              <Box>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Assigned Location</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                  {searchResult.accessible_print_locations[0]?.name || 'No location assigned'}
+                </Typography>
+                {searchResult.accessible_print_locations[0] && (
+                  <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
+                    {searchResult.accessible_print_locations[0].code} - {searchResult.accessible_print_locations[0].province_code}
+                  </Typography>
+                )}
+              </Box>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Application Selection */}
+      <Paper 
+        elevation={0}
+        sx={{ 
+          bgcolor: 'white',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          p: 2
+        }}
+      >
         <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, fontSize: '1rem', mb: 1 }}>
           Select Applications for Card Order
         </Typography>
@@ -1103,94 +1236,40 @@ const CardOrderingByIdPage: React.FC = () => {
               </TableContainer>
             </Paper>
 
-            {/* Print Location Selection */}
-            <Card 
-              elevation={0}
-              sx={{ 
-                mb: 1.5,
-                bgcolor: 'white',
-                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-                borderRadius: 2
-              }}
-            >
-              <CardHeader 
-                sx={{ p: 1.5 }}
-                title={
-                  <Box display="flex" alignItems="center" gap={1}>
-                    <LocationOnIcon color="primary" fontSize="small" />
-                    <Typography variant="subtitle1" sx={{ fontSize: '1rem', fontWeight: 600 }}>
-                      Print Location
-                    </Typography>
-                  </Box>
-                }
-              />
-              <CardContent sx={{ p: 1.5, pt: 0 }}>
-                {searchResult.accessible_print_locations.length > 1 ? (
-                  <FormControl 
-                    fullWidth 
-                    required 
-                    size="small" 
-                    error={!!error && !selectedLocation}
-                  >
-                    <InputLabel>Select Print Location</InputLabel>
-                    <Select
-                      value={selectedLocation}
-                      onChange={(e) => setSelectedLocation(e.target.value)}
-                      label="Select Print Location"
-                      size="small"
-                    >
-                      {searchResult.accessible_print_locations.map((location) => (
-                        <MenuItem key={location.id} value={location.id}>
-                          {location.name} ({location.code})
-                        </MenuItem>
-                      ))}
-                    </Select>
-                    {!!error && !selectedLocation && (
-                      <FormHelperText>Please select a print location</FormHelperText>
-                    )}
-                    {!selectedLocation && (
-                      <FormHelperText sx={{ color: '#ff9800' }}>This field is required</FormHelperText>
-                    )}
-                  </FormControl>
-                ) : (
-                  <Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Assigned Location</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                      {searchResult.accessible_print_locations[0]?.name || 'No location assigned'}
-                    </Typography>
-                    {searchResult.accessible_print_locations[0] && (
-                      <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
-                        {searchResult.accessible_print_locations[0].code} - {searchResult.accessible_print_locations[0].province_code}
-                      </Typography>
-                    )}
-                  </Box>
-                )}
-              </CardContent>
-            </Card>
           </>
         )}
-      </Box>
+      </Paper>
 
       {/* Order Success */}
       {orderSuccess && (
-        <Alert severity="success" sx={{ mt: 3 }}>
-          <Typography variant="h6" gutterBottom sx={{ fontSize: '1rem' }}>
-            Print Job Created Successfully!
-          </Typography>
-          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-            Job Number: <strong>{orderSuccess.job_number}</strong>
-          </Typography>
-          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-            Card Number: <strong>{orderSuccess.card_number}</strong>
-          </Typography>
-          <Box sx={{ mt: 2 }}>
-            <Button variant="contained" onClick={resetForm} size="small">
-              Order Another Card
-            </Button>
-          </Box>
-        </Alert>
+        <Paper 
+          elevation={0}
+          sx={{ 
+            bgcolor: 'white',
+            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+            borderRadius: 2,
+            p: 2
+          }}
+        >
+          <Alert severity="success">
+            <Typography variant="h6" gutterBottom sx={{ fontSize: '1rem' }}>
+              Print Job Created Successfully!
+            </Typography>
+            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+              Job Number: <strong>{orderSuccess.job_number}</strong>
+            </Typography>
+            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+              Card Number: <strong>{orderSuccess.card_number}</strong>
+            </Typography>
+            <Box sx={{ mt: 2 }}>
+              <Button variant="contained" onClick={resetForm} size="small">
+                Order Another Card
+              </Button>
+            </Box>
+          </Alert>
+        </Paper>
       )}
-    </Paper>
+    </Box>
   );
 
   return (
