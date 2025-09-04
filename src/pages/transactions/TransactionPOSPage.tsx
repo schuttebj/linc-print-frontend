@@ -110,7 +110,6 @@ const TransactionPOSPage: React.FC = () => {
   const [selectedCardOrders, setSelectedCardOrders] = useState<string[]>([]);
   const [paymentMethod, setPaymentMethod] = useState('');
   const [paymentReference, setPaymentReference] = useState('');
-  const [notes, setNotes] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -369,8 +368,7 @@ const TransactionPOSPage: React.FC = () => {
         application_ids: selectedApplications,
         card_order_ids: selectedCardOrders,
         payment_method: paymentMethod,
-        payment_reference: paymentReference || undefined,
-        notes: notes || undefined
+        payment_reference: paymentReference || undefined
       };
 
       const response = await transactionService.processPayment(paymentData);
@@ -639,7 +637,6 @@ const TransactionPOSPage: React.FC = () => {
     setSelectedCardOrders([]);
     setPaymentMethod('');
     setPaymentReference('');
-    setNotes('');
     setTransaction(null);
     setError(null);
     setSuccess(null);
@@ -1134,49 +1131,52 @@ const TransactionPOSPage: React.FC = () => {
           </Alert>
         )}
         
-        <Grid container spacing={2}>
-          {/* Location selection for admin users */}
-          {user && !user.primary_location_id && (
-            <Grid item xs={12} md={6}>
-              <FormControl 
-                fullWidth 
-                required 
-                size="small"
-                error={!!error && !selectedLocationId}
+        {/* Location selection for admin users - Full width in its own section */}
+        {user && !user.primary_location_id && (
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="body2" sx={{ fontSize: '0.9rem', fontWeight: 500, mb: 1 }}>
+              Processing Location
+            </Typography>
+            <FormControl 
+              fullWidth 
+              required 
+              size="small"
+              error={!!error && !selectedLocationId}
+            >
+              <InputLabel>Location</InputLabel>
+              <Select
+                value={selectedLocationId}
+                onChange={handleLocationChange}
+                label="Location"
+                sx={{
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderWidth: '1px',
+                    borderColor: !!error && !selectedLocationId ? '#ff9800' : undefined,
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderWidth: '1px',
+                    borderColor: !!error && !selectedLocationId ? '#f57c00' : undefined,
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderWidth: '1px',
+                    borderColor: !!error && !selectedLocationId ? '#ff9800' : undefined,
+                  },
+                }}
               >
-                <InputLabel>Location</InputLabel>
-                <Select
-                  value={selectedLocationId}
-                  onChange={handleLocationChange}
-                  label="Location"
-                  sx={{
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      borderWidth: '1px',
-                      borderColor: !!error && !selectedLocationId ? '#ff9800' : undefined,
-                    },
-                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderWidth: '1px',
-                      borderColor: !!error && !selectedLocationId ? '#f57c00' : undefined,
-                    },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderWidth: '1px',
-                      borderColor: !!error && !selectedLocationId ? '#ff9800' : undefined,
-                    },
-                  }}
-                >
-                  {availableLocations.map((location) => (
-                    <MenuItem key={location.id} value={location.id}>
-                      {location.name} ({location.full_code})
-                    </MenuItem>
-                  ))}
-                </Select>
-                {!!error && !selectedLocationId && (
-                  <FormHelperText>Please select a processing location</FormHelperText>
-                )}
-              </FormControl>
-            </Grid>
-          )}
+                {availableLocations.map((location) => (
+                  <MenuItem key={location.id} value={location.id}>
+                    {location.name} ({location.full_code})
+                  </MenuItem>
+                ))}
+              </Select>
+              {!!error && !selectedLocationId && (
+                <FormHelperText>Please select a processing location</FormHelperText>
+              )}
+            </FormControl>
+          </Box>
+        )}
 
+        <Grid container spacing={2}>
           <Grid item xs={12} md={6}>
             <FormControl 
               fullWidth 
@@ -1240,59 +1240,7 @@ const TransactionPOSPage: React.FC = () => {
               }}
             />
           </Grid>
-          
-          <Grid item xs={12}>
-            <TextField
-              fullWidth
-              size="small"
-              multiline
-              rows={3}
-              label="Notes (Optional)"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Additional notes about this payment..."
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  '& fieldset': {
-                    borderWidth: '1px',
-                    transition: 'border-color 0.2s ease-in-out',
-                  },
-                  '&:hover fieldset': {
-                    borderWidth: '1px',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderWidth: '1px',
-                  },
-                },
-              }}
-            />
-          </Grid>
         </Grid>
-      </Paper>
-
-      {/* Payment Summary */}
-      <Paper 
-        elevation={0}
-        sx={{ 
-          bgcolor: 'white',
-          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-          borderRadius: 2,
-          flex: '0 0 auto',
-          p: 2
-        }}
-      >
-        <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-          Payment Summary
-        </Typography>
-        <Typography variant="h6" color="primary" sx={{ fontSize: '1.2rem', fontWeight: 600 }}>
-          Total Amount: {formatCurrency(calculateSelectedTotal())}
-        </Typography>
-        
-        <Alert severity="warning" sx={{ mt: 2, fontSize: '0.8rem' }}>
-          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-            <strong>Note:</strong> A receipt will be automatically generated and must be printed after payment completion.
-          </Typography>
-        </Alert>
       </Paper>
 
       {error && (
@@ -1391,7 +1339,7 @@ const TransactionPOSPage: React.FC = () => {
           </Typography>
         </Alert>
 
-        <Box display="flex" gap={1} justifyContent="center" mb={2}>
+        <Box display="flex" gap={1} justifyContent="center">
           <Button
             variant="outlined"
             onClick={handlePrintReceipt}
@@ -1408,17 +1356,6 @@ const TransactionPOSPage: React.FC = () => {
             size="small"
           >
             Print Receipt
-          </Button>
-        </Box>
-
-        <Box display="flex" justifyContent="center">
-          <Button
-            variant="contained"
-            onClick={handleStartNewTransaction}
-            size="small"
-            color="success"
-          >
-            New Transaction
           </Button>
         </Box>
       </Paper>
@@ -1510,7 +1447,7 @@ const TransactionPOSPage: React.FC = () => {
           justifyContent: 'flex-end', 
           gap: 1 
         }}>
-          {activeStep > 0 && (
+          {activeStep > 0 && activeStep < 2 && (
             <Button
               onClick={() => setActiveStep(activeStep - 1)}
               disabled={isProcessing}
@@ -1537,7 +1474,6 @@ const TransactionPOSPage: React.FC = () => {
               onClick={handleProcessPayment}
               disabled={!isStepValid(activeStep) || isProcessing}
               startIcon={isProcessing ? <CircularProgress size={16} /> : <PaymentIcon />}
-              color="success"
               size="small"
             >
               {isProcessing ? 'Processing...' : `Process Payment`}
