@@ -34,16 +34,25 @@ interface GeneratorInfo {
 
 interface SampleData {
   success: boolean;
+  template_type: string;
   data: any;
   generator_version: string;
   generated_at: string;
 }
 
-const DocumentTestPage: React.FC = () => {
+interface TemplatesInfo {
+  templates: string[];
+  generator_version: string;
+  timestamp: string;
+}
+
+const DocumentTemplatesPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generatorInfo, setGeneratorInfo] = useState<GeneratorInfo | null>(null);
+  const [templatesInfo, setTemplatesInfo] = useState<TemplatesInfo | null>(null);
   const [sampleData, setSampleData] = useState<SampleData | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('receipt');
   const [lastGeneratedPdf, setLastGeneratedPdf] = useState<string | null>(null);
 
   const fetchGeneratorInfo = async () => {
@@ -71,12 +80,38 @@ const DocumentTestPage: React.FC = () => {
     }
   };
 
-  const fetchSampleData = async () => {
+  const fetchTemplates = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(API_ENDPOINTS.documentTest.sampleReceiptData, {
+      const response = await fetch(API_ENDPOINTS.documentTest.templates, {
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      setTemplatesInfo(data);
+    } catch (err: any) {
+      setError(`Failed to fetch templates: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchSampleData = async (templateType?: string) => {
+    const template = templateType || selectedTemplate;
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(API_ENDPOINTS.documentTest.sampleData(template), {
         headers: {
           'Authorization': `Bearer ${getAuthToken()}`,
           'Content-Type': 'application/json',
@@ -96,12 +131,13 @@ const DocumentTestPage: React.FC = () => {
     }
   };
 
-  const generateSamplePdf = async (action: 'preview' | 'download' | 'print') => {
+  const generateSamplePdf = async (action: 'preview' | 'download' | 'print', templateType?: string) => {
+    const template = templateType || selectedTemplate;
     try {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(API_ENDPOINTS.documentTest.sampleReceiptPdf, {
+      const response = await fetch(API_ENDPOINTS.documentTest.samplePdf(template), {
         headers: {
           'Authorization': `Bearer ${getAuthToken()}`,
         },
@@ -125,7 +161,7 @@ const DocumentTestPage: React.FC = () => {
           // Trigger download
           const a = document.createElement('a');
           a.href = url;
-          a.download = `sample_receipt_${new Date().toISOString().slice(0, 19).replace(/:/g, '')}.pdf`;
+          a.download = `sample_${template}_${new Date().toISOString().slice(0, 19).replace(/:/g, '')}.pdf`;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
@@ -162,15 +198,27 @@ const DocumentTestPage: React.FC = () => {
 
   React.useEffect(() => {
     fetchGeneratorInfo();
+    fetchTemplates();
   }, []);
+
+  const getTemplateName = (template: string): string => {
+    const names: Record<string, string> = {
+      'receipt': 'Receipt / Reçu',
+      'card_order_confirmation': 'Card Order Confirmation / Confirmation de Commande'
+    };
+    return names[template] || template;
+  };
 
   return (
     <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
       <Typography variant="h4" gutterBottom>
-        Document Generation Test
+        Document Templates
       </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-        Test interface for A4 document generation and PDF preview functionality
+      <Typography variant="body1" color="text.secondary" sx={{ mb: 1 }}>
+        Preview and manage document templates for official government forms and receipts
+      </Typography>
+      <Typography variant="body2" color="success.main" sx={{ mb: 3, fontStyle: 'italic' }}>
+        ✓ Documents are generated in-memory and streamed directly to your browser
       </Typography>
 
       {error && (
@@ -179,20 +227,49 @@ const DocumentTestPage: React.FC = () => {
         </Alert>
       )}
 
+      {/* Template Selection */}
+      {templatesInfo && (
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Available Document Templates
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
+              {templatesInfo.templates.map((template) => (
+                <Chip
+                  key={template}
+                  label={getTemplateName(template)}
+                  onClick={() => setSelectedTemplate(template)}
+                  color={selectedTemplate === template ? 'primary' : 'default'}
+                  variant={selectedTemplate === template ? 'filled' : 'outlined'}
+                />
+              ))}
+            </Box>
+            <Typography variant="body2" color="text.secondary">
+              Selected Template: <strong>{getTemplateName(selectedTemplate)}</strong>
+            </Typography>
+          </CardContent>
+        </Card>
+      )}
+
       <Grid container spacing={3}>
         {/* Generator Information */}
         <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Generator Service Information
+                Document Generation Service
               </Typography>
               
               {generatorInfo ? (
                 <Stack spacing={2}>
                   <Box>
-                    <Typography variant="body2" color="text.secondary">Service</Typography>
-                    <Typography variant="body1">{generatorInfo.service}</Typography>
+                    <Typography variant="body2" color="text.secondary">Service Status</Typography>
+                    <Chip 
+                      label={generatorInfo.status === 'Operational' ? 'Active' : generatorInfo.status} 
+                      color={generatorInfo.status === 'Operational' ? 'success' : 'default'} 
+                      size="small" 
+                    />
                   </Box>
                   
                   <Box>
@@ -201,45 +278,47 @@ const DocumentTestPage: React.FC = () => {
                   </Box>
                   
                   <Box>
-                    <Typography variant="body2" color="text.secondary">Status</Typography>
-                    <Chip 
-                      label={generatorInfo.status} 
-                      color={generatorInfo.status === 'active' ? 'success' : 'default'} 
-                      size="small" 
-                    />
-                  </Box>
-                  
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">Supported Formats</Typography>
+                    <Typography variant="body2" color="text.secondary">Supported Output Formats</Typography>
                     <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
-                      {generatorInfo.supported_formats.map((format) => (
-                        <Chip key={format} label={format.toUpperCase()} variant="outlined" size="small" />
-                      ))}
+                      <Chip label="PDF" variant="outlined" size="small" />
                     </Box>
                   </Box>
                   
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">Supported Templates</Typography>
-                    <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
-                      {generatorInfo.supported_templates.map((template) => (
-                        <Chip key={template} label={template} variant="outlined" size="small" />
-                      ))}
+                  {templatesInfo && (
+                    <Box>
+                      <Typography variant="body2" color="text.secondary">Available Templates</Typography>
+                      <Box sx={{ display: 'flex', gap: 1, mt: 0.5, flexWrap: 'wrap' }}>
+                        {templatesInfo.templates.map((template) => (
+                          <Chip key={template} label={getTemplateName(template)} variant="outlined" size="small" />
+                        ))}
+                      </Box>
                     </Box>
-                  </Box>
+                  )}
                 </Stack>
               ) : (
-                <Typography color="text.secondary">Loading...</Typography>
+                <Typography color="text.secondary">Loading service information...</Typography>
               )}
               
-              <Button 
-                variant="outlined" 
-                startIcon={<RefreshIcon />}
-                onClick={fetchGeneratorInfo}
-                disabled={loading}
-                sx={{ mt: 2 }}
-              >
-                Refresh Info
-              </Button>
+              <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                <Button 
+                  variant="outlined" 
+                  startIcon={<RefreshIcon />}
+                  onClick={fetchGeneratorInfo}
+                  disabled={loading}
+                  size="small"
+                >
+                  Refresh Status
+                </Button>
+                <Button 
+                  variant="outlined" 
+                  startIcon={<RefreshIcon />}
+                  onClick={fetchTemplates}
+                  disabled={loading}
+                  size="small"
+                >
+                  Refresh Templates
+                </Button>
+              </Box>
             </CardContent>
           </Card>
         </Grid>
@@ -249,11 +328,11 @@ const DocumentTestPage: React.FC = () => {
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                PDF Generation Test
+                Document Preview & Generation
               </Typography>
               
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Generate sample receipt PDF for testing document generation
+                Generate sample documents using the selected template for preview, printing, or download
               </Typography>
 
               <Stack spacing={2}>
@@ -264,7 +343,7 @@ const DocumentTestPage: React.FC = () => {
                   disabled={loading}
                   fullWidth
                 >
-                  {loading ? 'Generating...' : 'Preview PDF'}
+                  {loading ? 'Generating Document...' : `Preview ${getTemplateName(selectedTemplate)}`}
                 </Button>
 
                 <Button
@@ -274,7 +353,7 @@ const DocumentTestPage: React.FC = () => {
                   disabled={loading}
                   fullWidth
                 >
-                  Generate & Print
+                  Generate & Print Document
                 </Button>
 
                 <Button
@@ -284,7 +363,17 @@ const DocumentTestPage: React.FC = () => {
                   disabled={loading}
                   fullWidth
                 >
-                  Download PDF
+                  Download PDF Document
+                </Button>
+
+                <Button
+                  variant="text"
+                  startIcon={<CodeIcon />}
+                  onClick={() => fetchSampleData()}
+                  disabled={loading}
+                  size="small"
+                >
+                  View Template Data Structure
                 </Button>
 
                 {lastGeneratedPdf && (
@@ -294,7 +383,7 @@ const DocumentTestPage: React.FC = () => {
                     onClick={refreshLastPdf}
                     size="small"
                   >
-                    Re-open Last PDF
+                    Re-open Last Generated Document
                   </Button>
                 )}
               </Stack>
@@ -307,27 +396,17 @@ const DocumentTestPage: React.FC = () => {
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Sample Data Structure
+                Template Data Structure
               </Typography>
               
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                View the data structure used for receipt generation
+                View the data structure used for document generation. This shows the format expected for real document generation.
               </Typography>
-
-              <Button
-                variant="outlined"
-                startIcon={<CodeIcon />}
-                onClick={fetchSampleData}
-                disabled={loading}
-                sx={{ mb: 2 }}
-              >
-                Load Sample Data
-              </Button>
 
               {sampleData && (
                 <Paper sx={{ p: 2, bgcolor: '#f5f5f5', overflow: 'auto' }}>
                   <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-                    Generated: {new Date(sampleData.generated_at).toLocaleString()}
+                    Template: {getTemplateName(sampleData.template_type)} | Generated: {new Date(sampleData.generated_at).toLocaleString()}
                   </Typography>
                   <pre style={{ 
                     fontSize: '12px', 
@@ -348,4 +427,4 @@ const DocumentTestPage: React.FC = () => {
   );
 };
 
-export default DocumentTestPage;
+export default DocumentTemplatesPage;
