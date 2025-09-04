@@ -28,13 +28,15 @@ import {
   DialogContent,
   DialogActions,
   CircularProgress,
-  Stepper,
-  Step,
-  StepLabel,
+  Skeleton,
+  Tabs,
+  Tab,
+  Container,
   List,
   ListItem,
   ListItemText,
-  ListItemIcon
+  ListItemIcon,
+  FormHelperText
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -44,7 +46,10 @@ import {
   AttachMoney as MoneyIcon,
   Print as PrintIcon,
   CheckCircle as CheckIcon,
-  Error as ErrorIcon
+  Error as ErrorIcon,
+  CreditCard as CreditCardIcon,
+  Assessment as AssessmentIcon,
+  CheckCircle as CheckCircleIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import { transactionService } from '../../services/transactionService';
@@ -117,7 +122,24 @@ const TransactionPOSPage: React.FC = () => {
   const [selectedLocationId, setSelectedLocationId] = useState('');
   const [availableLocations, setAvailableLocations] = useState<any[]>([]);
 
-  const steps = ['Search Person', 'Select Items', 'Payment Details', 'Process Payment'];
+  const steps = [
+    {
+      label: 'Search Person',
+      icon: <PersonIcon />
+    },
+    {
+      label: 'Select Items',
+      icon: <AssessmentIcon />
+    },
+    {
+      label: 'Payment Details',
+      icon: <CreditCardIcon />
+    },
+    {
+      label: 'Process Payment',
+      icon: <CheckCircleIcon />
+    }
+  ];
 
   // Load available locations for admin users
   useEffect(() => {
@@ -264,6 +286,57 @@ const TransactionPOSPage: React.FC = () => {
 
   const canProceedToPayment = (): boolean => {
     return selectedApplications.length > 0 || selectedCardOrders.length > 0;
+  };
+
+  // Step validation
+  const isStepValid = (step: number): boolean => {
+    switch (step) {
+      case 0: // Search Person
+        return !!personSummary && (personSummary.payable_applications.length > 0 || personSummary.payable_card_orders.length > 0);
+      case 1: // Select Items
+        return selectedApplications.length > 0 || selectedCardOrders.length > 0;
+      case 2: // Payment Details
+        return !!paymentMethod && isLocationValid();
+      case 3: // Process Payment
+        return !!transaction;
+      default:
+        return false;
+    }
+  };
+
+  // Tab change handler
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    // Allow navigation to previous/completed steps or the next step if current is valid
+    if (newValue <= activeStep || (newValue === activeStep + 1 && isStepValid(activeStep))) {
+      setActiveStep(newValue);
+    }
+  };
+
+  // Helper function to render tab with completion indicator
+  const renderTabLabel = (step: any, index: number) => {
+    const isCompleted = index < activeStep && isStepValid(index);
+    const isCurrent = activeStep === index;
+    
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          color: isCompleted ? 'success.main' : isCurrent ? 'primary.main' : 'text.secondary' 
+        }}>
+          {isCompleted ? <CheckCircleIcon fontSize="small" /> : step.icon}
+        </Box>
+        <Typography 
+          variant="body2" 
+          sx={{ 
+            fontWeight: isCurrent ? 'bold' : 'normal',
+            color: isCompleted ? 'success.main' : isCurrent ? 'primary.main' : 'text.secondary'
+          }}
+        >
+          {step.label}
+        </Typography>
+      </Box>
+    );
   };
 
   const handleProceedToPayment = () => {
@@ -583,40 +656,70 @@ const TransactionPOSPage: React.FC = () => {
   };
 
   const renderSearchStep = () => (
-    <Card>
-      <CardContent>
-        <Box display="flex" alignItems="center" mb={2}>
-          <PersonIcon sx={{ mr: 1 }} />
-          <Typography variant="h6">Search Person by ID Number</Typography>
-        </Box>
-        
-        <Box display="flex" gap={2} alignItems="center">
-          <TextField
-            label="ID Number"
-            value={searchIdNumber}
-            onChange={(e) => setSearchIdNumber(e.target.value)}
-            placeholder="Enter Madagascar ID or passport number"
-            disabled={isSearching}
-            onKeyPress={(e) => e.key === 'Enter' && handleSearchPerson()}
-            sx={{ flexGrow: 1 }}
-          />
-          <Button
-            variant="contained"
-            onClick={handleSearchPerson}
-            disabled={isSearching || !searchIdNumber.trim()}
-            startIcon={isSearching ? <CircularProgress size={20} /> : <SearchIcon />}
-          >
-            {isSearching ? 'Searching...' : 'Search'}
-          </Button>
-        </Box>
+    <Box>
+      <Box display="flex" alignItems="center" mb={2}>
+        <PersonIcon sx={{ mr: 1, color: 'primary.main' }} />
+        <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+          Search Person by ID Number
+        </Typography>
+      </Box>
+      
+      <Box display="flex" gap={2} alignItems="flex-start" mb={2}>
+        <TextField
+          label="ID Number"
+          value={searchIdNumber}
+          onChange={(e) => setSearchIdNumber(e.target.value)}
+          placeholder="Enter Madagascar ID or passport number"
+          disabled={isSearching}
+          onKeyPress={(e) => e.key === 'Enter' && handleSearchPerson()}
+          size="small"
+          error={!!error && !searchIdNumber.trim()}
+          sx={{ 
+            flexGrow: 1,
+            '& .MuiOutlinedInput-root': {
+              '& fieldset': {
+                borderWidth: '1px',
+                borderColor: !!error && !searchIdNumber.trim() ? '#ff9800' : undefined,
+                transition: 'border-color 0.2s ease-in-out',
+              },
+              '&:hover fieldset': {
+                borderWidth: '1px',
+                borderColor: !!error && !searchIdNumber.trim() ? '#f57c00' : undefined,
+              },
+              '&.Mui-focused fieldset': {
+                borderWidth: '1px',
+                borderColor: !!error && !searchIdNumber.trim() ? '#ff9800' : undefined,
+              },
+            },
+          }}
+        />
+        <Button
+          variant="contained"
+          onClick={handleSearchPerson}
+          disabled={isSearching || !searchIdNumber.trim()}
+          startIcon={isSearching ? <CircularProgress size={16} /> : <SearchIcon />}
+          size="small"
+        >
+          {isSearching ? 'Searching...' : 'Search'}
+        </Button>
+      </Box>
 
-        {error && (
-          <Alert severity="error" sx={{ mt: 2 }}>
-            {error}
-          </Alert>
-        )}
-      </CardContent>
-    </Card>
+      {error && (
+        <Alert severity="error" sx={{ mt: 2, fontSize: '0.8rem' }}>
+          {error}
+        </Alert>
+      )}
+
+      {isSearching && (
+        <Box sx={{ mt: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <Skeleton variant="circular" width={24} height={24} />
+            <Skeleton variant="text" width="40%" height={20} />
+          </Box>
+          <Skeleton variant="rectangular" width="100%" height={60} sx={{ borderRadius: 1 }} />
+        </Box>
+      )}
+    </Box>
   );
 
   const renderSelectionStep = () => {
@@ -625,167 +728,298 @@ const TransactionPOSPage: React.FC = () => {
     return (
       <Box>
         {/* Person Information */}
-        <Card sx={{ mb: 2 }}>
-          <CardContent>
-            <Box display="flex" alignItems="center" mb={1}>
-              <PersonIcon sx={{ mr: 1 }} />
-              <Typography variant="h6">Person Information</Typography>
-            </Box>
-            <Typography variant="body1">
-              <strong>Name:</strong> {personSummary.person_name}
-            </Typography>
-            <Typography variant="body1">
-              <strong>ID Number:</strong> {personSummary.person_id_number}
-            </Typography>
-          </CardContent>
-        </Card>
+        <Box sx={{ mb: 2, p: 1.5, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
+          <Box display="flex" alignItems="center" mb={1}>
+            <PersonIcon sx={{ mr: 1, color: 'primary.main' }} />
+            <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>Person Information</Typography>
+          </Box>
+          <Typography variant="body2" sx={{ fontSize: '0.8rem', mb: 0.5 }}>
+            <strong>Name:</strong> {personSummary.person_name}
+          </Typography>
+          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+            <strong>ID Number:</strong> {personSummary.person_id_number}
+          </Typography>
+        </Box>
 
         {/* Payable Applications */}
         {personSummary.payable_applications.length > 0 && (
-          <Card sx={{ mb: 2 }}>
-            <CardContent>
-              <Box display="flex" justifyContent="between" alignItems="center" mb={2}>
-                <Typography variant="h6">Payable Applications</Typography>
-                <Button
-                  size="small"
-                  onClick={handleSelectAllApplications}
-                  variant="outlined"
-                >
-                  {personSummary.payable_applications.every(app => 
-                    selectedApplications.includes(app.id)
-                  ) ? 'Deselect All' : 'Select All'}
-                </Button>
-              </Box>
+          <Box sx={{ mb: 2 }}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5}>
+              <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                Payable Applications
+              </Typography>
+              <Button
+                size="small"
+                onClick={handleSelectAllApplications}
+                variant="contained"
+                sx={{
+                  borderWidth: '1px',
+                  '&:hover': {
+                    borderWidth: '1px',
+                  },
+                }}
+              >
+                {personSummary.payable_applications.every(app => 
+                  selectedApplications.includes(app.id)
+                ) ? 'Deselect All' : 'Select All'}
+              </Button>
+            </Box>
 
-              <TableContainer component={Paper}>
-                <Table size="small">
+            <Paper 
+              elevation={0}
+              sx={{ 
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2,
+                overflow: 'hidden'
+              }}
+            >
+              <TableContainer>
+                <Table size="small" sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
                   <TableHead>
                     <TableRow>
-                      <TableCell></TableCell>
-                      <TableCell>Application #</TableCell>
-                      <TableCell>Type</TableCell>
-                      <TableCell>Category</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell align="right">Amount</TableCell>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}></TableCell>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}>Application #</TableCell>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}>Type</TableCell>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}>Category</TableCell>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}>Status</TableCell>
+                      <TableCell align="right" sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}>Amount</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {personSummary.payable_applications.map((app) => (
-                      <TableRow key={app.id}>
-                        <TableCell>
+                      <TableRow key={app.id} hover>
+                        <TableCell sx={{ py: 1, px: 2 }}>
                           <Checkbox
                             checked={selectedApplications.includes(app.id)}
                             onChange={(e) => handleApplicationSelection(app.id, e.target.checked)}
+                            size="small"
                           />
                         </TableCell>
-                        <TableCell>{app.application_number}</TableCell>
-                        <TableCell>{app.application_type.replace('_', ' ')}</TableCell>
-                        <TableCell>{app.license_category}</TableCell>
-                        <TableCell>
-                          <Chip label={app.status} size="small" color="primary" />
+                        <TableCell sx={{ py: 1, px: 2 }}>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                            {app.application_number}
+                          </Typography>
                         </TableCell>
-                        <TableCell align="right">
-                          {formatCurrency(app.total_amount)}
+                        <TableCell sx={{ py: 1, px: 2 }}>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                            {app.application_type.replace('_', ' ')}
+                          </Typography>
+                        </TableCell>
+                        <TableCell sx={{ py: 1, px: 2 }}>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                            {app.license_category}
+                          </Typography>
+                        </TableCell>
+                        <TableCell sx={{ py: 1, px: 2 }}>
+                          <Chip 
+                            label={app.status} 
+                            size="small" 
+                            color="primary" 
+                            sx={{ 
+                              fontSize: '0.7rem', 
+                              height: '24px'
+                            }} 
+                          />
+                        </TableCell>
+                        <TableCell align="right" sx={{ py: 1, px: 2 }}>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 500 }}>
+                            {formatCurrency(app.total_amount)}
+                          </Typography>
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               </TableContainer>
-            </CardContent>
-          </Card>
+            </Paper>
+          </Box>
         )}
 
         {/* Payable Card Orders */}
         {personSummary.payable_card_orders.length > 0 && (
-          <Card sx={{ mb: 2 }}>
-            <CardContent>
-              <Box display="flex" justifyContent="between" alignItems="center" mb={2}>
-                <Typography variant="h6">Payable Card Orders</Typography>
-                <Button
-                  size="small"
-                  onClick={handleSelectAllCardOrders}
-                  variant="outlined"
-                >
-                  {personSummary.payable_card_orders.every(order => 
-                    selectedCardOrders.includes(order.id)
-                  ) ? 'Deselect All' : 'Select All'}
-                </Button>
-              </Box>
+          <Box sx={{ mb: 2 }}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5}>
+              <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                Payable Card Orders
+              </Typography>
+              <Button
+                size="small"
+                onClick={handleSelectAllCardOrders}
+                variant="contained"
+                sx={{
+                  borderWidth: '1px',
+                  '&:hover': {
+                    borderWidth: '1px',
+                  },
+                }}
+              >
+                {personSummary.payable_card_orders.every(order => 
+                  selectedCardOrders.includes(order.id)
+                ) ? 'Deselect All' : 'Select All'}
+              </Button>
+            </Box>
 
-              <TableContainer component={Paper}>
-                <Table size="small">
+            <Paper 
+              elevation={0}
+              sx={{ 
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2,
+                overflow: 'hidden'
+              }}
+            >
+              <TableContainer>
+                <Table size="small" sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
                   <TableHead>
                     <TableRow>
-                      <TableCell></TableCell>
-                      <TableCell>Order #</TableCell>
-                      <TableCell>Application #</TableCell>
-                      <TableCell>Card Type</TableCell>
-                      <TableCell>Urgency</TableCell>
-                      <TableCell align="right">Amount</TableCell>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}></TableCell>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}>Order #</TableCell>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}>Application #</TableCell>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}>Card Type</TableCell>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}>Urgency</TableCell>
+                      <TableCell align="right" sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}>Amount</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {personSummary.payable_card_orders.map((order) => (
-                      <TableRow key={order.id}>
-                        <TableCell>
+                      <TableRow key={order.id} hover>
+                        <TableCell sx={{ py: 1, px: 2 }}>
                           <Checkbox
                             checked={selectedCardOrders.includes(order.id)}
                             onChange={(e) => handleCardOrderSelection(order.id, e.target.checked)}
+                            size="small"
                           />
                         </TableCell>
-                        <TableCell>{order.order_number}</TableCell>
-                        <TableCell>{order.application_number}</TableCell>
-                        <TableCell>{order.card_type}</TableCell>
-                        <TableCell>
+                        <TableCell sx={{ py: 1, px: 2 }}>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                            {order.order_number}
+                          </Typography>
+                        </TableCell>
+                        <TableCell sx={{ py: 1, px: 2 }}>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                            {order.application_number}
+                          </Typography>
+                        </TableCell>
+                        <TableCell sx={{ py: 1, px: 2 }}>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                            {order.card_type}
+                          </Typography>
+                        </TableCell>
+                        <TableCell sx={{ py: 1, px: 2 }}>
                           <Chip 
                             label={order.urgency_level === 1 ? 'Normal' : 
                                   order.urgency_level === 2 ? 'Urgent' : 'Emergency'}
                             size="small"
                             color={order.urgency_level === 1 ? 'default' : 
                                   order.urgency_level === 2 ? 'warning' : 'error'}
+                            sx={{ 
+                              fontSize: '0.7rem', 
+                              height: '24px'
+                            }}
                           />
                         </TableCell>
-                        <TableCell align="right">
-                          {formatCurrency(order.fee_amount)}
+                        <TableCell align="right" sx={{ py: 1, px: 2 }}>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 500 }}>
+                            {formatCurrency(order.fee_amount)}
+                          </Typography>
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               </TableContainer>
-            </CardContent>
-          </Card>
+            </Paper>
+          </Box>
         )}
 
         {/* Selection Summary */}
-        <Card>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>Selection Summary</Typography>
-            <Typography variant="body1">
-              Selected Applications: {selectedApplications.length}
-            </Typography>
-            <Typography variant="body1">
-              Selected Card Orders: {selectedCardOrders.length}
-            </Typography>
-            <Divider sx={{ my: 1 }} />
-            <Typography variant="h6" color="primary">
-              Total Amount: {formatCurrency(calculateSelectedTotal())}
-            </Typography>
-          </CardContent>
-        </Card>
-
-        <Box mt={2} display="flex" justifyContent="space-between">
-          <Button onClick={() => setActiveStep(0)}>
-            Back to Search
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleProceedToPayment}
-            disabled={!canProceedToPayment()}
-          >
-            Proceed to Payment
-          </Button>
+        <Box sx={{ p: 1.5, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
+          <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+            Selection Summary
+          </Typography>
+          <Typography variant="body2" sx={{ fontSize: '0.8rem', mb: 0.5 }}>
+            Selected Applications: {selectedApplications.length}
+          </Typography>
+          <Typography variant="body2" sx={{ fontSize: '0.8rem', mb: 1 }}>
+            Selected Card Orders: {selectedCardOrders.length}
+          </Typography>
+          <Divider sx={{ my: 1 }} />
+          <Typography variant="h6" color="primary" sx={{ fontSize: '1rem', fontWeight: 600 }}>
+            Total Amount: {formatCurrency(calculateSelectedTotal())}
+          </Typography>
         </Box>
       </Box>
     );
@@ -793,115 +1027,174 @@ const TransactionPOSPage: React.FC = () => {
 
   const renderPaymentStep = () => (
     <Box>
-      <Card sx={{ mb: 2 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>Payment Details</Typography>
-          
-          {/* Location status for location users */}
-          {user?.primary_location_id ? (
-            <Alert severity="info" sx={{ mb: 2 }}>
-              Processing payments for location: {user.primary_location_id}
-            </Alert>
-          ) : selectedLocationId ? (
-            <Alert severity="success" sx={{ mb: 2 }}>
-              Processing payments for selected location: {availableLocations.find(loc => loc.id === selectedLocationId)?.name}
-            </Alert>
-          ) : (
-            <Alert severity="warning" sx={{ mb: 2 }}>
-              Please select a location to process payments
-            </Alert>
-          )}
-          
-          <Grid container spacing={3}>
-            {/* Location selection for admin users */}
-            {user && !user.primary_location_id && (
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth required>
-                  <InputLabel>Location</InputLabel>
-                  <Select
-                    value={selectedLocationId}
-                    onChange={handleLocationChange}
-                    label="Location"
-                  >
-                    {availableLocations.map((location) => (
-                      <MenuItem key={location.id} value={location.id}>
-                        {location.name} ({location.full_code})
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-            )}
-
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+          Payment Details
+        </Typography>
+        
+        {/* Location status for location users */}
+        {user?.primary_location_id ? (
+          <Alert severity="info" sx={{ mb: 2, fontSize: '0.8rem' }}>
+            Processing payments for location: {user.primary_location_id}
+          </Alert>
+        ) : selectedLocationId ? (
+          <Alert severity="success" sx={{ mb: 2, fontSize: '0.8rem' }}>
+            Processing payments for selected location: {availableLocations.find(loc => loc.id === selectedLocationId)?.name}
+          </Alert>
+        ) : (
+          <Alert severity="warning" sx={{ mb: 2, fontSize: '0.8rem' }}>
+            Please select a location to process payments
+          </Alert>
+        )}
+        
+        <Grid container spacing={2}>
+          {/* Location selection for admin users */}
+          {user && !user.primary_location_id && (
             <Grid item xs={12} md={6}>
-              <FormControl fullWidth required>
-                <InputLabel>Payment Method</InputLabel>
+              <FormControl 
+                fullWidth 
+                required 
+                size="small"
+                error={!!error && !selectedLocationId}
+              >
+                <InputLabel>Location</InputLabel>
                 <Select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  label="Payment Method"
+                  value={selectedLocationId}
+                  onChange={handleLocationChange}
+                  label="Location"
+                  sx={{
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderWidth: '1px',
+                      borderColor: !!error && !selectedLocationId ? '#ff9800' : undefined,
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderWidth: '1px',
+                      borderColor: !!error && !selectedLocationId ? '#f57c00' : undefined,
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderWidth: '1px',
+                      borderColor: !!error && !selectedLocationId ? '#ff9800' : undefined,
+                    },
+                  }}
                 >
-                  {paymentMethods.map((method) => (
-                    <MenuItem key={method.value} value={method.value}>
-                      {method.label}
+                  {availableLocations.map((location) => (
+                    <MenuItem key={location.id} value={location.id}>
+                      {location.name} ({location.full_code})
                     </MenuItem>
                   ))}
                 </Select>
+                {!!error && !selectedLocationId && (
+                  <FormHelperText>Please select a processing location</FormHelperText>
+                )}
               </FormControl>
             </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Payment Reference (Optional)"
-                value={paymentReference}
-                onChange={(e) => setPaymentReference(e.target.value)}
-                placeholder="Receipt #, Transaction ID, etc."
-              />
-            </Grid>
-            
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                multiline
-                rows={3}
-                label="Notes (Optional)"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Additional notes about this payment..."
-              />
-            </Grid>
+          )}
+
+          <Grid item xs={12} md={6}>
+            <FormControl 
+              fullWidth 
+              required 
+              size="small"
+              error={!!error && !paymentMethod}
+            >
+              <InputLabel>Payment Method</InputLabel>
+              <Select
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                label="Payment Method"
+                sx={{
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderWidth: '1px',
+                    borderColor: !!error && !paymentMethod ? '#ff9800' : undefined,
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderWidth: '1px',
+                    borderColor: !!error && !paymentMethod ? '#f57c00' : undefined,
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderWidth: '1px',
+                    borderColor: !!error && !paymentMethod ? '#ff9800' : undefined,
+                  },
+                }}
+              >
+                {paymentMethods.map((method) => (
+                  <MenuItem key={method.value} value={method.value}>
+                    {method.label}
+                  </MenuItem>
+                ))}
+              </Select>
+              {!!error && !paymentMethod && (
+                <FormHelperText>Please select a payment method</FormHelperText>
+              )}
+            </FormControl>
           </Grid>
-        </CardContent>
-      </Card>
+          
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              size="small"
+              label="Payment Reference (Optional)"
+              value={paymentReference}
+              onChange={(e) => setPaymentReference(e.target.value)}
+              placeholder="Receipt #, Transaction ID, etc."
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '& fieldset': {
+                    borderWidth: '1px',
+                    transition: 'border-color 0.2s ease-in-out',
+                  },
+                  '&:hover fieldset': {
+                    borderWidth: '1px',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderWidth: '1px',
+                  },
+                },
+              }}
+            />
+          </Grid>
+          
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              size="small"
+              multiline
+              rows={3}
+              label="Notes (Optional)"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Additional notes about this payment..."
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '& fieldset': {
+                    borderWidth: '1px',
+                    transition: 'border-color 0.2s ease-in-out',
+                  },
+                  '&:hover fieldset': {
+                    borderWidth: '1px',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderWidth: '1px',
+                  },
+                },
+              }}
+            />
+          </Grid>
+        </Grid>
+      </Box>
 
       {/* Payment Summary */}
-      <Card>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>Payment Summary</Typography>
-          <Typography variant="h5" color="primary">
-            Total Amount: {formatCurrency(calculateSelectedTotal())}
-          </Typography>
-        </CardContent>
-      </Card>
-
-      <Box mt={2} display="flex" justifyContent="space-between">
-        <Button onClick={() => setActiveStep(1)}>
-          Back to Selection
-        </Button>
-        <Button
-          variant="contained"
-          onClick={handleProcessPayment}
-          disabled={isProcessing || !paymentMethod}
-          startIcon={isProcessing ? <CircularProgress size={20} /> : <PaymentIcon />}
-          color="success"
-        >
-          {isProcessing ? 'Processing...' : `Process Payment (${formatCurrency(calculateSelectedTotal())})`}
-        </Button>
+      <Box sx={{ p: 1.5, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
+        <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+          Payment Summary
+        </Typography>
+        <Typography variant="h6" color="primary" sx={{ fontSize: '1.2rem', fontWeight: 600 }}>
+          Total Amount: {formatCurrency(calculateSelectedTotal())}
+        </Typography>
       </Box>
 
       {error && (
-        <Alert severity="error" sx={{ mt: 2 }}>
+        <Alert severity="error" sx={{ mt: 2, fontSize: '0.8rem' }}>
           {error}
         </Alert>
       )}
@@ -910,71 +1203,79 @@ const TransactionPOSPage: React.FC = () => {
 
   const renderSuccessStep = () => (
     <Box textAlign="center">
-      <CheckIcon sx={{ fontSize: 80, color: 'success.main', mb: 2 }} />
-      <Typography variant="h4" gutterBottom color="success.main">
+      <CheckIcon sx={{ fontSize: 60, color: 'success.main', mb: 2 }} />
+      <Typography variant="h5" gutterBottom color="success.main" sx={{ fontSize: '1.3rem', fontWeight: 600 }}>
         Payment Successful!
       </Typography>
       
       {success && (
-        <Alert severity="success" sx={{ mb: 3 }}>
+        <Alert severity="success" sx={{ mb: 2, fontSize: '0.8rem' }}>
           {success}
         </Alert>
       )}
 
       {transaction && (
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>Transaction Details</Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <Typography variant="body2" color="text.secondary">
-                  Transaction Number
-                </Typography>
-                <Typography variant="body1" fontWeight="bold">
-                  {transaction.transaction_number}
-                </Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="body2" color="text.secondary">
-                  Receipt Number
-                </Typography>
-                <Typography variant="body1" fontWeight="bold">
-                  {transaction.receipt_number}
-                </Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="body2" color="text.secondary">
-                  Amount Paid
-                </Typography>
-                <Typography variant="body1" fontWeight="bold">
-                  {formatCurrency(transaction.total_amount)}
-                </Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="body2" color="text.secondary">
-                  Payment Method
-                </Typography>
-                <Typography variant="body1" fontWeight="bold">
-                  {paymentMethods.find(m => m.value === transaction.payment_method)?.label}
-                </Typography>
-              </Grid>
+        <Box sx={{ mb: 2, p: 1.5, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
+          <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+            Transaction Details
+          </Typography>
+          <Grid container spacing={1.5}>
+            <Grid item xs={6}>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                Transaction Number
+              </Typography>
+              <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>
+                {transaction.transaction_number}
+              </Typography>
             </Grid>
-          </CardContent>
-        </Card>
+            <Grid item xs={6}>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                Receipt Number
+              </Typography>
+              <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>
+                {transaction.receipt_number}
+              </Typography>
+            </Grid>
+            <Grid item xs={6}>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                Amount Paid
+              </Typography>
+              <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>
+                {formatCurrency(transaction.total_amount)}
+              </Typography>
+            </Grid>
+            <Grid item xs={6}>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                Payment Method
+              </Typography>
+              <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>
+                {paymentMethods.find(m => m.value === transaction.payment_method)?.label}
+              </Typography>
+            </Grid>
+          </Grid>
+        </Box>
       )}
 
-      <Box display="flex" gap={2} justifyContent="center">
+      <Box display="flex" gap={1} justifyContent="center">
         <Button
           variant="contained"
           onClick={handlePrintReceipt}
           startIcon={<PrintIcon />}
           color="primary"
+          size="small"
         >
           Print Receipt
         </Button>
         <Button
-          variant="outlined"
+          variant="contained"
           onClick={handleStartNewTransaction}
+          size="small"
+          sx={{
+            borderWidth: '1px',
+            '&:hover': {
+              borderWidth: '1px',
+            },
+          }}
         >
           New Transaction
         </Button>
@@ -983,25 +1284,94 @@ const TransactionPOSPage: React.FC = () => {
   );
 
   return (
-    <Box p={3}>
-      <Typography variant="h4" gutterBottom>
-        Point of Sale - Payment Processing
-      </Typography>
+    <Container maxWidth="lg" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Paper 
+        elevation={0}
+        sx={{ 
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: '#f8f9fa',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          overflow: 'hidden'
+        }}
+      >
+        {/* Tab Navigation */}
+        <Box sx={{ 
+          bgcolor: 'white', 
+          borderBottom: '1px solid', 
+          borderColor: 'divider',
+          flexShrink: 0 
+        }}>
+          <Tabs
+            value={activeStep}
+            onChange={handleTabChange}
+            sx={{
+              px: 2,
+              '& .MuiTab-root': {
+                minHeight: 48,
+                textTransform: 'none',
+                fontSize: '0.875rem',
+                color: 'text.secondary',
+                bgcolor: 'grey.100',
+                mx: 0.5,
+                borderRadius: '8px 8px 0 0',
+                '&.Mui-selected': {
+                  bgcolor: 'white',
+                  color: 'text.primary',
+                },
+                '&:hover': {
+                  bgcolor: 'grey.200',
+                  '&.Mui-selected': {
+                    bgcolor: 'white',
+                  }
+                }
+              },
+              '& .MuiTabs-indicator': {
+                display: 'none'
+              }
+            }}
+          >
+            {steps.map((step, index) => (
+              <Tab
+                key={step.label}
+                label={renderTabLabel(step, index)}
+                disabled={index > activeStep + 1 || (index === activeStep + 1 && !isStepValid(activeStep))}
+              />
+            ))}
+          </Tabs>
+        </Box>
 
-      <Box mb={4}>
-        <Stepper activeStep={activeStep} alternativeLabel>
-          {steps.map((label) => (
-            <Step key={label}>
-              <StepLabel>{label}</StepLabel>
-            </Step>
-          ))}
-        </Stepper>
-      </Box>
-
-      {activeStep === 0 && renderSearchStep()}
-      {activeStep === 1 && renderSelectionStep()}
-      {activeStep === 2 && renderPaymentStep()}
-      {activeStep === 3 && renderSuccessStep()}
+        {/* Content Area */}
+        <Box sx={{ 
+          flex: 1, 
+          overflow: 'auto',
+          p: 2,
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          <Paper 
+            elevation={0}
+            sx={{ 
+              bgcolor: 'white',
+              boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+              borderRadius: 2,
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              p: 2
+            }}
+          >
+            {activeStep === 0 && renderSearchStep()}
+            {activeStep === 1 && renderSelectionStep()}
+            {activeStep === 2 && renderPaymentStep()}
+            {activeStep === 3 && renderSuccessStep()}
+          </Paper>
+        </Box>
+      </Paper>
 
       {/* Receipt Dialog */}
       <Dialog
@@ -1122,7 +1492,7 @@ const TransactionPOSPage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </Container>
   );
 };
 
