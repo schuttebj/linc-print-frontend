@@ -414,8 +414,8 @@ const HomePage: React.FC = () => {
             </Box>
 
             {/* User Profile Widget */}
-            <Box sx={{ flex: 1, minHeight: 0 }}>
-              <Card sx={{ height: '100%' }}>
+            <Box sx={{ flex: '0 0 auto' }}>
+              <Card>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                     <PersonIcon color="primary" />
@@ -670,7 +670,7 @@ const HomePage: React.FC = () => {
                   </Grid>
                 ) : (
                   <Grid container spacing={2}>
-                    <Grid item xs={6}>
+                    <Grid item xs={12}>
                       <Button
                         variant="outlined"
                         startIcon={<SchoolIcon />}
@@ -681,7 +681,7 @@ const HomePage: React.FC = () => {
                         Training
                       </Button>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid item xs={12}>
                       <Button
                         variant="outlined"
                         startIcon={<HelpIcon />}
