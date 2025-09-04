@@ -1,16 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
-  Card,
-  CardContent,
+  Container,
   Typography,
   Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
   Alert,
-  CircularProgress,
+  Chip,
+  IconButton,
+  Collapse,
+  Tooltip,
+  Skeleton,
   Grid,
   Divider,
-  Chip,
-  Paper,
   Stack
 } from '@mui/material';
 import {
@@ -19,7 +27,9 @@ import {
   Print as PrintIcon,
   Download as DownloadIcon,
   Refresh as RefreshIcon,
-  Code as CodeIcon
+  Code as CodeIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon
 } from '@mui/icons-material';
 import { getAuthToken, API_ENDPOINTS } from '../../config/api';
 
@@ -46,14 +56,39 @@ interface TemplatesInfo {
   timestamp: string;
 }
 
+interface TemplateItem {
+  id: string;
+  name: string;
+  description: string;
+  status: 'active' | 'inactive';
+  lastGenerated?: string;
+  sampleDataLoaded: boolean;
+  sampleData?: SampleData;
+}
+
 const DocumentTemplatesPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generatorInfo, setGeneratorInfo] = useState<GeneratorInfo | null>(null);
   const [templatesInfo, setTemplatesInfo] = useState<TemplatesInfo | null>(null);
-  const [sampleData, setSampleData] = useState<SampleData | null>(null);
-  const [selectedTemplate, setSelectedTemplate] = useState<string>('receipt');
-  const [lastGeneratedPdf, setLastGeneratedPdf] = useState<string | null>(null);
+  const [templates, setTemplates] = useState<TemplateItem[]>([]);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
+  const getTemplateName = (template: string): string => {
+    const names: Record<string, string> = {
+      'receipt': 'Payment Receipt',
+      'card_order_confirmation': 'Card Order Confirmation'
+    };
+    return names[template] || template;
+  };
+
+  const getTemplateDescription = (template: string): string => {
+    const descriptions: Record<string, string> = {
+      'receipt': 'Official payment receipt for government transactions',
+      'card_order_confirmation': 'Card order confirmation for license applications'
+    };
+    return descriptions[template] || 'Document template';
+  };
 
   const fetchGeneratorInfo = async () => {
     try {
@@ -98,6 +133,17 @@ const DocumentTemplatesPage: React.FC = () => {
 
       const data = await response.json();
       setTemplatesInfo(data);
+
+      // Convert to TemplateItem format
+      const templateItems: TemplateItem[] = data.templates.map((template: string) => ({
+        id: template,
+        name: getTemplateName(template),
+        description: getTemplateDescription(template),
+        status: 'active' as const,
+        sampleDataLoaded: false
+      }));
+
+      setTemplates(templateItems);
     } catch (err: any) {
       setError(`Failed to fetch templates: ${err.message}`);
     } finally {
@@ -105,13 +151,9 @@ const DocumentTemplatesPage: React.FC = () => {
     }
   };
 
-  const fetchSampleData = async (templateType?: string) => {
-    const template = templateType || selectedTemplate;
+  const fetchSampleData = async (templateId: string) => {
     try {
-      setLoading(true);
-      setError(null);
-
-      const response = await fetch(API_ENDPOINTS.documentTest.sampleData(template), {
+      const response = await fetch(API_ENDPOINTS.documentTest.sampleData(templateId), {
         headers: {
           'Authorization': `Bearer ${getAuthToken()}`,
           'Content-Type': 'application/json',
@@ -123,21 +165,24 @@ const DocumentTemplatesPage: React.FC = () => {
       }
 
       const data = await response.json();
-      setSampleData(data);
+      
+      // Update the specific template with sample data
+      setTemplates(prev => prev.map(template => 
+        template.id === templateId 
+          ? { ...template, sampleDataLoaded: true, sampleData: data }
+          : template
+      ));
     } catch (err: any) {
       setError(`Failed to fetch sample data: ${err.message}`);
-    } finally {
-      setLoading(false);
     }
   };
 
-  const generateSamplePdf = async (action: 'preview' | 'download' | 'print', templateType?: string) => {
-    const template = templateType || selectedTemplate;
+  const generateSamplePdf = async (templateId: string, action: 'preview' | 'download' | 'print') => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(API_ENDPOINTS.documentTest.samplePdf(template), {
+      const response = await fetch(API_ENDPOINTS.documentTest.samplePdf(templateId), {
         headers: {
           'Authorization': `Bearer ${getAuthToken()}`,
         },
@@ -149,26 +194,29 @@ const DocumentTemplatesPage: React.FC = () => {
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      setLastGeneratedPdf(url);
+
+      // Update last generated timestamp
+      setTemplates(prev => prev.map(template => 
+        template.id === templateId 
+          ? { ...template, lastGenerated: new Date().toLocaleString() }
+          : template
+      ));
 
       switch (action) {
         case 'preview':
-          // Open in new tab for preview
           window.open(url, '_blank');
           break;
         
         case 'download':
-          // Trigger download
           const a = document.createElement('a');
           a.href = url;
-          a.download = `sample_${template}_${new Date().toISOString().slice(0, 19).replace(/:/g, '')}.pdf`;
+          a.download = `${templateId}_${new Date().toISOString().slice(0, 19).replace(/:/g, '')}.pdf`;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
           break;
         
         case 'print':
-          // Open in new window and trigger print
           const printWindow = window.open(url, '_blank');
           if (printWindow) {
             printWindow.addEventListener('load', () => {
@@ -190,240 +238,322 @@ const DocumentTemplatesPage: React.FC = () => {
     }
   };
 
-  const refreshLastPdf = () => {
-    if (lastGeneratedPdf) {
-      window.open(lastGeneratedPdf, '_blank');
+  const toggleRowExpansion = (templateId: string) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(templateId)) {
+      newExpanded.delete(templateId);
+    } else {
+      newExpanded.add(templateId);
+      // Load sample data when expanding
+      const template = templates.find(t => t.id === templateId);
+      if (template && !template.sampleDataLoaded) {
+        fetchSampleData(templateId);
+      }
     }
+    setExpandedRows(newExpanded);
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetchGeneratorInfo();
     fetchTemplates();
   }, []);
 
-  const getTemplateName = (template: string): string => {
-    const names: Record<string, string> = {
-      'receipt': 'Receipt / Reçu',
-      'card_order_confirmation': 'Card Order Confirmation / Confirmation de Commande'
-    };
-    return names[template] || template;
-  };
+  // Skeleton loader component for templates
+  const TemplatesResultsSkeleton = () => (
+    <TableContainer sx={{ flex: 1 }}>
+      <Table stickyHeader>
+        <TableHead>
+          <TableRow>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Template</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Description</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Last Generated</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Actions</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {Array.from({ length: 3 }).map((_, index) => (
+            <React.Fragment key={index}>
+              <TableRow>
+                <TableCell sx={{ py: 1, px: 2 }}>
+                  <Box display="flex" alignItems="center">
+                    <Skeleton variant="circular" width={24} height={24} sx={{ mr: 1 }} />
+                    <Skeleton variant="text" width="100%" height={20} />
+                  </Box>
+                </TableCell>
+                <TableCell sx={{ py: 1, px: 2 }}>
+                  <Skeleton variant="text" width="100%" height={20} />
+                </TableCell>
+                <TableCell sx={{ py: 1, px: 2 }}>
+                  <Skeleton variant="rounded" width={60} height={24} />
+                </TableCell>
+                <TableCell sx={{ py: 1, px: 2 }}>
+                  <Skeleton variant="text" width="80%" height={20} />
+                </TableCell>
+                <TableCell sx={{ py: 1, px: 2 }}>
+                  <Box display="flex" gap={1}>
+                    <Skeleton variant="circular" width={32} height={32} />
+                    <Skeleton variant="circular" width={32} height={32} />
+                    <Skeleton variant="circular" width={32} height={32} />
+                  </Box>
+                </TableCell>
+              </TableRow>
+            </React.Fragment>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
-      <Typography variant="h4" gutterBottom>
-        Document Templates
-      </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 1 }}>
-        Preview and manage document templates for official government forms and receipts
-      </Typography>
-      <Typography variant="body2" color="success.main" sx={{ mb: 3, fontStyle: 'italic' }}>
-        ✓ Documents are generated in-memory and streamed directly to your browser
-      </Typography>
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-
-      {/* Template Selection */}
-      {templatesInfo && (
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Available Document Templates
+    <Container maxWidth="lg" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Paper 
+        elevation={0}
+        sx={{ 
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: '#f8f9fa',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          overflow: 'hidden'
+        }}
+      >
+        {/* Header Section */}
+        <Box sx={{ 
+          bgcolor: 'white', 
+          borderBottom: '1px solid', 
+          borderColor: 'divider',
+          flexShrink: 0,
+          p: 2
+        }}>
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+              Document Templates
             </Typography>
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
-              {templatesInfo.templates.map((template) => (
-                <Chip
-                  key={template}
-                  label={getTemplateName(template)}
-                  onClick={() => setSelectedTemplate(template)}
-                  color={selectedTemplate === template ? 'primary' : 'default'}
-                  variant={selectedTemplate === template ? 'filled' : 'outlined'}
-                />
-              ))}
+            <Button
+              variant="contained"
+              onClick={() => {
+                fetchGeneratorInfo();
+                fetchTemplates();
+              }}
+              startIcon={<RefreshIcon />}
+              size="small"
+            >
+              Refresh
+            </Button>
+          </Box>
+          
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            Preview and manage document templates for official government forms and receipts
+          </Typography>
+          <Typography variant="body2" color="success.main" sx={{ fontStyle: 'italic' }}>
+            ✓ Documents are generated in-memory and streamed directly to your browser
+          </Typography>
+
+          {/* Service Status */}
+          {generatorInfo && (
+            <Box sx={{ mt: 2, p: 2, bgcolor: '#f8f9fa', borderRadius: 1 }}>
+              <Grid container spacing={2}>
+                <Grid item xs={6} md={3}>
+                  <Typography variant="caption" color="text.secondary">Service Status</Typography>
+                  <Chip 
+                    label={generatorInfo.status === 'Operational' ? 'Active' : generatorInfo.status} 
+                    color={generatorInfo.status === 'Operational' ? 'success' : 'default'} 
+                    size="small" 
+                    sx={{ display: 'block', width: 'fit-content' }}
+                  />
+                </Grid>
+                <Grid item xs={6} md={3}>
+                  <Typography variant="caption" color="text.secondary">Version</Typography>
+                  <Chip label={generatorInfo.version} color="primary" size="small" sx={{ display: 'block', width: 'fit-content' }} />
+                </Grid>
+                <Grid item xs={6} md={3}>
+                  <Typography variant="caption" color="text.secondary">Output Format</Typography>
+                  <Chip label="PDF" variant="outlined" size="small" sx={{ display: 'block', width: 'fit-content' }} />
+                </Grid>
+                <Grid item xs={6} md={3}>
+                  <Typography variant="caption" color="text.secondary">Templates Available</Typography>
+                  <Chip label={templates.length.toString()} variant="outlined" size="small" sx={{ display: 'block', width: 'fit-content' }} />
+                </Grid>
+              </Grid>
             </Box>
-            <Typography variant="body2" color="text.secondary">
-              Selected Template: <strong>{getTemplateName(selectedTemplate)}</strong>
-            </Typography>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </Box>
 
-      <Grid container spacing={3}>
-        {/* Generator Information */}
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Document Generation Service
-              </Typography>
-              
-              {generatorInfo ? (
-                <Stack spacing={2}>
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">Service Status</Typography>
-                    <Chip 
-                      label={generatorInfo.status === 'Operational' ? 'Active' : generatorInfo.status} 
-                      color={generatorInfo.status === 'Operational' ? 'success' : 'default'} 
-                      size="small" 
-                    />
-                  </Box>
-                  
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">Version</Typography>
-                    <Chip label={generatorInfo.version} color="primary" size="small" />
-                  </Box>
-                  
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">Supported Output Formats</Typography>
-                    <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
-                      <Chip label="PDF" variant="outlined" size="small" />
-                    </Box>
-                  </Box>
-                  
-                  {templatesInfo && (
-                    <Box>
-                      <Typography variant="body2" color="text.secondary">Available Templates</Typography>
-                      <Box sx={{ display: 'flex', gap: 1, mt: 0.5, flexWrap: 'wrap' }}>
-                        {templatesInfo.templates.map((template) => (
-                          <Chip key={template} label={getTemplateName(template)} variant="outlined" size="small" />
-                        ))}
-                      </Box>
-                    </Box>
-                  )}
-                </Stack>
-              ) : (
-                <Typography color="text.secondary">Loading service information...</Typography>
-              )}
-              
-              <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
-                <Button 
-                  variant="outlined" 
-                  startIcon={<RefreshIcon />}
-                  onClick={fetchGeneratorInfo}
-                  disabled={loading}
-                  size="small"
-                >
-                  Refresh Status
-                </Button>
-                <Button 
-                  variant="outlined" 
-                  startIcon={<RefreshIcon />}
-                  onClick={fetchTemplates}
-                  disabled={loading}
-                  size="small"
-                >
-                  Refresh Templates
-                </Button>
+        {/* Content Area */}
+        <Box sx={{ 
+          flex: 1, 
+          overflow: 'hidden',
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          {/* Error Display */}
+          {error && (
+            <Alert severity="error" sx={{ m: 2, flexShrink: 0 }}>
+              {error}
+            </Alert>
+          )}
+
+          {/* Templates Table */}
+          <Paper 
+            elevation={0}
+            sx={{ 
+              bgcolor: 'white',
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              borderRadius: 0
+            }}
+          >
+            {loading && templates.length === 0 ? (
+              <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                <TemplatesResultsSkeleton />
               </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* PDF Generation Controls */}
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Document Preview & Generation
-              </Typography>
-              
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Generate sample documents using the selected template for preview, printing, or download
-              </Typography>
-
-              <Stack spacing={2}>
-                <Button
-                  variant="contained"
-                  startIcon={loading ? <CircularProgress size={16} /> : <PreviewIcon />}
-                  onClick={() => generateSamplePdf('preview')}
-                  disabled={loading}
-                  fullWidth
-                >
-                  {loading ? 'Generating Document...' : `Preview ${getTemplateName(selectedTemplate)}`}
-                </Button>
-
-                <Button
-                  variant="outlined"
-                  startIcon={<PrintIcon />}
-                  onClick={() => generateSamplePdf('print')}
-                  disabled={loading}
-                  fullWidth
-                >
-                  Generate & Print Document
-                </Button>
-
-                <Button
-                  variant="outlined"
-                  startIcon={<DownloadIcon />}
-                  onClick={() => generateSamplePdf('download')}
-                  disabled={loading}
-                  fullWidth
-                >
-                  Download PDF Document
-                </Button>
-
-                <Button
-                  variant="text"
-                  startIcon={<CodeIcon />}
-                  onClick={() => fetchSampleData()}
-                  disabled={loading}
-                  size="small"
-                >
-                  View Template Data Structure
-                </Button>
-
-                {lastGeneratedPdf && (
-                  <Button
-                    variant="text"
-                    startIcon={<RefreshIcon />}
-                    onClick={refreshLastPdf}
-                    size="small"
-                  >
-                    Re-open Last Generated Document
-                  </Button>
+            ) : (
+              <>
+                {templates.length === 0 ? (
+                  <Box sx={{ p: 2 }}>
+                    <Alert severity="info">
+                      No document templates found. Please check the service configuration.
+                    </Alert>
+                  </Box>
+                ) : (
+                  <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                    <TableContainer sx={{ flex: 1 }}>
+                      <Table stickyHeader>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Template</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Description</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Status</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Last Generated</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Actions</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {templates.map((template) => (
+                            <React.Fragment key={template.id}>
+                              <TableRow hover>
+                                <TableCell sx={{ py: 1, px: 2 }}>
+                                  <Box display="flex" alignItems="center">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => toggleRowExpansion(template.id)}
+                                    >
+                                      {expandedRows.has(template.id) ? 
+                                        <ExpandLessIcon /> : <ExpandMoreIcon />
+                                      }
+                                    </IconButton>
+                                    <Box sx={{ ml: 1 }}>
+                                      <Typography variant="body2" sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                                        {template.name}
+                                      </Typography>
+                                      <Typography variant="caption" color="text.secondary">
+                                        ID: {template.id}
+                                      </Typography>
+                                    </Box>
+                                  </Box>
+                                </TableCell>
+                                <TableCell sx={{ py: 1, px: 2 }}>
+                                  <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                    {template.description}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell sx={{ py: 1, px: 2 }}>
+                                  <Chip
+                                    label={template.status}
+                                    color={template.status === 'active' ? 'success' : 'default'}
+                                    size="small"
+                                  />
+                                </TableCell>
+                                <TableCell sx={{ py: 1, px: 2 }}>
+                                  <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                    {template.lastGenerated || 'Never'}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell sx={{ py: 1, px: 2 }}>
+                                  <Box display="flex" gap={1}>
+                                    <Tooltip title="Preview PDF">
+                                      <IconButton
+                                        size="small"
+                                        onClick={() => generateSamplePdf(template.id, 'preview')}
+                                        disabled={loading}
+                                      >
+                                        <PreviewIcon />
+                                      </IconButton>
+                                    </Tooltip>
+                                    <Tooltip title="Download PDF">
+                                      <IconButton
+                                        size="small"
+                                        onClick={() => generateSamplePdf(template.id, 'download')}
+                                        disabled={loading}
+                                      >
+                                        <DownloadIcon />
+                                      </IconButton>
+                                    </Tooltip>
+                                    <Tooltip title="Print PDF">
+                                      <IconButton
+                                        size="small"
+                                        onClick={() => generateSamplePdf(template.id, 'print')}
+                                        disabled={loading}
+                                      >
+                                        <PrintIcon />
+                                      </IconButton>
+                                    </Tooltip>
+                                  </Box>
+                                </TableCell>
+                              </TableRow>
+                              
+                              {/* Expanded row with template details */}
+                              <TableRow>
+                                <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={5}>
+                                  <Collapse in={expandedRows.has(template.id)} timeout="auto" unmountOnExit>
+                                    <Box margin={1}>
+                                      <Typography variant="h6" gutterBottom component="div" sx={{ fontSize: '0.875rem' }}>
+                                        Template Data Structure
+                                      </Typography>
+                                      
+                                      {template.sampleDataLoaded && template.sampleData ? (
+                                        <Paper sx={{ p: 2, bgcolor: '#f5f5f5', overflow: 'auto', maxHeight: '300px' }}>
+                                          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                                            Template: {template.name} | Generated: {new Date(template.sampleData.generated_at).toLocaleString()}
+                                          </Typography>
+                                          <pre style={{ 
+                                            fontSize: '11px', 
+                                            margin: 0, 
+                                            overflow: 'auto',
+                                            whiteSpace: 'pre-wrap'
+                                          }}>
+                                            {JSON.stringify(template.sampleData.data, null, 2)}
+                                          </pre>
+                                        </Paper>
+                                      ) : (
+                                        <Box sx={{ p: 2, textAlign: 'center' }}>
+                                          <Typography variant="body2" color="text.secondary">
+                                            Loading template data structure...
+                                          </Typography>
+                                        </Box>
+                                      )}
+                                    </Box>
+                                  </Collapse>
+                                </TableCell>
+                              </TableRow>
+                            </React.Fragment>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Box>
                 )}
-              </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Sample Data Viewer */}
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Template Data Structure
-              </Typography>
-              
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                View the data structure used for document generation. This shows the format expected for real document generation.
-              </Typography>
-
-              {sampleData && (
-                <Paper sx={{ p: 2, bgcolor: '#f5f5f5', overflow: 'auto' }}>
-                  <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-                    Template: {getTemplateName(sampleData.template_type)} | Generated: {new Date(sampleData.generated_at).toLocaleString()}
-                  </Typography>
-                  <pre style={{ 
-                    fontSize: '12px', 
-                    margin: 0, 
-                    overflow: 'auto',
-                    maxHeight: '400px',
-                    whiteSpace: 'pre-wrap'
-                  }}>
-                    {JSON.stringify(sampleData.data, null, 2)}
-                  </pre>
-                </Paper>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-    </Box>
+              </>
+            )}
+          </Paper>
+        </Box>
+      </Paper>
+    </Container>
   );
 };
 
