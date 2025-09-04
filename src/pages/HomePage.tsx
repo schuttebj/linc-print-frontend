@@ -16,7 +16,12 @@ import {
   Alert,
   Avatar,
   Container,
-  Divider
+  Divider,
+  Chip,
+  Badge,
+  IconButton,
+  Stack,
+  Skeleton
 } from '@mui/material';
 import {
   Person as PersonIcon,
@@ -32,7 +37,9 @@ import {
   Dashboard as DashboardIcon,
   AccountCircle as ProfileIcon,
   FlashOn as FlashIcon,
-  School as SchoolIcon
+  School as SchoolIcon,
+  Notifications as NotificationsIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
 import { API_ENDPOINTS, api } from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -60,6 +67,16 @@ interface DashboardStats {
     version: string;
     last_backup: string;
   };
+}
+
+interface Announcement {
+  id: string;
+  title: string;
+  message: string;
+  category: 'Fraud' | 'Policy Update' | 'System Maintenance' | 'General';
+  severity: 'info' | 'warning' | 'error' | 'success';
+  date: string;
+  dismissed?: boolean;
 }
 
 interface SystemStatus {
@@ -94,10 +111,19 @@ const HomePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
   const [productivityStats, setProductivityStats] = useState<ProductivityStats | null>(null);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [dismissedAnnouncements, setDismissedAnnouncements] = useState<Set<string>>(new Set());
+  const [announcementFilter, setAnnouncementFilter] = useState<string>('all');
 
   useEffect(() => {
     loadDashboardData();
     loadEnhancedDashboardData();
+    
+    // Load dismissed announcements from localStorage
+    const dismissed = localStorage.getItem('dismissed_announcements');
+    if (dismissed) {
+      setDismissedAnnouncements(new Set(JSON.parse(dismissed)));
+    }
   }, []);
 
   const loadDashboardData = async () => {
@@ -145,6 +171,36 @@ const HomePage: React.FC = () => {
 
   const loadEnhancedDashboardData = async () => {
     try {
+      // Mock announcements
+      const mockAnnouncements: Announcement[] = [
+        {
+          id: '1',
+          title: 'System Maintenance Scheduled',
+          message: 'Scheduled maintenance on Sunday, 2AM-4AM. Expect brief service interruptions.',
+          category: 'System Maintenance',
+          severity: 'warning',
+          date: new Date().toISOString()
+        },
+        {
+          id: '2',
+          title: 'New Fraud Detection Rules',
+          message: 'Updated fraud detection algorithms are now active. Review flagged applications carefully.',
+          category: 'Fraud',
+          severity: 'info',
+          date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+        },
+        {
+          id: '3',
+          title: 'License Issuance Policy Update',
+          message: 'New regulations for license category B effective immediately. Check the updated guidelines.',
+          category: 'Policy Update',
+          severity: 'success',
+          date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+        }
+      ];
+
+      setAnnouncements(mockAnnouncements);
+
       // Mock system status
       setSystemStatus({
         online: true,
@@ -176,6 +232,19 @@ const HomePage: React.FC = () => {
       console.error('Failed to load enhanced dashboard data:', err);
     }
   };
+
+  const dismissAnnouncement = (announcementId: string) => {
+    const newDismissed = new Set(dismissedAnnouncements);
+    newDismissed.add(announcementId);
+    setDismissedAnnouncements(newDismissed);
+    localStorage.setItem('dismissed_announcements', JSON.stringify([...newDismissed]));
+  };
+
+  const filteredAnnouncements = announcements.filter(announcement => {
+    if (dismissedAnnouncements.has(announcement.id)) return false;
+    if (announcementFilter === 'all') return true;
+    return announcement.category === announcementFilter;
+  });
 
   if (loading) {
     return (
@@ -215,9 +284,91 @@ const HomePage: React.FC = () => {
 
       {/* Bento Grid Layout */}
       <Grid container spacing={3}>
+        {/* Row 1: Announcements (Large), System Status (Medium), User Profile (Medium) */}
+        
+        {/* Announcements Widget - Top Left */}
+        <Grid item xs={12} lg={6}>
+          <Card sx={{ height: '300px', display: 'flex', flexDirection: 'column' }}>
+            <CardContent sx={{ pb: 0 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <NotificationsIcon color="primary" />
+                  <Typography variant="h6" fontWeight={600}>
+                    Announcements & Alerts
+                  </Typography>
+                  <Badge badgeContent={filteredAnnouncements.length} color="error" />
+                </Box>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  {['all', 'Fraud', 'Policy Update', 'System Maintenance'].map((filter) => (
+                    <Chip
+                      key={filter}
+                      label={filter === 'all' ? 'All' : filter}
+                      variant={announcementFilter === filter ? 'filled' : 'outlined'}
+                      size="small"
+                      onClick={() => setAnnouncementFilter(filter)}
+                      sx={{ fontSize: '0.7rem' }}
+                    />
+                  ))}
+                </Box>
+              </Box>
+              <Divider />
+            </CardContent>
+            <CardContent sx={{ flex: 1, overflow: 'auto', pt: 2 }}>
+              {loading ? (
+                <Stack spacing={2}>
+                  {Array.from({ length: 2 }).map((_, index) => (
+                    <Box key={index} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                      <Skeleton variant="text" width="60%" height={20} sx={{ mb: 1 }} />
+                      <Skeleton variant="text" width="100%" height={16} sx={{ mb: 1 }} />
+                      <Skeleton variant="text" width="80%" height={16} />
+                    </Box>
+                  ))}
+                </Stack>
+              ) : filteredAnnouncements.length === 0 ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'text.secondary' }}>
+                  <Typography variant="body2">No announcements to display</Typography>
+                </Box>
+              ) : (
+                <Stack spacing={2}>
+                  {filteredAnnouncements.map((announcement) => (
+                    <Alert
+                      key={announcement.id}
+                      severity={announcement.severity}
+                      action={
+                        <IconButton
+                          size="small"
+                          onClick={() => dismissAnnouncement(announcement.id)}
+                        >
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      }
+                      sx={{ fontSize: '0.85rem' }}
+                    >
+                      <Box>
+                        <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
+                          {announcement.title}
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          {announcement.message}
+                        </Typography>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Chip label={announcement.category} size="small" sx={{ fontSize: '0.65rem' }} />
+                          <Typography variant="caption" color="text.secondary">
+                            {new Date(announcement.date).toLocaleDateString()}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Alert>
+                  ))}
+                </Stack>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+
         {/* System Status Widget */}
-        <Grid item xs={12} md={6} lg={4}>
-          <Card>
+        <Grid item xs={12} md={6} lg={3}>
+          <Card sx={{ height: '300px' }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                 <MonitorHeartIcon color="primary" />
@@ -254,9 +405,9 @@ const HomePage: React.FC = () => {
           </Card>
         </Grid>
 
-        {/* User Context Widget */}
-        <Grid item xs={12} md={6} lg={4}>
-          <Card>
+        {/* User Profile Widget */}
+        <Grid item xs={12} md={6} lg={3}>
+          <Card sx={{ height: '300px' }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                 <PersonIcon color="primary" />
@@ -285,9 +436,11 @@ const HomePage: React.FC = () => {
           </Card>
         </Grid>
 
+        {/* Row 2: Quick Actions, Productivity, Support */}
+        
         {/* Quick Actions Widget */}
         <Grid item xs={12} md={6} lg={4}>
-          <Card>
+          <Card sx={{ height: '250px' }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                 <SpeedIcon color="primary" />
@@ -349,8 +502,8 @@ const HomePage: React.FC = () => {
         </Grid>
 
         {/* Productivity Stats Widget */}
-        <Grid item xs={12} md={6}>
-          <Card>
+        <Grid item xs={12} md={6} lg={4}>
+          <Card sx={{ height: '250px' }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                 <TrendingUpIcon color="primary" />
@@ -364,17 +517,17 @@ const HomePage: React.FC = () => {
                   <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
                     Today
                   </Typography>
-                  <Grid container spacing={2} sx={{ mb: 2 }}>
+                  <Grid container spacing={1} sx={{ mb: 2 }}>
                     <Grid item xs={4}>
-                      <Typography variant="h4" color="primary.main" fontWeight="bold">
+                      <Typography variant="h5" color="primary.main" fontWeight="bold">
                         {productivityStats.today.applications_processed}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        Applications
+                        Apps
                       </Typography>
                     </Grid>
                     <Grid item xs={4}>
-                      <Typography variant="h4" color="success.main" fontWeight="bold">
+                      <Typography variant="h5" color="success.main" fontWeight="bold">
                         {productivityStats.today.licenses_issued}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
@@ -382,11 +535,11 @@ const HomePage: React.FC = () => {
                       </Typography>
                     </Grid>
                     <Grid item xs={4}>
-                      <Typography variant="h4" color="info.main" fontWeight="bold">
+                      <Typography variant="h5" color="info.main" fontWeight="bold">
                         {productivityStats.today.transactions_completed}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        Transactions
+                        Trans
                       </Typography>
                     </Grid>
                   </Grid>
@@ -394,17 +547,17 @@ const HomePage: React.FC = () => {
                   <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
                     This Week
                   </Typography>
-                  <Grid container spacing={2}>
+                  <Grid container spacing={1}>
                     <Grid item xs={4}>
-                      <Typography variant="h5" color="primary.main" fontWeight="bold">
+                      <Typography variant="h6" color="primary.main" fontWeight="bold">
                         {productivityStats.week.applications_processed}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        Applications
+                        Apps
                       </Typography>
                     </Grid>
                     <Grid item xs={4}>
-                      <Typography variant="h5" color="success.main" fontWeight="bold">
+                      <Typography variant="h6" color="success.main" fontWeight="bold">
                         {productivityStats.week.licenses_issued}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
@@ -412,11 +565,11 @@ const HomePage: React.FC = () => {
                       </Typography>
                     </Grid>
                     <Grid item xs={4}>
-                      <Typography variant="h5" color="info.main" fontWeight="bold">
+                      <Typography variant="h6" color="info.main" fontWeight="bold">
                         {productivityStats.week.transactions_completed}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        Transactions
+                        Trans
                       </Typography>
                     </Grid>
                   </Grid>
@@ -427,8 +580,8 @@ const HomePage: React.FC = () => {
         </Grid>
 
         {/* Support & Resources Widget */}
-        <Grid item xs={12} md={6}>
-          <Card>
+        <Grid item xs={12} md={6} lg={4}>
+          <Card sx={{ height: '250px' }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                 <HelpIcon color="primary" />
@@ -443,6 +596,7 @@ const HomePage: React.FC = () => {
                     variant="outlined"
                     startIcon={<SchoolIcon />}
                     fullWidth
+                    size="small"
                     onClick={() => window.open('/help/training', '_blank')}
                   >
                     Training
@@ -453,6 +607,7 @@ const HomePage: React.FC = () => {
                     variant="outlined"
                     startIcon={<HelpIcon />}
                     fullWidth
+                    size="small"
                     onClick={() => window.open('/help/guides', '_blank')}
                   >
                     Guides
@@ -463,6 +618,7 @@ const HomePage: React.FC = () => {
                     variant="outlined"
                     startIcon={<SecurityIcon />}
                     fullWidth
+                    size="small"
                     onClick={() => navigate('/dashboard/admin/audit')}
                   >
                     Security & Compliance
