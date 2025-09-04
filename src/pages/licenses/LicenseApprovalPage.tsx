@@ -120,12 +120,8 @@ const LicenseApprovalPage: React.FC = () => {
 
   const steps = [
     {
-      label: 'Search Person',
+      label: 'Search & Select',
       icon: <PersonIcon />
-    },
-    {
-      label: 'Select Application',
-      icon: <AssignmentIcon />
     },
     {
       label: 'Review & Approve',
@@ -172,11 +168,9 @@ const LicenseApprovalPage: React.FC = () => {
   // Step validation
   const isStepValid = (step: number): boolean => {
     switch (step) {
-      case 0: // Search Person
-        return !!personSummary && personSummary.applications.length > 0;
-      case 1: // Select Application
-        return !!selectedApplication;
-      case 2: // Review & Approve
+      case 0: // Search & Select
+        return !!personSummary && personSummary.applications.length > 0 && !!selectedApplication;
+      case 1: // Review & Approve
         return !!approvalOutcome && isLocationValid();
       default:
         return false;
@@ -273,7 +267,6 @@ const LicenseApprovalPage: React.FC = () => {
     }
     
     setApprovalOutcome('');
-    // Don't auto-advance - let user manually proceed
   };
 
   const handleDriverRestrictionToggle = (restrictionCode: string) => {
@@ -374,88 +367,85 @@ const LicenseApprovalPage: React.FC = () => {
     }
   };
 
-  const renderSearchStep = () => (
-    <Paper 
-      elevation={0}
-      sx={{ 
-        bgcolor: 'white',
-        boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-        borderRadius: 2,
-        flex: '0 0 auto',
-        p: 2
-      }}
-    >
-      <Box display="flex" alignItems="center" mb={2}>
-        <PersonIcon sx={{ mr: 1, color: 'primary.main' }} />
-        <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-          Search Person by ID Number
-        </Typography>
-      </Box>
-      
-      <Box display="flex" gap={2} alignItems="flex-start" mb={2}>
-        <TextField
-          label="ID Number"
-          value={searchIdNumber}
-          onChange={(e) => setSearchIdNumber(e.target.value)}
-          placeholder="Enter Madagascar ID or passport number"
-          disabled={isSearching}
-          onKeyPress={(e) => e.key === 'Enter' && handleSearchPerson()}
-          size="small"
-          error={!!error && !searchIdNumber.trim()}
-          sx={{ 
-            flexGrow: 1,
-            '& .MuiOutlinedInput-root': {
-              '& fieldset': {
-                borderWidth: '1px',
-                borderColor: !!error && !searchIdNumber.trim() ? '#ff9800' : undefined,
-                transition: 'border-color 0.2s ease-in-out',
-              },
-              '&:hover fieldset': {
-                borderWidth: '1px',
-                borderColor: !!error && !searchIdNumber.trim() ? '#f57c00' : undefined,
-              },
-              '&.Mui-focused fieldset': {
-                borderWidth: '1px',
-                borderColor: !!error && !searchIdNumber.trim() ? '#ff9800' : undefined,
-              },
-            },
-          }}
-        />
-        <Button
-          variant="contained"
-          onClick={handleSearchPerson}
-          disabled={isSearching || !searchIdNumber.trim()}
-          startIcon={isSearching ? <CircularProgress size={16} /> : <SearchIcon />}
-          size="small"
-        >
-          {isSearching ? 'Searching...' : 'Search'}
-        </Button>
-      </Box>
-
-      {error && (
-        <Alert severity="error" sx={{ mt: 2, fontSize: '0.8rem' }}>
-          {error}
-        </Alert>
-      )}
-
-      {isSearching && (
-        <Box sx={{ mt: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-            <Skeleton variant="circular" width={24} height={24} />
-            <Skeleton variant="text" width="40%" height={20} />
-          </Box>
-          <Skeleton variant="rectangular" width="100%" height={60} sx={{ borderRadius: 1 }} />
+  const renderSearchAndSelectStep = () => (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {/* Search Section */}
+      <Paper 
+        elevation={0}
+        sx={{ 
+          bgcolor: 'white',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          flex: '0 0 auto',
+          p: 2
+        }}
+      >
+        <Box display="flex" alignItems="center" mb={2}>
+          <PersonIcon sx={{ mr: 1, color: 'primary.main' }} />
+          <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+            Search Person by ID Number
+          </Typography>
         </Box>
-      )}
-    </Paper>
-  );
+        
+        <Box display="flex" gap={2} alignItems="flex-start" mb={2}>
+          <TextField
+            label="ID Number"
+            value={searchIdNumber}
+            onChange={(e) => setSearchIdNumber(e.target.value)}
+            placeholder="Enter Madagascar ID or passport number"
+            disabled={isSearching}
+            onKeyPress={(e) => e.key === 'Enter' && handleSearchPerson()}
+            size="small"
+            error={!!error && !searchIdNumber.trim()}
+            sx={{ 
+              flexGrow: 1,
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                  borderWidth: '1px',
+                  borderColor: !!error && !searchIdNumber.trim() ? '#ff9800' : undefined,
+                  transition: 'border-color 0.2s ease-in-out',
+                },
+                '&:hover fieldset': {
+                  borderWidth: '1px',
+                  borderColor: !!error && !searchIdNumber.trim() ? '#f57c00' : undefined,
+                },
+                '&.Mui-focused fieldset': {
+                  borderWidth: '1px',
+                  borderColor: !!error && !searchIdNumber.trim() ? '#ff9800' : undefined,
+                },
+              },
+            }}
+          />
+          <Button
+            variant="contained"
+            onClick={handleSearchPerson}
+            disabled={isSearching || !searchIdNumber.trim()}
+            startIcon={isSearching ? <CircularProgress size={16} /> : <SearchIcon />}
+            size="small"
+          >
+            {isSearching ? 'Searching...' : 'Search'}
+          </Button>
+        </Box>
 
-  const renderApplicationSelection = () => {
-    if (!personSummary) return null;
+        {error && (
+          <Alert severity="error" sx={{ mt: 2, fontSize: '0.8rem' }}>
+            {error}
+          </Alert>
+        )}
 
-    return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {/* Person Information */}
+        {isSearching && (
+          <Box sx={{ mt: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <Skeleton variant="circular" width={24} height={24} />
+              <Skeleton variant="text" width="40%" height={20} />
+            </Box>
+            <Skeleton variant="rectangular" width="100%" height={60} sx={{ borderRadius: 1 }} />
+          </Box>
+        )}
+      </Paper>
+
+      {/* Person Information */}
+      {personSummary && (
         <Paper 
           elevation={0}
           sx={{ 
@@ -477,8 +467,10 @@ const LicenseApprovalPage: React.FC = () => {
             <strong>ID Number:</strong> {personSummary.person.id_number}
           </Typography>
         </Paper>
+      )}
 
-        {/* Applications Pending Approval */}
+      {/* Applications Pending Approval */}
+      {personSummary && (
         <Paper 
           elevation={0}
           sx={{ 
@@ -511,6 +503,13 @@ const LicenseApprovalPage: React.FC = () => {
                       bgcolor: '#f8f9fa',
                       py: 1, 
                       px: 2
+                    }}>Select</TableCell>
+                    <TableCell sx={{ 
+                      fontWeight: 600, 
+                      fontSize: '0.875rem',
+                      bgcolor: '#f8f9fa',
+                      py: 1, 
+                      px: 2
                     }}>Application #</TableCell>
                     <TableCell sx={{ 
                       fontWeight: 600, 
@@ -533,18 +532,19 @@ const LicenseApprovalPage: React.FC = () => {
                       py: 1, 
                       px: 2
                     }}>Status</TableCell>
-                    <TableCell sx={{ 
-                      fontWeight: 600, 
-                      fontSize: '0.875rem',
-                      bgcolor: '#f8f9fa',
-                      py: 1, 
-                      px: 2
-                    }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {personSummary.applications.map((app) => (
                     <TableRow key={app.id} hover>
+                      <TableCell sx={{ py: 1, px: 2 }}>
+                        <Checkbox
+                          checked={selectedApplication?.id === app.id}
+                          onChange={() => handleSelectApplication(app)}
+                          size="small"
+                          color="primary"
+                        />
+                      </TableCell>
                       <TableCell sx={{ py: 1, px: 2 }}>
                         <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                           {app.application_number}
@@ -571,16 +571,6 @@ const LicenseApprovalPage: React.FC = () => {
                           }} 
                         />
                       </TableCell>
-                      <TableCell sx={{ py: 1, px: 2 }}>
-                        <Button
-                          size="small"
-                          variant="contained"
-                          onClick={() => handleSelectApplication(app)}
-                          startIcon={<AssignmentIcon />}
-                        >
-                          Select for Approval
-                        </Button>
-                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -588,18 +578,10 @@ const LicenseApprovalPage: React.FC = () => {
             </TableContainer>
           </Paper>
         </Paper>
-      </Box>
-    );
-  };
+      )}
 
-  const renderApprovalStep = () => {
-    if (!selectedApplication || !personSummary) return null;
-
-    const restrictionInfo = personSummary.restrictions_info[selectedApplication.id];
-
-    return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {/* Application Summary */}
+      {/* Selection Summary */}
+      {selectedApplication && (
         <Paper 
           elevation={0}
           sx={{ 
@@ -611,51 +593,75 @@ const LicenseApprovalPage: React.FC = () => {
           }}
         >
           <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-            Application Details
+            Selected Application
           </Typography>
-          <Grid container spacing={1.5}>
-            <Grid item xs={6}>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Application Number</Typography>
-              <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>{selectedApplication.application_number}</Typography>
-            </Grid>
-            <Grid item xs={6}>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Type</Typography>
-              <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>{selectedApplication.application_type.replace('_', ' ')}</Typography>
-            </Grid>
-            <Grid item xs={6}>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>License Category</Typography>
-              <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>{selectedApplication.license_category}</Typography>
-            </Grid>
-            <Grid item xs={6}>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Status</Typography>
-              <Chip 
-                label={selectedApplication.status} 
-                size="small" 
-                color="warning" 
-                sx={{ 
-                  fontSize: '0.7rem', 
-                  height: '24px'
-                }} 
-              />
-            </Grid>
-          </Grid>
-
-          <Box mt={2}>
-            <Button
-              variant="outlined"
-              onClick={() => setShowMedicalInfo(true)}
-              startIcon={<VisibilityIcon />}
-              size="small"
-              sx={{
-                borderWidth: '1px',
-                '&:hover': {
-                  borderWidth: '1px',
-                },
-              }}
-            >
-              View Medical Information
-            </Button>
+          <Box sx={{ bgcolor: '#f8f9fa', p: 1.5, borderRadius: 1 }}>
+            <Typography variant="body2" sx={{ fontSize: '0.8rem', mb: 0.5 }}>
+              <strong>Application:</strong> {selectedApplication.application_number}
+            </Typography>
+            <Typography variant="body2" sx={{ fontSize: '0.8rem', mb: 0.5 }}>
+              <strong>Type:</strong> {selectedApplication.application_type.replace('_', ' ')}
+            </Typography>
+            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+              <strong>Category:</strong> {selectedApplication.license_category}
+            </Typography>
           </Box>
+        </Paper>
+      )}
+    </Box>
+  );
+
+
+  const renderApprovalStep = () => {
+    if (!selectedApplication || !personSummary) return null;
+
+    const restrictionInfo = personSummary.restrictions_info[selectedApplication.id];
+
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {/* Selected Application Summary */}
+        <Paper 
+          elevation={0}
+          sx={{ 
+            bgcolor: 'white',
+            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+            borderRadius: 2,
+            flex: '0 0 auto',
+            p: 2
+          }}
+        >
+          <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+            Selected Application Summary
+          </Typography>
+          <Box sx={{ bgcolor: '#f8f9fa', p: 1.5, borderRadius: 1, mb: 2 }}>
+            <Typography variant="body2" sx={{ fontSize: '0.8rem', mb: 0.5 }}>
+              <strong>Person:</strong> {personSummary.person.name} ({personSummary.person.id_number})
+            </Typography>
+            <Typography variant="body2" sx={{ fontSize: '0.8rem', mb: 0.5 }}>
+              <strong>Application:</strong> {selectedApplication.application_number}
+            </Typography>
+            <Typography variant="body2" sx={{ fontSize: '0.8rem', mb: 0.5 }}>
+              <strong>Type:</strong> {selectedApplication.application_type.replace('_', ' ')}
+            </Typography>
+            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+              <strong>Category:</strong> {selectedApplication.license_category}
+            </Typography>
+          </Box>
+
+          <Button
+            variant="outlined"
+            onClick={() => setShowMedicalInfo(true)}
+            startIcon={<VisibilityIcon />}
+            size="small"
+            sx={{
+              borderWidth: '1px',
+              '&:hover': {
+                borderWidth: '1px',
+              },
+            }}
+          >
+            View Medical Information
+          </Button>
         </Paper>
 
         {/* Location Selection for Admin Users */}
@@ -679,11 +685,11 @@ const LicenseApprovalPage: React.FC = () => {
               size="small"
               error={!!error && !selectedLocationId}
             >
-              <InputLabel>Location</InputLabel>
-              <Select
-                value={selectedLocationId}
-                onChange={(e) => setSelectedLocationId(e.target.value)}
-                label="Location"
+                <InputLabel>Location</InputLabel>
+                <Select
+                  value={selectedLocationId}
+                  onChange={(e) => setSelectedLocationId(e.target.value)}
+                  label="Location"
                 sx={{
                   '& .MuiOutlinedInput-notchedOutline': {
                     borderWidth: '1px',
@@ -698,17 +704,17 @@ const LicenseApprovalPage: React.FC = () => {
                     borderColor: !!error && !selectedLocationId ? '#ff9800' : undefined,
                   },
                 }}
-              >
-                {availableLocations.map((location) => (
-                  <MenuItem key={location.id} value={location.id}>
-                    {location.name} ({location.full_code})
-                  </MenuItem>
-                ))}
-              </Select>
+                >
+                  {availableLocations.map((location) => (
+                    <MenuItem key={location.id} value={location.id}>
+                      {location.name} ({location.full_code})
+                    </MenuItem>
+                  ))}
+                </Select>
               {!!error && !selectedLocationId && (
                 <FormHelperText>Please select a processing location</FormHelperText>
               )}
-            </FormControl>
+              </FormControl>
           </Paper>
         )}
 
@@ -726,15 +732,15 @@ const LicenseApprovalPage: React.FC = () => {
           <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
             Approval Outcome
           </Typography>
-          
-          <Grid container spacing={2}>
-            <Grid item xs={4}>
-              <Button
-                fullWidth
-                variant={approvalOutcome === 'PASSED' ? 'contained' : 'outlined'}
-                color="success"
-                onClick={() => setApprovalOutcome('PASSED')}
-                startIcon={<CheckIcon />}
+            
+            <Grid container spacing={2}>
+              <Grid item xs={4}>
+                <Button
+                  fullWidth
+                  variant={approvalOutcome === 'PASSED' ? 'contained' : 'outlined'}
+                  color="success"
+                  onClick={() => setApprovalOutcome('PASSED')}
+                  startIcon={<CheckIcon />}
                 size="small"
                 sx={{
                   borderWidth: '1px',
@@ -742,17 +748,17 @@ const LicenseApprovalPage: React.FC = () => {
                     borderWidth: '1px',
                   },
                 }}
-              >
-                PASS
-              </Button>
-            </Grid>
-            <Grid item xs={4}>
-              <Button
-                fullWidth
-                variant={approvalOutcome === 'FAILED' ? 'contained' : 'outlined'}
-                color="error"
-                onClick={() => setApprovalOutcome('FAILED')}
-                startIcon={<CancelIcon />}
+                >
+                  PASS
+                </Button>
+              </Grid>
+              <Grid item xs={4}>
+                <Button
+                  fullWidth
+                  variant={approvalOutcome === 'FAILED' ? 'contained' : 'outlined'}
+                  color="error"
+                  onClick={() => setApprovalOutcome('FAILED')}
+                  startIcon={<CancelIcon />}
                 size="small"
                 sx={{
                   borderWidth: '1px',
@@ -760,17 +766,17 @@ const LicenseApprovalPage: React.FC = () => {
                     borderWidth: '1px',
                   },
                 }}
-              >
-                FAIL
-              </Button>
-            </Grid>
-            <Grid item xs={4}>
-              <Button
-                fullWidth
-                variant={approvalOutcome === 'ABSENT' ? 'contained' : 'outlined'}
-                color="warning"
-                onClick={() => setApprovalOutcome('ABSENT')}
-                startIcon={<WarningIcon />}
+                >
+                  FAIL
+                </Button>
+              </Grid>
+              <Grid item xs={4}>
+                <Button
+                  fullWidth
+                  variant={approvalOutcome === 'ABSENT' ? 'contained' : 'outlined'}
+                  color="warning"
+                  onClick={() => setApprovalOutcome('ABSENT')}
+                  startIcon={<WarningIcon />}
                 size="small"
                 sx={{
                   borderWidth: '1px',
@@ -778,11 +784,11 @@ const LicenseApprovalPage: React.FC = () => {
                     borderWidth: '1px',
                   },
                 }}
-              >
-                ABSENT
-              </Button>
+                >
+                  ABSENT
+                </Button>
+              </Grid>
             </Grid>
-          </Grid>
         </Paper>
 
         {/* Restrictions (only shown for PASS) */}
@@ -800,108 +806,108 @@ const LicenseApprovalPage: React.FC = () => {
             <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
               License Restrictions
             </Typography>
-            
-            {/* Driver Restrictions */}
-            {restrictionInfo.driver_restrictions.length > 0 && (
-              <Box mb={3}>
+              
+              {/* Driver Restrictions */}
+              {restrictionInfo.driver_restrictions.length > 0 && (
+                <Box mb={3}>
                 <Typography variant="subtitle1" gutterBottom color="primary" fontWeight="bold" sx={{ fontSize: '0.9rem' }}>
-                  Driver Restrictions
-                </Typography>
-                <FormGroup>
-                  {restrictionInfo.driver_restrictions.map((restriction) => (
-                    <FormControlLabel
-                      key={restriction.code}
-                      control={
-                        <Checkbox
-                          checked={selectedDriverRestrictions.includes(restriction.code)}
-                          onChange={() => handleDriverRestrictionToggle(restriction.code)}
-                          disabled={restriction.locked}
+                    Driver Restrictions
+                  </Typography>
+                  <FormGroup>
+                    {restrictionInfo.driver_restrictions.map((restriction) => (
+                      <FormControlLabel
+                        key={restriction.code}
+                        control={
+                          <Checkbox
+                            checked={selectedDriverRestrictions.includes(restriction.code)}
+                            onChange={() => handleDriverRestrictionToggle(restriction.code)}
+                            disabled={restriction.locked}
                           size="small"
-                        />
-                      }
-                      label={
-                        <Box display="flex" alignItems="center" gap={1}>
+                          />
+                        }
+                        label={
+                          <Box display="flex" alignItems="center" gap={1}>
                           <Typography sx={{ fontSize: '0.8rem' }}>{restriction.description}</Typography>
-                          {restriction.locked && (
-                            <Chip 
-                              label="Required by vision test" 
-                              size="small" 
-                              color="warning" 
-                              variant="outlined"
+                            {restriction.locked && (
+                              <Chip 
+                                label="Required by vision test" 
+                                size="small" 
+                                color="warning" 
+                                variant="outlined"
                               sx={{ 
                                 fontSize: '0.7rem', 
                                 height: '24px'
                               }}
-                            />
-                          )}
-                        </Box>
-                      }
-                    />
-                  ))}
-                </FormGroup>
-              </Box>
-            )}
-
-            {/* Vehicle Restrictions */}
-            {restrictionInfo.vehicle_restrictions.length > 0 && (
-              <Box mb={2}>
-                <Typography variant="subtitle1" gutterBottom color="primary" fontWeight="bold" sx={{ fontSize: '0.9rem' }}>
-                  Vehicle Restrictions
-                </Typography>
-                <FormGroup>
-                  {restrictionInfo.vehicle_restrictions.map((restriction) => (
-                    <FormControlLabel
-                      key={restriction.code}
-                      control={
-                        <Checkbox
-                          checked={selectedVehicleRestrictions.includes(restriction.code)}
-                          onChange={() => handleVehicleRestrictionToggle(restriction.code)}
-                          size="small"
-                        />
-                      }
-                      label={<Typography sx={{ fontSize: '0.8rem' }}>{restriction.description}</Typography>}
-                    />
-                  ))}
-                </FormGroup>
-              </Box>
-            )}
-
-            {/* Selected Restrictions Summary */}
-            {(selectedDriverRestrictions.length > 0 || selectedVehicleRestrictions.length > 0) && (
-              <Box mt={2}>
-                <Typography variant="body2" color="text.secondary" gutterBottom sx={{ fontSize: '0.8rem' }}>
-                  Selected Restrictions:
-                </Typography>
-                <Box display="flex" gap={1} flexWrap="wrap">
-                  {selectedDriverRestrictions.map((code) => (
-                    <Chip 
-                      key={`driver-${code}`} 
-                      label={`Driver: ${code}`} 
-                      size="small" 
-                      color="primary" 
-                      variant={lockedDriverRestrictions.includes(code) ? "filled" : "outlined"}
-                      sx={{ 
-                        fontSize: '0.7rem', 
-                        height: '24px'
-                      }}
-                    />
-                  ))}
-                  {selectedVehicleRestrictions.map((code) => (
-                    <Chip 
-                      key={`vehicle-${code}`} 
-                      label={`Vehicle: ${code}`} 
-                      size="small" 
-                      color="secondary" 
-                      variant="outlined"
-                      sx={{ 
-                        fontSize: '0.7rem', 
-                        height: '24px'
-                      }}
-                    />
-                  ))}
+                              />
+                            )}
+                          </Box>
+                        }
+                      />
+                    ))}
+                  </FormGroup>
                 </Box>
-              </Box>
-            )}
+              )}
+
+              {/* Vehicle Restrictions */}
+              {restrictionInfo.vehicle_restrictions.length > 0 && (
+                <Box mb={2}>
+                <Typography variant="subtitle1" gutterBottom color="primary" fontWeight="bold" sx={{ fontSize: '0.9rem' }}>
+                    Vehicle Restrictions
+                  </Typography>
+                  <FormGroup>
+                    {restrictionInfo.vehicle_restrictions.map((restriction) => (
+                      <FormControlLabel
+                        key={restriction.code}
+                        control={
+                          <Checkbox
+                            checked={selectedVehicleRestrictions.includes(restriction.code)}
+                            onChange={() => handleVehicleRestrictionToggle(restriction.code)}
+                          size="small"
+                          />
+                        }
+                      label={<Typography sx={{ fontSize: '0.8rem' }}>{restriction.description}</Typography>}
+                      />
+                    ))}
+                  </FormGroup>
+                </Box>
+              )}
+
+              {/* Selected Restrictions Summary */}
+              {(selectedDriverRestrictions.length > 0 || selectedVehicleRestrictions.length > 0) && (
+                <Box mt={2}>
+                <Typography variant="body2" color="text.secondary" gutterBottom sx={{ fontSize: '0.8rem' }}>
+                    Selected Restrictions:
+                  </Typography>
+                  <Box display="flex" gap={1} flexWrap="wrap">
+                    {selectedDriverRestrictions.map((code) => (
+                      <Chip 
+                        key={`driver-${code}`} 
+                        label={`Driver: ${code}`} 
+                        size="small" 
+                        color="primary" 
+                        variant={lockedDriverRestrictions.includes(code) ? "filled" : "outlined"}
+                      sx={{ 
+                        fontSize: '0.7rem', 
+                        height: '24px'
+                      }}
+                      />
+                    ))}
+                    {selectedVehicleRestrictions.map((code) => (
+                      <Chip 
+                        key={`vehicle-${code}`} 
+                        label={`Vehicle: ${code}`} 
+                        size="small" 
+                        color="secondary" 
+                        variant="outlined"
+                      sx={{ 
+                        fontSize: '0.7rem', 
+                        height: '24px'
+                      }}
+                      />
+                    ))}
+                  </Box>
+                </Box>
+              )}
           </Paper>
         )}
 
@@ -937,8 +943,8 @@ const LicenseApprovalPage: React.FC = () => {
         {/* Header */}
         <Box sx={{ p: 2, bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
           <Typography variant="h4" gutterBottom sx={{ fontSize: '1.5rem', fontWeight: 600, mb: 0 }}>
-            License Application Approval
-          </Typography>
+        License Application Approval
+      </Typography>
         </Box>
 
         {/* Tab Navigation */}
@@ -983,7 +989,7 @@ const LicenseApprovalPage: React.FC = () => {
               />
             ))}
           </Tabs>
-        </Box>
+      </Box>
 
         {/* Content Area */}
         <Box sx={{ 
@@ -994,9 +1000,8 @@ const LicenseApprovalPage: React.FC = () => {
           display: 'flex',
           flexDirection: 'column'
         }}>
-          {activeStep === 0 && renderSearchStep()}
-          {activeStep === 1 && renderApplicationSelection()}
-          {activeStep === 2 && renderApprovalStep()}
+          {activeStep === 0 && renderSearchAndSelectStep()}
+          {activeStep === 1 && renderApprovalStep()}
         </Box>
 
         {/* Navigation Footer */}
@@ -1031,11 +1036,11 @@ const LicenseApprovalPage: React.FC = () => {
               size="small"
               endIcon={<ArrowForwardIcon />}
             >
-              {activeStep === 0 ? 'Continue' : 'Next'}
+              {activeStep === 0 ? 'Proceed to Approval' : 'Next'}
             </Button>
           )}
 
-          {activeStep === 2 && (
+          {activeStep === 1 && (
             <Button
               variant="contained"
               color={approvalOutcome === 'PASSED' ? 'success' : approvalOutcome === 'FAILED' ? 'error' : 'warning'}
