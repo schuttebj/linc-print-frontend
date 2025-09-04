@@ -46,14 +46,12 @@ const DocumentTestPage: React.FC = () => {
   const [sampleData, setSampleData] = useState<SampleData | null>(null);
   const [lastGeneratedPdf, setLastGeneratedPdf] = useState<string | null>(null);
 
-  const baseUrl = `${API_ENDPOINTS.base}/document-test`;
-
   const fetchGeneratorInfo = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`${baseUrl}/generator-info`, {
+      const response = await fetch(API_ENDPOINTS.documentTest.generatorInfo, {
         headers: {
           'Authorization': `Bearer ${getAuthToken()}`,
           'Content-Type': 'application/json',
@@ -78,7 +76,7 @@ const DocumentTestPage: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`${baseUrl}/sample-receipt-data`, {
+      const response = await fetch(API_ENDPOINTS.documentTest.sampleReceiptData, {
         headers: {
           'Authorization': `Bearer ${getAuthToken()}`,
           'Content-Type': 'application/json',
@@ -103,7 +101,7 @@ const DocumentTestPage: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`${baseUrl}/sample-receipt-pdf`, {
+      const response = await fetch(API_ENDPOINTS.documentTest.sampleReceiptPdf, {
         headers: {
           'Authorization': `Bearer ${getAuthToken()}`,
         },

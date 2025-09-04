@@ -178,6 +178,14 @@ export const API_ENDPOINTS = {
   issueFiles: (id: string, fileType: string) => `${API_BASE_URL}/api/${API_VERSION}/issues/${id}/files/${fileType}`,
   issueStats: `${API_BASE_URL}/api/${API_VERSION}/issues/stats/overview`,
   myIssues: `${API_BASE_URL}/api/${API_VERSION}/issues/my-issues`,
+
+  // Document generation test endpoints
+  documentTest: {
+    generatorInfo: `${API_BASE_URL}/api/${API_VERSION}/document-test/generator-info`,
+    sampleReceiptData: `${API_BASE_URL}/api/${API_VERSION}/document-test/sample-receipt-data`,
+    sampleReceiptPdf: `${API_BASE_URL}/api/${API_VERSION}/document-test/sample-receipt-pdf`,
+    customReceiptPdf: `${API_BASE_URL}/api/${API_VERSION}/document-test/custom-receipt-pdf`,
+  },
 } as const;
 
 /**
