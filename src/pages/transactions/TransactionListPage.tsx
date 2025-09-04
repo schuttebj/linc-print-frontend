@@ -195,7 +195,7 @@ const TransactionListPage: React.FC = () => {
       
       // Generate PDF using the new document generation API
       const token = getAuthToken();
-      const response = await fetch(API_ENDPOINTS.documentTest.customReceiptPdf, {
+      const response = await fetch(API_ENDPOINTS.documents.customReceiptPdf, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
