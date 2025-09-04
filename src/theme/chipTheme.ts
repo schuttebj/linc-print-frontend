@@ -24,6 +24,12 @@ export const chipThemeOverrides = {
           backgroundColor: '#f5f5f5',
           opacity: 0.9,
         },
+        '& .MuiChip-deleteIcon': {
+          color: '#424242', // Match text color for visibility
+          '&:hover': {
+            color: '#212121',
+          },
+        },
       },
       colorPrimary: {
         backgroundColor: '#e3f2fd',
@@ -32,6 +38,12 @@ export const chipThemeOverrides = {
         '&:hover': {
           backgroundColor: '#e3f2fd',
           opacity: 0.9,
+        },
+        '& .MuiChip-deleteIcon': {
+          color: '#1565c0', // Match text color for visibility
+          '&:hover': {
+            color: '#0d47a1',
+          },
         },
       },
       colorSecondary: {
@@ -42,6 +54,12 @@ export const chipThemeOverrides = {
           backgroundColor: '#f3e5f5',
           opacity: 0.9,
         },
+        '& .MuiChip-deleteIcon': {
+          color: '#6a1b9a', // Match text color for visibility
+          '&:hover': {
+            color: '#4a148c',
+          },
+        },
       },
       colorError: {
         backgroundColor: '#ffebee',
@@ -50,6 +68,12 @@ export const chipThemeOverrides = {
         '&:hover': {
           backgroundColor: '#ffebee',
           opacity: 0.9,
+        },
+        '& .MuiChip-deleteIcon': {
+          color: '#c62828', // Match text color for visibility
+          '&:hover': {
+            color: '#b71c1c',
+          },
         },
       },
       colorInfo: {
@@ -60,6 +84,12 @@ export const chipThemeOverrides = {
           backgroundColor: '#e1f5fe',
           opacity: 0.9,
         },
+        '& .MuiChip-deleteIcon': {
+          color: '#0277bd', // Match text color for visibility
+          '&:hover': {
+            color: '#01579b',
+          },
+        },
       },
       colorSuccess: {
         backgroundColor: '#e8f5e8',
@@ -68,6 +98,12 @@ export const chipThemeOverrides = {
         '&:hover': {
           backgroundColor: '#e8f5e8',
           opacity: 0.9,
+        },
+        '& .MuiChip-deleteIcon': {
+          color: '#1b5e20', // Match text color for visibility
+          '&:hover': {
+            color: '#2e7d32',
+          },
         },
       },
       colorWarning: {
@@ -78,6 +114,12 @@ export const chipThemeOverrides = {
           backgroundColor: '#fff3e0',
           opacity: 0.9,
         },
+        '& .MuiChip-deleteIcon': {
+          color: '#e65100', // Match text color for visibility
+          '&:hover': {
+            color: '#bf360c',
+          },
+        },
       },
       // Outlined variant adjustments - border matches text for no-background chips
       outlined: {
@@ -85,30 +127,72 @@ export const chipThemeOverrides = {
         '&.MuiChip-colorDefault': {
           borderColor: '#424242', // Text-matching border for outlined chips
           color: '#424242',
+          '& .MuiChip-deleteIcon': {
+            color: '#424242',
+            '&:hover': {
+              color: '#212121',
+            },
+          },
         },
         '&.MuiChip-colorPrimary': {
           borderColor: '#1565c0', // Text-matching border for outlined chips
           color: '#1565c0',
+          '& .MuiChip-deleteIcon': {
+            color: '#1565c0',
+            '&:hover': {
+              color: '#0d47a1',
+            },
+          },
         },
         '&.MuiChip-colorSecondary': {
           borderColor: '#6a1b9a', // Text-matching border for outlined chips
           color: '#6a1b9a',
+          '& .MuiChip-deleteIcon': {
+            color: '#6a1b9a',
+            '&:hover': {
+              color: '#4a148c',
+            },
+          },
         },
         '&.MuiChip-colorError': {
           borderColor: '#c62828', // Text-matching border for outlined chips
           color: '#c62828',
+          '& .MuiChip-deleteIcon': {
+            color: '#c62828',
+            '&:hover': {
+              color: '#b71c1c',
+            },
+          },
         },
         '&.MuiChip-colorInfo': {
           borderColor: '#0277bd', // Text-matching border for outlined chips
           color: '#0277bd',
+          '& .MuiChip-deleteIcon': {
+            color: '#0277bd',
+            '&:hover': {
+              color: '#01579b',
+            },
+          },
         },
         '&.MuiChip-colorSuccess': {
           borderColor: '#1b5e20', // Text-matching border for outlined chips
           color: '#1b5e20',
+          '& .MuiChip-deleteIcon': {
+            color: '#1b5e20',
+            '&:hover': {
+              color: '#2e7d32',
+            },
+          },
         },
         '&.MuiChip-colorWarning': {
           borderColor: '#e65100', // Text-matching border for outlined chips
           color: '#e65100',
+          '& .MuiChip-deleteIcon': {
+            color: '#e65100',
+            '&:hover': {
+              color: '#bf360c',
+            },
+          },
         },
       },
     },
@@ -127,6 +211,12 @@ export const createChipStyle = (textColor: string, bgColor: string, borderColor?
   '&:hover': {
     backgroundColor: outlined ? 'transparent' : bgColor,
     opacity: 0.9,
+  },
+  '& .MuiChip-deleteIcon': {
+    color: textColor, // Match text color for visibility
+    '&:hover': {
+      opacity: 0.8,
+    },
   },
 });
 

@@ -495,7 +495,7 @@ const LicenseApprovalPage: React.FC = () => {
         )}
       </Paper>
 
-      {/* Person Information */}
+        {/* Person Information */}
       {personSummary && (
         <Paper 
           elevation={0}
@@ -507,20 +507,20 @@ const LicenseApprovalPage: React.FC = () => {
             p: 2
           }}
         >
-          <Box display="flex" alignItems="center" mb={1}>
+            <Box display="flex" alignItems="center" mb={1}>
             <PersonIcon sx={{ mr: 1, color: 'primary.main' }} />
             <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>Person Information</Typography>
-          </Box>
+            </Box>
           <Typography variant="body2" sx={{ fontSize: '0.8rem', mb: 0.5 }}>
-            <strong>Name:</strong> {personSummary.person.name}
-          </Typography>
+              <strong>Name:</strong> {personSummary.person.name}
+            </Typography>
           <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-            <strong>ID Number:</strong> {personSummary.person.id_number}
-          </Typography>
+              <strong>ID Number:</strong> {personSummary.person.id_number}
+            </Typography>
         </Paper>
       )}
 
-      {/* Applications Pending Approval */}
+        {/* Applications Pending Approval */}
       {personSummary && (
         <Paper 
           elevation={0}
@@ -614,7 +614,7 @@ const LicenseApprovalPage: React.FC = () => {
                       <TableCell sx={{ py: 1, px: 2 }}>
                         <Chip 
                           label={app.status} 
-                          size="small" 
+                          size="small"
                           color="warning" 
                           sx={{ 
                             fontSize: '0.7rem', 
@@ -656,11 +656,11 @@ const LicenseApprovalPage: React.FC = () => {
             <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
               <strong>Category:</strong> {selectedApplication.license_category}
             </Typography>
-          </Box>
+        </Box>
         </Paper>
       )}
-    </Box>
-  );
+      </Box>
+    );
 
 
   const renderApprovalStep = () => {
@@ -699,10 +699,10 @@ const LicenseApprovalPage: React.FC = () => {
             </Typography>
           </Box>
 
-          <Button
-            variant="outlined"
-            onClick={() => setShowMedicalInfo(true)}
-            startIcon={<VisibilityIcon />}
+              <Button
+                variant="outlined"
+                onClick={() => setShowMedicalInfo(true)}
+                startIcon={<VisibilityIcon />}
             size="small"
             sx={{
               borderWidth: '1px',
@@ -710,9 +710,9 @@ const LicenseApprovalPage: React.FC = () => {
                 borderWidth: '1px',
               },
             }}
-          >
-            View Medical Information
-          </Button>
+              >
+                View Medical Information
+              </Button>
         </Paper>
 
         {/* Location Selection for Admin Users */}
@@ -785,13 +785,13 @@ const LicenseApprovalPage: React.FC = () => {
           </Typography>
             
             <Grid container spacing={2}>
-                          <Grid item xs={4}>
-              <Button
-                fullWidth
-                variant={approvalOutcome === 'PASSED' ? 'contained' : 'outlined'}
-                color="success"
-                onClick={() => setApprovalOutcome('PASSED')}
-                startIcon={<CheckIcon />}
+              <Grid item xs={4}>
+                <Button
+                  fullWidth
+                  variant={approvalOutcome === 'PASSED' ? 'contained' : 'outlined'}
+                  color="success"
+                  onClick={() => setApprovalOutcome('PASSED')}
+                  startIcon={<CheckIcon />}
                 size="small"
                 sx={{
                   borderWidth: '1px',
@@ -802,10 +802,10 @@ const LicenseApprovalPage: React.FC = () => {
                     color: 'white',
                   },
                 }}
-              >
-                PASS
-              </Button>
-            </Grid>
+                >
+                  PASS
+                </Button>
+              </Grid>
               <Grid item xs={4}>
                 <Button
                   fullWidth
@@ -861,182 +861,185 @@ const LicenseApprovalPage: React.FC = () => {
               License Restrictions
             </Typography>
               
-                          {/* Driver Restrictions */}
-            <Box mb={3}>
-              <Typography variant="subtitle1" gutterBottom color="primary" fontWeight="bold" sx={{ fontSize: '0.9rem' }}>
-                Driver Restrictions
-              </Typography>
-              <FormControl fullWidth size="small">
-                <InputLabel>Driver Restrictions</InputLabel>
-                <Select
-                  multiple
-                  size="small"
-                  value={selectedDriverRestrictions}
-                  label="Driver Restrictions"
-                  onChange={(e) => updateRestrictions('driver_restrictions', Array.isArray(e.target.value) ? e.target.value : [])}
-                  sx={{
-                    position: 'relative',
-                    '& .chip-container .MuiChip-deleteIcon': {
-                      pointerEvents: 'auto',
-                      zIndex: 10000
-                    }
-                  }}
-                  MenuProps={{
-                    PaperProps: {
-                      sx: { zIndex: 1200 }
-                    }
-                  }}
-                  renderValue={(selected) => (
-                    <Box 
-                      className="chip-container"
-                      data-chip-container="true"
-                      sx={{ 
-                        display: 'flex', 
-                        flexWrap: 'wrap', 
-                        gap: 0.5
-                      }}
-                      onMouseDown={(e) => {
-                        const target = e.target as HTMLElement;
-                        if (target.closest('.MuiChip-root') || target.classList.contains('MuiChip-root')) {
-                          e.stopPropagation();
-                        }
-                      }}
-                    >
-                      {(selected as string[]).map((value) => (
+                          {/* Driver and Vehicle Restrictions Side by Side */}
+            <Grid container spacing={2} sx={{ mb: 2 }}>
+              {/* Driver Restrictions */}
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle1" gutterBottom color="primary" fontWeight="bold" sx={{ fontSize: '0.9rem' }}>
+                    Driver Restrictions
+                  </Typography>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Driver Restrictions</InputLabel>
+                  <Select
+                    multiple
+                    size="small"
+                    value={selectedDriverRestrictions}
+                    label="Driver Restrictions"
+                    onChange={(e) => updateRestrictions('driver_restrictions', Array.isArray(e.target.value) ? e.target.value : [])}
+                    sx={{
+                      position: 'relative',
+                      '& .chip-container .MuiChip-deleteIcon': {
+                        pointerEvents: 'auto',
+                        zIndex: 10000
+                      }
+                    }}
+                    MenuProps={{
+                      PaperProps: {
+                        sx: { zIndex: 1200 }
+                      }
+                    }}
+                    renderValue={(selected) => (
+                      <Box 
+                        className="chip-container"
+                        data-chip-container="true"
+                        sx={{ 
+                          display: 'flex', 
+                          flexWrap: 'wrap', 
+                          gap: 0.5
+                        }}
+                        onMouseDown={(e) => {
+                          const target = e.target as HTMLElement;
+                          if (target.closest('.MuiChip-root') || target.classList.contains('MuiChip-root')) {
+                            e.stopPropagation();
+                          }
+                        }}
+                      >
+                        {(selected as string[]).map((value) => (
+                              <Chip 
+                            key={value} 
+                            label={`${value} - ${getRestrictionDisplayName(value)}`}
+                            size="small"
+                            color="primary"
+                            sx={{ 
+                              fontSize: '0.65rem', 
+                              height: '20px',
+                              '& .MuiChip-deleteIcon': {
+                                pointerEvents: 'auto',
+                                zIndex: 10000
+                              }
+                            }}
+                            onDelete={value !== '00' || selected.length > 1 ? (e) => {
+                              if (e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }
+                              const newValues = selected.filter(v => v !== value);
+                              updateRestrictions('driver_restrictions', newValues);
+                            } : undefined}
+                          />
+                        ))}
+                      </Box>
+                    )}
+                  >
+                    <MenuItem value="00">00 - None</MenuItem>
+                    <MenuItem value="01">01 - Corrective Lenses Required</MenuItem>
+                    <MenuItem value="02">02 - Artificial Limb/Prosthetics</MenuItem>
+                  </Select>
+                </FormControl>
+                
+                {/* Show locked restrictions from medical examination */}
+                {restrictionInfo && restrictionInfo.driver_restrictions.filter((r: any) => r.locked).length > 0 && (
+                  <Box sx={{ mt: 1 }}>
+                    <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'warning.main' }}>
+                      <strong>Required by medical examination:</strong>
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 0.5 }}>
+                      {restrictionInfo.driver_restrictions.filter((r: any) => r.locked).map((restriction: any) => (
                         <Chip 
-                          key={value} 
-                          label={`${value} - ${getRestrictionDisplayName(value)}`}
-                          size="small"
-                          color="primary"
+                          key={restriction.code}
+                          label={`${restriction.code} - ${restriction.description}`}
+                          size="small" 
+                          color="warning" 
+                          variant="outlined"
                           sx={{ 
                             fontSize: '0.65rem', 
-                            height: '20px',
-                            '& .MuiChip-deleteIcon': {
-                              pointerEvents: 'auto',
-                              zIndex: 10000
-                            }
+                            height: '20px'
                           }}
-                          onDelete={value !== '00' || selected.length > 1 ? (e) => {
-                            if (e) {
-                              e.preventDefault();
-                              e.stopPropagation();
-                            }
-                            const newValues = selected.filter(v => v !== value);
-                            updateRestrictions('driver_restrictions', newValues);
-                          } : undefined}
                         />
-                      ))}
-                    </Box>
-                  )}
-                >
-                  <MenuItem value="00">00 - None</MenuItem>
-                  <MenuItem value="01">01 - Corrective Lenses Required</MenuItem>
-                  <MenuItem value="02">02 - Artificial Limb/Prosthetics</MenuItem>
-                </Select>
-              </FormControl>
-              
-              {/* Show locked restrictions from medical examination */}
-              {restrictionInfo && restrictionInfo.driver_restrictions.filter((r: any) => r.locked).length > 0 && (
-                <Box sx={{ mt: 1 }}>
-                  <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'warning.main' }}>
-                    <strong>Required by medical examination:</strong>
-                  </Typography>
-                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 0.5 }}>
-                    {restrictionInfo.driver_restrictions.filter((r: any) => r.locked).map((restriction: any) => (
-                      <Chip 
-                        key={restriction.code}
-                        label={`${restriction.code} - ${restriction.description}`}
-                        size="small" 
-                        color="warning" 
-                        variant="outlined"
-                        sx={{ 
-                          fontSize: '0.65rem', 
-                          height: '20px'
-                        }}
-                      />
                     ))}
-                  </Box>
+                    </Box>
                 </Box>
               )}
-            </Box>
+              </Grid>
 
-            {/* Vehicle Restrictions */}
-            <Box mb={2}>
-              <Typography variant="subtitle1" gutterBottom color="primary" fontWeight="bold" sx={{ fontSize: '0.9rem' }}>
-                Vehicle Restrictions
-              </Typography>
-              <FormControl fullWidth size="small">
-                <InputLabel>Vehicle Restrictions</InputLabel>
-                <Select
-                  multiple
-                  size="small"
-                  value={selectedVehicleRestrictions}
-                  label="Vehicle Restrictions"
-                  onChange={(e) => updateRestrictions('vehicle_restrictions', Array.isArray(e.target.value) ? e.target.value : [])}
-                  sx={{
-                    position: 'relative',
-                    '& .chip-container .MuiChip-deleteIcon': {
-                      pointerEvents: 'auto',
-                      zIndex: 10000
-                    }
-                  }}
-                  MenuProps={{
-                    PaperProps: {
-                      sx: { zIndex: 1200 }
-                    }
-                  }}
-                  renderValue={(selected) => (
-                    <Box 
-                      className="chip-container"
-                      data-chip-container="true"
-                      sx={{ 
-                        display: 'flex', 
-                        flexWrap: 'wrap', 
-                        gap: 0.5
-                      }}
-                      onMouseDown={(e) => {
-                        const target = e.target as HTMLElement;
-                        if (target.closest('.MuiChip-root') || target.classList.contains('MuiChip-root')) {
-                          e.stopPropagation();
-                        }
-                      }}
-                    >
-                      {(selected as string[]).map((value) => (
-                        <Chip 
-                          key={value} 
-                          label={`${value} - ${getRestrictionDisplayName(value)}`}
-                          size="small"
-                          color="secondary"
-                          sx={{ 
-                            fontSize: '0.65rem', 
-                            height: '20px',
-                            '& .MuiChip-deleteIcon': {
-                              pointerEvents: 'auto',
-                              zIndex: 10000
-                            }
-                          }}
-                          onDelete={value !== '00' || selected.length > 1 ? (e) => {
-                            if (e) {
-                              e.preventDefault();
-                              e.stopPropagation();
-                            }
-                            const newValues = selected.filter(v => v !== value);
-                            updateRestrictions('vehicle_restrictions', newValues);
-                          } : undefined}
-                        />
-                      ))}
-                    </Box>
-                  )}
-                >
-                  <MenuItem value="00">00 - None</MenuItem>
-                  <MenuItem value="01">01 - Automatic Transmission Only</MenuItem>
-                  <MenuItem value="02">02 - Electric Powered Vehicles Only</MenuItem>
-                  <MenuItem value="03">03 - Vehicles Adapted for Physical Disabilities</MenuItem>
-                  <MenuItem value="04">04 - Tractor Vehicles Only</MenuItem>
-                  <MenuItem value="05">05 - Industrial/Agriculture Vehicles Only</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
+              {/* Vehicle Restrictions */}
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle1" gutterBottom color="primary" fontWeight="bold" sx={{ fontSize: '0.9rem' }}>
+                    Vehicle Restrictions
+                  </Typography>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Vehicle Restrictions</InputLabel>
+                  <Select
+                    multiple
+                    size="small"
+                    value={selectedVehicleRestrictions}
+                    label="Vehicle Restrictions"
+                    onChange={(e) => updateRestrictions('vehicle_restrictions', Array.isArray(e.target.value) ? e.target.value : [])}
+                    sx={{
+                      position: 'relative',
+                      '& .chip-container .MuiChip-deleteIcon': {
+                        pointerEvents: 'auto',
+                        zIndex: 10000
+                      }
+                    }}
+                    MenuProps={{
+                      PaperProps: {
+                        sx: { zIndex: 1200 }
+                      }
+                    }}
+                    renderValue={(selected) => (
+                      <Box 
+                        className="chip-container"
+                        data-chip-container="true"
+                        sx={{ 
+                          display: 'flex', 
+                          flexWrap: 'wrap', 
+                          gap: 0.5
+                        }}
+                        onMouseDown={(e) => {
+                          const target = e.target as HTMLElement;
+                          if (target.closest('.MuiChip-root') || target.classList.contains('MuiChip-root')) {
+                            e.stopPropagation();
+                          }
+                        }}
+                      >
+                        {(selected as string[]).map((value) => (
+                          <Chip 
+                            key={value} 
+                            label={`${value} - ${getRestrictionDisplayName(value)}`}
+                            size="small"
+                            color="secondary"
+                            sx={{ 
+                              fontSize: '0.65rem', 
+                              height: '20px',
+                              '& .MuiChip-deleteIcon': {
+                                pointerEvents: 'auto',
+                                zIndex: 10000
+                              }
+                            }}
+                            onDelete={value !== '00' || selected.length > 1 ? (e) => {
+                              if (e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }
+                              const newValues = selected.filter(v => v !== value);
+                              updateRestrictions('vehicle_restrictions', newValues);
+                            } : undefined}
+                      />
+                    ))}
+                </Box>
+              )}
+                  >
+                    <MenuItem value="00">00 - None</MenuItem>
+                    <MenuItem value="01">01 - Automatic Transmission Only</MenuItem>
+                    <MenuItem value="02">02 - Electric Powered Vehicles Only</MenuItem>
+                    <MenuItem value="03">03 - Vehicles Adapted for Physical Disabilities</MenuItem>
+                    <MenuItem value="04">04 - Tractor Vehicles Only</MenuItem>
+                    <MenuItem value="05">05 - Industrial/Agriculture Vehicles Only</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
 
               {/* Selected Restrictions Summary */}
               {(selectedDriverRestrictions.length > 0 || selectedVehicleRestrictions.length > 0) && (
@@ -1048,27 +1051,27 @@ const LicenseApprovalPage: React.FC = () => {
                     {selectedDriverRestrictions.map((code) => (
                       <Chip 
                         key={`driver-${code}`} 
-                        label={`Driver: ${code}`} 
+                        label={`Driver: ${code} - ${getRestrictionDisplayName(code)}`} 
                         size="small" 
                         color="primary" 
                         variant={lockedDriverRestrictions.includes(code) ? "filled" : "outlined"}
-                      sx={{ 
-                        fontSize: '0.7rem', 
-                        height: '24px'
-                      }}
+                                                  sx={{ 
+                            fontSize: '0.7rem', 
+                            height: '24px'
+                          }}
                       />
                     ))}
                     {selectedVehicleRestrictions.map((code) => (
                       <Chip 
                         key={`vehicle-${code}`} 
-                        label={`Vehicle: ${code}`} 
+                        label={`Vehicle: ${code} - ${getRestrictionDisplayName(code)}`} 
                         size="small" 
                         color="secondary" 
                         variant="outlined"
-                      sx={{ 
-                        fontSize: '0.7rem', 
-                        height: '24px'
-                      }}
+                        sx={{ 
+                          fontSize: '0.7rem', 
+                          height: '24px'
+                        }}
                       />
                     ))}
                   </Box>
@@ -1341,7 +1344,10 @@ const LicenseApprovalPage: React.FC = () => {
                             label={`${code} - ${code === '01' ? 'Corrective Lenses Required' : code === '02' ? 'Artificial Limb/Prosthetics' : `Restriction ${code}`}`}
                             size="small" 
                             color="warning"
-                            sx={{ fontSize: '0.7rem', height: '24px' }}
+                            sx={{ 
+                              fontSize: '0.7rem', 
+                              height: '24px'
+                            }}
                           />
                         ))}
                       </Box>
@@ -1359,7 +1365,10 @@ const LicenseApprovalPage: React.FC = () => {
                             label={`${code} - ${code === '01' ? 'Automatic Transmission Only' : code === '02' ? 'Electric Powered Vehicles Only' : code === '03' ? 'Vehicles Adapted for Physical Disabilities' : `Restriction ${code}`}`}
                             size="small" 
                             color="warning"
-                            sx={{ fontSize: '0.7rem', height: '24px' }}
+                            sx={{ 
+                              fontSize: '0.7rem', 
+                              height: '24px'
+                            }}
                           />
                         ))}
                       </Box>
@@ -1381,8 +1390,8 @@ const LicenseApprovalPage: React.FC = () => {
                 <Collapse in={showRawMedicalData}>
                   <Paper elevation={0} sx={{ mt: 2, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
                     <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '12px', margin: 0 }}>
-                      {JSON.stringify(selectedApplication.medical_information, null, 2)}
-                    </pre>
+              {JSON.stringify(selectedApplication.medical_information, null, 2)}
+            </pre>
                   </Paper>
                 </Collapse>
               </Box>
