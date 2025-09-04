@@ -38,7 +38,8 @@ import {
   FormGroup,
   Select,
   MenuItem,
-  FormHelperText
+  FormHelperText,
+  Collapse
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -52,7 +53,9 @@ import {
   Warning as WarningIcon,
   CheckCircle as CheckCircleIcon,
   ArrowBack as ArrowBackIcon,
-  ArrowForward as ArrowForwardIcon
+  ArrowForward as ArrowForwardIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAuthToken, API_ENDPOINTS } from '../../config/api';
@@ -113,6 +116,7 @@ const LicenseApprovalPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showMedicalInfo, setShowMedicalInfo] = useState(false);
+  const [showRawMedicalData, setShowRawMedicalData] = useState(false);
 
   // Location selection for admin users
   const [selectedLocationId, setSelectedLocationId] = useState('');
@@ -261,9 +265,10 @@ const LicenseApprovalPage: React.FC = () => {
       const preSelectedDriver = restrictionInfo?.pre_selected_driver_restrictions || [];
       
       // Set pre-selected and locked restrictions based on medical information
-      setSelectedDriverRestrictions(preSelectedDriver);
+      // Default to "00" if no pre-selected restrictions
+      setSelectedDriverRestrictions(preSelectedDriver.length > 0 ? preSelectedDriver : ['00']);
       setLockedDriverRestrictions(preSelectedDriver);
-      setSelectedVehicleRestrictions([]);
+      setSelectedVehicleRestrictions(['00']); // Default to "00 - None"
     }
     
     setApprovalOutcome('');
@@ -288,6 +293,51 @@ const LicenseApprovalPage: React.FC = () => {
         ? prev.filter(code => code !== restrictionCode)
         : [...prev, restrictionCode]
     );
+  };
+
+  // Helper functions for restrictions management similar to LicenseCaptureForm
+  const getRestrictionDisplayName = (code: string): string => {
+    // Driver restrictions mapping
+    const driverRestrictionMap: Record<string, string> = {
+      '00': 'None',
+      '01': 'Corrective Lenses Required',
+      '02': 'Artificial Limb/Prosthetics'
+    };
+    
+    // Vehicle restrictions mapping
+    const vehicleRestrictionMap: Record<string, string> = {
+      '00': 'None',
+      '01': 'Automatic Transmission Only',
+      '02': 'Electric Powered Vehicles Only',
+      '03': 'Vehicles Adapted for Physical Disabilities',
+      '04': 'Tractor Vehicles Only',
+      '05': 'Industrial/Agriculture Vehicles Only'
+    };
+    
+    return driverRestrictionMap[code] || vehicleRestrictionMap[code] || `Restriction ${code}`;
+  };
+
+  // Helper function to manage automatic "00 - None" default logic
+  const updateRestrictions = (restrictionType: 'driver_restrictions' | 'vehicle_restrictions', selectedValues: string[]) => {
+    // If no values selected or only "00" is selected when others are added, automatically add "00"
+    let finalValues = [...selectedValues];
+    
+    // If selecting other restrictions while "00" is present, remove "00"
+    if (finalValues.length > 1 && finalValues.includes('00')) {
+      finalValues = finalValues.filter(value => value !== '00');
+    }
+    
+    // If no restrictions selected, automatically add "00" as default
+    if (finalValues.length === 0) {
+      finalValues = ['00'];
+    }
+    
+    // Update the appropriate restriction type
+    if (restrictionType === 'driver_restrictions') {
+      setSelectedDriverRestrictions(finalValues);
+    } else {
+      setSelectedVehicleRestrictions(finalValues);
+    }
   };
 
   const handleProcessApproval = async () => {
@@ -354,13 +404,14 @@ const LicenseApprovalPage: React.FC = () => {
     setSearchIdNumber('');
     setPersonSummary(null);
     setSelectedApplication(null);
-    setSelectedDriverRestrictions([]);
-    setSelectedVehicleRestrictions([]);
+    setSelectedDriverRestrictions(['00']);
+    setSelectedVehicleRestrictions(['00']);
     setLockedDriverRestrictions([]);
     setApprovalOutcome('');
     setError(null);
     setSuccess(null);
     setShowMedicalInfo(false);
+    setShowRawMedicalData(false);
     // Reset location selection for admin users
     if (!user?.primary_location_id) {
       setSelectedLocationId('');
@@ -734,24 +785,27 @@ const LicenseApprovalPage: React.FC = () => {
           </Typography>
             
             <Grid container spacing={2}>
-              <Grid item xs={4}>
-                <Button
-                  fullWidth
-                  variant={approvalOutcome === 'PASSED' ? 'contained' : 'outlined'}
-                  color="success"
-                  onClick={() => setApprovalOutcome('PASSED')}
-                  startIcon={<CheckIcon />}
+                          <Grid item xs={4}>
+              <Button
+                fullWidth
+                variant={approvalOutcome === 'PASSED' ? 'contained' : 'outlined'}
+                color="success"
+                onClick={() => setApprovalOutcome('PASSED')}
+                startIcon={<CheckIcon />}
                 size="small"
                 sx={{
                   borderWidth: '1px',
                   '&:hover': {
                     borderWidth: '1px',
                   },
+                  '&.MuiButton-contained': {
+                    color: 'white',
+                  },
                 }}
-                >
-                  PASS
-                </Button>
-              </Grid>
+              >
+                PASS
+              </Button>
+            </Grid>
               <Grid item xs={4}>
                 <Button
                   fullWidth
@@ -807,70 +861,182 @@ const LicenseApprovalPage: React.FC = () => {
               License Restrictions
             </Typography>
               
-              {/* Driver Restrictions */}
-              {restrictionInfo.driver_restrictions.length > 0 && (
-                <Box mb={3}>
-                <Typography variant="subtitle1" gutterBottom color="primary" fontWeight="bold" sx={{ fontSize: '0.9rem' }}>
-                    Driver Restrictions
-                  </Typography>
-                  <FormGroup>
-                    {restrictionInfo.driver_restrictions.map((restriction) => (
-                      <FormControlLabel
-                        key={restriction.code}
-                        control={
-                          <Checkbox
-                            checked={selectedDriverRestrictions.includes(restriction.code)}
-                            onChange={() => handleDriverRestrictionToggle(restriction.code)}
-                            disabled={restriction.locked}
+                          {/* Driver Restrictions */}
+            <Box mb={3}>
+              <Typography variant="subtitle1" gutterBottom color="primary" fontWeight="bold" sx={{ fontSize: '0.9rem' }}>
+                Driver Restrictions
+              </Typography>
+              <FormControl fullWidth size="small">
+                <InputLabel>Driver Restrictions</InputLabel>
+                <Select
+                  multiple
+                  size="small"
+                  value={selectedDriverRestrictions}
+                  label="Driver Restrictions"
+                  onChange={(e) => updateRestrictions('driver_restrictions', Array.isArray(e.target.value) ? e.target.value : [])}
+                  sx={{
+                    position: 'relative',
+                    '& .chip-container .MuiChip-deleteIcon': {
+                      pointerEvents: 'auto',
+                      zIndex: 10000
+                    }
+                  }}
+                  MenuProps={{
+                    PaperProps: {
+                      sx: { zIndex: 1200 }
+                    }
+                  }}
+                  renderValue={(selected) => (
+                    <Box 
+                      className="chip-container"
+                      data-chip-container="true"
+                      sx={{ 
+                        display: 'flex', 
+                        flexWrap: 'wrap', 
+                        gap: 0.5
+                      }}
+                      onMouseDown={(e) => {
+                        const target = e.target as HTMLElement;
+                        if (target.closest('.MuiChip-root') || target.classList.contains('MuiChip-root')) {
+                          e.stopPropagation();
+                        }
+                      }}
+                    >
+                      {(selected as string[]).map((value) => (
+                        <Chip 
+                          key={value} 
+                          label={`${value} - ${getRestrictionDisplayName(value)}`}
                           size="small"
-                          />
-                        }
-                        label={
-                          <Box display="flex" alignItems="center" gap={1}>
-                          <Typography sx={{ fontSize: '0.8rem' }}>{restriction.description}</Typography>
-                            {restriction.locked && (
-                              <Chip 
-                                label="Required by vision test" 
-                                size="small" 
-                                color="warning" 
-                                variant="outlined"
-                              sx={{ 
-                                fontSize: '0.7rem', 
-                                height: '24px'
-                              }}
-                              />
-                            )}
-                          </Box>
-                        }
+                          color="primary"
+                          sx={{ 
+                            fontSize: '0.65rem', 
+                            height: '20px',
+                            '& .MuiChip-deleteIcon': {
+                              pointerEvents: 'auto',
+                              zIndex: 10000
+                            }
+                          }}
+                          onDelete={value !== '00' || selected.length > 1 ? (e) => {
+                            if (e) {
+                              e.preventDefault();
+                              e.stopPropagation();
+                            }
+                            const newValues = selected.filter(v => v !== value);
+                            updateRestrictions('driver_restrictions', newValues);
+                          } : undefined}
+                        />
+                      ))}
+                    </Box>
+                  )}
+                >
+                  <MenuItem value="00">00 - None</MenuItem>
+                  <MenuItem value="01">01 - Corrective Lenses Required</MenuItem>
+                  <MenuItem value="02">02 - Artificial Limb/Prosthetics</MenuItem>
+                </Select>
+              </FormControl>
+              
+              {/* Show locked restrictions from medical examination */}
+              {restrictionInfo && restrictionInfo.driver_restrictions.filter((r: any) => r.locked).length > 0 && (
+                <Box sx={{ mt: 1 }}>
+                  <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'warning.main' }}>
+                    <strong>Required by medical examination:</strong>
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 0.5 }}>
+                    {restrictionInfo.driver_restrictions.filter((r: any) => r.locked).map((restriction: any) => (
+                      <Chip 
+                        key={restriction.code}
+                        label={`${restriction.code} - ${restriction.description}`}
+                        size="small" 
+                        color="warning" 
+                        variant="outlined"
+                        sx={{ 
+                          fontSize: '0.65rem', 
+                          height: '20px'
+                        }}
                       />
                     ))}
-                  </FormGroup>
+                  </Box>
                 </Box>
               )}
+            </Box>
 
-              {/* Vehicle Restrictions */}
-              {restrictionInfo.vehicle_restrictions.length > 0 && (
-                <Box mb={2}>
-                <Typography variant="subtitle1" gutterBottom color="primary" fontWeight="bold" sx={{ fontSize: '0.9rem' }}>
-                    Vehicle Restrictions
-                  </Typography>
-                  <FormGroup>
-                    {restrictionInfo.vehicle_restrictions.map((restriction) => (
-                      <FormControlLabel
-                        key={restriction.code}
-                        control={
-                          <Checkbox
-                            checked={selectedVehicleRestrictions.includes(restriction.code)}
-                            onChange={() => handleVehicleRestrictionToggle(restriction.code)}
-                          size="small"
-                          />
+            {/* Vehicle Restrictions */}
+            <Box mb={2}>
+              <Typography variant="subtitle1" gutterBottom color="primary" fontWeight="bold" sx={{ fontSize: '0.9rem' }}>
+                Vehicle Restrictions
+              </Typography>
+              <FormControl fullWidth size="small">
+                <InputLabel>Vehicle Restrictions</InputLabel>
+                <Select
+                  multiple
+                  size="small"
+                  value={selectedVehicleRestrictions}
+                  label="Vehicle Restrictions"
+                  onChange={(e) => updateRestrictions('vehicle_restrictions', Array.isArray(e.target.value) ? e.target.value : [])}
+                  sx={{
+                    position: 'relative',
+                    '& .chip-container .MuiChip-deleteIcon': {
+                      pointerEvents: 'auto',
+                      zIndex: 10000
+                    }
+                  }}
+                  MenuProps={{
+                    PaperProps: {
+                      sx: { zIndex: 1200 }
+                    }
+                  }}
+                  renderValue={(selected) => (
+                    <Box 
+                      className="chip-container"
+                      data-chip-container="true"
+                      sx={{ 
+                        display: 'flex', 
+                        flexWrap: 'wrap', 
+                        gap: 0.5
+                      }}
+                      onMouseDown={(e) => {
+                        const target = e.target as HTMLElement;
+                        if (target.closest('.MuiChip-root') || target.classList.contains('MuiChip-root')) {
+                          e.stopPropagation();
                         }
-                      label={<Typography sx={{ fontSize: '0.8rem' }}>{restriction.description}</Typography>}
-                      />
-                    ))}
-                  </FormGroup>
-                </Box>
-              )}
+                      }}
+                    >
+                      {(selected as string[]).map((value) => (
+                        <Chip 
+                          key={value} 
+                          label={`${value} - ${getRestrictionDisplayName(value)}`}
+                          size="small"
+                          color="secondary"
+                          sx={{ 
+                            fontSize: '0.65rem', 
+                            height: '20px',
+                            '& .MuiChip-deleteIcon': {
+                              pointerEvents: 'auto',
+                              zIndex: 10000
+                            }
+                          }}
+                          onDelete={value !== '00' || selected.length > 1 ? (e) => {
+                            if (e) {
+                              e.preventDefault();
+                              e.stopPropagation();
+                            }
+                            const newValues = selected.filter(v => v !== value);
+                            updateRestrictions('vehicle_restrictions', newValues);
+                          } : undefined}
+                        />
+                      ))}
+                    </Box>
+                  )}
+                >
+                  <MenuItem value="00">00 - None</MenuItem>
+                  <MenuItem value="01">01 - Automatic Transmission Only</MenuItem>
+                  <MenuItem value="02">02 - Electric Powered Vehicles Only</MenuItem>
+                  <MenuItem value="03">03 - Vehicles Adapted for Physical Disabilities</MenuItem>
+                  <MenuItem value="04">04 - Tractor Vehicles Only</MenuItem>
+                  <MenuItem value="05">05 - Industrial/Agriculture Vehicles Only</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
 
               {/* Selected Restrictions Summary */}
               {(selectedDriverRestrictions.length > 0 || selectedVehicleRestrictions.length > 0) && (
@@ -1048,6 +1214,11 @@ const LicenseApprovalPage: React.FC = () => {
               disabled={isProcessing || !approvalOutcome || !isLocationValid()}
               startIcon={isProcessing ? <CircularProgress size={16} /> : <GavelIcon />}
               size="small"
+              sx={{
+                '&.MuiButton-contained': {
+                  color: approvalOutcome === 'PASSED' ? 'white' : undefined,
+                },
+              }}
             >
               {isProcessing ? 'Processing...' : `Confirm ${approvalOutcome}`}
             </Button>
@@ -1065,9 +1236,157 @@ const LicenseApprovalPage: React.FC = () => {
         <DialogTitle>Medical Information</DialogTitle>
         <DialogContent>
           {selectedApplication?.medical_information ? (
-            <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '12px' }}>
-              {JSON.stringify(selectedApplication.medical_information, null, 2)}
-            </pre>
+            <Box sx={{ mt: 1 }}>
+              {/* Vision Test Results */}
+              {selectedApplication.medical_information.vision_test && (
+                <Paper elevation={0} sx={{ p: 2, mb: 2, bgcolor: '#f8f9fa', borderRadius: 1 }}>
+                  <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                    Vision Test Results
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={6}>
+                      <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                        <strong>Visual Acuity:</strong> {selectedApplication.medical_information.vision_test.visual_acuity || 'Not recorded'}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                        <strong>Color Vision:</strong> {selectedApplication.medical_information.vision_test.color_vision || 'Not recorded'}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                        <strong>Field of Vision:</strong> {selectedApplication.medical_information.vision_test.field_of_vision || 'Not recorded'}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                        <strong>Night Vision:</strong> {selectedApplication.medical_information.vision_test.night_vision || 'Not recorded'}
+                      </Typography>
+                    </Grid>
+                    {selectedApplication.medical_information.vision_test.corrective_lenses_required && (
+                      <Grid item xs={12}>
+                        <Alert severity="warning" sx={{ fontSize: '0.8rem' }}>
+                          <strong>Corrective Lenses Required:</strong> This person must wear corrective lenses while driving
+                        </Alert>
+                      </Grid>
+                    )}
+                  </Grid>
+                </Paper>
+              )}
+
+              {/* Medical Examination */}
+              {selectedApplication.medical_information.medical_exam && (
+                <Paper elevation={0} sx={{ p: 2, mb: 2, bgcolor: '#f8f9fa', borderRadius: 1 }}>
+                  <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                    Medical Examination
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={6}>
+                      <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                        <strong>General Health:</strong> {selectedApplication.medical_information.medical_exam.general_health || 'Not recorded'}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                        <strong>Physical Fitness:</strong> {selectedApplication.medical_information.medical_exam.physical_fitness || 'Not recorded'}
+                      </Typography>
+                    </Grid>
+                    {selectedApplication.medical_information.medical_exam.medical_conditions && (
+                      <Grid item xs={12}>
+                        <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                          <strong>Medical Conditions:</strong> {selectedApplication.medical_information.medical_exam.medical_conditions}
+                        </Typography>
+                      </Grid>
+                    )}
+                    {selectedApplication.medical_information.medical_exam.medications && (
+                      <Grid item xs={12}>
+                        <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                          <strong>Current Medications:</strong> {selectedApplication.medical_information.medical_exam.medications}
+                        </Typography>
+                      </Grid>
+                    )}
+                  </Grid>
+                </Paper>
+              )}
+
+              {/* Examiner Notes */}
+              {selectedApplication.medical_information.examiner_notes && (
+                <Paper elevation={0} sx={{ p: 2, mb: 2, bgcolor: '#f8f9fa', borderRadius: 1 }}>
+                  <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                    Examiner Notes
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                    {selectedApplication.medical_information.examiner_notes}
+                  </Typography>
+                </Paper>
+              )}
+
+              {/* Pre-Selected Restrictions */}
+              {(selectedApplication.medical_information.pre_selected_restrictions?.driver_restrictions?.length > 0 || 
+                selectedApplication.medical_information.pre_selected_restrictions?.vehicle_restrictions?.length > 0) && (
+                <Paper elevation={0} sx={{ p: 2, mb: 2, bgcolor: '#fff3e0', borderRadius: 1 }}>
+                  <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                    Pre-Selected Restrictions (Based on Medical Examination)
+                  </Typography>
+                  {selectedApplication.medical_information.pre_selected_restrictions.driver_restrictions?.length > 0 && (
+                    <Box sx={{ mb: 1 }}>
+                      <Typography variant="subtitle2" sx={{ fontSize: '0.9rem', fontWeight: 600, mb: 0.5 }}>
+                        Driver Restrictions:
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                        {selectedApplication.medical_information.pre_selected_restrictions.driver_restrictions.map((code: string) => (
+                          <Chip 
+                            key={code} 
+                            label={`${code} - ${code === '01' ? 'Corrective Lenses Required' : code === '02' ? 'Artificial Limb/Prosthetics' : `Restriction ${code}`}`}
+                            size="small" 
+                            color="warning"
+                            sx={{ fontSize: '0.7rem', height: '24px' }}
+                          />
+                        ))}
+                      </Box>
+                    </Box>
+                  )}
+                  {selectedApplication.medical_information.pre_selected_restrictions.vehicle_restrictions?.length > 0 && (
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontSize: '0.9rem', fontWeight: 600, mb: 0.5 }}>
+                        Vehicle Restrictions:
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                        {selectedApplication.medical_information.pre_selected_restrictions.vehicle_restrictions.map((code: string) => (
+                          <Chip 
+                            key={code} 
+                            label={`${code} - ${code === '01' ? 'Automatic Transmission Only' : code === '02' ? 'Electric Powered Vehicles Only' : code === '03' ? 'Vehicles Adapted for Physical Disabilities' : `Restriction ${code}`}`}
+                            size="small" 
+                            color="warning"
+                            sx={{ fontSize: '0.7rem', height: '24px' }}
+                          />
+                        ))}
+                      </Box>
+                    </Box>
+                  )}
+                </Paper>
+              )}
+
+              {/* Raw Data (Collapsible) */}
+              <Box sx={{ mt: 2 }}>
+                <Button 
+                  variant="outlined" 
+                  size="small" 
+                  onClick={() => setShowRawMedicalData(!showRawMedicalData)}
+                  startIcon={showRawMedicalData ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                >
+                  {showRawMedicalData ? 'Hide' : 'Show'} Raw Medical Data
+                </Button>
+                <Collapse in={showRawMedicalData}>
+                  <Paper elevation={0} sx={{ mt: 2, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
+                    <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '12px', margin: 0 }}>
+                      {JSON.stringify(selectedApplication.medical_information, null, 2)}
+                    </pre>
+                  </Paper>
+                </Collapse>
+              </Box>
+            </Box>
           ) : (
             <Typography>No medical information available</Typography>
           )}
