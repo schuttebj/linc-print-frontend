@@ -47,6 +47,7 @@ import {
   Preview as PreviewIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
+import { API_ENDPOINTS } from '../../config/api';
 
 // Types
 interface PersonData {
@@ -135,12 +136,12 @@ const CardOrderingByIdPage: React.FC = () => {
       icon: <PersonIcon />
     },
     {
-      label: 'Document Preview',
-      icon: <DocumentScannerIcon />
+      label: 'Select Applications',
+      icon: <AssignmentIcon />
     },
     {
-      label: 'Order Card',
-      icon: <AssignmentIcon />
+      label: 'Review & Print',
+      icon: <DocumentScannerIcon />
     }
   ];
 
@@ -225,10 +226,10 @@ const CardOrderingByIdPage: React.FC = () => {
     switch (step) {
       case 0: // Search Person
         return !!searchResult && searchResult.print_eligibility.can_order_card;
-      case 1: // Document Preview
-        return documentPrinted && signatureConfirmed;
-      case 2: // Order Card
+      case 1: // Select Applications
         return !!selectedApplication && !!selectedLocation;
+      case 2: // Review & Print
+        return documentPrinted && signatureConfirmed;
       default:
         return false;
     }
@@ -333,6 +334,11 @@ const CardOrderingByIdPage: React.FC = () => {
 
     try {
       const token = localStorage.getItem('access_token');
+      
+      // TODO: Future enhancement - support multiple applications in a single card order
+      // This should be updated to handle selectedApplications[] instead of single selectedApplication
+      // and update the status of all applications to "SENT_TO_PRINTER" or appropriate enum value
+      
       const response = await fetch('https://linc-print-backend.onrender.com/api/v1/printing/jobs', {
         method: 'POST',
         headers: {
@@ -354,6 +360,9 @@ const CardOrderingByIdPage: React.FC = () => {
       const data = await response.json();
       setOrderSuccess(data);
 
+      // Note: The backend should automatically update application status to "SENT_TO_PRINTER"
+      // when the print job is successfully created
+
     } catch (error: any) {
       setError(error.message);
     } finally {
@@ -366,7 +375,7 @@ const CardOrderingByIdPage: React.FC = () => {
     if (!searchResult) return;
     
     try {
-      // Prepare data for the license verification template
+      // Prepare data for the license verification template using actual application data
       const verificationData = {
         government_header: '🇲🇬 REPUBLIC OF MADAGASCAR',
         department_header: 'MINISTRY OF TRANSPORT',
@@ -389,16 +398,27 @@ const CardOrderingByIdPage: React.FC = () => {
           issue_date: new Date(permit.issue_date).toLocaleDateString(),
           expiry_date: permit.expiry_date ? new Date(permit.expiry_date).toLocaleDateString() : 'No expiry'
         })),
+        // Add application-specific data
+        applications: searchResult.approved_applications.map(app => ({
+          id: app.id,
+          application_number: app.application_number,
+          application_type: app.application_type,
+          status: app.status,
+          submitted_date: new Date(app.application_date).toLocaleDateString()
+        })),
         footer: 'Ministry of Transport - Republic of Madagascar',
         contact_info: 'For assistance: +261 20 22 123 45 | transport@gov.mg'
       };
 
-      // Generate PDF using the new document generation API
+      // Generate PDF using the new document generation API with actual data
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`https://linc-print-backend.onrender.com/api/v1/document-test/sample-pdf/license_verification`, {
+      const response = await fetch(API_ENDPOINTS.documents.generatePdf('license_verification'), {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
-        }
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(verificationData)
       });
 
       if (!response.ok) {
@@ -450,9 +470,9 @@ const CardOrderingByIdPage: React.FC = () => {
       case 0:
         return renderSearchStep();
       case 1:
-        return renderDocumentPreviewStep();
+        return renderApplicationSelectionStep();
       case 2:
-        return renderOrderStep();
+        return renderReviewAndPrintStep();
       default:
         return null;
     }
@@ -766,8 +786,8 @@ const CardOrderingByIdPage: React.FC = () => {
     </Box>
   );
 
-  // Step 2: Document Preview
-  const renderDocumentPreviewStep = () => (
+  // Step 2: Review & Print (formerly Document Preview)
+  const renderReviewAndPrintStep = () => (
     <Paper 
       elevation={0}
       sx={{ 
@@ -781,11 +801,6 @@ const CardOrderingByIdPage: React.FC = () => {
           Review & Print Verification Document
         </Typography>
 
-        <Alert severity="info" sx={{ mb: 1.5, py: 0.5 }}>
-          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-            Please review the license verification details and print the document for signing before proceeding with card ordering.
-          </Typography>
-        </Alert>
 
         {searchResult && (
           <>
@@ -829,8 +844,7 @@ const CardOrderingByIdPage: React.FC = () => {
             <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
               <Grid container spacing={1}>
                 <Grid item xs={12}>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Licenses ({searchResult.card_eligible_licenses.length})</Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                     {searchResult.card_eligible_licenses.map(license => (
                       <Chip 
                         key={license.id}
@@ -854,8 +868,7 @@ const CardOrderingByIdPage: React.FC = () => {
                 <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
                   <Grid container spacing={1}>
                     <Grid item xs={12}>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Permits ({searchResult.learners_permits.length})</Typography>
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                         {searchResult.learners_permits.map(license => (
                           <Chip 
                             key={license.id}
@@ -915,14 +928,21 @@ const CardOrderingByIdPage: React.FC = () => {
                 variant="contained"
                 startIcon={<PrintIcon />}
                 onClick={handlePrintVerificationDocument}
-                sx={{ mb: 1, display: 'block' }}
-                size="small"
+                sx={{ 
+                  mb: 1, 
+                  width: '100%',
+                  maxWidth: '400px',
+                  py: 1.5,
+                  fontSize: '0.9rem',
+                  fontWeight: 600
+                }}
+                size="medium"
               >
                 {documentPrinted ? 'Print Document Again' : 'Print Verification Document'}
               </Button>
 
               {documentPrinted && (
-                <Box sx={{ mt: 1, p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'grey.50' }}>
+                <Box sx={{ mt: 1, p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
                   <FormControlLabel
                     control={
                       <Checkbox
@@ -946,8 +966,8 @@ const CardOrderingByIdPage: React.FC = () => {
     </Paper>
   );
 
-  // Step 3: Order Card
-  const renderOrderStep = () => (
+  // Step 1: Application Selection (formerly Order Card)
+  const renderApplicationSelectionStep = () => (
     <Paper 
       elevation={0}
       sx={{ 
@@ -957,95 +977,132 @@ const CardOrderingByIdPage: React.FC = () => {
         p: 2
       }}
     >
-      <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-        Card Order Configuration
-      </Typography>
+      <Box sx={{ p: 1.5 }}>
+        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, fontSize: '1rem', mb: 1 }}>
+          Select Applications for Card Order
+        </Typography>
 
-      {searchResult && (
-        <Grid container spacing={3}>
-          {/* Application Selection */}
-          <Grid item xs={12} md={6}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Select Application</InputLabel>
-              <Select
-                value={selectedApplication}
-                onChange={(e) => setSelectedApplication(e.target.value)}
-                label="Select Application"
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    '& fieldset': { borderWidth: '1px' },
-                    '&:hover fieldset': { borderWidth: '1px' },
-                    '&.Mui-focused fieldset': { borderWidth: '1px' },
-                  },
-                }}
-              >
-                {searchResult.approved_applications.map((app) => (
-                  <MenuItem key={app.id} value={app.id}>
-                    <Box>
-                      <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 600 }}>
+        <Alert severity="info" sx={{ mb: 1.5, py: 0.5 }}>
+          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+            Select all applications that should be included in this card order. Multiple licenses can be combined on a single card.
+          </Typography>
+        </Alert>
+
+        {searchResult && (
+          <>
+            {/* Applications Ready for Printing */}
+            <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+              Available Applications ({searchResult.approved_applications.length})
+            </Typography>
+            
+            <Box sx={{ mb: 1.5 }}>
+              {searchResult.approved_applications.map((app) => (
+                <Paper 
+                  key={app.id}
+                  sx={{ 
+                    p: 1, 
+                    mb: 1, 
+                    border: selectedApplication === app.id ? '2px solid' : '1px solid', 
+                    borderColor: selectedApplication === app.id ? 'primary.main' : 'divider',
+                    borderRadius: 1, 
+                    backgroundColor: selectedApplication === app.id ? 'primary.50' : 'transparent',
+                    cursor: 'pointer',
+                    '&:hover': { 
+                      borderColor: 'primary.main', 
+                      backgroundColor: 'primary.50' 
+                    } 
+                  }}
+                  onClick={() => setSelectedApplication(app.id)}
+                >
+                  <Grid container spacing={1} alignItems="center">
+                    <Grid item xs={12} md={3}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Application Number</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
                         {app.application_number}
                       </Typography>
-                      <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
+                    </Grid>
+                    <Grid item xs={6} md={2}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Category</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                        <Chip label={app.application_type} size="small" color="primary" sx={{ fontSize: '0.7rem', height: '20px' }} />
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6} md={2}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Type</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                         {app.application_type}
                       </Typography>
-                    </Box>
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-
-          {/* Location Selection */}
-          {searchResult.accessible_print_locations.length > 1 && (
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Print Location</InputLabel>
-                <Select
-                  value={selectedLocation}
-                  onChange={(e) => setSelectedLocation(e.target.value)}
-                  label="Print Location"
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      '& fieldset': { borderWidth: '1px' },
-                      '&:hover fieldset': { borderWidth: '1px' },
-                      '&.Mui-focused fieldset': { borderWidth: '1px' },
-                    },
-                  }}
-                >
-                  {searchResult.accessible_print_locations.map((location) => (
-                    <MenuItem key={location.id} value={location.id}>
-                      <Box>
-                        <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 600 }}>
-                          {location.name}
-                        </Typography>
-                        <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
-                          {location.code} - {location.province_code}
-                        </Typography>
+                    </Grid>
+                    <Grid item xs={6} md={2}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Status</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                        <Chip label={app.status} size="small" color="success" sx={{ fontSize: '0.7rem', height: '20px' }} />
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6} md={2}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Submitted</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                        {new Date(app.application_date).toLocaleDateString()}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} md={1}>
+                      <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                        {selectedApplication === app.id && (
+                          <Chip label="Selected" size="small" color="primary" sx={{ fontSize: '0.65rem', height: '18px' }} />
+                        )}
                       </Box>
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-          )}
-
-          {/* Order Button */}
-          <Grid item xs={12}>
-            <Box sx={{ textAlign: 'center', mt: 2 }}>
-              <Button
-                variant="contained"
-                size="large"
-                startIcon={ordering ? <CircularProgress size={16} /> : <PrintIcon />}
-                onClick={createPrintJob}
-                disabled={!selectedApplication || !selectedLocation || ordering}
-                sx={{ minWidth: 200 }}
-              >
-                {ordering ? 'Creating Print Job...' : 'Create Print Job'}
-              </Button>
+                    </Grid>
+                  </Grid>
+                </Paper>
+              ))}
             </Box>
-          </Grid>
-        </Grid>
-      )}
+
+            {/* Print Location Selection */}
+            <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+              Print Location
+            </Typography>
+            <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
+              {searchResult.accessible_print_locations.length > 1 ? (
+                <FormControl fullWidth size="small">
+                  <InputLabel>Select Print Location</InputLabel>
+                  <Select
+                    value={selectedLocation}
+                    onChange={(e) => setSelectedLocation(e.target.value)}
+                    label="Select Print Location"
+                  >
+                    {searchResult.accessible_print_locations.map((location) => (
+                      <MenuItem key={location.id} value={location.id}>
+                        <Box>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                            {location.name}
+                          </Typography>
+                          <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
+                            {location.code} - {location.province_code}
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              ) : (
+                <Grid container spacing={1}>
+                  <Grid item xs={12}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Assigned Location</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {searchResult.accessible_print_locations[0]?.name || 'No location assigned'}
+                    </Typography>
+                    {searchResult.accessible_print_locations[0] && (
+                      <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
+                        {searchResult.accessible_print_locations[0].code} - {searchResult.accessible_print_locations[0].province_code}
+                      </Typography>
+                    )}
+                  </Grid>
+                </Grid>
+              )}
+            </Box>
+          </>
+        )}
+      </Box>
 
       {/* Order Success */}
       {orderSuccess && (
@@ -1181,7 +1238,7 @@ const CardOrderingByIdPage: React.FC = () => {
                 disabled={!isStepValid(activeStep) || loading || ordering}
                 size="small"
               >
-                {activeStep === 0 ? 'Preview Document' : 'Proceed to Order'}
+                {activeStep === 0 ? 'Select Applications' : activeStep === 1 ? 'Review & Print' : 'Complete Order'}
               </Button>
             )}
           </Box>
