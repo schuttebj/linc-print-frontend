@@ -469,7 +469,7 @@ const HomePage: React.FC = () => {
         <Box sx={{ flex: '0 0 auto', display: 'flex', gap: 3, width: '100%' }}>
           {/* Quick Actions Widget */}
           <Box sx={{ flex: 1 }}>
-            <Card>
+            <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                   <SpeedIcon color="primary" />
@@ -542,7 +542,7 @@ const HomePage: React.FC = () => {
 
           {/* Productivity Stats Widget */}
           <Box sx={{ flex: 1 }}>
-            <Card>
+            <Card sx={{ height: '100%' }}>
               <CardContent sx={{ pb: 0.5 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
                   <TrendingUpIcon color="primary" />
@@ -647,7 +647,7 @@ const HomePage: React.FC = () => {
 
           {/* Support & Resources Widget */}
           <Box sx={{ flex: 1 }}>
-            <Card>
+            <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                   <HelpIcon color="primary" />
