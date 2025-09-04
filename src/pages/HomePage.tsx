@@ -265,23 +265,24 @@ const HomePage: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 2, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      {/* Welcome Header */}
-      <Box sx={{ mb: 3, flexShrink: 0 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Welcome, {user?.first_name || user?.username}!
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Madagascar Driver's License Management System Dashboard
-        </Typography>
-      </Box>
+    <Box sx={{ height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <Container maxWidth="lg" sx={{ flex: 1, display: 'flex', flexDirection: 'column', py: 2 }}>
+        {/* Welcome Header */}
+        <Box sx={{ mb: 3, flexShrink: 0 }}>
+          <Typography variant="h4" component="h1" gutterBottom>
+            Welcome, {user?.first_name || user?.username}!
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Madagascar Driver's License Management System Dashboard
+          </Typography>
+        </Box>
 
-      {/* Bento Grid Layout */}
-      <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 3 }}>
+        {/* Bento Grid Layout */}
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3, minHeight: 0 }}>
         {/* Row 1: Announcements (Large), System Status (Medium), User Profile (Medium) */}
-        <Box sx={{ flex: '0 0 60%', display: 'flex', gap: 3 }}>
+        <Box sx={{ flex: '1 1 55%', display: 'flex', gap: 3, minHeight: 0 }}>
           {/* Announcements Widget - Left Half */}
-          <Box sx={{ flex: '0 0 50%' }}>
+          <Box sx={{ flex: '0 0 50%', minHeight: 0 }}>
             <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
               <CardContent sx={{ pb: 0 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
@@ -349,21 +350,21 @@ const HomePage: React.FC = () => {
                             <Chip label={announcement.category} size="small" sx={{ fontSize: '0.65rem' }} />
                             <Typography variant="caption" color="text.secondary">
                               {new Date(announcement.date).toLocaleDateString()}
-                            </Typography>
+                  </Typography>
                           </Box>
                         </Box>
                       </Alert>
                     ))}
-                  </Stack>
+                </Stack>
                 )}
               </CardContent>
             </Card>
           </Box>
 
           {/* Right Half - System Status and User Profile */}
-          <Box sx={{ flex: '0 0 50%', display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <Box sx={{ flex: '0 0 50%', display: 'flex', flexDirection: 'column', gap: 3, minHeight: 0 }}>
             {/* System Status Widget */}
-            <Box sx={{ flex: 1 }}>
+            <Box sx={{ flex: 1, minHeight: 0 }}>
               <Card sx={{ height: '100%' }}>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
@@ -413,7 +414,7 @@ const HomePage: React.FC = () => {
             </Box>
 
             {/* User Profile Widget */}
-            <Box sx={{ flex: 1 }}>
+            <Box sx={{ flex: 1, minHeight: 0 }}>
               <Card sx={{ height: '100%' }}>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
@@ -465,9 +466,9 @@ const HomePage: React.FC = () => {
         </Box>
 
         {/* Row 2: Quick Actions, Productivity, Support */}
-        <Box sx={{ flex: '0 0 40%', display: 'flex', gap: 3 }}>
+        <Box sx={{ flex: '1 1 45%', display: 'flex', gap: 3, minHeight: 0 }}>
           {/* Quick Actions Widget */}
-          <Box sx={{ flex: 1 }}>
+          <Box sx={{ flex: 1, minHeight: 0 }}>
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
@@ -540,9 +541,9 @@ const HomePage: React.FC = () => {
           </Box>
 
           {/* Productivity Stats Widget */}
-          <Box sx={{ flex: 1 }}>
-            <Card sx={{ height: '100%' }}>
-              <CardContent>
+          <Box sx={{ flex: 1, minHeight: 0 }}>
+            <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <CardContent sx={{ pb: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                   <TrendingUpIcon color="primary" />
                   <Typography variant="h6" fontWeight={600}>
@@ -550,6 +551,8 @@ const HomePage: React.FC = () => {
                   </Typography>
                 </Box>
                 <Divider sx={{ mb: 2 }} />
+              </CardContent>
+              <CardContent sx={{ flex: 1, pt: 0, overflow: 'auto' }}>
                 {loading ? (
                   <Box>
                     <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
@@ -643,7 +646,7 @@ const HomePage: React.FC = () => {
           </Box>
 
           {/* Support & Resources Widget */}
-          <Box sx={{ flex: 1 }}>
+          <Box sx={{ flex: 1, minHeight: 0 }}>
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
@@ -706,8 +709,9 @@ const HomePage: React.FC = () => {
             </Card>
           </Box>
         </Box>
-      </Box>
-    </Container>
+        </Box>
+      </Container>
+    </Box>
   );
 };
 
