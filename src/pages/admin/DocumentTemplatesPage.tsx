@@ -97,7 +97,7 @@ const DocumentTemplatesPage: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(API_ENDPOINTS.documentTest.generatorInfo, {
+      const response = await fetch(API_ENDPOINTS.documents.generatorInfo, {
         headers: {
           'Authorization': `Bearer ${getAuthToken()}`,
           'Content-Type': 'application/json',
@@ -122,7 +122,7 @@ const DocumentTemplatesPage: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(API_ENDPOINTS.documentTest.templates, {
+      const response = await fetch(API_ENDPOINTS.documents.templates, {
         headers: {
           'Authorization': `Bearer ${getAuthToken()}`,
           'Content-Type': 'application/json',
@@ -155,7 +155,7 @@ const DocumentTemplatesPage: React.FC = () => {
 
   const fetchSampleData = async (templateId: string) => {
     try {
-      const response = await fetch(API_ENDPOINTS.documentTest.sampleData(templateId), {
+      const response = await fetch(API_ENDPOINTS.documents.sampleData(templateId), {
         headers: {
           'Authorization': `Bearer ${getAuthToken()}`,
           'Content-Type': 'application/json',
@@ -184,7 +184,7 @@ const DocumentTemplatesPage: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(API_ENDPOINTS.documentTest.samplePdf(templateId), {
+      const response = await fetch(API_ENDPOINTS.documents.samplePdf(templateId), {
         headers: {
           'Authorization': `Bearer ${getAuthToken()}`,
         },
@@ -515,27 +515,104 @@ const DocumentTemplatesPage: React.FC = () => {
                                   <Collapse in={expandedRows.has(template.id)} timeout="auto" unmountOnExit>
                                     <Box margin={1}>
                                       <Typography variant="h6" gutterBottom component="div" sx={{ fontSize: '0.875rem' }}>
-                                        Template Data Structure
+                                        Template Information
                                       </Typography>
                                       
                                       {template.sampleDataLoaded && template.sampleData ? (
-                                        <Paper sx={{ p: 2, bgcolor: '#f5f5f5', overflow: 'auto', maxHeight: '300px' }}>
-                                          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-                                            Template: {template.name} | Generated: {new Date(template.sampleData.generated_at).toLocaleString()}
-                                          </Typography>
-                                          <pre style={{ 
-                                            fontSize: '11px', 
-                                            margin: 0, 
-                                            overflow: 'auto',
-                                            whiteSpace: 'pre-wrap'
-                                          }}>
-                                            {JSON.stringify(template.sampleData.data, null, 2)}
-                                          </pre>
-                                        </Paper>
+                                        <Grid container spacing={2}>
+                                          {/* Template Metadata */}
+                                          <Grid item xs={12} md={6}>
+                                            <Paper sx={{ p: 2, bgcolor: '#f5f5f5' }}>
+                                              <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
+                                                Template Details
+                                              </Typography>
+                                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                                <Box>
+                                                  <Typography variant="caption" color="text.secondary">Template Type:</Typography>
+                                                  <Typography variant="body2" sx={{ fontWeight: 500 }}>{template.name}</Typography>
+                                                </Box>
+                                                <Box>
+                                                  <Typography variant="caption" color="text.secondary">Generator Version:</Typography>
+                                                  <Typography variant="body2" sx={{ fontWeight: 500 }}>{template.sampleData.generator_version}</Typography>
+                                                </Box>
+                                                <Box>
+                                                  <Typography variant="caption" color="text.secondary">Last Generated:</Typography>
+                                                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                                    {new Date(template.sampleData.generated_at).toLocaleString()}
+                                                  </Typography>
+                                                </Box>
+                                                <Box>
+                                                  <Typography variant="caption" color="text.secondary">Output Format:</Typography>
+                                                  <Chip label="PDF" size="small" color="primary" sx={{ fontSize: '0.7rem', height: '20px' }} />
+                                                </Box>
+                                              </Box>
+                                            </Paper>
+                                          </Grid>
+
+                                          {/* Template Content Summary */}
+                                          <Grid item xs={12} md={6}>
+                                            <Paper sx={{ p: 2, bgcolor: '#f5f5f5' }}>
+                                              <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
+                                                Document Content
+                                              </Typography>
+                                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                                {template.id === 'receipt' && (
+                                                  <>
+                                                    <Typography variant="body2">• Government headers and official branding</Typography>
+                                                    <Typography variant="body2">• Transaction and receipt numbers</Typography>
+                                                    <Typography variant="body2">• Beneficiary information</Typography>
+                                                    <Typography variant="body2">• Itemized payment details</Typography>
+                                                    <Typography variant="body2">• Payment method and processing info</Typography>
+                                                    <Typography variant="body2">• Official footer and contact information</Typography>
+                                                  </>
+                                                )}
+                                                {template.id === 'card_order_confirmation' && (
+                                                  <>
+                                                    <Typography variant="body2">• Government headers and official branding</Typography>
+                                                    <Typography variant="body2">• Order number and processing details</Typography>
+                                                    <Typography variant="body2">• Applicant information</Typography>
+                                                    <Typography variant="body2">• Order status and delivery timeline</Typography>
+                                                    <Typography variant="body2">• Important collection notices</Typography>
+                                                    <Typography variant="body2">• Signature area for confirmation</Typography>
+                                                  </>
+                                                )}
+                                                {template.id === 'license_verification' && (
+                                                  <>
+                                                    <Typography variant="body2">• Government headers and verification title</Typography>
+                                                    <Typography variant="body2">• License holder personal information</Typography>
+                                                    <Typography variant="body2">• Card-eligible licenses with restrictions</Typography>
+                                                    <Typography variant="body2">• Learner's permits (if applicable)</Typography>
+                                                    <Typography variant="body2">• Signature sections for holder and officer</Typography>
+                                                    <Typography variant="body2">• Authorization confirmation text</Typography>
+                                                  </>
+                                                )}
+                                              </Box>
+                                            </Paper>
+                                          </Grid>
+
+                                          {/* Optional: Show sample data toggle */}
+                                          <Grid item xs={12}>
+                                            <details>
+                                              <summary style={{ cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600, color: '#1976d2' }}>
+                                                Show Sample Data Structure (Developer Info)
+                                              </summary>
+                                              <Paper sx={{ p: 2, bgcolor: '#f5f5f5', mt: 1, overflow: 'auto', maxHeight: '200px' }}>
+                                                <pre style={{ 
+                                                  fontSize: '11px', 
+                                                  margin: 0, 
+                                                  overflow: 'auto',
+                                                  whiteSpace: 'pre-wrap'
+                                                }}>
+                                                  {JSON.stringify(template.sampleData.data, null, 2)}
+                                                </pre>
+                                              </Paper>
+                                            </details>
+                                          </Grid>
+                                        </Grid>
                                       ) : (
                                         <Box sx={{ p: 2, textAlign: 'center' }}>
                                           <Typography variant="body2" color="text.secondary">
-                                            Loading template data structure...
+                                            Loading template information...
                                           </Typography>
                                         </Box>
                                       )}

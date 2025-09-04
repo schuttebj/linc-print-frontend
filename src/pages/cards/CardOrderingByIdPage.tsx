@@ -415,7 +415,6 @@ const CardOrderingByIdPage: React.FC = () => {
         printWindow.addEventListener('load', () => {
           setTimeout(() => {
             printWindow.print();
-            printWindow.close();
             setDocumentPrinted(true);
           }, 500);
         });
@@ -774,120 +773,176 @@ const CardOrderingByIdPage: React.FC = () => {
       sx={{ 
         bgcolor: 'white',
         boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-        borderRadius: 2,
-        p: 2
+        borderRadius: 2
       }}
     >
-      <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-        License Verification Document
-      </Typography>
-
-      <Alert severity="info" sx={{ mb: 2, py: 1 }}>
-        <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-          Print the verification document for the license holder to review and sign before proceeding with card ordering.
+      <Box sx={{ p: 1.5 }}>
+        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, fontSize: '1rem', mb: 1 }}>
+          Review & Print Verification Document
         </Typography>
-      </Alert>
 
-      {searchResult && (
-        <>
-          {/* Document Preview */}
-          <Paper sx={{ p: 3, bgcolor: 'grey.50', border: '2px dashed grey.300', mb: 3 }}>
-            <Typography variant="h5" gutterBottom align="center" sx={{ fontSize: '1.2rem' }}>
-              🇲🇬 REPUBLIC OF MADAGASCAR
-            </Typography>
-            <Typography variant="h6" gutterBottom align="center" sx={{ fontSize: '1rem' }}>
-              LICENSE VERIFICATION DOCUMENT
-            </Typography>
-            
-            <Divider sx={{ my: 2 }} />
-            
-            <Typography variant="subtitle1" gutterBottom sx={{ fontSize: '0.9rem', fontWeight: 600 }}>
-              License Holder: {searchResult.person.first_name} {searchResult.person.last_name}
-            </Typography>
-            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-              ID: {searchResult.person.id_number}
-            </Typography>
-            
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 600 }}>
-                Card Eligible Licenses ({searchResult.card_eligible_licenses.length}):
+        <Alert severity="info" sx={{ mb: 1.5, py: 0.5 }}>
+          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+            Please review the license verification details and print the document for signing before proceeding with card ordering.
+          </Typography>
+        </Alert>
+
+        {searchResult && (
+          <>
+            {/* Person Summary */}
+            <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
+              <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+                License Holder Information
               </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
-                {searchResult.card_eligible_licenses.map(license => (
-                  <Chip 
-                    key={license.id}
-                    label={`${license.category} - ${license.status}`} 
-                    size="small" 
-                    color="primary" 
-                    sx={{ fontSize: '0.65rem', height: '20px' }}
-                  />
-                ))}
-              </Box>
+              <Grid container spacing={1}>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Full Name</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                    {searchResult.person.first_name} {searchResult.person.last_name}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>ID Number</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                    {searchResult.person.id_number}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Date of Birth</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                    {searchResult.person.birth_date ? new Date(searchResult.person.birth_date).toLocaleDateString() : 'N/A'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Nationality</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                    {searchResult.person.nationality || 'N/A'}
+                  </Typography>
+                </Grid>
+              </Grid>
             </Box>
 
+            {/* Card Eligible Licenses */}
+            <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+              Card Eligible Licenses
+            </Typography>
+            <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
+              <Grid container spacing={1}>
+                <Grid item xs={12}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Licenses ({searchResult.card_eligible_licenses.length})</Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
+                    {searchResult.card_eligible_licenses.map(license => (
+                      <Chip 
+                        key={license.id}
+                        label={`${license.category} - ${license.status}`} 
+                        size="small" 
+                        color="primary" 
+                        sx={{ fontSize: '0.7rem', height: '20px' }}
+                      />
+                    ))}
+                  </Box>
+                </Grid>
+              </Grid>
+            </Box>
+
+            {/* Learner's Permits */}
             {searchResult.learners_permits.length > 0 && (
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 600 }}>
-                  Learner's Permits (Not on card) ({searchResult.learners_permits.length}):
+              <>
+                <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+                  Learner's Permits (Not on Card)
                 </Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
-                  {searchResult.learners_permits.map(license => (
-                    <Chip 
-                      key={license.id}
-                      label={`${license.category} - ${license.status}`} 
-                      size="small" 
-                      color="secondary" 
-                      sx={{ fontSize: '0.65rem', height: '20px' }}
-                    />
-                  ))}
+                <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
+                  <Grid container spacing={1}>
+                    <Grid item xs={12}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Permits ({searchResult.learners_permits.length})</Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
+                        {searchResult.learners_permits.map(license => (
+                          <Chip 
+                            key={license.id}
+                            label={`${license.category} - ${license.status}`} 
+                            size="small" 
+                            color="secondary" 
+                            sx={{ fontSize: '0.7rem', height: '20px' }}
+                          />
+                        ))}
+                      </Box>
+                    </Grid>
+                  </Grid>
                 </Box>
-              </Box>
+              </>
             )}
 
-            <Box sx={{ mt: 3, p: 2, border: '1px solid grey.400', borderRadius: 1 }}>
-              <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 600 }}>
-                Signature Required:
-              </Typography>
-              <Typography variant="body2" sx={{ fontSize: '0.75rem', mt: 1 }}>
-                ☐ License Holder Signature __________________ Date: __________
-              </Typography>
-              <Typography variant="body2" sx={{ fontSize: '0.75rem', mt: 1 }}>
-                ☐ Authorized Officer __________________ Badge: __________
-              </Typography>
-            </Box>
-          </Paper>
-
-          {/* Print & Signature Confirmation */}
-          <Box sx={{ mb: 3 }}>
-            <Button
-              variant="contained"
-              startIcon={<PrintIcon />}
-              onClick={handlePrintVerificationDocument}
-              sx={{ mb: 2, display: 'block' }}
-            >
-              {documentPrinted ? 'Print Document Again' : 'Print Verification Document'}
-            </Button>
-
-            {documentPrinted && (
-              <Box sx={{ mt: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'grey.50' }}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={signatureConfirmed}
-                      onChange={(e) => setSignatureConfirmed(e.target.checked)}
+            {/* Document Processing */}
+            <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+              Document Processing
+            </Typography>
+            <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
+              <Grid container spacing={1}>
+                <Grid item xs={12} md={4}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Document Status</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                    <Chip
+                      label={documentPrinted ? 'Printed' : 'Pending Print'}
+                      size="small"
+                      color={documentPrinted ? 'success' : 'warning'} 
+                      sx={{ fontSize: '0.7rem', height: '20px' }}
                     />
-                  }
-                  label={
-                    <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                      I confirm that the license holder has signed the printed verification document
-                    </Typography>
-                  }
-                />
-              </Box>
-            )}
-          </Box>
-        </>
-      )}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Signature Status</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                    <Chip
+                      label={signatureConfirmed ? 'Confirmed' : 'Required'}
+                      size="small"
+                      color={signatureConfirmed ? 'success' : 'error'} 
+                      sx={{ fontSize: '0.7rem', height: '20px' }}
+                    />
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Verification Date</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                    {new Date().toLocaleDateString()}
+                  </Typography>
+                </Grid>
+              </Grid>
+            </Box>
+
+            {/* Print & Signature Confirmation */}
+            <Box sx={{ mb: 1.5 }}>
+              <Button
+                variant="contained"
+                startIcon={<PrintIcon />}
+                onClick={handlePrintVerificationDocument}
+                sx={{ mb: 1, display: 'block' }}
+                size="small"
+              >
+                {documentPrinted ? 'Print Document Again' : 'Print Verification Document'}
+              </Button>
+
+              {documentPrinted && (
+                <Box sx={{ mt: 1, p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'grey.50' }}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={signatureConfirmed}
+                        onChange={(e) => setSignatureConfirmed(e.target.checked)}
+                        size="small"
+                      />
+                    }
+                    label={
+                      <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                        I confirm that the license holder has signed the printed verification document
+                      </Typography>
+                    }
+                  />
+                </Box>
+              )}
+            </Box>
+          </>
+        )}
+      </Box>
     </Paper>
   );
 

@@ -179,13 +179,14 @@ export const API_ENDPOINTS = {
   issueStats: `${API_BASE_URL}/api/${API_VERSION}/issues/stats/overview`,
   myIssues: `${API_BASE_URL}/api/${API_VERSION}/issues/my-issues`,
 
-  // Document generation test endpoints
-  documentTest: {
-    generatorInfo: `${API_BASE_URL}/api/${API_VERSION}/document-test/generator-info`,
-    templates: `${API_BASE_URL}/api/${API_VERSION}/document-test/templates`,
-    samplePdf: (templateType: string) => `${API_BASE_URL}/api/${API_VERSION}/document-test/sample-pdf/${templateType}`,
-    sampleData: (templateType: string) => `${API_BASE_URL}/api/${API_VERSION}/document-test/sample-data/${templateType}`,
-    customReceiptPdf: `${API_BASE_URL}/api/${API_VERSION}/document-test/custom-receipt-pdf`,
+  // Document generation endpoints
+  documents: {
+    generatorInfo: `${API_BASE_URL}/api/${API_VERSION}/documents/generator-info`,
+    templates: `${API_BASE_URL}/api/${API_VERSION}/documents/templates`,
+    samplePdf: (templateType: string) => `${API_BASE_URL}/api/${API_VERSION}/documents/sample-pdf/${templateType}`,
+    sampleData: (templateType: string) => `${API_BASE_URL}/api/${API_VERSION}/documents/sample-data/${templateType}`,
+    customReceiptPdf: `${API_BASE_URL}/api/${API_VERSION}/documents/custom-receipt-pdf`,
+    generatePdf: (templateType: string) => `${API_BASE_URL}/api/${API_VERSION}/documents/generate-pdf/${templateType}`,
   },
 } as const;
 
