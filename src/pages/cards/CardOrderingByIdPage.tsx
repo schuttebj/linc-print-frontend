@@ -8,6 +8,7 @@ import {
   Grid,
   Card,
   CardContent,
+  CardHeader,
   Chip,
   Alert,
   Table,
@@ -20,6 +21,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  FormHelperText,
   Checkbox,
   FormControlLabel,
   Divider,
@@ -44,7 +46,10 @@ import {
   Warning as WarningIcon,
   DocumentScanner as DocumentScannerIcon,
   Assignment as AssignmentIcon,
-  Preview as PreviewIcon
+  Preview as PreviewIcon,
+  LocationOn as LocationOnIcon,
+  ArrowForward as ArrowForwardIcon,
+  ArrowBack as ArrowBackIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import { API_ENDPOINTS } from '../../config/api';
@@ -56,7 +61,7 @@ interface PersonData {
   last_name: string;
   id_number: string;
   birth_date?: string;
-  nationality?: string;
+  nationality_code?: string;
   photo_path?: string;
   signature_path?: string;
   address?: string;
@@ -384,7 +389,7 @@ const CardOrderingByIdPage: React.FC = () => {
         person_name: `${searchResult.person.first_name} ${searchResult.person.last_name}`,
         person_id: searchResult.person.id_number,
         birth_date: searchResult.person.birth_date ? new Date(searchResult.person.birth_date).toLocaleDateString() : 'N/A',
-        nationality: searchResult.person.nationality || 'N/A',
+        nationality: searchResult.person.nationality_code === 'MG' ? 'MALAGASY' : (searchResult.person.nationality_code || 'N/A'),
         verification_date: new Date().toLocaleDateString(),
         card_eligible_licenses: searchResult.card_eligible_licenses.map(license => ({
           category: license.category,
@@ -601,10 +606,10 @@ const CardOrderingByIdPage: React.FC = () => {
                       </Typography>
                     </Grid>
                   )}
-                  {searchResult.person.nationality && (
+                  {searchResult.person.nationality_code && (
                     <Grid item xs={12} md={6}>
                       <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                        <strong>Nationality:</strong> {searchResult.person.nationality}
+                        <strong>Nationality:</strong> {searchResult.person.nationality_code === 'MG' ? 'MALAGASY' : searchResult.person.nationality_code}
                       </Typography>
                     </Grid>
                   )}
@@ -831,7 +836,7 @@ const CardOrderingByIdPage: React.FC = () => {
                 <Grid item xs={12} md={6}>
                   <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Nationality</Typography>
                   <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                    {searchResult.person.nationality || 'N/A'}
+                    {searchResult.person.nationality_code === 'MG' ? 'MALAGASY' : (searchResult.person.nationality_code || 'N/A')}
                   </Typography>
                 </Grid>
               </Grid>
@@ -924,30 +929,23 @@ const CardOrderingByIdPage: React.FC = () => {
 
             {/* Print & Signature Confirmation */}
             <Box sx={{ mb: 1.5 }}>
-              <Button
-                variant="contained"
-                startIcon={<PrintIcon />}
-                onClick={handlePrintVerificationDocument}
-                sx={{ 
-                  mb: 1, 
-                  width: '100%',
-                  maxWidth: '400px',
-                  py: 1.5,
-                  fontSize: '0.9rem',
-                  fontWeight: 600
-                }}
-                size="medium"
-              >
-                {documentPrinted ? 'Print Document Again' : 'Print Verification Document'}
-              </Button>
-
-              {documentPrinted && (
-                <Box sx={{ mt: 1, p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 1 }}>
+                <Button
+                  variant="contained"
+                  startIcon={<PrintIcon />}
+                  onClick={handlePrintVerificationDocument}
+                  size="small"
+                >
+                  {documentPrinted ? 'Print Document Again' : 'Print Verification Document'}
+                </Button>
+                
+                <Box sx={{ flex: 1, p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
                   <FormControlLabel
                     control={
                       <Checkbox
                         checked={signatureConfirmed}
                         onChange={(e) => setSignatureConfirmed(e.target.checked)}
+                        disabled={!documentPrinted}
                         size="small"
                       />
                     }
@@ -958,7 +956,7 @@ const CardOrderingByIdPage: React.FC = () => {
                     }
                   />
                 </Box>
-              )}
+              </Box>
             </Box>
           </>
         )}
@@ -995,98 +993,167 @@ const CardOrderingByIdPage: React.FC = () => {
               Available Applications ({searchResult.approved_applications.length})
             </Typography>
             
-            <Box sx={{ mb: 1.5 }}>
-              {searchResult.approved_applications.map((app) => (
-                <Paper 
-                  key={app.id}
-                  sx={{ 
-                    p: 1, 
-                    mb: 1, 
-                    border: selectedApplication === app.id ? '2px solid' : '1px solid', 
-                    borderColor: selectedApplication === app.id ? 'primary.main' : 'divider',
-                    borderRadius: 1, 
-                    backgroundColor: selectedApplication === app.id ? 'primary.50' : 'transparent',
-                    cursor: 'pointer',
-                    '&:hover': { 
-                      borderColor: 'primary.main', 
-                      backgroundColor: 'primary.50' 
-                    } 
-                  }}
-                  onClick={() => setSelectedApplication(app.id)}
-                >
-                  <Grid container spacing={1} alignItems="center">
-                    <Grid item xs={12} md={3}>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Application Number</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
-                        {app.application_number}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={6} md={2}>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Category</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                        <Chip label={app.application_type} size="small" color="primary" sx={{ fontSize: '0.7rem', height: '20px' }} />
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={6} md={2}>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Type</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                        {app.application_type}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={6} md={2}>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Status</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                        <Chip label={app.status} size="small" color="success" sx={{ fontSize: '0.7rem', height: '20px' }} />
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={6} md={2}>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Submitted</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                        {new Date(app.application_date).toLocaleDateString()}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={12} md={1}>
-                      <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                        {selectedApplication === app.id && (
-                          <Chip label="Selected" size="small" color="primary" sx={{ fontSize: '0.65rem', height: '18px' }} />
-                        )}
-                      </Box>
-                    </Grid>
-                  </Grid>
-                </Paper>
-              ))}
-            </Box>
+            <Paper 
+              elevation={0}
+              sx={{ 
+                bgcolor: '#fafafa',
+                borderRadius: 1,
+                overflow: 'hidden',
+                mb: 1.5
+              }}
+            >
+              <TableContainer>
+                <Table size="small" sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}></TableCell>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}>Application #</TableCell>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}>Type</TableCell>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}>Status</TableCell>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}>Submitted</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {searchResult.approved_applications.map((app) => (
+                      <TableRow 
+                        key={app.id} 
+                        hover
+                        selected={selectedApplication === app.id}
+                        sx={{ 
+                          cursor: 'pointer',
+                          '&.Mui-selected': {
+                            backgroundColor: 'primary.50'
+                          },
+                          '&:hover': {
+                            backgroundColor: selectedApplication === app.id ? 'primary.100' : 'action.hover'
+                          }
+                        }}
+                        onClick={() => setSelectedApplication(app.id)}
+                      >
+                        <TableCell sx={{ py: 1, px: 2 }}>
+                          <Checkbox
+                            checked={selectedApplication === app.id}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              setSelectedApplication(selectedApplication === app.id ? '' : app.id);
+                            }}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell sx={{ py: 1, px: 2 }}>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                            {app.application_number}
+                          </Typography>
+                        </TableCell>
+                        <TableCell sx={{ py: 1, px: 2 }}>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                            {app.application_type.replace('_', ' ')}
+                          </Typography>
+                        </TableCell>
+                        <TableCell sx={{ py: 1, px: 2 }}>
+                          <Chip 
+                            label={app.status} 
+                            size="small" 
+                            color="success" 
+                            sx={{ 
+                              fontSize: '0.7rem', 
+                              height: '24px'
+                            }} 
+                          />
+                        </TableCell>
+                        <TableCell sx={{ py: 1, px: 2 }}>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                            {new Date(app.application_date).toLocaleDateString()}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Paper>
 
             {/* Print Location Selection */}
-            <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
-              Print Location
-            </Typography>
-            <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
-              {searchResult.accessible_print_locations.length > 1 ? (
-                <FormControl fullWidth size="small">
-                  <InputLabel>Select Print Location</InputLabel>
-                  <Select
-                    value={selectedLocation}
-                    onChange={(e) => setSelectedLocation(e.target.value)}
-                    label="Select Print Location"
+            <Card 
+              elevation={0}
+              sx={{ 
+                mb: 1.5,
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2
+              }}
+            >
+              <CardHeader 
+                sx={{ p: 1.5 }}
+                title={
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <LocationOnIcon color="primary" fontSize="small" />
+                    <Typography variant="subtitle1" sx={{ fontSize: '1rem', fontWeight: 600 }}>
+                      Print Location
+                    </Typography>
+                  </Box>
+                }
+              />
+              <CardContent sx={{ p: 1.5, pt: 0 }}>
+                {searchResult.accessible_print_locations.length > 1 ? (
+                  <FormControl 
+                    fullWidth 
+                    required 
+                    size="small" 
+                    error={!!error && !selectedLocation}
                   >
-                    {searchResult.accessible_print_locations.map((location) => (
-                      <MenuItem key={location.id} value={location.id}>
-                        <Box>
-                          <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 600 }}>
-                            {location.name}
-                          </Typography>
-                          <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
-                            {location.code} - {location.province_code}
-                          </Typography>
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              ) : (
-                <Grid container spacing={1}>
-                  <Grid item xs={12}>
+                    <InputLabel>Select Print Location</InputLabel>
+                    <Select
+                      value={selectedLocation}
+                      onChange={(e) => setSelectedLocation(e.target.value)}
+                      label="Select Print Location"
+                      size="small"
+                    >
+                      {searchResult.accessible_print_locations.map((location) => (
+                        <MenuItem key={location.id} value={location.id}>
+                          {location.name} ({location.code})
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    {!!error && !selectedLocation && (
+                      <FormHelperText>Please select a print location</FormHelperText>
+                    )}
+                    {!selectedLocation && (
+                      <FormHelperText sx={{ color: '#ff9800' }}>This field is required</FormHelperText>
+                    )}
+                  </FormControl>
+                ) : (
+                  <Box>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Assigned Location</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                       {searchResult.accessible_print_locations[0]?.name || 'No location assigned'}
@@ -1096,10 +1163,10 @@ const CardOrderingByIdPage: React.FC = () => {
                         {searchResult.accessible_print_locations[0].code} - {searchResult.accessible_print_locations[0].province_code}
                       </Typography>
                     )}
-                  </Grid>
-                </Grid>
-              )}
-            </Box>
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
           </>
         )}
       </Box>
@@ -1189,8 +1256,8 @@ const CardOrderingByIdPage: React.FC = () => {
         {/* Content Area */}
         <Box sx={{ 
           flex: 1, 
-          overflow: 'auto',
-          p: 2,
+          overflow: activeStep === 0 ? 'hidden' : 'auto',
+          p: activeStep === 0 ? 0 : 2,
           minHeight: 0,
           display: 'flex',
           flexDirection: 'column'
@@ -1208,39 +1275,53 @@ const CardOrderingByIdPage: React.FC = () => {
         </Box>
 
         {/* Navigation Footer */}
-        <Box sx={{ 
-          p: 2, 
-          bgcolor: 'white', 
-          borderTop: '1px solid', 
-          borderColor: 'divider',
-          flexShrink: 0,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <Box>
-            {activeStep > 0 && (
-              <Button
-                onClick={() => setActiveStep(activeStep - 1)}
-                disabled={loading || ordering}
-                size="small"
-              >
-                Back
-              </Button>
-            )}
-          </Box>
-          
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            {activeStep < steps.length - 1 && (
-              <Button
-                variant="contained"
-                onClick={() => setActiveStep(activeStep + 1)}
-                disabled={!isStepValid(activeStep) || loading || ordering}
-                size="small"
-              >
-                {activeStep === 0 ? 'Select Applications' : activeStep === 1 ? 'Review & Print' : 'Complete Order'}
-              </Button>
-            )}
+        <Box sx={{ p: 2, bgcolor: 'white', borderTop: '1px solid', borderColor: 'divider' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Button
+              onClick={resetForm}
+              disabled={loading || ordering}
+              color="secondary"
+              size="small"
+            >
+              Cancel
+            </Button>
+            
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              {activeStep > 0 && (
+                <Button
+                  disabled={loading || ordering}
+                  onClick={() => setActiveStep(activeStep - 1)}
+                  startIcon={<ArrowBackIcon />}
+                  size="small"
+                >
+                  Back
+                </Button>
+              )}
+              
+              {activeStep < steps.length - 1 && (
+                <Button
+                  variant="contained"
+                  onClick={() => setActiveStep(activeStep + 1)}
+                  disabled={!isStepValid(activeStep) || loading || ordering}
+                  endIcon={<ArrowForwardIcon />}
+                  size="small"
+                >
+                  {activeStep === 0 ? 'Select Applications' : 'Review & Print'}
+                </Button>
+              )}
+              
+              {activeStep === steps.length - 1 && (
+                <Button
+                  variant="contained"
+                  onClick={createPrintJob}
+                  disabled={!isStepValid(activeStep) || loading || ordering}
+                  startIcon={ordering ? <CircularProgress size={16} /> : undefined}
+                  size="small"
+                >
+                  {ordering ? 'Creating Order...' : 'Create Card Order'}
+                </Button>
+              )}
+            </Box>
           </Box>
         </Box>
       </Paper>
