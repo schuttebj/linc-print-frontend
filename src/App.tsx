@@ -67,6 +67,7 @@ import AnalyticsDashboard from './pages/analytics/AnalyticsDashboard';
 import FingerprintTestPage from './pages/admin/FingerprintTestPage';
 import FingerprintTemplateTestPage from './pages/admin/FingerprintTemplateTestPage';
 import ProductionBiometricTestPage from './pages/admin/ProductionBiometricTestPage';
+import DocumentTestPage from './pages/test/DocumentTestPage';
 
 
 function App() {
@@ -469,6 +470,14 @@ function App() {
                 element={
                   <ProtectedRoute requiredPermission="admin.read">
                     <ProductionBiometricTestPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route 
+                path="document-test" 
+                element={
+                  <ProtectedRoute requiredPermission="admin.read">
+                    <DocumentTestPage />
                   </ProtectedRoute>
                 }
               />
