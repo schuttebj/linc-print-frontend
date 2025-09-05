@@ -116,168 +116,6 @@ const CardOrderingByIdPage: React.FC = () => {
   
   // Modern step navigation
   const [activeStep, setActiveStep] = useState(0);
-
-  // Form validation helper functions (like DrivingLicenseApplicationPage)
-  const getFieldStyling = (fieldName: string, value: any, isRequired: boolean = true) => {
-    let fieldState = 'default';
-    
-    if (isRequired && (!value || (typeof value === 'string' && value.trim() === ''))) {
-      fieldState = 'required';
-    } else if (value && value.trim() !== '') {
-      fieldState = 'valid';
-    }
-
-    const baseSx = {
-      '& .MuiOutlinedInput-root': {
-        '& fieldset': {
-          borderWidth: '2px',
-          transition: 'border-color 0.2s ease-in-out',
-        },
-        '&:hover fieldset': {
-          borderWidth: '2px',
-        },
-        '&.Mui-focused fieldset': {
-          borderWidth: '2px',
-        },
-      },
-    };
-
-    switch (fieldState) {
-      case 'required':
-        return {
-          sx: {
-            ...baseSx,
-            '& .MuiOutlinedInput-root': {
-              ...baseSx['& .MuiOutlinedInput-root'],
-              '& fieldset': {
-                ...baseSx['& .MuiOutlinedInput-root']['& fieldset'],
-                borderColor: '#ff9800', // Orange for required fields
-              },
-              '&:hover fieldset': {
-                ...baseSx['& .MuiOutlinedInput-root']['&:hover fieldset'],
-                borderColor: '#f57c00', // Darker orange on hover
-              },
-              '&.Mui-focused fieldset': {
-                ...baseSx['& .MuiOutlinedInput-root']['&.Mui-focused fieldset'],
-                borderColor: '#ff9800', // Orange when focused
-              },
-            },
-          },
-          error: false,
-          helperText: isRequired ? 'This field is required' : undefined,
-        };
-
-      case 'valid':
-        return {
-          sx: {
-            ...baseSx,
-            '& .MuiOutlinedInput-root': {
-              ...baseSx['& .MuiOutlinedInput-root'],
-              '& fieldset': {
-                ...baseSx['& .MuiOutlinedInput-root']['& fieldset'],
-                borderColor: '#4caf50', // Green for valid fields
-              },
-              '&:hover fieldset': {
-                ...baseSx['& .MuiOutlinedInput-root']['&:hover fieldset'],
-                borderColor: '#388e3c', // Darker green on hover
-              },
-              '&.Mui-focused fieldset': {
-                ...baseSx['& .MuiOutlinedInput-root']['&.Mui-focused fieldset'],
-                borderColor: '#4caf50', // Green when focused
-              },
-            },
-          },
-          error: false,
-          helperText: undefined,
-        };
-
-      default:
-        return {
-          sx: baseSx,
-          error: false,
-          helperText: undefined,
-        };
-    }
-  };
-
-  const getSelectStyling = (fieldName: string, value: any, isRequired: boolean = true) => {
-    let fieldState = 'default';
-    
-    if (isRequired && (!value || value === '')) {
-      fieldState = 'required';
-    } else if (value && value !== '') {
-      fieldState = 'valid';
-    }
-
-    const baseSx = {
-      '& .MuiOutlinedInput-root': {
-        '& fieldset': {
-          borderWidth: '2px',
-          transition: 'border-color 0.2s ease-in-out',
-        },
-        '&:hover fieldset': {
-          borderWidth: '2px',
-        },
-        '&.Mui-focused fieldset': {
-          borderWidth: '2px',
-        },
-      },
-    };
-
-    switch (fieldState) {
-      case 'required':
-        return {
-          sx: {
-            ...baseSx,
-            '& .MuiOutlinedInput-root': {
-              ...baseSx['& .MuiOutlinedInput-root'],
-              '& fieldset': {
-                ...baseSx['& .MuiOutlinedInput-root']['& fieldset'],
-                borderColor: '#ff9800', // Orange for required fields
-              },
-              '&:hover fieldset': {
-                ...baseSx['& .MuiOutlinedInput-root']['&:hover fieldset'],
-                borderColor: '#f57c00', // Darker orange on hover
-              },
-              '&.Mui-focused fieldset': {
-                ...baseSx['& .MuiOutlinedInput-root']['&.Mui-focused fieldset'],
-                borderColor: '#ff9800', // Orange when focused
-              },
-            },
-          },
-          error: false,
-        };
-
-      case 'valid':
-        return {
-          sx: {
-            ...baseSx,
-            '& .MuiOutlinedInput-root': {
-              ...baseSx['& .MuiOutlinedInput-root'],
-              '& fieldset': {
-                ...baseSx['& .MuiOutlinedInput-root']['& fieldset'],
-                borderColor: '#4caf50', // Green for valid fields
-              },
-              '&:hover fieldset': {
-                ...baseSx['& .MuiOutlinedInput-root']['&:hover fieldset'],
-                borderColor: '#388e3c', // Darker green on hover
-              },
-              '&.Mui-focused fieldset': {
-                ...baseSx['& .MuiOutlinedInput-root']['&.Mui-focused fieldset'],
-                borderColor: '#4caf50', // Green when focused
-              },
-            },
-          },
-          error: false,
-        };
-
-      default:
-        return {
-          sx: baseSx,
-          error: false,
-        };
-    }
-  };
   
   // Search state
   const [searchId, setSearchId] = useState('');
@@ -296,11 +134,15 @@ const CardOrderingByIdPage: React.FC = () => {
   const [ordering, setOrdering] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState<any>(null);
 
-  // Steps configuration (simplified - no application selection)
+  // Steps configuration
   const steps = [
     {
       label: 'Search Person',
       icon: <PersonIcon />
+    },
+    {
+      label: 'Select Applications',
+      icon: <AssignmentIcon />
     },
     {
       label: 'Review & Print',
@@ -388,9 +230,11 @@ const CardOrderingByIdPage: React.FC = () => {
   const isStepValid = (step: number): boolean => {
     switch (step) {
       case 0: // Search Person
-        return !!searchResult && !!searchId.trim() && (!user?.primary_location_id ? !!selectedLocation : true) && searchResult.print_eligibility.can_order_card;
-      case 1: // Review & Print
-        return !!searchResult && documentPrinted && signatureConfirmed;
+        return !!searchResult && searchResult.print_eligibility.can_order_card;
+      case 1: // Select Applications
+        return !!selectedApplication && !!selectedLocation;
+      case 2: // Review & Print
+        return documentPrinted && signatureConfirmed;
       default:
         return false;
     }
@@ -480,25 +324,13 @@ const CardOrderingByIdPage: React.FC = () => {
   };
 
   const createPrintJob = async () => {
-    if (!searchResult) {
-      setError('Please search for a person first');
-      return;
-    }
-
-    // Check location requirement for admin users
-    if (!user?.primary_location_id && !selectedLocation) {
-      setError('Please select a print location');
+    if (!searchResult || !selectedApplication || !selectedLocation) {
+      setError('Please select an application and print location');
       return;
     }
 
     if (!signatureConfirmed) {
       setError('Please confirm signature verification');
-      return;
-    }
-
-    // Auto-include all approved applications
-    if (!searchResult.approved_applications || searchResult.approved_applications.length === 0) {
-      setError('No approved applications found for this person');
       return;
     }
 
@@ -508,8 +340,9 @@ const CardOrderingByIdPage: React.FC = () => {
     try {
       const token = localStorage.getItem('access_token');
       
-      // Use all approved applications automatically
-      const applicationIds = searchResult.approved_applications.map(app => app.id);
+      // TODO: Future enhancement - support multiple applications in a single card order
+      // This should be updated to handle selectedApplications[] instead of single selectedApplication
+      // and update the status of all applications to "SENT_TO_PRINTER" or appropriate enum value
       
       const response = await fetch('https://linc-print-backend.onrender.com/api/v1/printing/jobs', {
         method: 'POST',
@@ -518,8 +351,8 @@ const CardOrderingByIdPage: React.FC = () => {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          application_ids: applicationIds,
-          location_id: user?.primary_location_id || selectedLocation,
+          application_id: selectedApplication,
+          location_id: selectedLocation,
           card_template: 'MADAGASCAR_STANDARD'
         })
       });
@@ -642,68 +475,17 @@ const CardOrderingByIdPage: React.FC = () => {
       case 0:
         return renderSearchStep();
       case 1:
+        return renderApplicationSelectionStep();
+      case 2:
         return renderReviewAndPrintStep();
       default:
         return null;
     }
   };
 
-  // Step 0: Search Person (Simplified)
+  // Step 1: Search Person
   const renderSearchStep = () => (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      {/* Location Selection - Admin Only */}
-      {!user?.primary_location_id && (
-        <Card 
-          elevation={0}
-          sx={{ 
-            bgcolor: 'white',
-            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-            borderRadius: 2
-          }}
-        >
-          <CardHeader 
-            sx={{ p: 1.5 }}
-            title={
-              <Box display="flex" alignItems="center" gap={1}>
-                <LocationOnIcon color="primary" fontSize="small" />
-                <Typography variant="subtitle1" sx={{ fontSize: '1rem', fontWeight: 600 }}>
-                  Print Location
-                </Typography>
-              </Box>
-            }
-          />
-          <CardContent sx={{ p: 1.5, pt: 0 }}>
-            <FormControl 
-              fullWidth 
-              required 
-              size="small" 
-              error={!!error && !selectedLocation}
-              {...getSelectStyling('location', selectedLocation, true)}
-            >
-              <InputLabel>Select Print Location</InputLabel>
-              <Select
-                value={selectedLocation}
-                onChange={(e) => setSelectedLocation(e.target.value)}
-                label="Select Print Location"
-                size="small"
-              >
-                {searchResult?.accessible_print_locations?.map((location) => (
-                  <MenuItem key={location.id} value={location.id}>
-                    {location.name} ({location.code})
-                  </MenuItem>
-                ))}
-              </Select>
-              {!!error && !selectedLocation && (
-                <FormHelperText>Please select a print location</FormHelperText>
-              )}
-              {!selectedLocation && (
-                <FormHelperText sx={{ color: '#ff9800' }}>This field is required</FormHelperText>
-              )}
-            </FormControl>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Search Section */}
       <Paper 
         elevation={0}
@@ -726,20 +508,31 @@ const CardOrderingByIdPage: React.FC = () => {
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
-              label="ID Number *"
+              label="ID Number"
               value={searchId}
-              onChange={(e) => {
-                // Only allow numbers (like PersonFormWrapper validation)
-                const value = e.target.value.replace(/\D/g, '');
-                setSearchId(value);
-                setError(null); // Clear errors on change
-              }}
-              placeholder="Enter person's ID number (numbers only)..."
+              onChange={(e) => setSearchId(e.target.value)}
+              placeholder="Enter person's ID number..."
               onKeyPress={(e) => e.key === 'Enter' && searchPerson()}
               disabled={loading}
               size="small"
-              {...getFieldStyling('searchId', searchId, true)}
-              helperText={!searchId.trim() ? 'This field is required' : 'Enter document number (numbers only)'}
+              error={!!error && !searchId.trim()}
+              sx={{ 
+                '& .MuiOutlinedInput-root': {
+                  '& fieldset': {
+                    borderWidth: '1px',
+                    borderColor: !!error && !searchId.trim() ? '#ff9800' : undefined,
+                    transition: 'border-color 0.2s ease-in-out',
+                  },
+                  '&:hover fieldset': {
+                    borderWidth: '1px',
+                    borderColor: !!error && !searchId.trim() ? '#f57c00' : undefined,
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderWidth: '1px',
+                    borderColor: !!error && !searchId.trim() ? '#ff9800' : undefined,
+                  },
+                },
+              }}
             />
           </Grid>
           <Grid item xs={12} md={3}>
@@ -748,7 +541,7 @@ const CardOrderingByIdPage: React.FC = () => {
               variant="contained"
               startIcon={loading ? <CircularProgress size={16} /> : <SearchIcon />}
               onClick={searchPerson}
-              disabled={loading || !searchId.trim()}
+              disabled={loading}
               size="small"
             >
               {loading ? 'Searching...' : 'Search'}
@@ -766,23 +559,301 @@ const CardOrderingByIdPage: React.FC = () => {
             </Button>
           </Grid>
         </Grid>
-
-        {/* Search Success/Error Display */}
-        {searchResult && (
-          <Alert severity="success" sx={{ mt: 2, py: 1 }}>
-            <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 600 }}>
-              Person Found: {searchResult.person.first_name} {searchResult.person.last_name}
-            </Typography>
-            <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
-              {searchResult.print_eligibility.can_order_card ? 
-                `Ready for card ordering (${searchResult.approved_applications.length} applications eligible)` :
-                `Cannot order card: ${searchResult.print_eligibility.issues.join(', ')}`
-              }
-            </Typography>
-          </Alert>
-        )}
       </Paper>
 
+      {/* Search Results */}
+      {searchResult && (
+        <>
+          {/* Person Information */}
+          <Paper 
+            elevation={0}
+            sx={{ 
+              bgcolor: 'white',
+              boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+              borderRadius: 2,
+              flex: '0 0 auto',
+              p: 2
+            }}
+          >
+            <Box display="flex" alignItems="center" mb={2}>
+              <BadgeIcon sx={{ mr: 1, color: 'primary.main' }} />
+              <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                Person Information
+              </Typography>
+            </Box>
+            
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={8}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Avatar sx={{ mr: 2 }}>
+                    <PersonIcon />
+                  </Avatar>
+                  <Box>
+                    <Typography variant="h6" sx={{ fontSize: '1rem' }}>
+                      {searchResult.person.first_name} {searchResult.person.last_name}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                      ID: {searchResult.person.id_number}
+                    </Typography>
+                  </Box>
+                </Box>
+                
+                <Grid container spacing={1}>
+                  {searchResult.person.birth_date && (
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                        <strong>Birth Date:</strong> {new Date(searchResult.person.birth_date).toLocaleDateString()}
+                      </Typography>
+                    </Grid>
+                  )}
+                  {searchResult.person.nationality_code && (
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                        <strong>Nationality:</strong> {searchResult.person.nationality_code === 'MG' ? 'MALAGASY' : searchResult.person.nationality_code}
+                      </Typography>
+                    </Grid>
+                  )}
+                </Grid>
+              </Grid>
+              
+              <Grid item xs={12} md={4}>
+                {searchResult.print_eligibility.can_order_card ? (
+                  <Alert severity="success" sx={{ py: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <CheckCircleIcon sx={{ mr: 1, fontSize: '1rem' }} />
+                      <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                        Ready for card ordering
+                      </Typography>
+                    </Box>
+                  </Alert>
+                ) : (
+                  <Alert severity="error" sx={{ py: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <WarningIcon sx={{ mr: 1, fontSize: '1rem' }} />
+                      <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                        Cannot order card
+                      </Typography>
+                    </Box>
+                    <Box component="ul" sx={{ m: 0, pl: 2, '& li': { fontSize: '0.75rem' } }}>
+                      {searchResult.print_eligibility.issues.map((issue, index) => (
+                        <li key={index}>{issue}</li>
+                      ))}
+                    </Box>
+                  </Alert>
+                )}
+              </Grid>
+            </Grid>
+          </Paper>
+
+          {/* Card Eligible Licenses */}
+          <Paper 
+            elevation={0}
+            sx={{ 
+              bgcolor: 'white',
+              boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+              borderRadius: 2,
+              flex: '0 0 auto',
+              p: 2
+            }}
+          >
+            <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+              Card Eligible Licenses ({searchResult.card_eligible_licenses.length})
+            </Typography>
+            
+            {searchResult.card_eligible_licenses.length > 0 ? (
+              <Paper 
+                elevation={0}
+                sx={{ 
+                  bgcolor: '#fafafa',
+                  borderRadius: 1,
+                  overflow: 'hidden'
+                }}
+              >
+                <TableContainer>
+                  <Table size="small" sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ 
+                          fontWeight: 600, 
+                          fontSize: '0.875rem',
+                          bgcolor: '#f8f9fa',
+                          py: 1, 
+                          px: 2
+                        }}>Category</TableCell>
+                        <TableCell sx={{ 
+                          fontWeight: 600, 
+                          fontSize: '0.875rem',
+                          bgcolor: '#f8f9fa',
+                          py: 1, 
+                          px: 2
+                        }}>Status</TableCell>
+                        <TableCell sx={{ 
+                          fontWeight: 600, 
+                          fontSize: '0.875rem',
+                          bgcolor: '#f8f9fa',
+                          py: 1, 
+                          px: 2
+                        }}>Issue Date</TableCell>
+                        <TableCell sx={{ 
+                          fontWeight: 600, 
+                          fontSize: '0.875rem',
+                          bgcolor: '#f8f9fa',
+                          py: 1, 
+                          px: 2
+                        }}>Restrictions</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {searchResult.card_eligible_licenses.map((license) => (
+                        <TableRow key={license.id} hover>
+                          <TableCell sx={{ py: 1, px: 2 }}>
+                            <Chip 
+                              label={license.category} 
+                              size="small" 
+                              color="primary" 
+                              sx={{ fontSize: '0.65rem', height: '20px' }}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ py: 1, px: 2 }}>
+                            <Chip 
+                              label={license.status} 
+                              size="small" 
+                              color="success" 
+                              sx={{ fontSize: '0.65rem', height: '20px' }}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ py: 1, px: 2 }}>
+                            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                              {new Date(license.issue_date).toLocaleDateString()}
+                            </Typography>
+                          </TableCell>
+                          <TableCell sx={{ py: 1, px: 2 }}>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                              {renderRestrictionsChips(license.restrictions)}
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Paper>
+            ) : (
+              <Alert severity="warning" sx={{ py: 1 }}>
+                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                  No card-eligible licenses found
+                </Typography>
+              </Alert>
+            )}
+          </Paper>
+
+          {/* Learners Permits */}
+          {searchResult.learners_permits.length > 0 && (
+            <Paper 
+              elevation={0}
+              sx={{ 
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2,
+                flex: '0 0 auto',
+                p: 2
+              }}
+            >
+              <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                Learners Permits ({searchResult.learners_permits.length})
+                <Chip 
+                  label="Not printed on cards" 
+                  size="small" 
+                  color="secondary" 
+                  variant="outlined"
+                  sx={{ ml: 1, fontSize: '0.65rem', height: '20px' }}
+                />
+              </Typography>
+              
+              <Paper 
+                elevation={0}
+                sx={{ 
+                  bgcolor: '#fafafa',
+                  borderRadius: 1,
+                  overflow: 'hidden'
+                }}
+              >
+                <TableContainer>
+                  <Table size="small" sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ 
+                          fontWeight: 600, 
+                          fontSize: '0.875rem',
+                          bgcolor: '#f8f9fa',
+                          py: 1, 
+                          px: 2
+                        }}>Category</TableCell>
+                        <TableCell sx={{ 
+                          fontWeight: 600, 
+                          fontSize: '0.875rem',
+                          bgcolor: '#f8f9fa',
+                          py: 1, 
+                          px: 2
+                        }}>Status</TableCell>
+                        <TableCell sx={{ 
+                          fontWeight: 600, 
+                          fontSize: '0.875rem',
+                          bgcolor: '#f8f9fa',
+                          py: 1, 
+                          px: 2
+                        }}>Issue Date</TableCell>
+                        <TableCell sx={{ 
+                          fontWeight: 600, 
+                          fontSize: '0.875rem',
+                          bgcolor: '#f8f9fa',
+                          py: 1, 
+                          px: 2
+                        }}>Expiry Date</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {searchResult.learners_permits.map((license) => (
+                        <TableRow key={license.id} hover>
+                          <TableCell sx={{ py: 1, px: 2 }}>
+                            <Chip 
+                              label={license.category} 
+                              size="small" 
+                              color="secondary" 
+                              sx={{ fontSize: '0.65rem', height: '20px' }}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ py: 1, px: 2 }}>
+                            <Chip 
+                              label={license.status} 
+                              size="small" 
+                              color="success" 
+                              sx={{ fontSize: '0.65rem', height: '20px' }}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ py: 1, px: 2 }}>
+                            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                              {new Date(license.issue_date).toLocaleDateString()}
+                            </Typography>
+                          </TableCell>
+                          <TableCell sx={{ py: 1, px: 2 }}>
+                            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                              {license.expiry_date 
+                                ? new Date(license.expiry_date).toLocaleDateString()
+                                : 'No expiry'
+                              }
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Paper>
+            </Paper>
+          )}
+        </>
+      )}
     </Box>
   );
 
@@ -934,7 +1005,7 @@ const CardOrderingByIdPage: React.FC = () => {
                   {documentPrinted ? 'Print Document Again' : 'Print Verification Document'}
                 </Button>
                 
-                <Box sx={{ flex: 1, pl: 1, pr: 1, pt: 0, pb: 0, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                <Box sx={{ flex: 1, p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
                   <FormControlLabel
                     control={
                       <Checkbox
@@ -959,6 +1030,247 @@ const CardOrderingByIdPage: React.FC = () => {
     </Paper>
   );
 
+  // Step 1: Application Selection (formerly Order Card)
+  const renderApplicationSelectionStep = () => (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {/* Location Selection - Admin Only */}
+      {!user?.primary_location_id && searchResult && (
+        <Card 
+          elevation={0}
+          sx={{ 
+            bgcolor: 'white',
+            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+            borderRadius: 2
+          }}
+        >
+          <CardHeader 
+            sx={{ p: 1.5 }}
+            title={
+              <Box display="flex" alignItems="center" gap={1}>
+                <LocationOnIcon color="primary" fontSize="small" />
+                <Typography variant="subtitle1" sx={{ fontSize: '1rem', fontWeight: 600 }}>
+                  Print Location
+                </Typography>
+              </Box>
+            }
+          />
+          <CardContent sx={{ p: 1.5, pt: 0 }}>
+            {searchResult.accessible_print_locations.length > 1 ? (
+              <FormControl 
+                fullWidth 
+                required 
+                size="small" 
+                error={!!error && !selectedLocation}
+              >
+                <InputLabel>Select Print Location</InputLabel>
+                <Select
+                  value={selectedLocation}
+                  onChange={(e) => setSelectedLocation(e.target.value)}
+                  label="Select Print Location"
+                  size="small"
+                >
+                  {searchResult.accessible_print_locations.map((location) => (
+                    <MenuItem key={location.id} value={location.id}>
+                      {location.name} ({location.code})
+                    </MenuItem>
+                  ))}
+                </Select>
+                {!!error && !selectedLocation && (
+                  <FormHelperText>Please select a print location</FormHelperText>
+                )}
+                {!selectedLocation && (
+                  <FormHelperText sx={{ color: '#ff9800' }}>This field is required</FormHelperText>
+                )}
+              </FormControl>
+            ) : (
+              <Box>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Assigned Location</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                  {searchResult.accessible_print_locations[0]?.name || 'No location assigned'}
+                </Typography>
+                {searchResult.accessible_print_locations[0] && (
+                  <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
+                    {searchResult.accessible_print_locations[0].code} - {searchResult.accessible_print_locations[0].province_code}
+                  </Typography>
+                )}
+              </Box>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Application Selection */}
+      <Paper 
+        elevation={0}
+        sx={{ 
+          bgcolor: 'white',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          p: 2
+        }}
+      >
+        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, fontSize: '1rem', mb: 1 }}>
+          Select Applications for Card Order
+        </Typography>
+
+        <Alert severity="info" sx={{ mb: 1.5, py: 0.5 }}>
+          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+            Select all applications that should be included in this card order. Multiple licenses can be combined on a single card.
+          </Typography>
+        </Alert>
+
+        {searchResult && (
+          <>
+            {/* Applications Ready for Printing */}
+            <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+              Available Applications ({searchResult.approved_applications.length})
+            </Typography>
+            
+            <Paper 
+              elevation={0}
+              sx={{ 
+                bgcolor: '#fafafa',
+                borderRadius: 1,
+                overflow: 'hidden',
+                mb: 1.5
+              }}
+            >
+              <TableContainer>
+                <Table size="small" sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}></TableCell>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}>Application #</TableCell>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}>Type</TableCell>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}>Status</TableCell>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}>Submitted</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {searchResult.approved_applications.map((app) => (
+                      <TableRow 
+                        key={app.id} 
+                        hover
+                        selected={selectedApplication === app.id}
+                        sx={{ 
+                          cursor: 'pointer',
+                          '&.Mui-selected': {
+                            backgroundColor: 'primary.50'
+                          },
+                          '&:hover': {
+                            backgroundColor: selectedApplication === app.id ? 'primary.100' : 'action.hover'
+                          }
+                        }}
+                        onClick={() => setSelectedApplication(app.id)}
+                      >
+                        <TableCell sx={{ py: 1, px: 2 }}>
+                          <Checkbox
+                            checked={selectedApplication === app.id}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              setSelectedApplication(selectedApplication === app.id ? '' : app.id);
+                            }}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell sx={{ py: 1, px: 2 }}>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                            {app.application_number}
+                          </Typography>
+                        </TableCell>
+                        <TableCell sx={{ py: 1, px: 2 }}>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                            {app.application_type.replace('_', ' ')}
+                          </Typography>
+                        </TableCell>
+                        <TableCell sx={{ py: 1, px: 2 }}>
+                          <Chip 
+                            label={app.status} 
+                            size="small" 
+                            color="success" 
+                            sx={{ 
+                              fontSize: '0.7rem', 
+                              height: '24px'
+                            }} 
+                          />
+                        </TableCell>
+                        <TableCell sx={{ py: 1, px: 2 }}>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                            {new Date(app.application_date).toLocaleDateString()}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Paper>
+
+          </>
+        )}
+      </Paper>
+
+      {/* Order Success */}
+      {orderSuccess && (
+        <Paper 
+          elevation={0}
+          sx={{ 
+            bgcolor: 'white',
+            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+            borderRadius: 2,
+            p: 2
+          }}
+        >
+          <Alert severity="success">
+            <Typography variant="h6" gutterBottom sx={{ fontSize: '1rem' }}>
+              Print Job Created Successfully!
+            </Typography>
+            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+              Job Number: <strong>{orderSuccess.job_number}</strong>
+            </Typography>
+            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+              Card Number: <strong>{orderSuccess.card_number}</strong>
+            </Typography>
+            <Box sx={{ mt: 2 }}>
+              <Button variant="contained" onClick={resetForm} size="small">
+                Order Another Card
+              </Button>
+            </Box>
+          </Alert>
+        </Paper>
+      )}
+    </Box>
+  );
 
   return (
     <Container maxWidth="lg" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -1073,7 +1385,7 @@ const CardOrderingByIdPage: React.FC = () => {
                   endIcon={<ArrowForwardIcon />}
                   size="small"
                 >
-                  Review & Print
+                  {activeStep === 0 ? 'Select Applications' : 'Review & Print'}
                 </Button>
               )}
               
