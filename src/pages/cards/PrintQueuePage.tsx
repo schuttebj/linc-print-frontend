@@ -29,11 +29,12 @@ import {
   IconButton,
   Tooltip,
   Badge,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
+  Tabs,
+  Tab,
   LinearProgress,
-  Divider
+  Divider,
+  Container,
+  Skeleton
 } from '@mui/material';
 import {
   Print as PrintIcon,
@@ -61,6 +62,7 @@ import printJobService, {
   PrintJobDetailResponse,
   QualityCheckRequest
 } from '../../services/printJobService';
+import FilterBar, { FilterConfig, FilterValues } from '../../components/common/FilterBar';
 
 const PrintQueuePage: React.FC = () => {
   const { user, hasPermission } = useAuth();
@@ -91,8 +93,56 @@ const PrintQueuePage: React.FC = () => {
   const [adminSelectedLocation, setAdminSelectedLocation] = useState<string>('');
   const [availableLocations, setAvailableLocations] = useState<any[]>([]);
 
+  // FilterBar state management
+  const [searchValue, setSearchValue] = useState('');
+  const [filterValues, setFilterValues] = useState<FilterValues>({});
+  const [searching, setSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState(0);
+
   // Auto-refresh interval (30 seconds)
   const REFRESH_INTERVAL = 30000;
+
+  // Filter configurations for FilterBar
+  const PRINT_QUEUE_FILTER_CONFIGS: FilterConfig[] = [
+    {
+      key: 'status',
+      label: 'Status',
+      type: 'select',
+      options: [
+        { value: 'QUEUED', label: 'Queued' },
+        { value: 'ASSIGNED', label: 'Assigned' },
+        { value: 'PRINTING', label: 'Printing' },
+        { value: 'PRINTED', label: 'Printed' },
+        { value: 'COMPLETED', label: 'Completed' }
+      ]
+    },
+    {
+      key: 'priority',
+      label: 'Priority',
+      type: 'select',
+      options: [
+        { value: 'LOW', label: 'Low' },
+        { value: 'NORMAL', label: 'Normal' },
+        { value: 'HIGH', label: 'High' },
+        { value: 'URGENT', label: 'Urgent' }
+      ]
+    },
+    {
+      key: 'job_number',
+      label: 'Job Number',
+      type: 'text',
+      placeholder: 'Enter job number'
+    },
+    {
+      key: 'person_name',
+      label: 'Person Name',
+      type: 'text',
+      placeholder: 'Enter person name'
+    }
+  ];
 
   // Role-based UI controls
   const isLocationUser = () => user?.user_type === 'LOCATION_USER' || user?.primary_location_id;
@@ -311,40 +361,69 @@ const PrintQueuePage: React.FC = () => {
   const canManageQueue = () => hasPermission('printing.queue_manage') || user?.is_superuser;
   const canPerformQA = () => hasPermission('printing.quality_check') || user?.is_superuser;
 
-  // Search for print jobs by ID or person details
+  // FilterBar state management
+  const handleFilterChange = (key: string, value: any) => {
+    setFilterValues(prev => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
+  // FilterBar search handler
   const handleSearch = async () => {
-    if (!searchQuery.trim()) {
-      setShowSearchResults(false);
+    if (!searchValue.trim() && Object.keys(filterValues).length === 0) {
+      setHasSearched(false);
       return;
     }
 
     try {
-      setLoading(true);
+      setSearching(true);
+      setHasSearched(true);
       
-      // Search for jobs using the search API
-      const response = await printJobService.searchPrintJobs({
-        job_number: searchQuery,  // Search by job number
-        // Add location filter for location users
-        ...(isLocationUser() && user?.primary_location_id && {
-          location_id: user.primary_location_id
-        })
+      // Prepare search parameters
+      const searchParams: any = {};
+      
+      if (searchValue.trim()) {
+        searchParams.search = searchValue;
+      }
+      
+      // Add filter values
+      Object.entries(filterValues).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          searchParams[key] = value;
+        }
       });
+      
+      // Add location filter for location users
+      if (isLocationUser() && user?.primary_location_id) {
+        searchParams.location_id = user.primary_location_id;
+      } else if (selectedLocation) {
+        searchParams.location_id = selectedLocation;
+      }
 
-      setSearchResults(response.jobs);
-      setShowSearchResults(true);
+      const response = await printJobService.searchPrintJobs(searchParams);
+      setSearchResults(response.jobs || []);
     } catch (error) {
       console.error('Error searching print jobs:', error);
       setError('Failed to search print jobs');
+      setSearchResults([]);
     } finally {
-      setLoading(false);
+      setSearching(false);
     }
   };
 
-  // Clear search results
-  const clearSearch = () => {
-    setSearchQuery('');
+  // FilterBar clear handler
+  const handleClear = () => {
+    setSearchValue('');
+    setFilterValues({});
     setSearchResults([]);
-    setShowSearchResults(false);
+    setHasSearched(false);
+    setSearching(false);
+  };
+
+  // Legacy search functions for compatibility
+  const clearSearch = () => {
+    handleClear();
   };
 
   // Load card images for preview
@@ -473,6 +552,368 @@ const PrintQueuePage: React.FC = () => {
     };
   }, [refreshInterval]);
 
+  // Render functions for modernized UI
+  const renderSearchSkeleton = () => (
+    <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+        <Skeleton variant="text" width={200} height={24} />
+      </Box>
+      <TableContainer sx={{ flex: 1 }}>
+        <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+          <TableHead>
+            <TableRow>
+              <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa', py: 1, px: 2 }}>Job Number</TableCell>
+              <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa', py: 1, px: 2 }}>Person</TableCell>
+              <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa', py: 1, px: 2 }}>Status</TableCell>
+              <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa', py: 1, px: 2 }}>Priority</TableCell>
+              <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa', py: 1, px: 2 }}>Location</TableCell>
+              <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa', py: 1, px: 2 }}>Submitted</TableCell>
+              <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa', py: 1, px: 2 }}>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {Array.from({ length: 5 }).map((_, index) => (
+              <TableRow key={index}>
+                <TableCell sx={{ py: 1, px: 2 }}>
+                  <Skeleton variant="text" width="80%" height={20} />
+                </TableCell>
+                <TableCell sx={{ py: 1, px: 2 }}>
+                  <Skeleton variant="text" width="100%" height={20} />
+                </TableCell>
+                <TableCell sx={{ py: 1, px: 2 }}>
+                  <Skeleton variant="rounded" width={80} height={24} />
+                </TableCell>
+                <TableCell sx={{ py: 1, px: 2 }}>
+                  <Skeleton variant="rounded" width={60} height={24} />
+                </TableCell>
+                <TableCell sx={{ py: 1, px: 2 }}>
+                  <Skeleton variant="text" width="90%" height={20} />
+                </TableCell>
+                <TableCell sx={{ py: 1, px: 2 }}>
+                  <Skeleton variant="text" width="70%" height={20} />
+                </TableCell>
+                <TableCell align="center" sx={{ py: 1, px: 2 }}>
+                  <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                    <Skeleton variant="circular" width={32} height={32} />
+                    <Skeleton variant="circular" width={32} height={32} />
+                  </Box>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Box>
+  );
+
+  const renderSearchResultsTable = () => (
+    <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <TableContainer sx={{ flex: 1 }}>
+        <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+          <TableHead>
+            <TableRow>
+              <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa', py: 1, px: 2 }}>Job Number</TableCell>
+              <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa', py: 1, px: 2 }}>Person</TableCell>
+              <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa', py: 1, px: 2 }}>Status</TableCell>
+              <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa', py: 1, px: 2 }}>Priority</TableCell>
+              <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa', py: 1, px: 2 }}>Location</TableCell>
+              <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa', py: 1, px: 2 }}>Submitted</TableCell>
+              <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa', py: 1, px: 2 }}>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {searchResults.map((job) => (
+              <TableRow key={job.id} hover>
+                <TableCell sx={{ py: 1, px: 2 }}>
+                  <Button
+                    variant="text"
+                    onClick={() => viewJobDetails(job)}
+                    sx={{ fontSize: '0.8rem' }}
+                  >
+                    {job.job_number}
+                  </Button>
+                </TableCell>
+                <TableCell sx={{ py: 1, px: 2 }}>
+                  <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                    {job.person_name || 'Unknown'}
+                  </Typography>
+                </TableCell>
+                <TableCell sx={{ py: 1, px: 2 }}>
+                  <Chip 
+                    label={job.status}
+                    color={printJobService.getStatusColor(job.status)}
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell sx={{ py: 1, px: 2 }}>
+                  <Chip 
+                    label={printJobService.getPriorityDisplayName(job.priority)}
+                    color={printJobService.getPriorityColor(job.priority)}
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell sx={{ py: 1, px: 2 }}>
+                  <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                    {job.print_location_name || 'Unknown'}
+                  </Typography>
+                </TableCell>
+                <TableCell sx={{ py: 1, px: 2 }}>
+                  <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                    {printJobService.formatShortDate(job.submitted_at)}
+                  </Typography>
+                </TableCell>
+                <TableCell align="center" sx={{ py: 1, px: 2 }}>
+                  <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                    {getAvailableActions(job).map((action) => (
+                      <Tooltip key={action.action} title={action.label}>
+                        <IconButton
+                          size="small"
+                          color={action.color}
+                          onClick={() => handleJobAction(job, action.action)}
+                        >
+                          {action.icon}
+                        </IconButton>
+                      </Tooltip>
+                    ))}
+                  </Box>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Box>
+  );
+
+  const renderCompactStats = () => {
+    const stats = getQueueStats();
+    if (!stats) return null;
+
+    return (
+      <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', bgcolor: '#f8f9fa' }}>
+        <Grid container spacing={2}>
+          <Grid item xs={6} md={2.4}>
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="h6" color="primary" sx={{ fontSize: '1.1rem' }}>
+                {stats.totalJobs}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                Total Jobs
+              </Typography>
+            </Box>
+          </Grid>
+          <Grid item xs={6} md={2.4}>
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="h6" color="info.main" sx={{ fontSize: '1.1rem' }}>
+                {stats.queuedJobs}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                Queued
+              </Typography>
+            </Box>
+          </Grid>
+          <Grid item xs={6} md={2.4}>
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="h6" color="warning.main" sx={{ fontSize: '1.1rem' }}>
+                {stats.inProgressJobs}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                In Progress
+              </Typography>
+            </Box>
+          </Grid>
+          <Grid item xs={6} md={2.4}>
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="h6" color="success.main" sx={{ fontSize: '1.1rem' }}>
+                {stats.completedToday}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                Completed Today
+              </Typography>
+            </Box>
+          </Grid>
+          <Grid item xs={12} md={2.4}>
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="h6" sx={{ fontSize: '1.1rem' }}>
+                {stats.avgProcessingTime}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                Avg Time
+              </Typography>
+            </Box>
+          </Grid>
+        </Grid>
+      </Box>
+    );
+  };
+
+  const renderQueueTable = (jobs: PrintJobResponse[], isQueuedJobs: boolean = false) => (
+    <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <TableContainer sx={{ flex: 1 }}>
+        <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+          <TableHead>
+            <TableRow>
+              {isQueuedJobs && (
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa', py: 1, px: 2 }}>Position</TableCell>
+              )}
+              <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa', py: 1, px: 2 }}>Job Number</TableCell>
+              <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa', py: 1, px: 2 }}>Person</TableCell>
+              <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa', py: 1, px: 2 }}>Card Number</TableCell>
+              <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa', py: 1, px: 2 }}>
+                {isQueuedJobs ? 'Priority' : 'Status'}
+              </TableCell>
+              {!isQueuedJobs && (
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa', py: 1, px: 2 }}>Assigned To</TableCell>
+              )}
+              <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa', py: 1, px: 2 }}>
+                {isQueuedJobs ? 'Submitted' : 'Started'}
+              </TableCell>
+              <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa', py: 1, px: 2 }}>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {jobs.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={isQueuedJobs ? 7 : 7} align="center" sx={{ py: 4, px: 2 }}>
+                  <Alert severity="info">
+                    {isQueuedJobs ? 'No jobs in queue' : 'No jobs in progress'}
+                  </Alert>
+                </TableCell>
+              </TableRow>
+            ) : (
+              jobs.map((job) => (
+                <TableRow key={job.id} hover>
+                  {isQueuedJobs && (
+                    <TableCell sx={{ py: 1, px: 2 }}>
+                      <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 'bold' }}>
+                        {job.queue_position}
+                      </Typography>
+                    </TableCell>
+                  )}
+                  <TableCell sx={{ py: 1, px: 2 }}>
+                    <Button
+                      variant="text"
+                      onClick={() => viewJobDetails(job)}
+                      sx={{ fontSize: '0.8rem' }}
+                    >
+                      {job.job_number}
+                    </Button>
+                  </TableCell>
+                  <TableCell sx={{ py: 1, px: 2 }}>
+                    <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                      {job.person_name || 'Unknown'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell sx={{ py: 1, px: 2 }}>
+                    <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                      {job.card_number}
+                    </Typography>
+                  </TableCell>
+                  <TableCell sx={{ py: 1, px: 2 }}>
+                    {isQueuedJobs ? (
+                      <Chip 
+                        label={printJobService.getPriorityDisplayName(job.priority)}
+                        color={printJobService.getPriorityColor(job.priority)}
+                        size="small"
+                      />
+                    ) : (
+                      <Chip 
+                        label={printJobService.getStatusDisplayName(job.status)}
+                        color={printJobService.getStatusColor(job.status)}
+                        size="small"
+                      />
+                    )}
+                  </TableCell>
+                  {!isQueuedJobs && (
+                    <TableCell sx={{ py: 1, px: 2 }}>
+                      <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                        {job.assigned_to_user_name || 'Unassigned'}
+                      </Typography>
+                    </TableCell>
+                  )}
+                  <TableCell sx={{ py: 1, px: 2 }}>
+                    <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                      {isQueuedJobs 
+                        ? printJobService.formatShortDate(job.submitted_at)
+                        : (job.printing_started_at ? printJobService.formatShortDate(job.printing_started_at) : 'Not started')
+                      }
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="center" sx={{ py: 1, px: 2 }}>
+                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                      {getAvailableActions(job).map((action) => (
+                        <Tooltip key={action.action} title={action.label}>
+                          <IconButton
+                            size="small"
+                            color={action.color}
+                            onClick={() => handleJobAction(job, action.action)}
+                          >
+                            {action.icon}
+                          </IconButton>
+                        </Tooltip>
+                      ))}
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Box>
+  );
+
+  const renderTabContent = () => {
+    if (!queueData) {
+      return (
+        <Box sx={{ p: 2 }}>
+          <Alert severity="info">
+            {selectedLocation ? 'Loading queue data...' : 'Please select a location to view print queue.'}
+          </Alert>
+        </Box>
+      );
+    }
+
+    return (
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* Compact Stats */}
+        {renderCompactStats()}
+        
+        {/* Tab Content */}
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {activeTab === 0 && renderQueueTable(queueData.queued_jobs, true)}
+          {activeTab === 1 && renderQueueTable(queueData.in_progress_jobs, false)}
+        </Box>
+        
+        {/* Refresh Info */}
+        <Box sx={{ 
+          p: 1, 
+          borderTop: '1px solid', 
+          borderColor: 'divider', 
+          bgcolor: 'white',
+          flexShrink: 0,
+          display: 'flex', 
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+            Auto-refresh: 30s | Last updated: {new Date().toLocaleTimeString()}
+          </Typography>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<RefreshIcon />}
+            onClick={loadPrintQueue}
+            disabled={loading}
+            sx={{ fontSize: '0.7rem' }}
+          >
+            Refresh Now
+          </Button>
+        </Box>
+      </Box>
+    );
+  };
+
   const stats = getQueueStats();
 
   // Check if user has access to print queues
@@ -493,120 +934,46 @@ const PrintQueuePage: React.FC = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      {/* Page Header */}
-      <Typography variant="h4" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <QueueIcon fontSize="large" />
-        Print Queue Management
-      </Typography>
-      <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-        Manage print jobs and card production workflow
-      </Typography>
+    <Container maxWidth="lg" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Paper 
+        elevation={0}
+        sx={{ 
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: '#f8f9fa',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          overflow: 'hidden'
+        }}
+      >
 
-      {/* Queue Statistics */}
-      {stats && (
-        <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid item xs={12} md={2.4}>
-            <Card>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Typography variant="h4" color="primary">
-                  {stats.totalJobs}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Total Jobs
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={2.4}>
-            <Card>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Typography variant="h4" color="info.main">
-                  {stats.queuedJobs}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Queued
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={2.4}>
-            <Card>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Typography variant="h4" color="warning.main">
-                  {stats.inProgressJobs}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  In Progress
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={2.4}>
-            <Card>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Typography variant="h4" color="success.main">
-                  {stats.completedToday}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Completed Today
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={2.4}>
-            <Card>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Typography variant="h4">
-                  {stats.avgProcessingTime}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Avg Time
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      )}
 
-      {/* Enhanced Controls */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Grid container spacing={2} alignItems="center">
-          {/* Search Bar */}
-          <Grid item xs={12} md={4}>
-            <TextField
-              fullWidth
-              label="Search Jobs"
-              placeholder="Search by ID number, person name, or job number"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              InputProps={{
-                endAdornment: (
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <IconButton onClick={handleSearch} disabled={loading}>
-                      <SearchIcon />
-                    </IconButton>
-                    {showSearchResults && (
-                      <IconButton onClick={clearSearch}>
-                        <ClearIcon />
-                      </IconButton>
-                    )}
-                  </Box>
-                )
-              }}
-            />
-          </Grid>
-
-          {/* Location Selector - Only for Admin Users */}
-          {isAdmin() && (
-            <Grid item xs={12} md={4}>
-              <FormControl fullWidth>
+        {/* Filter Section */}
+        <Box sx={{ 
+          bgcolor: 'white', 
+          borderBottom: '1px solid', 
+          borderColor: 'divider',
+          flexShrink: 0,
+          p: 2
+        }}>
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+              Search Print Jobs
+            </Typography>
+            {/* Location Selector for Admin Users */}
+            {isAdmin() && (
+              <FormControl size="small" sx={{ minWidth: 200 }}>
                 <InputLabel>Print Location</InputLabel>
                 <Select
                   value={selectedLocation}
                   onChange={(e) => setSelectedLocation(e.target.value)}
                   label="Print Location"
+                  sx={{
+                    '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                    '&:hover .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
+                  }}
                 >
                   {accessibleLocations.map((loc) => (
                     <MenuItem key={loc.id} value={loc.id}>
@@ -615,293 +982,154 @@ const PrintQueuePage: React.FC = () => {
                   ))}
                 </Select>
               </FormControl>
-            </Grid>
-          )}
-
-          {/* Location Users Info */}
-          {isLocationUser() && (
-            <Grid item xs={12} md={4}>
-              <Box sx={{ p: 2, bgcolor: 'primary.50', borderRadius: 1 }}>
-                <Typography variant="body2" color="primary">
+            )}
+            
+            {/* Location Users Info */}
+            {isLocationUser() && (
+              <Box sx={{ p: 1.5, bgcolor: 'primary.50', borderRadius: 1 }}>
+                <Typography variant="body2" color="primary" sx={{ fontSize: '0.8rem' }}>
                   <strong>Location:</strong> {user?.primary_location || 'Your Location'}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Showing jobs for your assigned location only
-                </Typography>
               </Box>
-            </Grid>
+            )}
+          </Box>
+          
+          <FilterBar
+            searchValue={searchValue}
+            searchPlaceholder="Search by job number, person name, or card number"
+            onSearchChange={setSearchValue}
+            filterConfigs={PRINT_QUEUE_FILTER_CONFIGS}
+            filterValues={filterValues}
+            onFilterChange={handleFilterChange}
+            onSearch={handleSearch}
+            onClear={handleClear}
+            searching={searching}
+          />
+        </Box>
+
+        {/* Tab Navigation */}
+        <Box sx={{ 
+          bgcolor: 'white', 
+          borderBottom: '1px solid', 
+          borderColor: 'divider',
+          flexShrink: 0 
+        }}>
+          <Tabs 
+            value={activeTab} 
+            onChange={(e, newValue) => setActiveTab(newValue)}
+            sx={{
+              '& .MuiTab-root': {
+                textTransform: 'none',
+                fontWeight: 500,
+                fontSize: '0.9rem'
+              }
+            }}
+          >
+            <Tab 
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <QueueIcon fontSize="small" />
+                  <span>Queued Jobs</span>
+                  {queueData && (
+                    <Badge badgeContent={queueData.queued_jobs.length} color="info" />
+                  )}
+                </Box>
+              } 
+            />
+            <Tab 
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <PrintIcon fontSize="small" />
+                  <span>In Progress</span>
+                  {queueData && (
+                    <Badge badgeContent={queueData.in_progress_jobs.length} color="warning" />
+                  )}
+                </Box>
+              } 
+            />
+          </Tabs>
+        </Box>
+
+        {/* Content Area */}
+        <Box sx={{ 
+          flex: 1, 
+          overflow: 'auto',
+          p: 2,
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          {/* Error Display */}
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+              {error}
+            </Alert>
           )}
 
-          {/* Controls */}
-          <Grid item xs={12} md={isAdmin() ? 4 : 8}>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button
-                variant="outlined"
-                startIcon={<RefreshIcon />}
-                onClick={loadPrintQueue}
-                disabled={loading}
-              >
-                Refresh
-              </Button>
-              <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', ml: 2 }}>
-                Auto-refresh: 30s
-              </Typography>
+          {/* Loading */}
+          {loading && (
+            <Box sx={{ mb: 2 }}>
+              <LinearProgress />
             </Box>
-          </Grid>
-        </Grid>
+          )}
 
-        {/* Search Results Indicator */}
-        {showSearchResults && (
-          <Box sx={{ mt: 2, p: 1, bgcolor: 'info.50', borderRadius: 1 }}>
-            <Typography variant="body2" color="info.main">
-              <SearchIcon sx={{ fontSize: 16, mr: 1, verticalAlign: 'middle' }} />
-              Showing {searchResults.length} search results for "{searchQuery}"
-            </Typography>
-          </Box>
-        )}
-      </Paper>
-
-      {/* Error Display */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-
-      {/* Loading */}
-      {loading && (
-        <Box sx={{ mb: 2 }}>
-          <LinearProgress />
+          {/* Search Results */}
+          {(hasSearched || searching) ? (
+            <Paper 
+              elevation={0}
+              sx={{ 
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2,
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden'
+              }}
+            >
+              {searching ? (
+                renderSearchSkeleton()
+              ) : (
+                <>
+                  {searchResults.length === 0 ? (
+                    <Box sx={{ p: 2 }}>
+                      <Alert severity="info">
+                        No print jobs found matching your search criteria. Try adjusting your search terms.
+                      </Alert>
+                    </Box>
+                  ) : (
+                    <>
+                      <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+                        <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600 }}>
+                          Search Results ({searchResults.length} jobs found)
+                        </Typography>
+                      </Box>
+                      {renderSearchResultsTable()}
+                    </>
+                  )}
+                </>
+              )}
+            </Paper>
+          ) : (
+            /* Queue Content */
+            <Paper 
+              elevation={0}
+              sx={{ 
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2,
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden'
+              }}
+            >
+              {renderTabContent()}
+            </Paper>
+          )}
         </Box>
-      )}
 
-      {/* Search Results */}
-      {showSearchResults ? (
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Search Results ({searchResults.length} jobs found)
-            </Typography>
-            {searchResults.length === 0 ? (
-              <Alert severity="info">No jobs found matching your search criteria</Alert>
-            ) : (
-              <TableContainer component={Paper}>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Job Number</TableCell>
-                      <TableCell>Person</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell>Location</TableCell>
-                      <TableCell>Submitted</TableCell>
-                      <TableCell>Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {searchResults.map((job) => (
-                      <TableRow key={job.id}>
-                        <TableCell>
-                          <Button
-                            variant="text"
-                            onClick={() => viewJobDetails(job)}
-                          >
-                            {job.job_number}
-                          </Button>
-                        </TableCell>
-                        <TableCell>{job.person_name || 'Unknown'}</TableCell>
-                        <TableCell>
-                          <Chip 
-                            label={job.status}
-                            color={printJobService.getStatusColor(job.status)}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell>{job.print_location_name || 'Unknown'}</TableCell>
-                        <TableCell>
-                          {printJobService.formatShortDate(job.submitted_at)}
-                        </TableCell>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', gap: 1 }}>
-                            {getAvailableActions(job).map((action) => (
-                              <Tooltip key={action.action} title={action.label}>
-                                <IconButton
-                                  size="small"
-                                  color={action.color}
-                                  onClick={() => handleJobAction(job, action.action)}
-                                >
-                                  {action.icon}
-                                </IconButton>
-                              </Tooltip>
-                            ))}
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            )}
-          </CardContent>
-        </Card>
-      ) : (
-        /* Queue Sections - Regular View */
-        queueData && (
-          <>
-            {/* Queued Jobs */}
-            <Accordion defaultExpanded>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography variant="h6">
-                  <Badge badgeContent={queueData.queued_jobs.length} color="info">
-                    Queued Jobs
-                  </Badge>
-                </Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                {queueData.queued_jobs.length === 0 ? (
-                  <Alert severity="info">No jobs in queue</Alert>
-                ) : (
-                  <TableContainer component={Paper}>
-                    <Table>
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>Position</TableCell>
-                          <TableCell>Job Number</TableCell>
-                          <TableCell>Person</TableCell>
-                          <TableCell>Card Number</TableCell>
-                          <TableCell>Priority</TableCell>
-                          <TableCell>Submitted</TableCell>
-                          <TableCell>Actions</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {queueData.queued_jobs.map((job) => (
-                          <TableRow key={job.id}>
-                            <TableCell>{job.queue_position}</TableCell>
-                            <TableCell>
-                              <Button
-                                variant="text"
-                                onClick={() => viewJobDetails(job)}
-                              >
-                                {job.job_number}
-                              </Button>
-                            </TableCell>
-                            <TableCell>{job.person_name || 'Unknown'}</TableCell>
-                            <TableCell>{job.card_number}</TableCell>
-                            <TableCell>
-                              <Chip 
-                                label={printJobService.getPriorityDisplayName(job.priority)}
-                                color={printJobService.getPriorityColor(job.priority)}
-                                size="small"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              {printJobService.formatShortDate(job.submitted_at)}
-                            </TableCell>
-                            <TableCell>
-                              <Box sx={{ display: 'flex', gap: 1 }}>
-                                {getAvailableActions(job).map((action) => (
-                                  <Tooltip key={action.action} title={action.label}>
-                                    <IconButton
-                                      size="small"
-                                      color={action.color}
-                                      onClick={() => handleJobAction(job, action.action)}
-                                    >
-                                      {action.icon}
-                                    </IconButton>
-                                  </Tooltip>
-                                ))}
-                              </Box>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                )}
-              </AccordionDetails>
-            </Accordion>
-
-            {/* In Progress Jobs */}
-            <Accordion>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography variant="h6">
-                  <Badge badgeContent={queueData.in_progress_jobs.length} color="warning">
-                    In Progress Jobs
-                  </Badge>
-                </Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                {queueData.in_progress_jobs.length === 0 ? (
-                  <Alert severity="info">No jobs in progress</Alert>
-                ) : (
-                  <TableContainer component={Paper}>
-                    <Table>
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>Job Number</TableCell>
-                          <TableCell>Person</TableCell>
-                          <TableCell>Status</TableCell>
-                          <TableCell>Assigned To</TableCell>
-                          <TableCell>Started</TableCell>
-                          <TableCell>Actions</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {queueData.in_progress_jobs.map((job) => (
-                          <TableRow key={job.id}>
-                            <TableCell>
-                              <Button
-                                variant="text"
-                                onClick={() => viewJobDetails(job)}
-                              >
-                                {job.job_number}
-                              </Button>
-                            </TableCell>
-                            <TableCell>{job.person_name || 'Unknown'}</TableCell>
-                            <TableCell>
-                              <Chip 
-                                label={printJobService.getStatusDisplayName(job.status)}
-                                color={printJobService.getStatusColor(job.status)}
-                                size="small"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              {job.assigned_to_user_name || 'Unassigned'}
-                            </TableCell>
-                            <TableCell>
-                              {job.printing_started_at ? 
-                                printJobService.formatShortDate(job.printing_started_at) : 
-                                'Not started'
-                              }
-                            </TableCell>
-                            <TableCell>
-                              <Box sx={{ display: 'flex', gap: 1 }}>
-                                {getAvailableActions(job).map((action) => (
-                                  <Tooltip key={action.action} title={action.label}>
-                                    <IconButton
-                                      size="small"
-                                      color={action.color}
-                                      onClick={() => handleJobAction(job, action.action)}
-                                    >
-                                      {action.icon}
-                                    </IconButton>
-                                  </Tooltip>
-                                ))}
-                              </Box>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                )}
-              </AccordionDetails>
-            </Accordion>
-          </>
-        )
-      )}
-
-      {/* Job Detail Dialog */}
+        {/* Job Detail Dialog */}
       <Dialog 
         open={jobDetailDialogOpen} 
         onClose={() => setJobDetailDialogOpen(false)}
@@ -1061,7 +1289,8 @@ const PrintQueuePage: React.FC = () => {
           )}
         </DialogActions>
       </Dialog>
-    </Box>
+      </Paper>
+    </Container>
   );
 };
 

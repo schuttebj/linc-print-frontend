@@ -456,7 +456,7 @@ const CardOrderingByIdPage: React.FC = () => {
     }
   };
 
-  const resetForm = () => {
+  const handleStartNewCardOrder = () => {
     setActiveStep(0);
     setSearchId('');
     setSearchResult(null);
@@ -466,7 +466,14 @@ const CardOrderingByIdPage: React.FC = () => {
     setSignatureConfirmed(false);
     setShowDocumentPreview(false);
     setOrderSuccess(null);
+    setOrdering(false);
+    setLoading(false);
     setError(null);
+    
+    // Reset location selection for admin users (users without primary_location_id)
+    if (!user?.primary_location_id) {
+      setSelectedLocation('');
+    }
   };
 
   // Render step content
@@ -551,7 +558,7 @@ const CardOrderingByIdPage: React.FC = () => {
             <Button
               fullWidth
               variant="outlined"
-              onClick={resetForm}
+              onClick={handleStartNewCardOrder}
               disabled={loading}
               size="small"
             >
@@ -955,8 +962,8 @@ const CardOrderingByIdPage: React.FC = () => {
               Card Number: <strong>{orderSuccess.card_number}</strong>
             </Typography>
             <Box sx={{ mt: 2 }}>
-              <Button variant="contained" onClick={resetForm} size="small">
-                Order Another Card
+              <Button variant="contained" onClick={handleStartNewCardOrder} size="small">
+                New Card Order
               </Button>
             </Box>
           </Alert>
@@ -1050,7 +1057,7 @@ const CardOrderingByIdPage: React.FC = () => {
         <Box sx={{ p: 2, bgcolor: 'white', borderTop: '1px solid', borderColor: 'divider' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Button
-              onClick={resetForm}
+              onClick={handleStartNewCardOrder}
               disabled={loading || ordering}
               color="secondary"
               size="small"
@@ -1082,7 +1089,7 @@ const CardOrderingByIdPage: React.FC = () => {
                 </Button>
               )}
               
-              {activeStep === steps.length - 1 && (
+              {activeStep === steps.length - 1 && !orderSuccess && (
                 <Button
                   variant="contained"
                   onClick={createPrintJob}
@@ -1091,6 +1098,16 @@ const CardOrderingByIdPage: React.FC = () => {
                   size="small"
                 >
                   {ordering ? 'Creating Order...' : 'Create Card Order'}
+                </Button>
+              )}
+              
+              {orderSuccess && (
+                <Button
+                  variant="contained"
+                  onClick={handleStartNewCardOrder}
+                  size="small"
+                >
+                  New Card Order
                 </Button>
               )}
             </Box>
