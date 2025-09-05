@@ -268,16 +268,16 @@ const PrintJobPrintingPage: React.FC = () => {
     
     switch (printJob.status) {
       case 'QUEUED':
-      case 'SENT_TO_PRINTER':
         return 0;
       case 'PRINTING':
-      case 'CARD_PRODUCTION':
         return 1;
       case 'PRINTED':
-      case 'PRINT_COMPLETE':
         return 2;
-      default:
+      case 'QUALITY_CHECK':
+      case 'COMPLETED':
         return 3;
+      default:
+        return 0;
     }
   };
 
@@ -556,7 +556,7 @@ const PrintJobPrintingPage: React.FC = () => {
 
                 {/* Control Buttons */}
                 <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                  {(printJob.status === 'QUEUED' || printJob.status === 'SENT_TO_PRINTER') && (
+                  {printJob.status === 'QUEUED' && (
                     <Button
                       variant="contained"
                       color="primary"
@@ -568,7 +568,7 @@ const PrintJobPrintingPage: React.FC = () => {
                     </Button>
                   )}
 
-                  {(printJob.status === 'PRINTING' || printJob.status === 'CARD_PRODUCTION') && (
+                  {printJob.status === 'PRINTING' && (
                     <>
                       <Button
                         variant="contained"
@@ -592,10 +592,18 @@ const PrintJobPrintingPage: React.FC = () => {
                     </>
                   )}
 
-                  {(printJob.status === 'PRINTED' || printJob.status === 'PRINT_COMPLETE') && (
+                  {printJob.status === 'PRINTED' && (
                     <Alert severity="success" sx={{ width: '100%' }}>
                       <Typography variant="body2">
                         Printing completed successfully! This job is now ready for quality assurance.
+                      </Typography>
+                    </Alert>
+                  )}
+
+                  {(printJob.status === 'QUALITY_CHECK' || printJob.status === 'COMPLETED') && (
+                    <Alert severity="info" sx={{ width: '100%' }}>
+                      <Typography variant="body2">
+                        This job has moved to the next stage of the workflow.
                       </Typography>
                     </Alert>
                   )}
