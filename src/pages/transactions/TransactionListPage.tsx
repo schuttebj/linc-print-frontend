@@ -30,7 +30,6 @@ import {
 } from '@mui/material';
 import {
   Receipt as ReceiptIcon,
-  Visibility as ViewIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   Print as PrintIcon,
@@ -80,8 +79,6 @@ const TransactionListPage: React.FC = () => {
 
 
   // Dialog states
-  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [showTransactionDialog, setShowTransactionDialog] = useState(false);
   const [showReceiptDialog, setShowReceiptDialog] = useState(false);
   const [receiptData, setReceiptData] = useState<any>(null);
 
@@ -171,11 +168,6 @@ const TransactionListPage: React.FC = () => {
     setPage(0);
   };
 
-  const handleViewTransaction = (transaction: Transaction) => {
-    setSelectedTransaction(transaction);
-    setShowTransactionDialog(true);
-  };
-
   const handleViewReceipt = async (transaction: Transaction) => {
     try {
       const receipt = await transactionService.getTransactionReceipt(transaction.id);
@@ -218,7 +210,6 @@ const TransactionListPage: React.FC = () => {
         printWindow.addEventListener('load', () => {
           setTimeout(() => {
             printWindow.print();
-            printWindow.close();
           }, 500);
         });
       }
@@ -346,114 +337,6 @@ const TransactionListPage: React.FC = () => {
     </TableContainer>
   );
 
-  const renderTransactionDialog = () => (
-    <Dialog
-      open={showTransactionDialog}
-      onClose={() => setShowTransactionDialog(false)}
-      maxWidth="md"
-      fullWidth
-    >
-      <DialogTitle>
-        Transaction Details - {selectedTransaction?.transaction_number}
-      </DialogTitle>
-      <DialogContent>
-        {selectedTransaction && (
-          <Box>
-            <Grid container spacing={2} mb={3}>
-              <Grid item xs={6}>
-                <Typography variant="body2" color="text.secondary">
-                  Status
-                </Typography>
-                <Chip 
-                  label={transactionService.formatTransactionStatus(selectedTransaction.status)}
-                  color={getStatusColor(selectedTransaction.status) as any}
-                  size="small"
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="body2" color="text.secondary">
-                  Total Amount
-                </Typography>
-                <Typography variant="h6" color="primary">
-                  {formatCurrency(selectedTransaction.total_amount)}
-                </Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="body2" color="text.secondary">
-                  Payment Method
-                </Typography>
-                <Typography variant="body1">
-                  {selectedTransaction.payment_method ? 
-                    transactionService.formatPaymentMethod(selectedTransaction.payment_method) : 
-                    'Not specified'
-                  }
-                </Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="body2" color="text.secondary">
-                  Receipt Number
-                </Typography>
-                <Typography variant="body1">
-                  {selectedTransaction.receipt_number || 'Not generated'}
-                </Typography>
-              </Grid>
-              <Grid item xs={12}>
-                <Typography variant="body2" color="text.secondary">
-                  Payment Reference
-                </Typography>
-                <Typography variant="body1">
-                  {selectedTransaction.payment_reference || 'None'}
-                </Typography>
-              </Grid>
-              {selectedTransaction.notes && (
-                <Grid item xs={12}>
-                  <Typography variant="body2" color="text.secondary">
-                    Notes
-                  </Typography>
-                  <Typography variant="body1">
-                    {selectedTransaction.notes}
-                  </Typography>
-                </Grid>
-              )}
-            </Grid>
-
-            <Divider sx={{ my: 2 }} />
-            
-            <Typography variant="h6" gutterBottom>
-              Transaction Items
-            </Typography>
-            <List>
-              {selectedTransaction.items?.map((item: TransactionItem, index: number) => (
-                <ListItem key={item.id} divider={index < selectedTransaction.items.length - 1}>
-                  <ListItemText
-                    primary={item.description}
-                    secondary={`Type: ${item.item_type}`}
-                  />
-                  <Typography variant="body1" fontWeight="bold">
-                    {formatCurrency(item.amount)}
-                  </Typography>
-                </ListItem>
-              ))}
-            </List>
-          </Box>
-        )}
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={() => setShowTransactionDialog(false)}>
-          Close
-        </Button>
-        {selectedTransaction && (
-          <Button
-            variant="contained"
-            onClick={() => handleViewReceipt(selectedTransaction)}
-            startIcon={<ReceiptIcon />}
-          >
-            View Receipt
-          </Button>
-        )}
-      </DialogActions>
-    </Dialog>
-  );
 
   const renderReceiptDialog = () => (
     <Dialog
@@ -773,14 +656,6 @@ const TransactionListPage: React.FC = () => {
                                 </TableCell>
                                 <TableCell sx={{ py: 1, px: 2 }}>
                                   <Box display="flex" gap={1}>
-                                    <Tooltip title="View Details">
-                                      <IconButton
-                                        size="small"
-                                        onClick={() => handleViewTransaction(transaction)}
-                                      >
-                                        <ViewIcon />
-                                      </IconButton>
-                                    </Tooltip>
                                     {transaction.receipt_number && (
                                       <Tooltip title="View Receipt">
                                         <IconButton
@@ -869,7 +744,6 @@ const TransactionListPage: React.FC = () => {
       </Paper>
     </Container>
 
-    {renderTransactionDialog()}
     {renderReceiptDialog()}
     </>
   );
