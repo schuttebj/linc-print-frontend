@@ -32,7 +32,9 @@ import {
 import {
   Visibility as ViewIcon,
   Refresh as RefreshIcon,
-  CreditCard as CardIcon
+  CreditCard as CardIcon,
+  Build as RegenerateIcon,
+  Preview as PreviewIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
 
@@ -100,6 +102,13 @@ const CardListPage: React.FC<CardListPageProps> = () => {
   // Dialog states
   const [selectedCard, setSelectedCard] = useState<CardData | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [frontPreview, setFrontPreview] = useState<string | null>(null);
+  const [backPreview, setBackPreview] = useState<string | null>(null);
+  
+  // Action states
+  const [regeneratingCard, setRegeneratingCard] = useState<string | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState<string | null>(null);
 
   // Load cards
   const loadCards = useCallback(async () => {
@@ -220,6 +229,56 @@ const CardListPage: React.FC<CardListPageProps> = () => {
     setDetailDialogOpen(true);
   };
 
+  const handleRegenerateFiles = async (card: CardData) => {
+    setRegeneratingCard(card.id);
+    try {
+      await cardService.regenerateCardFiles(card.id);
+      setError(null);
+      // Show success message
+      await loadCards(); // Refresh the list
+    } catch (err: any) {
+      setError(`Failed to regenerate files for card ${card.card_number}: ${err.message}`);
+    } finally {
+      setRegeneratingCard(null);
+    }
+  };
+
+  const handlePreviewCard = async (card: CardData) => {
+    setLoadingPreview(card.id);
+    setSelectedCard(card);
+    try {
+      // Load both front and back previews
+      const [frontBlob, backBlob] = await Promise.all([
+        cardService.getCardFrontPreview(card.id),
+        cardService.getCardBackPreview(card.id)
+      ]);
+      
+      // Convert blobs to object URLs for display
+      setFrontPreview(URL.createObjectURL(frontBlob));
+      setBackPreview(URL.createObjectURL(backBlob));
+      setPreviewDialogOpen(true);
+      setError(null);
+    } catch (err: any) {
+      setError(`Failed to load preview for card ${card.card_number}: ${err.message}`);
+    } finally {
+      setLoadingPreview(null);
+    }
+  };
+
+  // Cleanup preview URLs when dialog closes
+  const handleClosePreview = () => {
+    if (frontPreview) {
+      URL.revokeObjectURL(frontPreview);
+      setFrontPreview(null);
+    }
+    if (backPreview) {
+      URL.revokeObjectURL(backPreview);
+      setBackPreview(null);
+    }
+    setPreviewDialogOpen(false);
+    setSelectedCard(null);
+  };
+
   // Handle pagination
   const handlePageChange = (_event: unknown, newPage: number) => {
     setPage(newPage);
@@ -272,7 +331,11 @@ const CardListPage: React.FC<CardListPageProps> = () => {
                 <Skeleton variant="rounded" width={60} height={24} />
               </TableCell>
               <TableCell sx={{ py: 1, px: 2 }}>
-                <Skeleton variant="circular" width={32} height={32} />
+                <Stack direction="row" spacing={0.5}>
+                  <Skeleton variant="circular" width={32} height={32} />
+                  <Skeleton variant="circular" width={32} height={32} />
+                  <Skeleton variant="circular" width={32} height={32} />
+                </Stack>
               </TableCell>
             </TableRow>
           ))}
@@ -455,6 +518,7 @@ const CardListPage: React.FC<CardListPageProps> = () => {
                         )}
                       </TableCell>
                               <TableCell sx={{ py: 1, px: 2 }}>
+                        <Stack direction="row" spacing={0.5}>
                           <Tooltip title="View Details">
                             <IconButton 
                               size="small"
@@ -463,6 +527,28 @@ const CardListPage: React.FC<CardListPageProps> = () => {
                               <ViewIcon />
                             </IconButton>
                           </Tooltip>
+                          
+                          <Tooltip title="Preview Card">
+                            <IconButton 
+                              size="small"
+                              onClick={() => handlePreviewCard(card)}
+                              disabled={loadingPreview === card.id}
+                            >
+                              <PreviewIcon />
+                            </IconButton>
+                          </Tooltip>
+                          
+                          <Tooltip title="Regenerate Files">
+                            <IconButton 
+                              size="small"
+                              onClick={() => handleRegenerateFiles(card)}
+                              disabled={regeneratingCard === card.id}
+                              color={regeneratingCard === card.id ? "primary" : "default"}
+                            >
+                              <RegenerateIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </Stack>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -566,6 +652,84 @@ const CardListPage: React.FC<CardListPageProps> = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDetailDialogOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Card Preview Dialog */}
+      <Dialog 
+        open={previewDialogOpen} 
+        onClose={handleClosePreview} 
+        maxWidth="lg" 
+        fullWidth
+      >
+        <DialogTitle>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <PreviewIcon />
+            <Typography variant="h6">
+              Card Preview: {selectedCard?.card_number}
+            </Typography>
+          </Stack>
+        </DialogTitle>
+        <DialogContent>
+          {frontPreview && backPreview ? (
+            <Grid container spacing={3} sx={{ mt: 1 }}>
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+                  Front Side
+                </Typography>
+                <Box
+                  sx={{
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    overflow: 'hidden',
+                    bgcolor: '#f5f5f5',
+                  }}
+                >
+                  <img
+                    src={frontPreview}
+                    alt="Card Front"
+                    style={{
+                      width: '100%',
+                      height: 'auto',
+                      display: 'block',
+                    }}
+                  />
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+                  Back Side
+                </Typography>
+                <Box
+                  sx={{
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    overflow: 'hidden',
+                    bgcolor: '#f5f5f5',
+                  }}
+                >
+                  <img
+                    src={backPreview}
+                    alt="Card Back"
+                    style={{
+                      width: '100%',
+                      height: 'auto',
+                      display: 'block',
+                    }}
+                  />
+                </Box>
+              </Grid>
+            </Grid>
+          ) : (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+              <Typography>Loading preview...</Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClosePreview}>Close</Button>
         </DialogActions>
       </Dialog>
     </>

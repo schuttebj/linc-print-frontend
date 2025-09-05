@@ -242,6 +242,64 @@ class CardService {
     return this.handleResponse<CardData>(response);
   }
 
+  // Regenerate card files
+  async regenerateCardFiles(cardId: string): Promise<{success: boolean, message: string, print_job_id: string}> {
+    const response = await fetch(`${this.baseURL}/${cardId}/regenerate-files`, {
+      method: 'POST',
+      headers: await this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<{success: boolean, message: string, print_job_id: string}>(response);
+  }
+
+  // Get card front preview
+  async getCardFrontPreview(cardId: string): Promise<Blob> {
+    const response = await fetch(`${this.baseURL}/${cardId}/preview/front`, {
+      method: 'GET',
+      headers: await this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.detail || errorData.message || errorMessage;
+      } catch {
+        // Keep original error message if parsing fails
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    return response.blob();
+  }
+
+  // Get card back preview
+  async getCardBackPreview(cardId: string): Promise<Blob> {
+    const response = await fetch(`${this.baseURL}/${cardId}/preview/back`, {
+      method: 'GET',
+      headers: await this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.detail || errorData.message || errorMessage;
+      } catch {
+        // Keep original error message if parsing fails
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    return response.blob();
+  }
+
   // Helper methods for status and formatting
   getStatusColor(status: string): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' {
     switch (status) {
