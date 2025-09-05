@@ -44,6 +44,7 @@ import LicenseApprovalPage from './pages/licenses/LicenseApprovalPage';
 import CardListPage from './pages/cards/CardListPage';
 import CardOrderingByIdPage from './pages/cards/CardOrderingByIdPage';
 import PrintQueuePage from './pages/cards/PrintQueuePage';
+import PrintJobPrintingPage from './pages/cards/PrintJobPrintingPage';
 import QualityAssurancePage from './pages/cards/QualityAssurancePage';
 
 // Transaction Pages
@@ -332,6 +333,14 @@ function App() {
                 element={
                   <ProtectedRoute requiredPermission="printing.read">
                     <PrintQueuePage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="print-job/:jobId" 
+                element={
+                  <ProtectedRoute requiredPermission="printing.print">
+                    <PrintJobPrintingPage />
                   </ProtectedRoute>
                 } 
               />

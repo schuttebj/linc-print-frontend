@@ -85,7 +85,7 @@ const PrintQueuePage: React.FC = () => {
   const [searchResults, setSearchResults] = useState<PrintJobResponse[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   
-  // Print preview state
+  // Print preview state (keeping for preview action only)
   const [printPreviewOpen, setPrintPreviewOpen] = useState(false);
   const [previewJob, setPreviewJob] = useState<PrintJobDetailResponse | null>(null);
   const [cardImages, setCardImages] = useState<{front?: string, back?: string}>({});
@@ -291,7 +291,8 @@ const PrintQueuePage: React.FC = () => {
   const handleJobAction = async (job: PrintJobResponse, action: string) => {
     switch (action) {
       case 'start_print':
-        await handleStartPrinting(job);
+        // Navigate to dedicated printing page instead of modal
+        window.location.href = `/cards/print-job/${job.id}`;
         break;
         
       case 'preview':
@@ -504,54 +505,9 @@ const PrintQueuePage: React.FC = () => {
     }
   };
 
-  // Start printing with preview
-  const handleStartPrinting = async (job: PrintJobResponse) => {
-    try {
-      // Load full job details
-      const jobDetails = await printJobService.getPrintJob(job.id);
-      setPreviewJob(jobDetails);
-      
-      // Load card images
-      await loadCardImages(job.id);
-      
-      // Show preview dialog
-      setPrintPreviewOpen(true);
-    } catch (error) {
-      console.error('Error starting print preview:', error);
-      setError('Failed to load print preview');
-    }
-  };
+  // Start printing with preview (removed - now navigates to dedicated page)
 
-  // Confirm printing start (auto-assigns to current user)
-  const confirmStartPrinting = async () => {
-    if (!previewJob) return;
-
-    try {
-      setActionLoading(true);
-      
-      // Auto-assign job to current user and start printing
-      await printJobService.assignJobToPrinter(previewJob.id, user?.id || '');
-      await printJobService.startPrintingJob(previewJob.id);
-      
-      setPrintPreviewOpen(false);
-      setPreviewJob(null);
-      
-      // Cleanup image URLs
-      Object.values(cardImages).forEach(url => {
-        if (url) URL.revokeObjectURL(url);
-      });
-      setCardImages({});
-      
-      // Refresh queue
-      loadPrintQueue();
-      
-    } catch (error) {
-      console.error('Error starting printing:', error);
-      setError('Failed to start printing');
-    } finally {
-      setActionLoading(false);
-    }
-  };
+  // Confirm printing start (removed - now handled in dedicated page)
 
   // Load locations on mount
   useEffect(() => {
@@ -1352,13 +1308,12 @@ const PrintQueuePage: React.FC = () => {
           </Button>
           {previewJob?.status === 'QUEUED' && canStartPrinting() && (
             <Button
-              onClick={confirmStartPrinting}
+              onClick={() => window.location.href = `/cards/print-job/${previewJob.id}`}
               variant="contained"
               color="success"
-              disabled={actionLoading}
-              startIcon={actionLoading ? <CircularProgress size={20} /> : <StartIcon />}
+              startIcon={<StartIcon />}
             >
-              {actionLoading ? 'Starting...' : 'Start Printing'}
+              Go to Printing Page
             </Button>
           )}
         </DialogActions>
