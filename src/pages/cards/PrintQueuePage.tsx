@@ -34,7 +34,8 @@ import {
   LinearProgress,
   Divider,
   Container,
-  Skeleton
+  Skeleton,
+  TablePagination
 } from '@mui/material';
 import {
   Print as PrintIcon,
@@ -101,6 +102,11 @@ const PrintQueuePage: React.FC = () => {
 
   // Tab state
   const [activeTab, setActiveTab] = useState(0);
+
+  // Pagination state
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [totalJobs, setTotalJobs] = useState(0);
 
   // Auto-refresh interval (30 seconds)
   const REFRESH_INTERVAL = 30000;
@@ -191,6 +197,10 @@ const PrintQueuePage: React.FC = () => {
     try {
       const queueResponse = await printJobService.getPrintQueue(selectedLocation);
       setQueueData(queueResponse);
+      
+      // Update total jobs count for pagination
+      const total = (queueResponse.queued_jobs?.length || 0) + (queueResponse.in_progress_jobs?.length || 0);
+      setTotalJobs(total);
     } catch (error) {
       console.error('Error loading print queue:', error);
       setError('Failed to load print queue');
@@ -424,6 +434,24 @@ const PrintQueuePage: React.FC = () => {
   // Legacy search functions for compatibility
   const clearSearch = () => {
     handleClear();
+  };
+
+  // Pagination handlers
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value === 'All' ? -1 : parseInt(event.target.value, 10);
+    setRowsPerPage(value);
+    setPage(0);
+  };
+
+  // Get paginated jobs for current tab
+  const getPaginatedJobs = (jobs: any[]) => {
+    if (rowsPerPage === -1) return jobs; // Show all
+    const startIndex = page * rowsPerPage;
+    return jobs.slice(startIndex, startIndex + rowsPerPage);
   };
 
   // Load card images for preview
@@ -864,11 +892,33 @@ const PrintQueuePage: React.FC = () => {
   );
 
   const renderTabContent = () => {
+    if (loading) {
+      return (
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {/* Compact Stats Skeleton */}
+          <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', bgcolor: '#f8f9fa' }}>
+            <Grid container spacing={2}>
+              {[...Array(5)].map((_, index) => (
+                <Grid item xs={6} md={2.4} key={index}>
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Skeleton variant="text" width="60%" height={24} sx={{ mx: 'auto' }} />
+                    <Skeleton variant="text" width="80%" height={16} sx={{ mx: 'auto' }} />
+                  </Box>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
+          {/* Table Skeleton */}
+          {renderSearchSkeleton()}
+        </Box>
+      );
+    }
+
     if (!queueData) {
       return (
         <Box sx={{ p: 2 }}>
           <Alert severity="info">
-            {selectedLocation ? 'Loading queue data...' : 'Please select a location to view print queue.'}
+            {selectedLocation ? 'No queue data available' : 'Please select a location to view print queue.'}
           </Alert>
         </Box>
       );
@@ -881,34 +931,63 @@ const PrintQueuePage: React.FC = () => {
         
         {/* Tab Content */}
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {activeTab === 0 && renderQueueTable(queueData.queued_jobs, true)}
-          {activeTab === 1 && renderQueueTable(queueData.in_progress_jobs, false)}
+          {activeTab === 0 && renderQueueTable(getPaginatedJobs(queueData.queued_jobs), true)}
+          {activeTab === 1 && renderQueueTable(getPaginatedJobs(queueData.in_progress_jobs), false)}
         </Box>
         
-        {/* Refresh Info */}
+        {/* Pagination with Refresh Controls */}
         <Box sx={{ 
-          p: 1, 
           borderTop: '1px solid', 
           borderColor: 'divider', 
           bgcolor: 'white',
           flexShrink: 0,
           display: 'flex', 
           justifyContent: 'space-between',
-          alignItems: 'center'
+          alignItems: 'center',
+          pl: 2,
+          pr: 0
         }}>
-          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-            Auto-refresh: 30s | Last updated: {new Date().toLocaleTimeString()}
-          </Typography>
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<RefreshIcon />}
-            onClick={loadPrintQueue}
+          {/* Left side - Refresh button and timestamp */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <IconButton
+              onClick={loadPrintQueue}
+              disabled={loading}
+              size="small"
+              sx={{
+                '&:disabled': {
+                  opacity: 0.5
+                }
+              }}
+            >
+              <RefreshIcon />
+            </IconButton>
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+              Auto-refresh: 30s | Last updated: {new Date().toLocaleTimeString()}
+            </Typography>
+          </Box>
+          
+          {/* Right side - Pagination */}
+          <TablePagination
+            component="div"
+            count={activeTab === 0 ? queueData.queued_jobs?.length || 0 : queueData.in_progress_jobs?.length || 0}
+            page={page}
+            onPageChange={handleChangePage}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            rowsPerPageOptions={[10, 25, 50, { value: -1, label: 'All' }]}
             disabled={loading}
-            sx={{ fontSize: '0.7rem' }}
-          >
-            Refresh Now
-          </Button>
+            sx={{
+              '& .MuiTablePagination-toolbar': {
+                minHeight: '52px',
+              },
+              '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+                fontSize: '0.8rem',
+              },
+              '& .MuiTablePagination-select': {
+                fontSize: '0.8rem',
+              },
+            }}
+          />
         </Box>
       </Box>
     );
@@ -976,8 +1055,8 @@ const PrintQueuePage: React.FC = () => {
                   }}
                 >
                   {accessibleLocations.map((loc) => (
-                    <MenuItem key={loc.id} value={loc.id}>
-                      {loc.name}
+                    <MenuItem key={loc.id || loc.location_id} value={loc.id || loc.location_id}>
+                      {loc.name} {loc.code && `(${loc.code})`}
                     </MenuItem>
                   ))}
                 </Select>
@@ -1016,7 +1095,10 @@ const PrintQueuePage: React.FC = () => {
         }}>
           <Tabs 
             value={activeTab} 
-            onChange={(e, newValue) => setActiveTab(newValue)}
+            onChange={(e, newValue) => {
+              setActiveTab(newValue);
+              setPage(0); // Reset pagination when switching tabs
+            }}
             sx={{
               '& .MuiTab-root': {
                 textTransform: 'none',
@@ -1054,23 +1136,15 @@ const PrintQueuePage: React.FC = () => {
         <Box sx={{ 
           flex: 1, 
           overflow: 'auto',
-          p: 2,
           minHeight: 0,
           display: 'flex',
           flexDirection: 'column'
         }}>
           {/* Error Display */}
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+            <Alert severity="error" sx={{ m: 2 }} onClose={() => setError(null)}>
               {error}
             </Alert>
-          )}
-
-          {/* Loading */}
-          {loading && (
-            <Box sx={{ mb: 2 }}>
-              <LinearProgress />
-            </Box>
           )}
 
           {/* Search Results */}
