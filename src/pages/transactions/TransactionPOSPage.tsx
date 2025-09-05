@@ -1062,114 +1062,168 @@ const TransactionPOSPage: React.FC = () => {
   );
 
   const renderSuccessStep = () => (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Paper 
-        elevation={0}
-        sx={{ 
-          bgcolor: 'white',
-          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-          borderRadius: 2,
-          flex: '0 0 auto',
-          p: 2,
-          textAlign: 'center'
-        }}
-      >
-        <CheckIcon sx={{ fontSize: 60, color: 'success.main', mb: 2 }} />
-        <Typography variant="h5" gutterBottom color="success.main" sx={{ fontSize: '1.3rem', fontWeight: 600 }}>
-          Payment Successful!
+    <Paper 
+      elevation={0}
+      sx={{ 
+        bgcolor: 'white',
+        boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+        borderRadius: 2
+      }}
+    >
+      <Box sx={{ p: 1.5 }}>
+        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, fontSize: '1rem', mb: 1 }}>
+          Payment Successful - Print Receipt
         </Typography>
-        
-        {success && (
-          <Alert severity="success" sx={{ mb: 2, fontSize: '0.8rem' }}>
-            {success}
-          </Alert>
-        )}
 
-        {transaction && (
-          <Box sx={{ mb: 2, p: 1.5, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
-            <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-              Transaction Details
+        {personSummary && transaction && (
+          <>
+            {/* Customer Summary */}
+            <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
+              <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+                Customer Information
+              </Typography>
+              <Grid container spacing={1}>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Full Name</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                    {personSummary.person_name}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>ID Number</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                    {personSummary.person_id_number}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Transaction Date</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                    {new Date().toLocaleDateString()}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Total Amount</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                    {formatCurrency(transaction.total_amount)}
+                  </Typography>
+                </Grid>
+              </Grid>
+            </Box>
+
+            {/* Payment Summary */}
+            <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+              Payment Summary
             </Typography>
-            <Grid container spacing={1.5}>
-              <Grid item xs={6}>
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                  Transaction Number
-                </Typography>
-                <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>
-                  {transaction.transaction_number}
-                </Typography>
+            <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
+              <Grid container spacing={1}>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Applications Paid</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                    {selectedApplications.length} items
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Card Orders Paid</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                    {selectedCardOrders.length} items
+                  </Typography>
+                </Grid>
               </Grid>
-              <Grid item xs={6}>
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                  Receipt Number
-                </Typography>
-                <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>
-                  {transaction.receipt_number}
-                </Typography>
+            </Box>
+
+            {/* Transaction Processing */}
+            <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+              Transaction Processing
+            </Typography>
+            <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
+              <Grid container spacing={1}>
+                <Grid item xs={12} md={4}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Transaction Number</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                    {transaction.transaction_number}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Receipt Number</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                    {transaction.receipt_number}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Payment Method</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                    {paymentMethods.find(m => m.value === transaction.payment_method)?.label}
+                  </Typography>
+                </Grid>
               </Grid>
-              <Grid item xs={6}>
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                  Amount Paid
-                </Typography>
-                <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>
-                  {formatCurrency(transaction.total_amount)}
-                </Typography>
+            </Box>
+
+            {/* Receipt Processing */}
+            <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
+              Receipt Processing
+            </Typography>
+            <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
+              <Grid container spacing={1}>
+                <Grid item xs={12} md={4}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Receipt Status</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                    <Chip
+                      label="Ready to Print"
+                      size="small"
+                      color="success" 
+                      sx={{ fontSize: '0.7rem', height: '20px' }}
+                    />
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Processing Location</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                    {user?.primary_location_id || selectedLocationId}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Processing Date</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                    {new Date().toLocaleDateString()}
+                  </Typography>
+                </Grid>
               </Grid>
-              <Grid item xs={6}>
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                  Payment Method
+            </Box>
+
+            {/* Print Receipt Action */}
+            <Box sx={{ mb: 1.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 1 }}>
+                <Button
+                  variant="outlined"
+                  startIcon={<ReceiptIcon />}
+                  onClick={handlePrintReceipt}
+                  size="small"
+                >
+                  Preview Receipt
+                </Button>
+                
+                <Button
+                  variant="contained"
+                  startIcon={<PrintIcon />}
+                  onClick={handlePrintA4Receipt}
+                  size="small"
+                >
+                  Print Receipt
+                </Button>
+              </Box>
+            </Box>
+
+            {success && (
+              <Alert severity="success" sx={{ mt: 1, py: 1 }}>
+                <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                  {success}
                 </Typography>
-                <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.8rem' }}>
-                  {paymentMethods.find(m => m.value === transaction.payment_method)?.label}
-                </Typography>
-              </Grid>
-            </Grid>
-          </Box>
+              </Alert>
+            )}
+          </>
         )}
-      </Paper>
-
-      {/* Mandatory Receipt Printing */}
-      <Paper 
-        elevation={0}
-        sx={{ 
-          bgcolor: 'white',
-          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-          borderRadius: 2,
-          flex: '0 0 auto',
-          p: 2
-        }}
-      >
-        <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-          Receipt Required
-        </Typography>
-        
-        <Alert severity="warning" sx={{ mb: 2, fontSize: '0.8rem' }}>
-          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-            <strong>Important:</strong> You must print a receipt for this transaction before proceeding.
-          </Typography>
-        </Alert>
-
-        <Box display="flex" gap={1} justifyContent="center">
-          <Button
-            variant="outlined"
-            onClick={handlePrintReceipt}
-            startIcon={<ReceiptIcon />}
-            size="small"
-          >
-            Preview Receipt
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handlePrintA4Receipt}
-            startIcon={<PrintIcon />}
-            color="primary"
-            size="small"
-          >
-            Print Receipt
-          </Button>
-        </Box>
-      </Paper>
-    </Box>
+      </Box>
+    </Paper>
   );
 
   return (
