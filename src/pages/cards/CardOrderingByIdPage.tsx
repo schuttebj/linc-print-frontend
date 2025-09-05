@@ -485,7 +485,7 @@ const CardOrderingByIdPage: React.FC = () => {
 
   // Step 1: Search Person
   const renderSearchStep = () => (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, p: 2 }}>
       {/* Search Section */}
       <Paper 
         elevation={0}
@@ -726,7 +726,7 @@ const CardOrderingByIdPage: React.FC = () => {
                   {documentPrinted ? 'Print Document Again' : 'Print Verification Document'}
                 </Button>
                 
-                <Box sx={{ flex: 1, p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                <Box sx={{ flex: 1, pt: 0, pb: 0, pl: 1, pr: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
                   <FormControlLabel
                     control={
                       <Checkbox
@@ -831,12 +831,12 @@ const CardOrderingByIdPage: React.FC = () => {
         }}
       >
         <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, fontSize: '1rem', mb: 1 }}>
-          Select Applications for Card Order
+          Applications for Card Order
         </Typography>
 
         <Alert severity="info" sx={{ mb: 1.5, py: 0.5 }}>
           <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-            Select all applications that should be included in this card order. Multiple licenses can be combined on a single card.
+            All approved applications below will be automatically included in this card order. Multiple licenses can be combined on a single card.
           </Typography>
         </Alert>
 
@@ -860,13 +860,6 @@ const CardOrderingByIdPage: React.FC = () => {
                 <Table size="small" sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{ 
-                        fontWeight: 600, 
-                        fontSize: '0.875rem',
-                        bgcolor: '#f8f9fa',
-                        py: 1, 
-                        px: 2
-                      }}></TableCell>
                       <TableCell sx={{ 
                         fontWeight: 600, 
                         fontSize: '0.875rem',
@@ -902,28 +895,7 @@ const CardOrderingByIdPage: React.FC = () => {
                       <TableRow 
                         key={app.id} 
                         hover
-                        selected={selectedApplication === app.id}
-                        sx={{ 
-                          cursor: 'pointer',
-                          '&.Mui-selected': {
-                            backgroundColor: 'primary.50'
-                          },
-                          '&:hover': {
-                            backgroundColor: selectedApplication === app.id ? 'primary.100' : 'action.hover'
-                          }
-                        }}
-                        onClick={() => setSelectedApplication(app.id)}
                       >
-                        <TableCell sx={{ py: 1, px: 2 }}>
-                          <Checkbox
-                            checked={selectedApplication === app.id}
-                            onChange={(e) => {
-                              e.stopPropagation();
-                              setSelectedApplication(selectedApplication === app.id ? '' : app.id);
-                            }}
-                            size="small"
-                          />
-                        </TableCell>
                         <TableCell sx={{ py: 1, px: 2 }}>
                           <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                             {app.application_number}
