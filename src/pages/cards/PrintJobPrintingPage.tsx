@@ -50,22 +50,33 @@ const PrintJobPrintingPage: React.FC = () => {
   const [lastPrintTime, setLastPrintTime] = useState<Date | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  // Utility function to calculate printing duration
+  // Utility function to calculate printing duration with full time format
   const getPrintingDuration = () => {
     if (!printJob?.printing_started_at) return null;
     
     const startTime = new Date(printJob.printing_started_at);
     const now = currentTime;
     const diffMs = now.getTime() - startTime.getTime();
-    const diffMinutes = Math.floor(diffMs / (1000 * 60));
-    const diffSeconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+    
+    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+    const totalMinutes = Math.floor(diffMs / (1000 * 60));
+    
+    // Build display text
+    let displayParts = [];
+    if (days > 0) displayParts.push(`${days}d`);
+    if (hours > 0) displayParts.push(`${hours}h`);
+    if (minutes > 0) displayParts.push(`${minutes}m`);
+    displayParts.push(`${seconds}s`);
     
     return {
-      totalMinutes: diffMinutes,
+      totalMinutes,
       totalSeconds: Math.floor(diffMs / 1000),
-      displayText: diffMinutes > 0 ? `${diffMinutes}m ${diffSeconds}s` : `${diffSeconds}s`,
-      isWarning: diffMinutes >= 5, // Warning after 5 minutes
-      isCritical: diffMinutes >= 10 // Critical after 10 minutes
+      displayText: displayParts.join(' '),
+      isWarning: totalMinutes >= 5, // Warning after 5 minutes
+      isCritical: totalMinutes >= 10 // Critical after 10 minutes
     };
   };
 
@@ -192,9 +203,9 @@ const PrintJobPrintingPage: React.FC = () => {
     }
   };
 
-  // Start printing process - Allow multiple attempts
+  // Start printing process - ONLY for QUEUED jobs
   const handleStartPrinting = async () => {
-    if (!printJob) return;
+    if (!printJob || printJob.status !== 'QUEUED') return;
 
     try {
       setActionLoading(true);
@@ -205,25 +216,59 @@ const PrintJobPrintingPage: React.FC = () => {
       setPrintAttempts(attemptNumber);
       setLastPrintTime(new Date());
       
-      console.log(`🖨️ Print attempt #${attemptNumber} for job ${printJob.job_number} by ${user?.username}`);
+      console.log(`🖨️ Starting print job ${printJob.job_number} by ${user?.username}`);
       
-      // Only assign and start printing on first attempt
-      if (attemptNumber === 1) {
-        await printJobService.assignJobToPrinter(printJob.id, user?.id || '');
-        await printJobService.startPrintingJob(printJob.id);
+      // Get user's location for assignment
+      let locationId = user?.primary_location_id;
+      
+      // For admin users, use the print job's location
+      if (user?.user_type === 'NATIONAL_ADMIN' && printJob.print_location_id) {
+        locationId = printJob.print_location_id;
       }
       
-      // Open Windows printer (can be done multiple times)
+      // Assign job to printer with location
+      await printJobService.assignJobToPrinter(printJob.id, user?.id || '', locationId);
+      
+      // Start printing process
+      await printJobService.startPrintingJob(printJob.id);
+      
+      // Open Windows printer
       await handlePrintToWindows();
       
-      // Show success message for subsequent attempts
-      if (attemptNumber > 1) {
-        console.log(`📄 Additional print attempt #${attemptNumber} completed`);
-      }
+      // Refresh job details to update status
+      await loadPrintJob();
       
     } catch (error) {
-      console.error(`❌ Print attempt #${printAttempts + 1} failed:`, error);
-      setError(`Print attempt #${printAttempts + 1} failed. You can try again.`);
+      console.error(`❌ Print job start failed:`, error);
+      setError(`Failed to start printing. Please try again.`);
+    } finally {
+      setActionLoading(false);
+      setPrinting(false);
+      setPrintProgress(0);
+    }
+  };
+
+  // Reprint function - ONLY for PRINTING jobs
+  const handleReprint = async () => {
+    if (!printJob || printJob.status !== 'PRINTING') return;
+
+    try {
+      setActionLoading(true);
+      setPrinting(true);
+      
+      // Track reprint attempt
+      const attemptNumber = printAttempts + 1;
+      setPrintAttempts(attemptNumber);
+      setLastPrintTime(new Date());
+      
+      console.log(`🔄 Reprint attempt #${attemptNumber} for job ${printJob.job_number}`);
+      
+      // Only open Windows printer (no status changes for reprints)
+      await handlePrintToWindows();
+      
+    } catch (error) {
+      console.error(`❌ Reprint attempt failed:`, error);
+      setError(`Reprint failed. Please try again.`);
     } finally {
       setActionLoading(false);
       setPrinting(false);
@@ -799,19 +844,9 @@ const PrintJobPrintingPage: React.FC = () => {
 
                 {/* Control Buttons */}
                 <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', flexDirection: 'column' }}>
-                  {/* Print Attempts Info */}
-                  {printAttempts > 0 && (
-                    <Alert severity="info" sx={{ mb: 2 }}>
-                      <Typography variant="body2">
-                        Print attempts: {printAttempts} | Last attempt: {lastPrintTime?.toLocaleTimeString()}
-                        {printAttempts > 1 && <span> | ⚠️ Multiple attempts detected</span>}
-                      </Typography>
-                    </Alert>
-                  )}
-
                   <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                    {/* Print Button - Available for QUEUED and PRINTING status */}
-                    {(printJob.status === 'QUEUED' || printJob.status === 'PRINTING') && (
+                    {/* Print Button - ONLY for QUEUED status */}
+                    {printJob.status === 'QUEUED' && (
                       <Button
                         variant="contained"
                         color="primary"
@@ -825,15 +860,31 @@ const PrintJobPrintingPage: React.FC = () => {
                           minWidth: 'auto'
                         }}
                       >
-                        {actionLoading ? 'Processing...' : 
-                          printAttempts === 0 ? 'Print Card' : 
-                          `Print Again (#${printAttempts + 1})`
-                        }
+                        {actionLoading ? 'Starting...' : 'Print Card'}
                       </Button>
                     )}
 
-                    {/* Mark Complete Button - Only show after at least one print attempt */}
-                    {printJob.status === 'PRINTING' && printAttempts > 0 && (
+                    {/* Reprint Button - For PRINTING status */}
+                    {printJob.status === 'PRINTING' && (
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        size="small"
+                        startIcon={<PrintIcon />}
+                        onClick={handleReprint}
+                        disabled={actionLoading || printing || !cardImages.front && !cardImages.back}
+                        sx={{
+                          fontSize: '0.8rem',
+                          padding: '6px 12px',
+                          minWidth: 'auto'
+                        }}
+                      >
+                        {actionLoading ? 'Reprinting...' : 'Reprint'}
+                      </Button>
+                    )}
+
+                    {/* Mark Complete Button - For PRINTING status */}
+                    {printJob.status === 'PRINTING' && (
                       <Button
                         variant="contained"
                         color="success"

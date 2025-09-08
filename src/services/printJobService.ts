@@ -266,7 +266,9 @@ class PrintJobService {
   }
 
   // Assign job to printer
-  async assignJobToPrinter(jobId: string, printerUserId: string): Promise<PrintJobResponse> {
+  async assignJobToPrinter(jobId: string, printerUserId: string, locationId?: string): Promise<PrintJobResponse> {
+    // Note: Currently the backend assign endpoint only accepts printer_user_id
+    // Location validation happens during start_printing phase
     return this.makeRequest<PrintJobResponse>(`/jobs/${jobId}/assign`, {
       method: 'POST',
       body: JSON.stringify({ printer_user_id: printerUserId }),

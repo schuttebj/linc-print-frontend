@@ -116,22 +116,33 @@ const PrintQueuePage: React.FC = () => {
   // Timer state for live updates
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  // Utility function to calculate printing duration
+  // Utility function to calculate printing duration with full time format
   const getPrintingDuration = (printingStartedAt: string | null) => {
     if (!printingStartedAt) return null;
     
     const startTime = new Date(printingStartedAt);
     const now = currentTime;
     const diffMs = now.getTime() - startTime.getTime();
-    const diffMinutes = Math.floor(diffMs / (1000 * 60));
-    const diffSeconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+    
+    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+    const totalMinutes = Math.floor(diffMs / (1000 * 60));
+    
+    // Build compact display text for table
+    let displayParts = [];
+    if (days > 0) displayParts.push(`${days}d`);
+    if (hours > 0) displayParts.push(`${hours}h`);
+    if (minutes > 0) displayParts.push(`${minutes}m`);
+    displayParts.push(`${seconds}s`);
     
     return {
-      totalMinutes: diffMinutes,
+      totalMinutes,
       totalSeconds: Math.floor(diffMs / 1000),
-      displayText: diffMinutes > 0 ? `${diffMinutes}m ${diffSeconds}s` : `${diffSeconds}s`,
-      isWarning: diffMinutes >= 5, // Warning after 5 minutes
-      isCritical: diffMinutes >= 10 // Critical after 10 minutes
+      displayText: displayParts.join(' '),
+      isWarning: totalMinutes >= 5, // Warning after 5 minutes
+      isCritical: totalMinutes >= 10 // Critical after 10 minutes
     };
   };
 
