@@ -59,6 +59,9 @@ const CARD_FILTER_CONFIGS: FilterConfig[] = [
       { value: 'COLLECTED', label: 'Collected' },
       { value: 'EXPIRED', label: 'Expired' },
       { value: 'CANCELLED', label: 'Cancelled' },
+      { value: 'DAMAGED', label: 'Damaged' },
+      { value: 'LOST', label: 'Lost' },
+      { value: 'STOLEN', label: 'Stolen' },
     ],
   },
   {
