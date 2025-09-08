@@ -5,8 +5,7 @@
 
 import React from 'react';
 import {
-  Card,
-  CardContent,
+  Paper,
   Typography,
   Box,
   Chip,
@@ -77,64 +76,99 @@ const KPICard: React.FC<KPICardProps> = ({
   };
 
   return (
-    <Card
+    <Paper
       elevation={0}
       sx={{
         height: '100%',
         bgcolor: 'white',
         borderRadius: 2,
         boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-        transition: 'transform 0.2s, box-shadow 0.2s',
+        p: 1.5,
+        transition: 'transform 0.1s, box-shadow 0.1s',
         '&:hover': {
-          transform: 'translateY(-2px)',
-          boxShadow: 3
+          transform: 'translateY(-1px)',
+          boxShadow: 'rgba(0, 0, 0, 0.08) 0px 2px 4px 0px'
         }
       }}
     >
-      <CardContent sx={{ p: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-          <Box
-            sx={{
-              bgcolor: `${color}.light`,
-              color: `${color}.main`,
-              p: 1,
-              borderRadius: 2,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            <IconComponent sx={{ fontSize: 24 }} />
-          </Box>
-          
-          <Chip
-            icon={getTrendIcon()}
-            label={change}
-            size="small"
-            color={getTrendColor() as any}
-            variant="outlined"
-            sx={{ 
-              fontSize: '0.75rem',
-              '& .MuiChip-icon': {
-                fontSize: 16
-              }
-            }}
-          />
+      {/* Header Row - Icon and Trend */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+        <Box
+          sx={{
+            bgcolor: `${color}.light`,
+            color: `${color}.main`,
+            p: 0.75,
+            borderRadius: 1.5,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minWidth: 32,
+            height: 32
+          }}
+        >
+          <IconComponent sx={{ fontSize: 18 }} />
         </Box>
+        
+        <Chip
+          icon={getTrendIcon()}
+          label={change}
+          size="small"
+          color={getTrendColor() as any}
+          variant="outlined"
+          sx={{ 
+            fontSize: '0.7rem',
+            height: 20,
+            '& .MuiChip-icon': {
+              fontSize: 12
+            },
+            '& .MuiChip-label': {
+              px: 0.5
+            }
+          }}
+        />
+      </Box>
 
-        <Typography variant="h4" component="div" sx={{ fontWeight: 700, mb: 0.5 }}>
-          {value}
-        </Typography>
+      {/* Main Value */}
+      <Typography 
+        variant="h5" 
+        component="div" 
+        sx={{ 
+          fontWeight: 700, 
+          mb: 0.25,
+          fontSize: '1.5rem',
+          lineHeight: 1.2,
+          color: `${color}.main`
+        }}
+      >
+        {value}
+      </Typography>
 
-        <Typography variant="subtitle1" component="div" sx={{ fontWeight: 600, mb: 0.5 }}>
-          {title}
-        </Typography>
+      {/* Title */}
+      <Typography 
+        variant="body2" 
+        component="div" 
+        sx={{ 
+          fontWeight: 600, 
+          mb: 0.25,
+          fontSize: '0.85rem',
+          color: 'text.primary'
+        }}
+      >
+        {title}
+      </Typography>
 
-        <Typography variant="caption" color="text.secondary">
-          {period}
-        </Typography>
-      </CardContent>
-    </Card>
+      {/* Period */}
+      <Typography 
+        variant="caption" 
+        color="text.secondary"
+        sx={{ 
+          fontSize: '0.7rem',
+          fontWeight: 400
+        }}
+      >
+        {period}
+      </Typography>
+    </Paper>
   );
 };
 

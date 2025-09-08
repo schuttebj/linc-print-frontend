@@ -1,6 +1,6 @@
 /**
  * Analytics Dashboard for Madagascar License System
- * Comprehensive statistics and insights dashboard
+ * Comprehensive statistics and insights dashboard with tabs and filtering
  */
 
 import React, { useState } from 'react';
@@ -10,22 +10,25 @@ import {
   Typography,
   Box,
   Paper,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
+  Tabs,
+  Tab,
   Button,
-  Stack,
-  Divider
+  Stack
 } from '@mui/material';
 import {
-  DateRange as DateRangeIcon,
+  Dashboard as DashboardIcon,
+  Assignment as AssignmentIcon,
+  Badge as BadgeIcon,
+  Print as PrintIcon,
+  AttachMoney as AttachMoneyIcon,
+  Computer as ComputerIcon,
+  Api as ApiIcon,
   Download as DownloadIcon,
-  Refresh as RefreshIcon,
-  FilterList as FilterIcon
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 
-// Import our custom components
+// Import components
+import FilterBar, { FilterConfig, FilterValues } from '../../components/common/FilterBar';
 import KPICard from './components/KPICard';
 import ChartWidget from './components/ChartWidget';
 import ApplicationAnalytics from './components/ApplicationAnalytics';
@@ -35,71 +38,296 @@ import FinancialAnalytics from './components/FinancialAnalytics';
 import ActivityFeed from './components/ActivityFeed';
 import SystemHealthCards from './components/SystemHealthCards';
 import ApiAnalytics from './components/ApiAnalytics';
+import {
+  OverviewTabSkeleton,
+  SingleTabSkeleton,
+  DualTabSkeleton
+} from './components/AnalyticsSkeleton';
 
 // Import hooks
 import { useAnalyticsData } from './hooks/useAnalyticsData';
 import { useChartFilters } from './hooks/useChartFilters';
 
 const AnalyticsDashboard: React.FC = () => {
-  const [dateRange, setDateRange] = useState('30days');
-  const [selectedLocation, setSelectedLocation] = useState('all');
+  // Tab management
+  const [activeTab, setActiveTab] = useState(0);
   const [autoRefresh, setAutoRefresh] = useState(true);
 
+  // FilterBar state management
+  const [searchValue, setSearchValue] = useState('');
+  const [filterValues, setFilterValues] = useState<FilterValues>({
+    dateRange: '30days',
+    location: 'all',
+    refreshInterval: '30s'
+  });
+
   // Custom hooks for data and filters
-  const { data, loading, refreshData } = useAnalyticsData(dateRange, selectedLocation);
+  const { data, loading, refreshData } = useAnalyticsData(
+    filterValues.dateRange || '30days', 
+    filterValues.location || 'all'
+  );
   const { applyFilters, clearFilters } = useChartFilters();
 
-  // KPI data
-  const kpiMetrics = [
+  // Analytics filter configuration
+  const ANALYTICS_FILTER_CONFIGS: FilterConfig[] = [
     {
-      title: "Total Applications",
-      value: "2,847",
-      change: "+12.5%",
-      period: "This Month",
-      icon: "Assignment",
-      color: "primary" as const,
-      trend: "up" as const
+      key: 'dateRange',
+      label: 'Date Range',
+      type: 'select',
+      options: [
+        { value: '7days', label: 'Last 7 days' },
+        { value: '30days', label: 'Last 30 days' },
+        { value: '90days', label: 'Last 90 days' },
+        { value: '6months', label: 'Last 6 months' },
+        { value: '1year', label: 'Last year' }
+      ]
     },
     {
-      title: "Active Licenses", 
-      value: "45,632",
-      change: "+8.2%",
-      period: "This Month",
-      icon: "Badge",
-      color: "success" as const,
-      trend: "up" as const
+      key: 'location',
+      label: 'Location',
+      type: 'select',
+      options: [
+        { value: 'all', label: 'All Locations' },
+        { value: 'antananarivo', label: 'Antananarivo' },
+        { value: 'toamasina', label: 'Toamasina' },
+        { value: 'antsirabe', label: 'Antsirabe' },
+        { value: 'mahajanga', label: 'Mahajanga' }
+      ]
     },
     {
-      title: "Cards Printed",
-      value: "1,523",
-      change: "+15.7%", 
-      period: "This Month",
-      icon: "Print",
-      color: "info" as const,
-      trend: "up" as const
+      key: 'refreshInterval',
+      label: 'Auto Refresh',
+      type: 'select',
+      options: [
+        { value: '15s', label: 'Every 15 seconds' },
+        { value: '30s', label: 'Every 30 seconds' },
+        { value: '60s', label: 'Every minute' },
+        { value: 'off', label: 'Off' }
+      ]
     },
     {
-      title: "Revenue Generated",
-      value: "₨ 89,456",
-      change: "+18.3%",
-      period: "This Month", 
-      icon: "AttachMoney",
-      color: "warning" as const,
-      trend: "up" as const
+      key: 'chartType',
+      label: 'Chart Style',
+      type: 'select',
+      options: [
+        { value: 'detailed', label: 'Detailed Charts' },
+        { value: 'compact', label: 'Compact Charts' }
+      ]
     }
   ];
 
-  const handleDateRangeChange = (event: any) => {
-    setDateRange(event.target.value);
+  // Tab configuration
+  const tabs = [
+    { label: 'Overview', icon: <DashboardIcon /> },
+    { label: 'Applications', icon: <AssignmentIcon /> },
+    { label: 'Licenses', icon: <BadgeIcon /> },
+    { label: 'Financial', icon: <AttachMoneyIcon /> },
+    { label: 'Printing', icon: <PrintIcon /> },
+    { label: 'System Health', icon: <ComputerIcon /> },
+    { label: 'API Analytics', icon: <ApiIcon /> }
+  ];
+
+  // Sample KPI data (will be replaced with live data)
+  const getKPIData = () => {
+    const dateRange = filterValues.dateRange || '30days';
+    const location = filterValues.location || 'all';
+    
+    // Mock data generation based on filters
+    const multiplier = location === 'all' ? 1 : 0.3;
+    const timeMultiplier = dateRange === '7days' ? 0.25 : dateRange === '90days' ? 3 : 1;
+    
+    return [
+      {
+        title: "Total Applications",
+        value: Math.floor(2847 * multiplier * timeMultiplier).toLocaleString(),
+        change: "+12.5%",
+        period: getPeriodLabel(dateRange),
+        icon: "Assignment",
+        color: "primary" as const,
+        trend: "up" as const
+      },
+      {
+        title: "Active Licenses",
+        value: Math.floor(45632 * multiplier * timeMultiplier).toLocaleString(),
+        change: "+8.2%",
+        period: getPeriodLabel(dateRange),
+        icon: "Badge",
+        color: "success" as const,
+        trend: "up" as const
+      },
+      {
+        title: "Cards Printed",
+        value: Math.floor(1523 * multiplier * timeMultiplier).toLocaleString(),
+        change: "+15.7%",
+        period: getPeriodLabel(dateRange),
+        icon: "Print",
+        color: "info" as const,
+        trend: "up" as const
+      },
+      {
+        title: "Revenue Generated",
+        value: `₨ ${Math.floor(89456 * multiplier * timeMultiplier).toLocaleString()}`,
+        change: "+18.3%",
+        period: getPeriodLabel(dateRange),
+        icon: "AttachMoney",
+        color: "warning" as const,
+        trend: "up" as const
+      }
+    ];
   };
 
-  const handleLocationChange = (event: any) => {
-    setSelectedLocation(event.target.value);
+  const getPeriodLabel = (range: string) => {
+    switch (range) {
+      case '7days': return 'Last 7 Days';
+      case '30days': return 'This Month';
+      case '90days': return 'Last 3 Months';
+      case '6months': return 'Last 6 Months';
+      case '1year': return 'This Year';
+      default: return 'This Month';
+    }
+  };
+
+  // Handler functions
+  const handleFilterChange = (key: string, value: any) => {
+    setFilterValues(prev => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
+  const handleSearch = () => {
+    // Trigger data refresh with current filters
+    refreshData();
+  };
+
+  const handleClear = () => {
+    setSearchValue('');
+    setFilterValues({
+      dateRange: '30days',
+      location: 'all',
+      refreshInterval: '30s'
+    });
+  };
+
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setActiveTab(newValue);
   };
 
   const handleExport = () => {
     // TODO: Implement export functionality
-    console.log('Exporting dashboard data...');
+    console.log('Exporting dashboard data for tab:', tabs[activeTab].label);
+  };
+
+  // Render tab content based on active tab
+  const renderTabContent = () => {
+    // Show skeleton loading while data is being fetched
+    if (loading) {
+      switch (activeTab) {
+        case 0: // Overview
+          return <OverviewTabSkeleton />;
+        case 5: // System Health (has dual layout)
+          return <DualTabSkeleton />;
+        default: // All other single-chart tabs
+          return <SingleTabSkeleton />;
+      }
+    }
+
+    const kpiData = getKPIData();
+    const dateRange = filterValues.dateRange || '30days';
+    const location = filterValues.location || 'all';
+
+    switch (activeTab) {
+      case 0: // Overview
+        return (
+          <Grid container spacing={2}>
+            {/* Overview KPI Cards */}
+            <Grid item xs={12}>
+              <Grid container spacing={2}>
+                {kpiData.map((metric, index) => (
+                  <Grid item xs={12} sm={6} lg={3} key={index}>
+                    <KPICard {...metric} />
+                  </Grid>
+                ))}
+              </Grid>
+            </Grid>
+
+            {/* Overview Charts - Compact Layout */}
+            <Grid item xs={12} md={8}>
+              <ApplicationAnalytics dateRange={dateRange} location={location} />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <SystemHealthCards />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <LicenseAnalytics dateRange={dateRange} location={location} />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <ActivityFeed />
+            </Grid>
+          </Grid>
+        );
+
+      case 1: // Applications
+        return (
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <ApplicationAnalytics dateRange={dateRange} location={location} />
+            </Grid>
+          </Grid>
+        );
+
+      case 2: // Licenses  
+        return (
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <LicenseAnalytics dateRange={dateRange} location={location} />
+            </Grid>
+          </Grid>
+        );
+
+      case 3: // Financial
+        return (
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <FinancialAnalytics dateRange={dateRange} location={location} />
+            </Grid>
+          </Grid>
+        );
+
+      case 4: // Printing
+        return (
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <PrintingAnalytics dateRange={dateRange} location={location} />
+            </Grid>
+          </Grid>
+        );
+
+      case 5: // System Health
+        return (
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={6}>
+              <SystemHealthCards />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <ActivityFeed />
+            </Grid>
+          </Grid>
+        );
+
+      case 6: // API Analytics
+        return (
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <ApiAnalytics dateRange={dateRange} location={location} />
+            </Grid>
+          </Grid>
+        );
+
+      default:
+        return null;
+    }
   };
 
   return (
@@ -119,140 +347,120 @@ const AnalyticsDashboard: React.FC = () => {
           overflow: 'hidden'
         }}
       >
-        {/* Header */}
-        <Box sx={{ p: 2, bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
-          <Typography variant="h5" component="h1" gutterBottom sx={{ mb: 0.5 }}>
-            Analytics Dashboard
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Monitor applications, licenses, printing, financial performance, and API analytics
-          </Typography>
+        {/* Header with FilterBar */}
+        <Box sx={{ 
+          bgcolor: 'white', 
+          borderBottom: '1px solid', 
+          borderColor: 'divider',
+          flexShrink: 0,
+          p: 2
+        }}>
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+              Analytics Dashboard
+            </Typography>
+            <Stack direction="row" spacing={1}>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<RefreshIcon />}
+                onClick={refreshData}
+                disabled={loading}
+              >
+                Refresh
+              </Button>
+              <Button 
+                variant="contained" 
+                size="small"
+                startIcon={<DownloadIcon />} 
+                onClick={handleExport}
+              >
+                Export
+              </Button>
+            </Stack>
+          </Box>
+          
+          <FilterBar
+            searchValue={searchValue}
+            searchPlaceholder="Search analytics data..."
+            onSearchChange={setSearchValue}
+            filterConfigs={ANALYTICS_FILTER_CONFIGS}
+            filterValues={filterValues}
+            onFilterChange={handleFilterChange}
+            onSearch={handleSearch}
+            onClear={handleClear}
+            searching={loading}
+          />
         </Box>
 
-        {/* Content */}
-        <Box sx={{ p: 2, flexGrow: 1, overflow: 'auto' }}>
-          {/* Filters and Controls */}
-          <Paper
-            elevation={0}
+        {/* Tabs Section */}
+        <Box sx={{ 
+          bgcolor: 'white', 
+          borderBottom: '1px solid', 
+          borderColor: 'divider',
+          flexShrink: 0 
+        }}>
+          <Tabs 
+            value={activeTab} 
+            onChange={handleTabChange}
+            variant="scrollable"
+            scrollButtons="auto"
             sx={{
-              p: 2,
-              mb: 2,
-              bgcolor: 'white',
-              boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-              borderRadius: 2
+              '& .MuiTab-root': {
+                minHeight: 48,
+                textTransform: 'none',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                '&.Mui-selected': {
+                  fontWeight: 600
+                }
+              }
             }}
           >
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
-              <FormControl size="small" sx={{ minWidth: 160 }}>
-                <InputLabel>Date Range</InputLabel>
-                <Select
-                  value={dateRange}
-                  onChange={handleDateRangeChange}
-                  label="Date Range"
-                  startAdornment={<DateRangeIcon sx={{ mr: 1, color: 'action.active' }} />}
-                >
-                  <MenuItem value="7days">Last 7 days</MenuItem>
-                  <MenuItem value="30days">Last 30 days</MenuItem>
-                  <MenuItem value="90days">Last 90 days</MenuItem>
-                  <MenuItem value="6months">Last 6 months</MenuItem>
-                  <MenuItem value="1year">Last year</MenuItem>
-                </Select>
-              </FormControl>
-
-              <FormControl size="small" sx={{ minWidth: 160 }}>
-                <InputLabel>Location</InputLabel>
-                <Select value={selectedLocation} onChange={handleLocationChange} label="Location">
-                  <MenuItem value="all">All Locations</MenuItem>
-                  <MenuItem value="antananarivo">Antananarivo</MenuItem>
-                  <MenuItem value="toamasina">Toamasina</MenuItem>
-                  <MenuItem value="antsirabe">Antsirabe</MenuItem>
-                  <MenuItem value="mahajanga">Mahajanga</MenuItem>
-                </Select>
-              </FormControl>
-
-              <Box sx={{ flexGrow: 1 }} />
-
-              <Stack direction="row" spacing={1}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={<RefreshIcon />}
-                  onClick={refreshData}
-                  disabled={loading}
-                >
-                  Refresh
-                </Button>
-                <Button variant="contained" color="primary" size="small" startIcon={<DownloadIcon />} onClick={handleExport}>
-                  Export
-                </Button>
-              </Stack>
-            </Stack>
-          </Paper>
-
-          {/* KPI Overview Cards */}
-          <Grid container spacing={2} sx={{ mb: 2 }}>
-            {kpiMetrics.map((metric, index) => (
-              <Grid item xs={12} sm={6} lg={3} key={index}>
-                <Paper
-                  elevation={0}
-                  sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 'rgba(0,0,0,0.05) 0px 1px 2px 0px', p: 2, height: '100%' }}
-                >
-                  <KPICard {...metric} />
-                </Paper>
-              </Grid>
+            {tabs.map((tab, index) => (
+              <Tab
+                key={index}
+                label={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    {tab.icon}
+                    {tab.label}
+                  </Box>
+                }
+              />
             ))}
-          </Grid>
+          </Tabs>
+        </Box>
 
-          {/* Main Analytics Grid */}
-          <Grid container spacing={2}>
-            {/* Row 1: Application Trends & Distribution */}
-            <Grid item xs={12} lg={8}>
-              <Paper elevation={0} sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 'rgba(0,0,0,0.05) 0px 1px 2px 0px', p: 2, height: '100%' }}>
-                <ApplicationAnalytics dateRange={dateRange} location={selectedLocation} />
-              </Paper>
-            </Grid>
-            <Grid item xs={12} lg={4}>
-              <Paper elevation={0} sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 'rgba(0,0,0,0.05) 0px 1px 2px 0px', p: 2, height: '100%' }}>
-                <SystemHealthCards />
-              </Paper>
-            </Grid>
+        {/* Tab Content */}
+        <Box sx={{ 
+          flex: 1, 
+          overflow: 'auto',
+          p: 2,
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          <Box sx={{ flex: 1 }}>
+            {renderTabContent()}
+          </Box>
 
-            {/* Row 2: License Analytics & Printing */}
-            <Grid item xs={12} lg={6}>
-              <Paper elevation={0} sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 'rgba(0,0,0,0.05) 0px 1px 2px 0px', p: 2, height: '100%' }}>
-                <LicenseAnalytics dateRange={dateRange} location={selectedLocation} />
-              </Paper>
-            </Grid>
-            <Grid item xs={12} lg={6}>
-              <Paper elevation={0} sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 'rgba(0,0,0,0.05) 0px 1px 2px 0px', p: 2, height: '100%' }}>
-                <PrintingAnalytics dateRange={dateRange} location={selectedLocation} />
-              </Paper>
-            </Grid>
-
-            {/* Row 3: Financial Analytics & Activity */}
-            <Grid item xs={12} lg={8}>
-              <Paper elevation={0} sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 'rgba(0,0,0,0.05) 0px 1px 2px 0px', p: 2, height: '100%' }}>
-                <FinancialAnalytics dateRange={dateRange} location={selectedLocation} />
-              </Paper>
-            </Grid>
-            <Grid item xs={12} lg={4}>
-              <Paper elevation={0} sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 'rgba(0,0,0,0.05) 0px 1px 2px 0px', p: 2, height: '100%' }}>
-                <ActivityFeed />
-              </Paper>
-            </Grid>
-
-            {/* Row 4: API Performance Analytics */}
-            <Grid item xs={12}>
-              <Paper elevation={0} sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 'rgba(0,0,0,0.05) 0px 1px 2px 0px', p: 2, height: '100%' }}>
-                <ApiAnalytics dateRange={dateRange} location={selectedLocation} />
-              </Paper>
-            </Grid>
-          </Grid>
-
-          {/* Auto-refresh indicator - inline, subtle */}
-          {autoRefresh && (
-            <Box sx={{ mt: 2, display: 'inline-flex', alignItems: 'center', gap: 1, px: 1, py: 0.5, bgcolor: 'success.light', color: 'success.contrastText', borderRadius: 1, fontSize: '0.75rem' }}>
-              <RefreshIcon sx={{ fontSize: 16 }} /> Auto-refresh enabled
+          {/* Auto-refresh indicator */}
+          {autoRefresh && filterValues.refreshInterval !== 'off' && (
+            <Box sx={{ 
+              mt: 2, 
+              alignSelf: 'flex-start',
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              gap: 1, 
+              px: 1, 
+              py: 0.5, 
+              bgcolor: 'success.light', 
+              color: 'success.contrastText', 
+              borderRadius: 1, 
+              fontSize: '0.75rem' 
+            }}>
+              <RefreshIcon sx={{ fontSize: 16 }} />
+              Auto-refresh: {filterValues.refreshInterval || '30s'}
             </Box>
           )}
         </Box>

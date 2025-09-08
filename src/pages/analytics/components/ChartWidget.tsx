@@ -74,33 +74,57 @@ const ChartWidget: React.FC<ChartWidgetProps> = ({
     <Paper
       elevation={0}
       sx={{
-        p: 2,
+        p: 1.5,
         height: '100%',
         bgcolor: 'white',
         borderRadius: 2,
-        boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px'
+        boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+        display: 'flex',
+        flexDirection: 'column'
       }}
     >
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
-        <Box>
-          <Typography variant="subtitle1" component="h3" sx={{ fontWeight: 600 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Typography 
+            variant="body2" 
+            component="h3" 
+            sx={{ 
+              fontWeight: 600, 
+              fontSize: '0.85rem', 
+              lineHeight: 1.2,
+              color: 'primary.main'
+            }}
+          >
             {title}
           </Typography>
           {subtitle && (
-            <Typography variant="caption" color="text.secondary">
+            <Typography 
+              variant="caption" 
+              color="text.secondary"
+              sx={{ 
+                fontSize: '0.7rem',
+                display: 'block',
+                mt: 0.25
+              }}
+            >
               {subtitle}
             </Typography>
           )}
         </Box>
 
         {actions && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            {loading && <CircularProgress size={20} />}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, ml: 1 }}>
+            {loading && <CircularProgress size={16} />}
             <IconButton
               size="small"
               onClick={handleMenuClick}
-              sx={{ ml: 1 }}
+              sx={{ 
+                p: 0.5,
+                '& .MuiSvgIcon-root': {
+                  fontSize: 18
+                }
+              }}
             >
               <MoreVertIcon />
             </IconButton>
@@ -109,9 +133,9 @@ const ChartWidget: React.FC<ChartWidgetProps> = ({
       </Box>
 
       {/* Chart Content */}
-      <Box sx={{ height: height, position: 'relative' }}>
+      <Box sx={{ height: height, position: 'relative', flex: 1, minHeight: 0 }}>
         {loading ? (
-          <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 0.5 }}>
             <Skeleton variant="rectangular" height="60%" />
             <Skeleton variant="rectangular" height="20%" />
             <Skeleton variant="rectangular" height="20%" />
