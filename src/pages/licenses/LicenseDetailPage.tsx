@@ -576,7 +576,17 @@ const LicenseDetailPage: React.FC = () => {
                             View
                           </Button>
                           {card.status === 'READY_FOR_COLLECTION' && (
-                            <Button size="small" variant="contained" color="success">
+                            <Button 
+                              size="small" 
+                              variant="contained" 
+                              color="success"
+                              sx={{
+                                color: 'white',
+                                '&:hover': {
+                                  color: 'white'
+                                }
+                              }}
+                            >
                               Mark Collected
                             </Button>
                           )}

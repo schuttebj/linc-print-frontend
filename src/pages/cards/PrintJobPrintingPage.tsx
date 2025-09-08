@@ -46,6 +46,84 @@ const PrintJobPrintingPage: React.FC = () => {
   const [printProgress, setPrintProgress] = useState(0);
   const [cardImages, setCardImages] = useState<{front?: string, back?: string}>({});
   const [actionLoading, setActionLoading] = useState(false);
+  const [printAttempts, setPrintAttempts] = useState(0);
+  const [lastPrintTime, setLastPrintTime] = useState<Date | null>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Utility function to calculate printing duration
+  const getPrintingDuration = () => {
+    if (!printJob?.printing_started_at) return null;
+    
+    const startTime = new Date(printJob.printing_started_at);
+    const now = currentTime;
+    const diffMs = now.getTime() - startTime.getTime();
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const diffSeconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+    
+    return {
+      totalMinutes: diffMinutes,
+      totalSeconds: Math.floor(diffMs / 1000),
+      displayText: diffMinutes > 0 ? `${diffMinutes}m ${diffSeconds}s` : `${diffSeconds}s`,
+      isWarning: diffMinutes >= 5, // Warning after 5 minutes
+      isCritical: diffMinutes >= 10 // Critical after 10 minutes
+    };
+  };
+
+  // Print Duration Component
+  const PrintDurationTimer = ({ showIcon = true }: { showIcon?: boolean }) => {
+    const duration = getPrintingDuration();
+    
+    if (!duration || printJob?.status !== 'PRINTING') return null;
+
+    const getSeverity = () => {
+      if (duration.isCritical) return 'error';
+      if (duration.isWarning) return 'warning';
+      return 'info';
+    };
+
+    const getIcon = () => {
+      if (duration.isCritical) return '🚨';
+      if (duration.isWarning) return '⚠️';
+      return '⏱️';
+    };
+
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 0.5,
+        padding: '4px 8px',
+        borderRadius: 1,
+        backgroundColor: getSeverity() === 'error' ? '#ffebee' : 
+                        getSeverity() === 'warning' ? '#fff3e0' : '#e3f2fd',
+        border: `1px solid ${getSeverity() === 'error' ? '#f44336' : 
+                              getSeverity() === 'warning' ? '#ff9800' : '#2196f3'}`
+      }}>
+        {showIcon && <span style={{ fontSize: '0.8rem' }}>{getIcon()}</span>}
+        <Typography 
+          variant="caption" 
+          sx={{ 
+            fontSize: '0.75rem',
+            fontWeight: 600,
+            color: getSeverity() === 'error' ? '#d32f2f' : 
+                   getSeverity() === 'warning' ? '#f57c00' : '#1976d2'
+          }}
+        >
+          {duration.displayText}
+          {duration.isWarning && ' (check printer)'}
+        </Typography>
+      </Box>
+    );
+  };
+
+  // Update current time every second for live timer
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Load print job details
   const loadPrintJob = async () => {
@@ -114,7 +192,7 @@ const PrintJobPrintingPage: React.FC = () => {
     }
   };
 
-  // Start printing process - Direct Windows printing
+  // Start printing process - Allow multiple attempts
   const handleStartPrinting = async () => {
     if (!printJob) return;
 
@@ -122,22 +200,30 @@ const PrintJobPrintingPage: React.FC = () => {
       setActionLoading(true);
       setPrinting(true);
       
-      // Auto-assign job to current user and start printing
-      await printJobService.assignJobToPrinter(printJob.id, user?.id || '');
-      await printJobService.startPrintingJob(printJob.id);
+      // Track print attempt
+      const attemptNumber = printAttempts + 1;
+      setPrintAttempts(attemptNumber);
+      setLastPrintTime(new Date());
       
-      // Directly open Windows printer
+      console.log(`🖨️ Print attempt #${attemptNumber} for job ${printJob.job_number} by ${user?.username}`);
+      
+      // Only assign and start printing on first attempt
+      if (attemptNumber === 1) {
+        await printJobService.assignJobToPrinter(printJob.id, user?.id || '');
+        await printJobService.startPrintingJob(printJob.id);
+      }
+      
+      // Open Windows printer (can be done multiple times)
       await handlePrintToWindows();
       
-      // Mark as complete after printing
-      await printJobService.completePrintingJob(printJob.id, 'Windows printer - printing completed');
-      
-      // Refresh job details
-      await loadPrintJob();
+      // Show success message for subsequent attempts
+      if (attemptNumber > 1) {
+        console.log(`📄 Additional print attempt #${attemptNumber} completed`);
+      }
       
     } catch (error) {
-      console.error('Error in printing workflow:', error);
-      setError('Failed to complete printing workflow');
+      console.error(`❌ Print attempt #${printAttempts + 1} failed:`, error);
+      setError(`Print attempt #${printAttempts + 1} failed. You can try again.`);
     } finally {
       setActionLoading(false);
       setPrinting(false);
@@ -152,8 +238,12 @@ const PrintJobPrintingPage: React.FC = () => {
     try {
       setActionLoading(true);
       
-      // Mark printing as complete (CARD_PRODUCTION → PRINT_COMPLETE)
-      await printJobService.completePrintingJob(printJob.id, 'Printing completed successfully');
+      // Log completion with print attempts info
+      const completionNotes = `Printing completed after ${printAttempts} attempt(s). Last printed: ${lastPrintTime?.toLocaleString()}`;
+      console.log(`✅ Job ${printJob.job_number} completed: ${completionNotes}`);
+      
+      // Mark printing as complete
+      await printJobService.completePrintingJob(printJob.id, completionNotes);
       
       // Refresh job details
       await loadPrintJob();
@@ -181,6 +271,7 @@ const PrintJobPrintingPage: React.FC = () => {
       }
 
       // CR80 standard card dimensions: 85.60 × 53.98 mm (3.375 × 2.125 inches)
+      // Full page printing with card-sized content
       const printHTML = `
         <!DOCTYPE html>
         <html>
@@ -188,47 +279,101 @@ const PrintJobPrintingPage: React.FC = () => {
           <title>License Card Print - ${printJob?.job_number}</title>
           <style>
             @page {
-              size: 3.375in 2.125in;
+              size: A4;
               margin: 0;
             }
             body {
               margin: 0;
               padding: 0;
               font-family: Arial, sans-serif;
+              background: white;
+            }
+            .page-container {
+              width: 100vw;
+              height: 100vh;
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+              align-items: center;
+              page-break-after: always;
             }
             .card-container {
               width: 3.375in;
               height: 2.125in;
-              page-break-after: always;
-              display: flex;
-              justify-content: center;
-              align-items: center;
+              border: 2px solid #000;
+              border-radius: 8px;
+              position: relative;
+              box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+              overflow: hidden;
+              margin: 20px;
             }
             .card-image {
-              max-width: 100%;
-              max-height: 100%;
-              object-fit: contain;
+              width: 100%;
+              height: 100%;
+              object-fit: cover;
+              display: block;
             }
-            .card-title {
+            .card-info {
               position: absolute;
-              top: 10px;
-              left: 10px;
-              font-size: 8px;
+              bottom: -30px;
+              left: 0;
+              right: 0;
+              text-align: center;
+              font-size: 10px;
+              color: #333;
+              background: white;
+              padding: 5px;
+              border: 1px solid #ccc;
+              border-radius: 4px;
+            }
+            .print-instructions {
+              margin-top: 20px;
+              padding: 10px;
+              border: 1px solid #ddd;
+              border-radius: 4px;
+              background: #f9f9f9;
+              max-width: 500px;
+              text-align: center;
+            }
+            .print-instructions h3 {
+              margin: 0 0 10px 0;
+              color: #333;
+              font-size: 14px;
+            }
+            .print-instructions p {
+              margin: 5px 0;
+              font-size: 12px;
               color: #666;
             }
           </style>
         </head>
         <body>
           ${cardImages.front ? `
-            <div class="card-container">
-              <div class="card-title">FRONT - ${printJob?.job_number}</div>
-              <img src="${cardImages.front}" alt="Card Front" class="card-image" />
+            <div class="page-container">
+              <div class="card-container">
+                <img src="${cardImages.front}" alt="Card Front" class="card-image" />
+                <div class="card-info">FRONT - ${printJob?.job_number}</div>
+              </div>
+              <div class="print-instructions">
+                <h3>Card Front - Printing Instructions</h3>
+                <p>Print this page on card stock</p>
+                <p>Card dimensions: 85.60 × 53.98 mm (CR80 standard)</p>
+                <p>Job: ${printJob?.job_number} | Person: ${printJob?.person_name}</p>
+              </div>
             </div>
           ` : ''}
           ${cardImages.back ? `
-            <div class="card-container">
-              <div class="card-title">BACK - ${printJob?.job_number}</div>
-              <img src="${cardImages.back}" alt="Card Back" class="card-image" />
+            <div class="page-container">
+              <div class="card-container">
+                <img src="${cardImages.back}" alt="Card Back" class="card-image" />
+                <div class="card-info">BACK - ${printJob?.job_number}</div>
+              </div>
+              <div class="print-instructions">
+                <h3>Card Back - Printing Instructions</h3>
+                <p>Print this page on card stock</p>
+                <p>Card dimensions: 85.60 × 53.98 mm (CR80 standard)</p>
+                <p>Job: ${printJob?.job_number} | Person: ${printJob?.person_name}</p>
+              </div>
             </div>
           ` : ''}
         </body>
@@ -424,7 +569,7 @@ const PrintJobPrintingPage: React.FC = () => {
         <Button
           variant="outlined"
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/cards/print-queue')}
+          onClick={() => navigate('/dashboard/cards/print-queue')}
         >
           Back to Print Queue
         </Button>
@@ -451,7 +596,7 @@ const PrintJobPrintingPage: React.FC = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <IconButton
-                onClick={() => navigate('/cards/print-queue')}
+                onClick={() => navigate('/dashboard/cards/print-queue')}
                 size="small"
               >
                 <ArrowBackIcon />
@@ -530,6 +675,16 @@ const PrintJobPrintingPage: React.FC = () => {
                     {printJobService.formatDate(printJob.submitted_at)}
                   </Typography>
                 </Box>
+
+                {/* Printing Duration Timer */}
+                {printJob.status === 'PRINTING' && printJob.printing_started_at && (
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="caption" color="text.secondary">Printing Time</Typography>
+                    <Box sx={{ mt: 0.5 }}>
+                      <PrintDurationTimer />
+                    </Box>
+                  </Box>
+                )}
               </Paper>
 
               {/* Printing Progress */}
@@ -643,35 +798,106 @@ const PrintJobPrintingPage: React.FC = () => {
                 <Divider sx={{ my: 2 }} />
 
                 {/* Control Buttons */}
-                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                  {printJob.status === 'QUEUED' && (
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      size="large"
-                      startIcon={<PrintIcon />}
-                      onClick={handleStartPrinting}
-                      disabled={actionLoading || printing || !cardImages.front && !cardImages.back}
-                    >
-                      {actionLoading ? 'Processing...' : 'Print Card (Windows Printer)'}
-                    </Button>
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', flexDirection: 'column' }}>
+                  {/* Print Attempts Info */}
+                  {printAttempts > 0 && (
+                    <Alert severity="info" sx={{ mb: 2 }}>
+                      <Typography variant="body2">
+                        Print attempts: {printAttempts} | Last attempt: {lastPrintTime?.toLocaleTimeString()}
+                        {printAttempts > 1 && <span> | ⚠️ Multiple attempts detected</span>}
+                      </Typography>
+                    </Alert>
                   )}
 
-                  {printJob.status === 'PRINTING' && (
-                    <Button
-                      variant="contained"
-                      color="success"
-                      size="large"
-                      startIcon={<CheckCircleIcon />}
-                      onClick={handleCompletePrinting}
-                      disabled={actionLoading}
-                    >
-                      {actionLoading ? 'Completing...' : 'Mark Complete'}
-                    </Button>
-                  )}
+                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                    {/* Print Button - Available for QUEUED and PRINTING status */}
+                    {(printJob.status === 'QUEUED' || printJob.status === 'PRINTING') && (
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        size="small"
+                        startIcon={<PrintIcon />}
+                        onClick={handleStartPrinting}
+                        disabled={actionLoading || printing || !cardImages.front && !cardImages.back}
+                        sx={{
+                          fontSize: '0.8rem',
+                          padding: '6px 12px',
+                          minWidth: 'auto'
+                        }}
+                      >
+                        {actionLoading ? 'Processing...' : 
+                          printAttempts === 0 ? 'Print Card' : 
+                          `Print Again (#${printAttempts + 1})`
+                        }
+                      </Button>
+                    )}
 
+                    {/* Mark Complete Button - Only show after at least one print attempt */}
+                    {printJob.status === 'PRINTING' && printAttempts > 0 && (
+                      <Button
+                        variant="contained"
+                        color="success"
+                        size="small"
+                        startIcon={<CheckCircleIcon />}
+                        onClick={handleCompletePrinting}
+                        disabled={actionLoading}
+                        sx={{
+                          fontSize: '0.8rem',
+                          padding: '6px 12px',
+                          minWidth: 'auto',
+                          color: 'white',
+                          '&:hover': {
+                            color: 'white'
+                          }
+                        }}
+                      >
+                        {actionLoading ? 'Completing...' : 'Mark Complete'}
+                      </Button>
+                    )}
+
+                    {/* Preview/Download buttons always available */}
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<VisibilityIcon />}
+                      onClick={() => {
+                        if (cardImages.front) {
+                          window.open(cardImages.front, '_blank');
+                        }
+                      }}
+                      disabled={!cardImages.front}
+                      sx={{
+                        fontSize: '0.8rem',
+                        padding: '6px 12px',
+                        minWidth: 'auto'
+                      }}
+                    >
+                      Front
+                    </Button>
+
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<VisibilityIcon />}
+                      onClick={() => {
+                        if (cardImages.back) {
+                          window.open(cardImages.back, '_blank');
+                        }
+                      }}
+                      disabled={!cardImages.back}
+                      sx={{
+                        fontSize: '0.8rem',
+                        padding: '6px 12px',
+                        minWidth: 'auto'
+                      }}
+                    >
+                      Back
+                    </Button>
+                  </Box>
+
+                  {/* Status Messages */}
                   {printJob.status === 'PRINTED' && (
-                    <Alert severity="success" sx={{ width: '100%' }}>
+                    <Alert severity="success" sx={{ width: '100%', mt: 2 }}>
                       <Typography variant="body2">
                         Printing completed successfully! This job is now ready for quality assurance.
                       </Typography>
@@ -679,39 +905,12 @@ const PrintJobPrintingPage: React.FC = () => {
                   )}
 
                   {(printJob.status === 'QUALITY_CHECK' || printJob.status === 'COMPLETED') && (
-                    <Alert severity="info" sx={{ width: '100%' }}>
+                    <Alert severity="info" sx={{ width: '100%', mt: 2 }}>
                       <Typography variant="body2">
                         This job has moved to the next stage of the workflow.
                       </Typography>
                     </Alert>
                   )}
-
-                  {/* Preview/Download buttons always available */}
-                  <Button
-                    variant="outlined"
-                    startIcon={<VisibilityIcon />}
-                    onClick={() => {
-                      if (cardImages.front) {
-                        window.open(cardImages.front, '_blank');
-                      }
-                    }}
-                    disabled={!cardImages.front}
-                  >
-                    Preview Front
-                  </Button>
-
-                  <Button
-                    variant="outlined"
-                    startIcon={<VisibilityIcon />}
-                    onClick={() => {
-                      if (cardImages.back) {
-                        window.open(cardImages.back, '_blank');
-                      }
-                    }}
-                    disabled={!cardImages.back}
-                  >
-                    Preview Back
-                  </Button>
                 </Box>
 
                 {/* License Information */}

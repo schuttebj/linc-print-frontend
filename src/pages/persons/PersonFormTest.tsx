@@ -148,10 +148,33 @@ const PersonFormTest: React.FC = () => {
             )}
           </DialogContent>
           <DialogActions sx={{ p: 3, gap: 2, justifyContent: 'center' }}>
-            <Button onClick={handleContinueEditing} variant="outlined" size="large" color="success">
+            <Button 
+              onClick={handleContinueEditing} 
+              variant="outlined" 
+              size="large" 
+              color="success"
+              sx={{
+                '&:hover': {
+                  color: 'white',
+                  backgroundColor: 'success.main'
+                }
+              }}
+            >
               Continue Editing This Person
             </Button>
-            <Button onClick={handleCreateAnother} variant="contained" size="large" startIcon={<PersonAddIcon />} color="success">
+            <Button 
+              onClick={handleCreateAnother} 
+              variant="contained" 
+              size="large" 
+              startIcon={<PersonAddIcon />} 
+              color="success"
+              sx={{
+                color: 'white',
+                '&:hover': {
+                  color: 'white'
+                }
+              }}
+            >
               Create Another Person
             </Button>
           </DialogActions>

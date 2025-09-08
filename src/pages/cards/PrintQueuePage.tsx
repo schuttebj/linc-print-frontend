@@ -112,6 +112,84 @@ const PrintQueuePage: React.FC = () => {
   
   // Loading state management
   const [isFirstLoad, setIsFirstLoad] = useState(true);
+  
+  // Timer state for live updates
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Utility function to calculate printing duration
+  const getPrintingDuration = (printingStartedAt: string | null) => {
+    if (!printingStartedAt) return null;
+    
+    const startTime = new Date(printingStartedAt);
+    const now = currentTime;
+    const diffMs = now.getTime() - startTime.getTime();
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const diffSeconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+    
+    return {
+      totalMinutes: diffMinutes,
+      totalSeconds: Math.floor(diffMs / 1000),
+      displayText: diffMinutes > 0 ? `${diffMinutes}m ${diffSeconds}s` : `${diffSeconds}s`,
+      isWarning: diffMinutes >= 5, // Warning after 5 minutes
+      isCritical: diffMinutes >= 10 // Critical after 10 minutes
+    };
+  };
+
+  // Compact Print Duration Component for table
+  const CompactPrintTimer = ({ job }: { job: PrintJobResponse }) => {
+    const duration = getPrintingDuration(job.printing_started_at);
+    
+    if (!duration || job.status !== 'PRINTING') return null;
+
+    const getColor = () => {
+      if (duration.isCritical) return '#d32f2f';
+      if (duration.isWarning) return '#f57c00';
+      return '#1976d2';
+    };
+
+    const getBackgroundColor = () => {
+      if (duration.isCritical) return '#ffebee';
+      if (duration.isWarning) return '#fff3e0';
+      return '#e3f2fd';
+    };
+
+    return (
+      <Box sx={{ 
+        display: 'inline-flex', 
+        alignItems: 'center', 
+        gap: 0.3,
+        padding: '2px 6px',
+        borderRadius: 0.5,
+        backgroundColor: getBackgroundColor(),
+        border: `1px solid ${getColor()}`,
+        fontSize: '0.7rem'
+      }}>
+        <span style={{ fontSize: '0.65rem' }}>
+          {duration.isCritical ? '🚨' : duration.isWarning ? '⚠️' : '⏱️'}
+        </span>
+        <Typography 
+          variant="caption" 
+          sx={{ 
+            fontSize: '0.65rem',
+            fontWeight: 600,
+            color: getColor(),
+            lineHeight: 1
+          }}
+        >
+          {duration.displayText}
+        </Typography>
+      </Box>
+    );
+  };
+
+  // Update current time every second for live timers
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Auto-refresh interval (60 seconds)
   const REFRESH_INTERVAL = 60000;
@@ -840,12 +918,18 @@ const PrintQueuePage: React.FC = () => {
                     </TableCell>
                   )}
                   <TableCell sx={{ py: 1, px: 2 }}>
-                    <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                      {isQueuedJobs 
-                        ? printJobService.formatShortDate(job.submitted_at)
-                        : (job.printing_started_at ? printJobService.formatShortDate(job.printing_started_at) : 'Not started')
-                      }
-                    </Typography>
+                    {isQueuedJobs ? (
+                      <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                        {printJobService.formatShortDate(job.submitted_at)}
+                      </Typography>
+                    ) : (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                        <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                          {job.printing_started_at ? printJobService.formatShortDate(job.printing_started_at) : 'Not started'}
+                        </Typography>
+                        <CompactPrintTimer job={job} />
+                      </Box>
+                    )}
                   </TableCell>
                   <TableCell align="center" sx={{ py: 1, px: 2 }}>
                     <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
@@ -1089,22 +1173,42 @@ const PrintQueuePage: React.FC = () => {
           >
             <Tab 
               label={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   <QueueIcon fontSize="small" />
                   <span>Queued Jobs</span>
                   {queueData && (
-                    <Badge badgeContent={queueData.queued_jobs.length} color="info" />
+                    <Badge 
+                      badgeContent={queueData.queued_jobs.length} 
+                      color="info"
+                      sx={{
+                        '& .MuiBadge-badge': {
+                          minWidth: '20px',
+                          height: '20px',
+                          padding: '0 6px'
+                        }
+                      }}
+                    />
                   )}
                 </Box>
               } 
             />
             <Tab 
               label={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   <PrintIcon fontSize="small" />
                   <span>In Progress</span>
                   {queueData && (
-                    <Badge badgeContent={queueData.in_progress_jobs.length} color="warning" />
+                    <Badge 
+                      badgeContent={queueData.in_progress_jobs.length} 
+                      color="warning"
+                      sx={{
+                        '& .MuiBadge-badge': {
+                          minWidth: '20px',
+                          height: '20px',
+                          padding: '0 6px'
+                        }
+                      }}
+                    />
                   )}
                 </Box>
               } 
@@ -1336,6 +1440,12 @@ const PrintQueuePage: React.FC = () => {
               variant="contained"
               color="success"
               startIcon={<StartIcon />}
+              sx={{
+                color: 'white',
+                '&:hover': {
+                  color: 'white'
+                }
+              }}
             >
               Go to Printing Page
             </Button>
