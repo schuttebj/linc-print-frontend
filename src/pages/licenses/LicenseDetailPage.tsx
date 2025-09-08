@@ -50,7 +50,7 @@ interface TabPanelProps {
 const TabPanelComponent: React.FC<TabPanelProps> = ({ children, value, index }) => {
   return (
     <div role="tabpanel" hidden={value !== index}>
-      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
+      {value === index && <Box sx={{ p: 0 }}>{children}</Box>}
     </div>
   );
 };
@@ -110,8 +110,9 @@ const LicenseDetailPage: React.FC = () => {
       <Chip 
         label={status} 
         color={color} 
-        size="medium"
+        size="small"
         variant="filled"
+        sx={{ fontSize: '0.7rem', height: '24px' }}
       />
     );
   };
@@ -124,6 +125,7 @@ const LicenseDetailPage: React.FC = () => {
         color={color} 
         size="small"
         variant="outlined"
+        sx={{ fontSize: '0.7rem', height: '24px' }}
       />
     );
   };
@@ -192,9 +194,9 @@ const LicenseDetailPage: React.FC = () => {
             overflow: 'hidden'
           }}
         >
-          <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
-            <CircularProgress />
-          </Box>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
+        <CircularProgress />
+      </Box>
         </Paper>
       </Container>
     );
@@ -215,9 +217,9 @@ const LicenseDetailPage: React.FC = () => {
             overflow: 'hidden'
           }}
         >
-          <Box sx={{ p: 3 }}>
-            <Alert severity="error">{error}</Alert>
-          </Box>
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error">{error}</Alert>
+      </Box>
         </Paper>
       </Container>
     );
@@ -238,9 +240,9 @@ const LicenseDetailPage: React.FC = () => {
             overflow: 'hidden'
           }}
         >
-          <Box sx={{ p: 3 }}>
-            <Alert severity="warning">License not found</Alert>
-          </Box>
+      <Box sx={{ p: 3 }}>
+        <Alert severity="warning">License not found</Alert>
+      </Box>
         </Paper>
       </Container>
     );
@@ -268,19 +270,20 @@ const LicenseDetailPage: React.FC = () => {
           flexShrink: 0,
           p: 2
         }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <IconButton 
               onClick={() => navigate('/dashboard/licenses/list')}
               sx={{ color: 'primary.main' }}
+              size="small"
             >
-              <BackIcon />
-            </IconButton>
+            <BackIcon />
+          </IconButton>
             <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
               License Details - {licenseService.formatLicenseId(license.id)}
-            </Typography>
-            {getStatusChip(license.status)}
-          </Box>
-        </Box>
+          </Typography>
+          {getStatusChip(license.status)}
+      </Box>
+      </Box>
 
         {/* Tab Navigation */}
         <Box sx={{ 
@@ -295,22 +298,25 @@ const LicenseDetailPage: React.FC = () => {
             sx={{
               px: 2,
               '& .MuiTab-root': {
-                minHeight: 48,
+                minHeight: 40,
                 textTransform: 'none',
-                fontSize: '0.875rem',
+                fontSize: '0.8rem',
                 color: 'text.secondary',
-                bgcolor: 'grey.100',
+                bgcolor: 'primary.50',
                 mx: 0.5,
-                borderRadius: '8px 8px 0 0',
+                borderRadius: '6px 6px 0 0',
                 '&.Mui-selected': {
-                  bgcolor: 'white',
-                  color: 'text.primary',
+                  bgcolor: 'primary.100',
+                  color: 'primary.main',
                 },
                 '&:hover': {
-                  bgcolor: 'grey.200',
+                  bgcolor: 'primary.100',
                   '&.Mui-selected': {
-                    bgcolor: 'white',
+                    bgcolor: 'primary.100',
                   }
+                },
+                '&.Mui-disabled': {
+                  opacity: 0.4
                 }
               },
               '& .MuiTabs-indicator': {
@@ -331,7 +337,7 @@ const LicenseDetailPage: React.FC = () => {
         <Box sx={{ 
           flex: 1, 
           overflow: 'auto',
-          p: 2,
+          p: 1.5,
           minHeight: 0,
           display: 'flex',
           flexDirection: 'column'
@@ -344,26 +350,26 @@ const LicenseDetailPage: React.FC = () => {
               <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
                 <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
                   License Information
-                </Typography>
+                        </Typography>
 
                 <Grid container spacing={1}>
                   <Grid item xs={12} md={4}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>License Number</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                      {licenseService.formatLicenseId(license.id)}
-                    </Typography>
+                          {licenseService.formatLicenseId(license.id)}
+                        </Typography>
                   </Grid>
                   <Grid item xs={6} md={2}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Category</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                       {license.category}
-                    </Typography>
+                        </Typography>
                   </Grid>
                   <Grid item xs={6} md={2}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Status</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                       {license.status}
-                    </Typography>
+                        </Typography>
                   </Grid>
                   <Grid item xs={6} md={2}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Issue Date</Typography>
@@ -378,7 +384,7 @@ const LicenseDetailPage: React.FC = () => {
                     </Typography>
                   </Grid>
                 </Grid>
-              </Box>
+                      </Box>
 
               {/* Current Card & Restrictions/Permits in a 2-column layout */}
               <Grid container spacing={1.5}>
@@ -390,35 +396,35 @@ const LicenseDetailPage: React.FC = () => {
                   {license.current_card ? (
                     <Box sx={{ mb: 0.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-                        <Box>
+                      <Box>
                           <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
                             {license.current_card.card_type || 'Standard Card'}
-                          </Typography>
+                        </Typography>
                           <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                             Status: {license.current_card.status.replace(/_/g, ' ')}
-                          </Typography>
-                        </Box>
+                        </Typography>
+                      </Box>
                         {license.current_card.is_current && <Chip label="CURRENT" size="small" color="primary" sx={{ fontSize: '0.6rem', height: '18px' }} />}
                       </Box>
                       <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
                         Expires: {formatShortDate(license.current_card.expiry_date)}
                         {license.current_card.is_near_expiry && ` (${license.current_card.days_until_expiry} days remaining)`}
-                      </Typography>
+                          </Typography>
                     </Box>
                   ) : (
                     <Box sx={{ mb: 0.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
                       <Typography variant="body2" sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
                         No current card issued
-                      </Typography>
-                    </Box>
-                  )}
-                </Grid>
+                          </Typography>
+                        </Box>
+                      )}
+              </Grid>
 
                 {/* Restrictions & Permits Summary */}
-                <Grid item xs={12} md={6}>
+              <Grid item xs={12} md={6}>
                   <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
                     Restrictions & Permits
-                  </Typography>
+                        </Typography>
                   <Box sx={{ mb: 0.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
                     <Box sx={{ mb: 1 }}>
                       <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Restrictions</Typography>
@@ -442,8 +448,8 @@ const LicenseDetailPage: React.FC = () => {
                           </Typography>
                         )}
                       </Box>
-                    </Box>
-                    <Box>
+                      </Box>
+                      <Box>
                       <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Professional Permit</Typography>
                       <Box sx={{ mt: 0.25 }}>
                         {license.has_professional_permit && license.professional_permit_categories.length > 0 ? (
@@ -474,34 +480,34 @@ const LicenseDetailPage: React.FC = () => {
               <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
                 <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
                   License Statistics
-                </Typography>
+                          </Typography>
                 <Grid container spacing={1}>
                   <Grid item xs={12} md={3}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Total Cards Issued</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                       {license.cards?.length || 0}
-                    </Typography>
+                          </Typography>
                   </Grid>
                   <Grid item xs={12} md={3}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Active Since</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                       {formatShortDate(license.created_at)}
-                    </Typography>
+                          </Typography>
                   </Grid>
                   <Grid item xs={12} md={3}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Last Updated</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                       {formatShortDate(license.updated_at)}
-                    </Typography>
+                          </Typography>
                   </Grid>
                   <Grid item xs={12} md={3}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Application ID</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                       {license.created_from_application_id || 'NOT AVAILABLE'}
-                    </Typography>
+                          </Typography>
                   </Grid>
                 </Grid>
-              </Box>
+                        </Box>
 
               {/* Reference Information (if available) */}
               {(license.captured_from_license_number || license.previous_license_id || license.is_upgrade) && (
@@ -523,7 +529,7 @@ const LicenseDetailPage: React.FC = () => {
                         <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Previous License</Typography>
                         <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                           {license.previous_license_id}
-                        </Typography>
+                      </Typography>
                       </Grid>
                     )}
                     {license.is_upgrade && license.upgrade_from_category && (
@@ -532,7 +538,7 @@ const LicenseDetailPage: React.FC = () => {
                         <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                           {license.upgrade_from_category}
                         </Typography>
-                      </Grid>
+              </Grid>
                     )}
                   </Grid>
                 </Box>
@@ -545,7 +551,7 @@ const LicenseDetailPage: React.FC = () => {
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
               <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
                 Cards ({license.cards?.length || 0})
-              </Typography>
+                        </Typography>
               {license.cards && license.cards.length > 0 ? (
                 license.cards.map((card, index) => (
                   <Box key={card.id} sx={{ mb: 0.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
@@ -554,36 +560,36 @@ const LicenseDetailPage: React.FC = () => {
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                           <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
                             {card.card_number}
-                          </Typography>
+                        </Typography>
                           {card.is_current && <Chip label="CURRENT" size="small" color="primary" sx={{ fontSize: '0.6rem', height: '18px' }} />}
-                        </Box>
+                      </Box>
                         
                         <Grid container spacing={1} sx={{ mb: 0.5 }}>
                           <Grid item xs={6} md={3}>
                             <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Status</Typography>
                             <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
                               {card.status.replace(/_/g, ' ')}
-                            </Typography>
+                        </Typography>
                           </Grid>
                           <Grid item xs={6} md={3}>
                             <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Issue Date</Typography>
                             <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
                               {formatShortDate(card.issue_date)}
-                            </Typography>
+                        </Typography>
                           </Grid>
                           <Grid item xs={6} md={3}>
                             <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Expiry Date</Typography>
                             <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
                               {formatShortDate(card.expiry_date)}
-                            </Typography>
+                        </Typography>
                           </Grid>
                           <Grid item xs={6} md={3}>
                             <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Type</Typography>
                             <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
                               {card.card_type || 'Standard'}
-                            </Typography>
-                          </Grid>
-                        </Grid>
+                        </Typography>
+              </Grid>
+            </Grid>
 
                         {/* Additional card details */}
                         <Grid container spacing={1}>
@@ -623,10 +629,10 @@ const LicenseDetailPage: React.FC = () => {
               ) : (
                 <Box sx={{ mb: 0.5, p: 2, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9', textAlign: 'center' }}>
                   <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
-                    No cards issued for this license
-                  </Typography>
+                          No cards issued for this license
+                        </Typography>
                 </Box>
-              )}
+                  )}
             </Box>
           </TabPanelComponent>
 
@@ -700,10 +706,10 @@ const LicenseDetailPage: React.FC = () => {
               ) : (
                 <Box sx={{ mb: 0.5, p: 2, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9', textAlign: 'center' }}>
                   <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
-                    No status history available
-                  </Typography>
+                          No status history available
+                        </Typography>
                 </Box>
-              )}
+                  )}
             </Box>
           </TabPanelComponent>
 
@@ -714,42 +720,42 @@ const LicenseDetailPage: React.FC = () => {
               <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
                 <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem', mb: 1 }}>
                   International Compliance
-                </Typography>
+                        </Typography>
 
                 <Grid container spacing={1}>
                   <Grid item xs={12} md={4}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>SADC Compliance</Typography>
                     <Box sx={{ mt: 0.25 }}>
-                      <Chip
-                        label={license.sadc_compliance_verified ? 'Verified' : 'Not Verified'}
-                        color={license.sadc_compliance_verified ? 'success' : 'error'}
-                        size="small"
+                        <Chip
+                          label={license.sadc_compliance_verified ? 'Verified' : 'Not Verified'}
+                          color={license.sadc_compliance_verified ? 'success' : 'error'}
+                          size="small"
                         sx={{ fontSize: '0.6rem', height: '18px' }}
-                      />
-                    </Box>
+                        />
+                      </Box>
                   </Grid>
                   <Grid item xs={12} md={4}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>International Validity</Typography>
                     <Box sx={{ mt: 0.25 }}>
-                      <Chip
+                        <Chip
                         label={license.international_validity ? 'Valid Internationally' : 'Local Only'}
                         color={license.international_validity ? 'success' : 'warning'}
-                        size="small"
+                          size="small"
                         sx={{ fontSize: '0.6rem', height: '18px' }}
-                      />
-                    </Box>
+                        />
+                      </Box>
                   </Grid>
                   <Grid item xs={12} md={4}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Vienna Convention</Typography>
                     <Box sx={{ mt: 0.25 }}>
-                      <Chip
+                        <Chip
                         label={license.vienna_convention_compliant ? 'Compliant' : 'Non-Compliant'}
-                        color={license.vienna_convention_compliant ? 'success' : 'error'}
-                        size="small"
+                          color={license.vienna_convention_compliant ? 'success' : 'error'}
+                          size="small"
                         sx={{ fontSize: '0.6rem', height: '18px' }}
-                      />
-                    </Box>
-                  </Grid>
+                        />
+                      </Box>
+              </Grid>
                 </Grid>
               </Box>
 
@@ -760,23 +766,23 @@ const LicenseDetailPage: React.FC = () => {
                 </Typography>
 
                 <Grid container spacing={1}>
-                  <Grid item xs={12} md={6}>
+              <Grid item xs={12} md={6}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>ISO Standard</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                       ISO 18013-1:2018 (Mobile ID Standard)
-                    </Typography>
+                        </Typography>
                   </Grid>
                   <Grid item xs={12} md={6}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Card Template</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                       {license.current_card?.card_template || 'Not specified'}
-                    </Typography>
+                        </Typography>
                   </Grid>
                   <Grid item xs={12} md={6}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>ISO Compliance Version</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
                       {license.current_card?.iso_compliance_version || 'Not specified'}
-                    </Typography>
+                        </Typography>
                   </Grid>
                   <Grid item xs={12} md={6}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Card Type</Typography>
@@ -785,7 +791,7 @@ const LicenseDetailPage: React.FC = () => {
                     </Typography>
                   </Grid>
                 </Grid>
-              </Box>
+                      </Box>
 
               {/* Regional Compliance Details */}
               <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
@@ -801,7 +807,7 @@ const LicenseDetailPage: React.FC = () => {
                         ? 'This license is recognized in all SADC member states for driving purposes according to the SADC Protocol on Transport, Communications and Meteorology.'
                         : 'This license may have limited recognition in other SADC member states. Additional documentation may be required.'}
                     </Typography>
-                  </Grid>
+              </Grid>
                   <Grid item xs={12}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Vienna Convention Recognition</Typography>
                     <Typography variant="body2" sx={{ fontSize: '0.75rem', mb: 1 }}>
@@ -809,7 +815,7 @@ const LicenseDetailPage: React.FC = () => {
                         ? 'This license complies with the Vienna Convention on Road Traffic and is recognized internationally in all signatory countries.'
                         : 'This license does not fully comply with Vienna Convention standards. An International Driving Permit may be required for international travel.'}
                     </Typography>
-                  </Grid>
+            </Grid>
                   <Grid item xs={12}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Digital Compliance</Typography>
                     <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
@@ -939,7 +945,7 @@ const LicenseDetailPage: React.FC = () => {
                 <Box sx={{ mb: 1.5, p: 1, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fff3e0' }}>
                   <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: 'warning.dark', fontSize: '0.85rem', mb: 1 }}>
                     Status Details
-                  </Typography>
+            </Typography>
                   
                   <Grid container spacing={1}>
                     {license.is_suspended && (
@@ -977,7 +983,7 @@ const LicenseDetailPage: React.FC = () => {
                       </>
                     )}
                   </Grid>
-                </Box>
+    </Box>
               )}
             </Box>
           </TabPanelComponent>
