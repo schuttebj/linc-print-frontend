@@ -94,7 +94,7 @@ const MainContentSkeleton: React.FC = () => (
     paddingTop: '64px', // Account for fixed header
   }}>
     <Box sx={{ p: 2, height: 'calc(100vh - 64px)', overflow: 'auto' }}>
-      {/* Universal Content Block Skeleton - matches real content structure */}
+      {/* Universal Content Block - matches real content structure */}
       <Box maxWidth="lg" sx={{ 
         py: 1, 
         height: '100%', 
@@ -104,50 +104,29 @@ const MainContentSkeleton: React.FC = () => (
       }}>
         <Box sx={{ 
           flexGrow: 1,
-          position: 'relative',
           display: 'flex',
-          flexDirection: 'column'
+          alignItems: 'center',
+          justifyContent: 'center'
         }}>
-          <Skeleton 
-            variant="rounded" 
-            width="100%" 
-            height="100%" 
-            sx={{
-              boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
-              borderRadius: 2
-            }}
-          />
-          
-          {/* Loading indicator overlay */}
-          <Box sx={{ 
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <Box sx={{ textAlign: 'center' }}>
-              <CircularProgress 
-                size={40} 
-                sx={{ 
-                  color: '#1976d2',
-                  mb: 2
-                }} 
-              />
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  color: '#666',
-                  fontSize: '0.875rem',
-                  fontWeight: 500
-                }}
-              >
-                Loading content...
-              </Typography>
-            </Box>
+          {/* Loading indicator only - no background block */}
+          <Box sx={{ textAlign: 'center' }}>
+            <CircularProgress 
+              size={40} 
+              sx={{ 
+                color: '#1976d2',
+                mb: 2
+              }} 
+            />
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                color: '#666',
+                fontSize: '0.875rem',
+                fontWeight: 500
+              }}
+            >
+              Loading content...
+            </Typography>
           </Box>
         </Box>
       </Box>
