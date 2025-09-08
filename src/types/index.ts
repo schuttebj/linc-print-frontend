@@ -57,6 +57,7 @@ export interface User {
   scope_province?: string;
   primary_location_id?: string;
   primary_location?: string; // Added for UI display
+  location_name?: string; // Location name for display purposes
   roles: Role[];
   permissions: string[];
   created_at: string;
