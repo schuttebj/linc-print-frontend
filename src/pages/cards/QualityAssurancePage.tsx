@@ -82,9 +82,7 @@ interface QAOutcome {
 const QualityAssurancePage: React.FC = () => {
   const { user } = useAuth();
   const [activeStep, setActiveStep] = useState(0);
-  const [searchIdNumber, setSearchIdNumber] = useState('');
-  const [searchCardNumber, setSearchCardNumber] = useState('');
-  const [searchJobNumber, setSearchJobNumber] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<PrintJobForQA[]>([]);
   const [selectedJob, setSelectedJob] = useState<PrintJobForQA | null>(null);
@@ -195,10 +193,8 @@ const QualityAssurancePage: React.FC = () => {
   };
 
   const handleSearch = async () => {
-    const hasSearchTerm = searchIdNumber.trim() || searchCardNumber.trim() || searchJobNumber.trim();
-    
-    if (!hasSearchTerm) {
-      setError('Please enter a Person ID, Card Number, or Job Number');
+    if (!searchTerm.trim()) {
+      setError('Please enter a search term (Person ID, Card Number, or Job Number)');
       return;
     }
 
@@ -211,9 +207,7 @@ const QualityAssurancePage: React.FC = () => {
 
       // Build search parameters
       const searchParams = new URLSearchParams();
-      if (searchIdNumber.trim()) searchParams.append('person_id_number', searchIdNumber.trim());
-      if (searchCardNumber.trim()) searchParams.append('card_number', searchCardNumber.trim());
-      if (searchJobNumber.trim()) searchParams.append('job_number', searchJobNumber.trim());
+      searchParams.append('search_term', searchTerm.trim());
       searchParams.append('status', 'PRINTED'); // Only get jobs ready for QA
 
       const response = await fetch(`${API_BASE_URL}/api/v1/printing/jobs/qa-search?${searchParams.toString()}`, {
@@ -335,9 +329,7 @@ const QualityAssurancePage: React.FC = () => {
 
   const handleStartNewQA = () => {
     setActiveStep(0);
-    setSearchIdNumber('');
-    setSearchCardNumber('');
-    setSearchJobNumber('');
+    setSearchTerm('');
     setSearchResults([]);
     setSelectedJob(null);
     setCardImages({});
@@ -371,93 +363,40 @@ const QualityAssurancePage: React.FC = () => {
           </Typography>
         </Box>
         
-        {/* Search Fields */}
-        <Grid container spacing={2} sx={{ mb: 2 }}>
-          <Grid item xs={12} md={4}>
-            <TextField
-              label="Person ID Number"
-              value={searchIdNumber}
-              onChange={(e) => setSearchIdNumber(e.target.value)}
-              placeholder="Enter Madagascar ID or passport"
-              disabled={isSearching}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              size="small"
-              fullWidth
-              sx={{ 
-                '& .MuiOutlinedInput-root': {
-                  '& fieldset': {
-                    borderWidth: '1px',
-                    transition: 'border-color 0.2s ease-in-out',
-                  },
-                  '&:hover fieldset': {
-                    borderWidth: '1px',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderWidth: '1px',
-                  },
+        {/* Search Field */}
+        <Box sx={{ mb: 2 }}>
+          <TextField
+            label="Search"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Enter Person ID, Card Number, or Job Number"
+            disabled={isSearching}
+            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+            size="small"
+            fullWidth
+            sx={{ 
+              maxWidth: 600,
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                  borderWidth: '1px',
+                  transition: 'border-color 0.2s ease-in-out',
                 },
-              }}
-            />
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <TextField
-              label="Card Number"
-              value={searchCardNumber}
-              onChange={(e) => setSearchCardNumber(e.target.value)}
-              placeholder="e.g., A0100000015"
-              disabled={isSearching}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              size="small"
-              fullWidth
-              sx={{ 
-                '& .MuiOutlinedInput-root': {
-                  '& fieldset': {
-                    borderWidth: '1px',
-                    transition: 'border-color 0.2s ease-in-out',
-                  },
-                  '&:hover fieldset': {
-                    borderWidth: '1px',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderWidth: '1px',
-                  },
+                '&:hover fieldset': {
+                  borderWidth: '1px',
                 },
-              }}
-            />
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <TextField
-              label="Job Number"
-              value={searchJobNumber}
-              onChange={(e) => setSearchJobNumber(e.target.value)}
-              placeholder="Enter print job number"
-              disabled={isSearching}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              size="small"
-              fullWidth
-              sx={{ 
-                '& .MuiOutlinedInput-root': {
-                  '& fieldset': {
-                    borderWidth: '1px',
-                    transition: 'border-color 0.2s ease-in-out',
-                  },
-                  '&:hover fieldset': {
-                    borderWidth: '1px',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderWidth: '1px',
-                  },
+                '&.Mui-focused fieldset': {
+                  borderWidth: '1px',
                 },
-              }}
-            />
-          </Grid>
-        </Grid>
+              },
+            }}
+          />
+        </Box>
 
         <Box display="flex" justifyContent="flex-end" mb={2}>
           <Button
             variant="contained"
             onClick={handleSearch}
-            disabled={isSearching || (!searchIdNumber.trim() && !searchCardNumber.trim() && !searchJobNumber.trim())}
+            disabled={isSearching || !searchTerm.trim()}
             startIcon={isSearching ? <CircularProgress size={16} /> : <SearchIcon />}
             size="small"
           >
