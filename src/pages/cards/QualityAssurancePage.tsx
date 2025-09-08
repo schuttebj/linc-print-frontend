@@ -364,7 +364,7 @@ const QualityAssurancePage: React.FC = () => {
         </Box>
         
         {/* Search Field */}
-        <Box sx={{ mb: 2 }}>
+        <Box display="flex" gap={2} alignItems="flex-start" mb={2}>
           <TextField
             label="Search"
             value={searchTerm}
@@ -373,12 +373,13 @@ const QualityAssurancePage: React.FC = () => {
             disabled={isSearching}
             onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
             size="small"
-            fullWidth
+            error={!!error && !searchTerm.trim()}
             sx={{ 
-              maxWidth: 600,
+              flexGrow: 1,
               '& .MuiOutlinedInput-root': {
                 '& fieldset': {
                   borderWidth: '1px',
+                  borderColor: !!error && !searchTerm.trim() ? '#ff9800' : undefined,
                   transition: 'border-color 0.2s ease-in-out',
                 },
                 '&:hover fieldset': {
@@ -390,15 +391,13 @@ const QualityAssurancePage: React.FC = () => {
               },
             }}
           />
-        </Box>
-
-        <Box display="flex" justifyContent="flex-end" mb={2}>
           <Button
             variant="contained"
             onClick={handleSearch}
             disabled={isSearching || !searchTerm.trim()}
             startIcon={isSearching ? <CircularProgress size={16} /> : <SearchIcon />}
             size="small"
+            sx={{ flexShrink: 0 }}
           >
             {isSearching ? 'Searching...' : 'Search'}
           </Button>
