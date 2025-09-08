@@ -219,25 +219,47 @@ const CardDestructionPage: React.FC = () => {
 
   // Render loading skeleton
   const renderSkeleton = () => (
-    <TableContainer component={Paper}>
-      <Table>
+    <TableContainer sx={{ flex: 1 }}>
+      <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
         <TableHead>
           <TableRow>
-            {[...Array(8)].map((_, index) => (
-              <TableCell key={index}>
-                <Skeleton variant="text" width="100%" />
-              </TableCell>
-            ))}
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Application #</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Person</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>ID Number</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Type</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Card Number</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Ready Date</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Days Overdue</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Actions</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {[...Array(5)].map((_, rowIndex) => (
-            <TableRow key={rowIndex}>
-              {[...Array(8)].map((_, cellIndex) => (
-                <TableCell key={cellIndex}>
-                  <Skeleton variant="text" width="100%" />
-                </TableCell>
-              ))}
+          {Array.from({ length: rowsPerPage }).map((_, index) => (
+            <TableRow key={index}>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="text" width="100%" height={20} />
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="text" width="100%" height={20} />
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="text" width="100%" height={20} />
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="text" width="100%" height={20} />
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="text" width="100%" height={20} />
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="text" width="100%" height={20} />
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="rounded" width={80} height={24} />
+              </TableCell>
+              <TableCell sx={{ py: 1, px: 2 }}>
+                <Skeleton variant="circular" width={32} height={32} />
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -246,7 +268,7 @@ const CardDestructionPage: React.FC = () => {
   );
 
   return (
-    <Container maxWidth="xl" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Container maxWidth="lg" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Paper 
         elevation={0}
         sx={{ 
@@ -264,182 +286,213 @@ const CardDestructionPage: React.FC = () => {
           bgcolor: 'white', 
           borderBottom: '1px solid', 
           borderColor: 'divider',
+          flexShrink: 0,
           p: 2
         }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <WarningIcon color="warning" fontSize="large" />
-              <Box>
-                <Typography variant="h5" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                  Card Destruction Management
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Cards overdue for collection (3+ months) requiring destruction
-                </Typography>
-              </Box>
-            </Box>
-            
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Typography variant="body2" color="text.secondary">
-                Last updated: {lastRefresh.toLocaleTimeString()}
-              </Typography>
-              <Tooltip title="Refresh">
-                <IconButton onClick={handleRefresh} disabled={loading}>
-                  <RefreshIcon />
-                </IconButton>
-              </Tooltip>
-            </Box>
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+              Card Destruction Management
+            </Typography>
+            <Button 
+              variant="contained" 
+              onClick={handleRefresh}
+              startIcon={<RefreshIcon />}
+              size="small"
+              disabled={loading}
+            >
+              Refresh
+            </Button>
           </Box>
+          <Typography variant="body2" color="text.secondary">
+            Cards overdue for collection (3+ months) requiring destruction. Last updated: {lastRefresh.toLocaleTimeString()}
+          </Typography>
         </Box>
 
-        {/* Content */}
+        {/* Content Area */}
         <Box sx={{ 
           flex: 1, 
-          overflow: 'auto',
-          p: 2,
-          minHeight: 0
+          overflow: 'hidden',
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column'
         }}>
-          {/* Alerts */}
+          {/* Error Display */}
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+            <Alert severity="error" sx={{ m: 2, flexShrink: 0 }} onClose={() => setError(null)}>
               {error}
             </Alert>
           )}
 
           {success && (
-            <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>
+            <Alert severity="success" sx={{ m: 2, flexShrink: 0 }} onClose={() => setSuccess(null)}>
               {success}
             </Alert>
           )}
 
-          {/* Stats */}
-          <Paper sx={{ p: 2, mb: 2, bgcolor: 'warning.lighter' }}>
-            <Grid container spacing={2} alignItems="center">
-              <Grid item>
-                <ScheduleIcon color="warning" />
-              </Grid>
-              <Grid item xs>
-                <Typography variant="h6" color="warning.dark">
-                  {totalCount} Cards Overdue for Collection
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Cards ready for collection more than 3 months ago require destruction
-                </Typography>
-              </Grid>
-            </Grid>
+          {/* Overdue Cards Table */}
+          <Paper 
+            elevation={0}
+            sx={{ 
+              bgcolor: 'white',
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              borderRadius: 0
+            }}
+          >
+            {/* Show skeleton while loading */}
+            {loading ? (
+              <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                {renderSkeleton()}
+                <TablePagination
+                  component="div"
+                  count={0}
+                  page={page}
+                  onPageChange={() => {}}
+                  rowsPerPage={rowsPerPage}
+                  onRowsPerPageChange={() => {}}
+                  rowsPerPageOptions={[10, 20, 50]}
+                  sx={{
+                    bgcolor: 'white',
+                    borderTop: '1px solid',
+                    borderColor: 'divider',
+                    flexShrink: 0,
+                    '& .MuiTablePagination-toolbar': {
+                      minHeight: '52px',
+                    },
+                    '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+                      fontSize: '0.8rem',
+                    },
+                    '& .MuiTablePagination-select': {
+                      fontSize: '0.8rem',
+                    },
+                  }}
+                />
+              </Box>
+            ) : (
+              /* Show results or no results message only after loading is complete */
+              <>
+                {overdueCards.length === 0 ? (
+                  <Box sx={{ p: 2 }}>
+                    <Alert severity="info">
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                        <ScheduleIcon sx={{ fontSize: 48, color: 'text.secondary' }} />
+                        <Typography variant="h6" color="text.secondary">
+                          No Overdue Cards
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          All cards are either collected or within the 3-month collection period.
+                        </Typography>
+                      </Box>
+                    </Alert>
+                  </Box>
+                ) : (
+                  <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                    <TableContainer sx={{ flex: 1 }}>
+                      <Table stickyHeader sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Application #</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Person</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>ID Number</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Type</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Card Number</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Ready Date</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Days Overdue</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', bgcolor: '#f8f9fa' }}>Actions</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {overdueCards.map((card) => (
+                            <TableRow key={card.id} hover>
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                                  {card.application_number}
+                                </Typography>
+                              </TableCell>
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <PersonIcon fontSize="small" color="action" />
+                                  <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                    {card.person_name}
+                                  </Typography>
+                                </Box>
+                              </TableCell>
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                  {card.person_id_number}
+                                </Typography>
+                              </TableCell>
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                  {card.application_type.replace('_', ' ')}
+                                </Typography>
+                              </TableCell>
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                                  {card.card_number}
+                                </Typography>
+                              </TableCell>
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                  {new Date(card.ready_for_collection_date).toLocaleDateString()}
+                                </Typography>
+                              </TableCell>
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                <Chip 
+                                  label={`${card.days_overdue} days`}
+                                  size="small"
+                                  color={getSeverityColor(card.days_overdue)}
+                                  sx={{ fontWeight: 500 }}
+                                />
+                              </TableCell>
+                              <TableCell sx={{ py: 1, px: 2 }}>
+                                <Tooltip title="Destroy Card">
+                                  <IconButton 
+                                    size="small" 
+                                    color="error"
+                                    onClick={() => handleOpenDestruction(card)}
+                                  >
+                                    <DeleteIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+
+                    <TablePagination
+                      component="div"
+                      count={totalCount}
+                      page={page}
+                      onPageChange={handlePageChange}
+                      rowsPerPage={rowsPerPage}
+                      onRowsPerPageChange={handleRowsPerPageChange}
+                      rowsPerPageOptions={[10, 20, 50]}
+                      sx={{
+                        bgcolor: 'white',
+                        borderTop: '1px solid',
+                        borderColor: 'divider',
+                        flexShrink: 0,
+                        '& .MuiTablePagination-toolbar': {
+                          minHeight: '52px',
+                        },
+                        '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+                          fontSize: '0.8rem',
+                        },
+                        '& .MuiTablePagination-select': {
+                          fontSize: '0.8rem',
+                        },
+                      }}
+                    />
+                  </Box>
+                )}
+              </>
+            )}
           </Paper>
-
-          {/* Table */}
-          {loading ? (
-            renderSkeleton()
-          ) : (
-            <Paper>
-              <TableContainer>
-                <Table stickyHeader>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 600, bgcolor: '#f8f9fa' }}>Application #</TableCell>
-                      <TableCell sx={{ fontWeight: 600, bgcolor: '#f8f9fa' }}>Person</TableCell>
-                      <TableCell sx={{ fontWeight: 600, bgcolor: '#f8f9fa' }}>ID Number</TableCell>
-                      <TableCell sx={{ fontWeight: 600, bgcolor: '#f8f9fa' }}>Type</TableCell>
-                      <TableCell sx={{ fontWeight: 600, bgcolor: '#f8f9fa' }}>Card Number</TableCell>
-                      <TableCell sx={{ fontWeight: 600, bgcolor: '#f8f9fa' }}>Ready Date</TableCell>
-                      <TableCell sx={{ fontWeight: 600, bgcolor: '#f8f9fa' }}>Days Overdue</TableCell>
-                      <TableCell sx={{ fontWeight: 600, bgcolor: '#f8f9fa' }}>Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {overdueCards.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
-                          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-                            <ScheduleIcon sx={{ fontSize: 48, color: 'text.secondary' }} />
-                            <Typography variant="h6" color="text.secondary">
-                              No Overdue Cards
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              All cards are either collected or within the 3-month collection period.
-                            </Typography>
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      overdueCards.map((card) => (
-                        <TableRow key={card.id} hover>
-                          <TableCell>
-                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                              {card.application_number}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <PersonIcon fontSize="small" color="action" />
-                              <Typography variant="body2">
-                                {card.person_name}
-                              </Typography>
-                            </Box>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2">
-                              {card.person_id_number}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2">
-                              {card.application_type.replace('_', ' ')}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                              {card.card_number}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2">
-                              {new Date(card.ready_for_collection_date).toLocaleDateString()}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Chip 
-                              label={`${card.days_overdue} days`}
-                              size="small"
-                              color={getSeverityColor(card.days_overdue)}
-                              sx={{ fontWeight: 500 }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Box sx={{ display: 'flex', gap: 1 }}>
-                              <Tooltip title="Destroy Card">
-                                <IconButton 
-                                  size="small" 
-                                  color="error"
-                                  onClick={() => handleOpenDestruction(card)}
-                                >
-                                  <DeleteIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            </Box>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-
-              {/* Pagination */}
-              <TablePagination
-                rowsPerPageOptions={[10, 20, 50]}
-                component="div"
-                count={totalCount}
-                rowsPerPage={rowsPerPage}
-                page={page}
-                onPageChange={handlePageChange}
-                onRowsPerPageChange={handleRowsPerPageChange}
-                sx={{ borderTop: '1px solid', borderColor: 'divider' }}
-              />
-            </Paper>
-          )}
         </Box>
       </Paper>
 

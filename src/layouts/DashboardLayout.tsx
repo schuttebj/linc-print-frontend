@@ -200,12 +200,35 @@ const DashboardLayout: React.FC = () => {
     navigate('/login');
   };
 
+  // Close all sections helper
+  const closeAllSections = () => {
+    setPersonsExpanded(false);
+    setApplicationsExpanded(false);
+    setCreateApplicationsExpanded(false);
+    setLicensesExpanded(false);
+    setCardsPrintingExpanded(false);
+    setTransactionsExpanded(false);
+    setAnalyticsExpanded(false);
+    setAdministrationExpanded(false);
+  };
+
   const handlePersonsToggle = () => {
-    setPersonsExpanded(!personsExpanded);
+    if (personsExpanded) {
+      setPersonsExpanded(false);
+    } else {
+      closeAllSections();
+      setPersonsExpanded(true);
+    }
   };
 
   const handleApplicationsToggle = () => {
-    setApplicationsExpanded(!applicationsExpanded);
+    if (applicationsExpanded) {
+      setApplicationsExpanded(false);
+      setCreateApplicationsExpanded(false); // Also close nested applications
+    } else {
+      closeAllSections();
+      setApplicationsExpanded(true);
+    }
   };
 
   const handleCreateApplicationsToggle = () => {
@@ -213,23 +236,48 @@ const DashboardLayout: React.FC = () => {
   };
 
   const handleLicensesToggle = () => {
-    setLicensesExpanded(!licensesExpanded);
+    if (licensesExpanded) {
+      setLicensesExpanded(false);
+    } else {
+      closeAllSections();
+      setLicensesExpanded(true);
+    }
   };
 
   const handleCardsPrintingToggle = () => {
-    setCardsPrintingExpanded(!cardsPrintingExpanded);
+    if (cardsPrintingExpanded) {
+      setCardsPrintingExpanded(false);
+    } else {
+      closeAllSections();
+      setCardsPrintingExpanded(true);
+    }
   };
 
   const handleTransactionsToggle = () => {
-    setTransactionsExpanded(!transactionsExpanded);
+    if (transactionsExpanded) {
+      setTransactionsExpanded(false);
+    } else {
+      closeAllSections();
+      setTransactionsExpanded(true);
+    }
   };
 
   const handleAnalyticsToggle = () => {
-    setAnalyticsExpanded(!analyticsExpanded);
+    if (analyticsExpanded) {
+      setAnalyticsExpanded(false);
+    } else {
+      closeAllSections();
+      setAnalyticsExpanded(true);
+    }
   };
 
   const handleAdministrationToggle = () => {
-    setAdministrationExpanded(!administrationExpanded);
+    if (administrationExpanded) {
+      setAdministrationExpanded(false);
+    } else {
+      closeAllSections();
+      setAdministrationExpanded(true);
+    }
   };
 
   const handleOpenCommandPalette = () => {
