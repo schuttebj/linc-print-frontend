@@ -109,9 +109,12 @@ const PrintQueuePage: React.FC = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [totalJobs, setTotalJobs] = useState(0);
+  
+  // Loading state management
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
 
-  // Auto-refresh interval (30 seconds)
-  const REFRESH_INTERVAL = 30000;
+  // Auto-refresh interval (60 seconds)
+  const REFRESH_INTERVAL = 60000;
 
   // Filter configurations for FilterBar
   const PRINT_QUEUE_FILTER_CONFIGS: FilterConfig[] = [
@@ -189,11 +192,14 @@ const PrintQueuePage: React.FC = () => {
     }
   };
 
-  // Load print queue
-  const loadPrintQueue = async () => {
+  // Load print queue with smart loading behavior
+  const loadPrintQueue = async (isRefresh = false) => {
     if (!selectedLocation) return;
 
-    setLoading(true);
+    // Only show loading skeleton on first load, not on refresh
+    if (isFirstLoad && !isRefresh) {
+      setLoading(true);
+    }
     setError(null);
 
     try {
@@ -203,11 +209,18 @@ const PrintQueuePage: React.FC = () => {
       // Update total jobs count for pagination
       const total = (queueResponse.queued_jobs?.length || 0) + (queueResponse.in_progress_jobs?.length || 0);
       setTotalJobs(total);
+      
+      // Mark first load as complete
+      if (isFirstLoad) {
+        setIsFirstLoad(false);
+      }
     } catch (error) {
       console.error('Error loading print queue:', error);
       setError('Failed to load print queue');
     } finally {
-      setLoading(false);
+      if (isFirstLoad && !isRefresh) {
+        setLoading(false);
+      }
     }
   };
 
@@ -246,11 +259,19 @@ const PrintQueuePage: React.FC = () => {
         
       case 'ASSIGNED':
       case 'PRINTING':
-        // Show complete button if user is assigned to this job
-        if (job.assigned_to_user_id === user?.id && canStartPrinting()) {
+        // Show print page access for users with print permission
+        if (canStartPrinting()) {
+          actions.push({ 
+            action: 'open_print_page', 
+            label: 'Open Print Page', 
+            icon: <PrintIcon />, 
+            color: 'primary' as const 
+          });
+          
+          // Quick complete action
           actions.push({ 
             action: 'complete', 
-            label: 'Mark Complete', 
+            label: 'Quick Complete', 
             icon: <CompleteIcon />, 
             color: 'success' as const 
           });
@@ -261,7 +282,7 @@ const PrintQueuePage: React.FC = () => {
           action: 'preview',
           label: 'Preview Card',
           icon: <VisibilityIcon />,
-          color: 'primary' as const
+          color: 'info' as const
         });
         break;
         
@@ -293,7 +314,8 @@ const PrintQueuePage: React.FC = () => {
   const handleJobAction = async (job: PrintJobResponse, action: string) => {
     switch (action) {
       case 'start_print':
-        // Navigate to dedicated printing page instead of modal
+      case 'open_print_page':
+        // Navigate to dedicated printing page
         navigate(`/dashboard/cards/print-job/${job.id}`);
         break;
         
@@ -330,7 +352,7 @@ const PrintQueuePage: React.FC = () => {
     try {
       setActionLoading(true);
       await printJobService.completePrintingJob(job.id, 'Printing completed');
-      loadPrintQueue(); // Refresh queue
+      loadPrintQueue(true); // Refresh queue
     } catch (error) {
       console.error('Error completing print job:', error);
       setError('Failed to complete print job');
@@ -519,10 +541,10 @@ const PrintQueuePage: React.FC = () => {
   // Setup auto-refresh when location is selected
   useEffect(() => {
     if (selectedLocation) {
-      loadPrintQueue();
+      loadPrintQueue(); // Initial load (first load)
       
       // Set up auto-refresh
-      const interval = setInterval(loadPrintQueue, REFRESH_INTERVAL);
+      const interval = setInterval(() => loadPrintQueue(true), REFRESH_INTERVAL);
       setRefreshInterval(interval);
 
       return () => {
@@ -908,7 +930,7 @@ const PrintQueuePage: React.FC = () => {
           {/* Left side - Refresh button and timestamp */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <IconButton
-              onClick={loadPrintQueue}
+              onClick={() => loadPrintQueue(true)}
               disabled={loading}
               size="small"
               sx={{
@@ -920,7 +942,7 @@ const PrintQueuePage: React.FC = () => {
               <RefreshIcon />
             </IconButton>
             <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-              Auto-refresh: 30s | Last updated: {new Date().toLocaleTimeString()}
+              Auto-refresh: 60s | Last updated: {new Date().toLocaleTimeString()}
             </Typography>
           </Box>
           

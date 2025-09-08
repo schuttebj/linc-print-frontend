@@ -20,6 +20,7 @@ import {
   Container,
   IconButton,
   Tooltip,
+  Skeleton,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -113,7 +114,7 @@ const PrintJobPrintingPage: React.FC = () => {
     }
   };
 
-  // Start printing process
+  // Start printing process - Direct Windows printing
   const handleStartPrinting = async () => {
     if (!printJob) return;
 
@@ -121,18 +122,22 @@ const PrintJobPrintingPage: React.FC = () => {
       setActionLoading(true);
       setPrinting(true);
       
-      // Start printing (SENT_TO_PRINTER/QUEUED → CARD_PRODUCTION)
+      // Auto-assign job to current user and start printing
+      await printJobService.assignJobToPrinter(printJob.id, user?.id || '');
       await printJobService.startPrintingJob(printJob.id);
       
-      // Simulate printing progress
-      await simulatePrintingProgress();
+      // Directly open Windows printer
+      await handlePrintToWindows();
+      
+      // Mark as complete after printing
+      await printJobService.completePrintingJob(printJob.id, 'Windows printer - printing completed');
       
       // Refresh job details
       await loadPrintJob();
       
     } catch (error) {
-      console.error('Error starting printing:', error);
-      setError('Failed to start printing process');
+      console.error('Error in printing workflow:', error);
+      setError('Failed to complete printing workflow');
     } finally {
       setActionLoading(false);
       setPrinting(false);
@@ -303,6 +308,96 @@ const PrintJobPrintingPage: React.FC = () => {
     };
   }, [cardImages]);
 
+  // Skeleton loading component
+  const renderSkeleton = () => (
+    <Container maxWidth="lg" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Paper 
+        elevation={0}
+        sx={{ 
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: '#f8f9fa',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          overflow: 'hidden'
+        }}
+      >
+        {/* Header Skeleton */}
+        <Box sx={{ p: 2, bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Skeleton variant="circular" width={32} height={32} />
+              <Skeleton variant="text" width={200} height={24} />
+              <Skeleton variant="rounded" width={80} height={24} />
+            </Box>
+            <Skeleton variant="circular" width={32} height={32} />
+          </Box>
+        </Box>
+
+        {/* Content Skeleton */}
+        <Box sx={{ flexGrow: 1, overflow: 'auto', p: 2 }}>
+          <Grid container spacing={2}>
+            {/* Left Column Skeleton */}
+            <Grid item xs={12} md={4}>
+              <Paper sx={{ p: 2, mb: 2 }}>
+                <Skeleton variant="text" width={120} height={24} sx={{ mb: 2 }} />
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <Box key={index} sx={{ mb: 2 }}>
+                    <Skeleton variant="text" width="40%" height={14} />
+                    <Skeleton variant="text" width="80%" height={20} />
+                  </Box>
+                ))}
+              </Paper>
+              
+              <Paper sx={{ p: 2 }}>
+                <Skeleton variant="text" width={150} height={24} sx={{ mb: 2 }} />
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {Array.from({ length: 4 }).map((_, index) => (
+                    <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Skeleton variant="circular" width={24} height={24} />
+                      <Skeleton variant="text" width="70%" height={20} />
+                    </Box>
+                  ))}
+                </Box>
+              </Paper>
+            </Grid>
+
+            {/* Right Column Skeleton */}
+            <Grid item xs={12} md={8}>
+              <Paper sx={{ p: 2 }}>
+                <Skeleton variant="text" width={180} height={24} sx={{ mb: 2 }} />
+                
+                {/* Card Images Skeleton */}
+                <Grid container spacing={2} sx={{ mb: 3 }}>
+                  <Grid item xs={12} md={6}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Skeleton variant="text" width={100} height={20} sx={{ mb: 1, mx: 'auto' }} />
+                      <Skeleton variant="rounded" width="100%" height={200} />
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Skeleton variant="text" width={100} height={20} sx={{ mb: 1, mx: 'auto' }} />
+                      <Skeleton variant="rounded" width="100%" height={200} />
+                    </Box>
+                  </Grid>
+                </Grid>
+
+                {/* Control Buttons Skeleton */}
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                  <Skeleton variant="rounded" width={200} height={48} />
+                  <Skeleton variant="rounded" width={150} height={40} />
+                  <Skeleton variant="rounded" width={150} height={40} />
+                </Box>
+              </Paper>
+            </Grid>
+          </Grid>
+        </Box>
+      </Paper>
+    </Container>
+  );
+
   // Permission check
   const canPrint = () => hasPermission('printing.print') || user?.is_superuser;
 
@@ -317,14 +412,7 @@ const PrintJobPrintingPage: React.FC = () => {
   }
 
   if (loading) {
-    return (
-      <Container maxWidth="lg" sx={{ py: 3, textAlign: 'center' }}>
-        <CircularProgress />
-        <Typography variant="body2" sx={{ mt: 2 }}>
-          Loading print job details...
-        </Typography>
-      </Container>
-    );
+    return renderSkeleton();
   }
 
   if (error || !printJob) {
@@ -345,7 +433,7 @@ const PrintJobPrintingPage: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 1, height: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column' }}>
+    <Container maxWidth="lg" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Paper 
         elevation={0}
         sx={{ 
@@ -560,36 +648,26 @@ const PrintJobPrintingPage: React.FC = () => {
                     <Button
                       variant="contained"
                       color="primary"
+                      size="large"
                       startIcon={<PrintIcon />}
                       onClick={handleStartPrinting}
-                      disabled={actionLoading || printing}
+                      disabled={actionLoading || printing || !cardImages.front && !cardImages.back}
                     >
-                      {actionLoading ? 'Starting...' : 'Start Printing'}
+                      {actionLoading ? 'Processing...' : 'Print Card (Windows Printer)'}
                     </Button>
                   )}
 
                   {printJob.status === 'PRINTING' && (
-                    <>
-                      <Button
-                        variant="contained"
-                        color="secondary"
-                        startIcon={<PrintIcon />}
-                        onClick={handlePrintToWindows}
-                        disabled={!cardImages.front && !cardImages.back}
-                      >
-                        Print to Windows Printer
-                      </Button>
-                      
-                      <Button
-                        variant="contained"
-                        color="success"
-                        startIcon={<CheckCircleIcon />}
-                        onClick={handleCompletePrinting}
-                        disabled={actionLoading}
-                      >
-                        {actionLoading ? 'Completing...' : 'Mark Complete'}
-                      </Button>
-                    </>
+                    <Button
+                      variant="contained"
+                      color="success"
+                      size="large"
+                      startIcon={<CheckCircleIcon />}
+                      onClick={handleCompletePrinting}
+                      disabled={actionLoading}
+                    >
+                      {actionLoading ? 'Completing...' : 'Mark Complete'}
+                    </Button>
                   )}
 
                   {printJob.status === 'PRINTED' && (
