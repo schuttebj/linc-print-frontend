@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -67,6 +68,7 @@ import FilterBar, { FilterConfig, FilterValues } from '../../components/common/F
 
 const PrintQueuePage: React.FC = () => {
   const { user, hasPermission } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [queueData, setQueueData] = useState<PrintQueueResponse | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<string>('');
@@ -292,7 +294,7 @@ const PrintQueuePage: React.FC = () => {
     switch (action) {
       case 'start_print':
         // Navigate to dedicated printing page instead of modal
-        window.location.href = `/cards/print-job/${job.id}`;
+        navigate(`/dashboard/cards/print-job/${job.id}`);
         break;
         
       case 'preview':
@@ -1308,7 +1310,7 @@ const PrintQueuePage: React.FC = () => {
           </Button>
           {previewJob?.status === 'QUEUED' && canStartPrinting() && (
             <Button
-              onClick={() => window.location.href = `/cards/print-job/${previewJob.id}`}
+              onClick={() => navigate(`/dashboard/cards/print-job/${previewJob.id}`)}
               variant="contained"
               color="success"
               startIcon={<StartIcon />}
