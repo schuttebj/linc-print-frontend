@@ -80,11 +80,15 @@ const DashboardLayout: React.FC = () => {
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [applicationsExpanded, setApplicationsExpanded] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
-  const [createApplicationsExpanded, setCreateApplicationsExpanded] = useState(false);
   const [personsExpanded, setPersonsExpanded] = useState(false);
+  const [applicationsExpanded, setApplicationsExpanded] = useState(false);
+  const [createApplicationsExpanded, setCreateApplicationsExpanded] = useState(false);
   const [licensesExpanded, setLicensesExpanded] = useState(false);
+  const [cardsPrintingExpanded, setCardsPrintingExpanded] = useState(false);
+  const [transactionsExpanded, setTransactionsExpanded] = useState(false);
+  const [analyticsExpanded, setAnalyticsExpanded] = useState(false);
+  const [administrationExpanded, setAdministrationExpanded] = useState(false);
 
   // Function to get user location display text
   const getUserLocationText = (): string => {
@@ -196,6 +200,10 @@ const DashboardLayout: React.FC = () => {
     navigate('/login');
   };
 
+  const handlePersonsToggle = () => {
+    setPersonsExpanded(!personsExpanded);
+  };
+
   const handleApplicationsToggle = () => {
     setApplicationsExpanded(!applicationsExpanded);
   };
@@ -204,12 +212,24 @@ const DashboardLayout: React.FC = () => {
     setCreateApplicationsExpanded(!createApplicationsExpanded);
   };
 
-  const handlePersonsToggle = () => {
-    setPersonsExpanded(!personsExpanded);
-  };
-
   const handleLicensesToggle = () => {
     setLicensesExpanded(!licensesExpanded);
+  };
+
+  const handleCardsPrintingToggle = () => {
+    setCardsPrintingExpanded(!cardsPrintingExpanded);
+  };
+
+  const handleTransactionsToggle = () => {
+    setTransactionsExpanded(!transactionsExpanded);
+  };
+
+  const handleAnalyticsToggle = () => {
+    setAnalyticsExpanded(!analyticsExpanded);
+  };
+
+  const handleAdministrationToggle = () => {
+    setAdministrationExpanded(!administrationExpanded);
   };
 
   const handleOpenCommandPalette = () => {
@@ -500,9 +520,6 @@ const DashboardLayout: React.FC = () => {
     },
   ];
 
-  // Check if user has permission to create applications
-  const canCreateApplications = hasPermission('applications.create');
-
   // Define all available application types from the applications folder
   const allApplicationTypes = [
     // New License Applications
@@ -592,29 +609,24 @@ const DashboardLayout: React.FC = () => {
     }
   ];
 
-  // Main navigation items for sidebar (simplified)
-  const mainNavigationItems = [
-    // Core navigation  
-    ...coreNavigationItems.filter(item => !item.permission || hasPermission(item.permission)),
-    
-    // Applications (only dashboard and view)
-    ...applicationNavigationItems.filter(item => !item.permission || hasPermission(item.permission)),
-    
-    // Cards  
-    ...cardNavigationItems.filter(item => !item.permission || hasPermission(item.permission)),
-    
-    // Transactions
-    ...transactionNavigationItems.filter(item => !item.permission || hasPermission(item.permission)),
-    
-    // Analytics
-    ...analyticsNavigationItems.filter(item => !item.permission || hasPermission(item.permission)),
-    
-    // Admin
-    ...adminNavigationItems.filter(item => !item.permission || hasPermission(item.permission)),
-  ];
-
-  // Use main navigation items for sidebar
-  const sidebarNavItems = mainNavigationItems;
+  // Reorganized navigation sections for new collapsible structure
+  const applicationsMainItems = applicationNavigationItems.filter(item => !item.permission || hasPermission(item.permission));
+  const cardsPrintingItems = cardNavigationItems.filter(item => !item.permission || hasPermission(item.permission));
+  const transactionsPaymentsItems = transactionNavigationItems.filter(item => !item.permission || hasPermission(item.permission));
+  const analyticsReportsItems = analyticsNavigationItems.filter(item => !item.permission || hasPermission(item.permission));
+  const administrationItems = adminNavigationItems.filter(item => !item.permission || hasPermission(item.permission));
+  
+  // Check if user has permission to create applications
+  const canCreateApplications = hasPermission('applications.create');
+  
+  // Check permissions for each section
+  const hasPersonsAccess = personNavigationItems.some(item => !item.permission || hasPermission(item.permission));
+  const hasApplicationsAccess = applicationsMainItems.length > 0 || canCreateApplications;
+  const hasLicensesAccess = licenseNavigationItems.some(item => !item.permission || hasPermission(item.permission));
+  const hasCardsPrintingAccess = cardsPrintingItems.length > 0;
+  const hasTransactionsAccess = transactionsPaymentsItems.length > 0;
+  const hasAnalyticsAccess = analyticsReportsItems.length > 0;
+  const hasAdministrationAccess = administrationItems.length > 0;
 
   const drawer = (
     <Box sx={{ 
@@ -762,8 +774,8 @@ const DashboardLayout: React.FC = () => {
 
           <Divider sx={{ my: 1 }} />
 
-          {/* Persons Dropdown */}
-          {personNavigationItems.some(item => !item.permission || hasPermission(item.permission)) && (
+          {/* Persons Section */}
+          {hasPersonsAccess && (
             <>
               <ListItem disablePadding sx={{ mb: 0.5 }}>
                 <ListItemButton
@@ -853,62 +865,11 @@ const DashboardLayout: React.FC = () => {
           <Divider sx={{ my: 1 }} />
 
           {/* Applications Section */}
-          {applicationNavigationItems.some(item => !item.permission || hasPermission(item.permission)) && (
-            applicationNavigationItems.map((item) => {
-              if (item.permission && !hasPermission(item.permission)) return null;
-              const isActive = location.pathname === item.path;
-
-              return (
-                <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
-                  <ListItemButton
-                    selected={isActive}
-                    onClick={() => {
-                      navigate(item.path);
-                      if (isMobile) setMobileOpen(false);
-                    }}
-                    sx={{
-                      borderRadius: '6px',
-                      minHeight: '36px',
-                      py: 0.75,
-                      px: 1.5,
-                      '&.Mui-selected': {
-                        backgroundColor: '#1976d2',
-                        color: 'white',
-                        '& .MuiListItemIcon-root': { color: 'white' },
-                        '&:hover': { backgroundColor: '#1565c0' },
-                      },
-                      '&:hover': {
-                        backgroundColor: isActive ? '#1565c0' : '#f0f0f0',
-                      },
-                    }}
-                  >
-                    <ListItemIcon sx={{ 
-                      minWidth: '32px',
-                      color: isActive ? 'white' : '#666',
-                      '& .MuiSvgIcon-root': { fontSize: '20px' },
-                    }}>
-                      {item.icon}
-                    </ListItemIcon>
-              <ListItemText 
-                      primary={item.text} 
-                primaryTypographyProps={{ 
-                        fontSize: '0.875rem',
-                        fontWeight: isActive ? 500 : 400,
-                        color: isActive ? 'white' : '#333',
-                      }}
-                    />
-                  </ListItemButton>
-                </ListItem>
-              );
-            })
-          )}
-
-          {/* Create Applications Dropdown */}
-          {canCreateApplications && (
+          {hasApplicationsAccess && (
             <>
               <ListItem disablePadding sx={{ mb: 0.5 }}>
                 <ListItemButton
-                  onClick={handleCreateApplicationsToggle}
+                  onClick={handleApplicationsToggle}
                   sx={{
                     borderRadius: '6px',
                     minHeight: '36px',
@@ -922,93 +883,181 @@ const DashboardLayout: React.FC = () => {
                     color: '#666',
                     '& .MuiSvgIcon-root': { fontSize: '20px' },
                   }}>
-                    <AddIcon />
-                  </ListItemIcon>
-              <ListItemText 
-                    primary="Create Applications" 
-                primaryTypographyProps={{ 
+                    <Apps />
+                    </ListItemIcon>
+                  <ListItemText 
+                    primary="Applications" 
+                    primaryTypographyProps={{
                       fontSize: '0.875rem',
                       fontWeight: 400,
                       color: '#333',
                     }}
                   />
-                  {createApplicationsExpanded ? <ExpandLess /> : <ExpandMore />}
-                </ListItemButton>
-            </ListItem>
-              
-              <Collapse in={createApplicationsExpanded} timeout="auto" unmountOnExit>
-                <List component="div" disablePadding sx={{ pl: 2 }}>
-                  {allApplicationTypes.map((categoryGroup) => 
-                    categoryGroup.applications.map((app) => {
-                      if (app.permission && !hasPermission(app.permission)) return null;
-                      const isActive = location.pathname === app.path;
-
-              return (
-                        <ListItem key={app.text} disablePadding sx={{ mb: 0.25 }}>
-                  <ListItemButton
-                    selected={isActive}
-                    onClick={() => {
-                              navigate(app.path);
-                              if (isMobile) setMobileOpen(false);
-                            }}
-                            sx={{
-                              borderRadius: '6px',
-                              minHeight: '32px',
-                              py: 0.5,
-                              px: 1,
-                              ml: 1,
-                              '&.Mui-selected': {
-                                backgroundColor: '#1976d2',
-                                color: 'white',
-                                '& .MuiListItemIcon-root': { color: 'white' },
-                                '&:hover': { backgroundColor: '#1565c0' },
-                              },
-                              '&:hover': {
-                                backgroundColor: isActive ? '#1565c0' : '#f0f0f0',
-                              },
-                            }}
-                          >
-                            <ListItemIcon sx={{ 
-                              minWidth: '28px',
-                              color: isActive ? 'white' : '#666',
-                              '& .MuiSvgIcon-root': { fontSize: '18px' },
-                            }}>
-                              {app.icon}
-                            </ListItemIcon>
-                            <ListItemText 
-                              primary={
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                  {app.text}
-                                  {(app as any).isNew && (
-                                    <Chip 
-                                      label="NEW" 
-                                      size="small" 
-                                      color="warning" 
-                                      sx={{ fontSize: '0.6rem', height: 16 }} 
-                                    />
-                                  )}
-                                </Box>
-                              }
-                              primaryTypographyProps={{
-                                fontSize: '0.8rem',
-                                fontWeight: isActive ? 500 : 400,
-                                color: isActive ? 'white' : '#333',
-                              }}
-                            />
+                  {applicationsExpanded ? <ExpandLess /> : <ExpandMore />}
                   </ListItemButton>
                 </ListItem>
-              );
-                    })
+                
+              <Collapse in={applicationsExpanded} timeout="auto" unmountOnExit>
+                <List component="div" disablePadding sx={{ pl: 2 }}>
+                  {/* Application Dashboard and View Items */}
+                  {applicationsMainItems.map((item) => {
+                    const isActive = location.pathname === item.path;
+                    return (
+                      <ListItem key={item.text} disablePadding sx={{ mb: 0.25 }}>
+                        <ListItemButton
+                          selected={isActive}
+                          onClick={() => {
+                            navigate(item.path);
+                            if (isMobile) setMobileOpen(false);
+                          }}
+                          sx={{
+                            borderRadius: '6px',
+                            minHeight: '32px',
+                            py: 0.5,
+                            px: 1,
+                            ml: 1,
+                            '&.Mui-selected': {
+                              backgroundColor: '#1976d2',
+                              color: 'white',
+                              '& .MuiListItemIcon-root': { color: 'white' },
+                              '&:hover': { backgroundColor: '#1565c0' },
+                            },
+                            '&:hover': {
+                              backgroundColor: isActive ? '#1565c0' : '#f0f0f0',
+                            },
+                          }}
+                        >
+                          <ListItemIcon sx={{ 
+                            minWidth: '28px',
+                            color: isActive ? 'white' : '#666',
+                            '& .MuiSvgIcon-root': { fontSize: '18px' },
+                          }}>
+                            {item.icon}
+                          </ListItemIcon>
+                          <ListItemText 
+                            primary={item.text} 
+                            primaryTypographyProps={{ 
+                              fontSize: '0.8rem',
+                              fontWeight: isActive ? 500 : 400,
+                              color: isActive ? 'white' : '#333',
+                            }} 
+                          />
+                        </ListItemButton>
+                      </ListItem>
+                    );
+                  })}
+
+                  {/* Create Applications Nested Dropdown */}
+                  {canCreateApplications && (
+                    <>
+                      <ListItem disablePadding sx={{ mb: 0.25 }}>
+                        <ListItemButton
+                          onClick={handleCreateApplicationsToggle}
+                          sx={{
+                            borderRadius: '6px',
+                            minHeight: '32px',
+                            py: 0.5,
+                            px: 1,
+                            ml: 1,
+                            '&:hover': { backgroundColor: '#f0f0f0' },
+                          }}
+                        >
+                          <ListItemIcon sx={{ 
+                            minWidth: '28px',
+                            color: '#666',
+                            '& .MuiSvgIcon-root': { fontSize: '18px' },
+                          }}>
+                            <AddIcon />
+                          </ListItemIcon>
+                          <ListItemText 
+                            primary="Create Applications" 
+                            primaryTypographyProps={{ 
+                              fontSize: '0.8rem',
+                              fontWeight: 400,
+                              color: '#333',
+                            }}
+                          />
+                          {createApplicationsExpanded ? <ExpandLess sx={{ fontSize: '18px' }} /> : <ExpandMore sx={{ fontSize: '18px' }} />}
+                        </ListItemButton>
+                      </ListItem>
+                      
+                      <Collapse in={createApplicationsExpanded} timeout="auto" unmountOnExit>
+                        <List component="div" disablePadding sx={{ pl: 3 }}>
+                          {allApplicationTypes.map((categoryGroup) => 
+                            categoryGroup.applications.map((app) => {
+                              if (app.permission && !hasPermission(app.permission)) return null;
+                              const isActive = location.pathname === app.path;
+
+                              return (
+                                <ListItem key={app.text} disablePadding sx={{ mb: 0.25 }}>
+                                  <ListItemButton
+                                    selected={isActive}
+                                    onClick={() => {
+                                      navigate(app.path);
+                                      if (isMobile) setMobileOpen(false);
+                                    }}
+                                    sx={{
+                                      borderRadius: '6px',
+                                      minHeight: '28px',
+                                      py: 0.25,
+                                      px: 0.75,
+                                      ml: 1,
+                                      '&.Mui-selected': {
+                                        backgroundColor: '#1976d2',
+                                        color: 'white',
+                                        '& .MuiListItemIcon-root': { color: 'white' },
+                                        '&:hover': { backgroundColor: '#1565c0' },
+                                      },
+                                      '&:hover': {
+                                        backgroundColor: isActive ? '#1565c0' : '#f0f0f0',
+                                      },
+                                    }}
+                                  >
+                                    <ListItemIcon sx={{ 
+                                      minWidth: '24px',
+                                      color: isActive ? 'white' : '#666',
+                                      '& .MuiSvgIcon-root': { fontSize: '16px' },
+                                    }}>
+                                      {app.icon}
+                                    </ListItemIcon>
+                                    <ListItemText 
+                                      primary={
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                          {app.text}
+                                          {(app as any).isNew && (
+                                            <Chip 
+                                              label="NEW" 
+                                              size="small" 
+                                              color="warning" 
+                                              sx={{ fontSize: '0.6rem', height: 16 }} 
+                                            />
+                                          )}
+                                        </Box>
+                                      }
+                                      primaryTypographyProps={{
+                                        fontSize: '0.75rem',
+                                        fontWeight: isActive ? 500 : 400,
+                                        color: isActive ? 'white' : '#333',
+                                      }}
+                                    />
+                                  </ListItemButton>
+                                </ListItem>
+                              );
+                            })
+                          )}
+                        </List>
+                      </Collapse>
+                    </>
                   )}
-          </List>
+                </List>
               </Collapse>
         </>
       )}
 
           <Divider sx={{ my: 1 }} />
 
-          {/* Licenses Dropdown */}
-          {licenseNavigationItems.some(item => !item.permission || hasPermission(item.permission)) && (
+          {/* Licenses Section */}
+          {hasLicensesAccess && (
             <>
               <ListItem disablePadding sx={{ mb: 0.5 }}>
                 <ListItemButton
@@ -1097,55 +1146,355 @@ const DashboardLayout: React.FC = () => {
 
           <Divider sx={{ my: 1 }} />
 
-          {/* Cards, Transactions, Analytics, Admin */}
-          {[...cardNavigationItems, ...transactionNavigationItems, ...analyticsNavigationItems, ...adminNavigationItems]
-            .filter(item => !item.permission || hasPermission(item.permission))
-            .map((item) => {
-              const isActive = location.pathname === item.path;
+          {/* Cards & Printing Section */}
+          {hasCardsPrintingAccess && (
+            <>
+              <ListItem disablePadding sx={{ mb: 0.5 }}>
+                <ListItemButton
+                  onClick={handleCardsPrintingToggle}
+                  sx={{
+                    borderRadius: '6px',
+                    minHeight: '36px',
+                    py: 0.75,
+                    px: 1.5,
+                    '&:hover': { backgroundColor: '#f0f0f0' },
+                  }}
+                >
+                  <ListItemIcon sx={{ 
+                    minWidth: '32px',
+                    color: '#666',
+                    '& .MuiSvgIcon-root': { fontSize: '20px' },
+                  }}>
+                    <CreditCard />
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary="Cards & Printing" 
+                    primaryTypographyProps={{ 
+                      fontSize: '0.875rem',
+                      fontWeight: 400,
+                      color: '#333',
+                    }}
+                  />
+                  {cardsPrintingExpanded ? <ExpandLess /> : <ExpandMore />}
+                </ListItemButton>
+              </ListItem>
+              
+              <Collapse in={cardsPrintingExpanded} timeout="auto" unmountOnExit>
+                <List component="div" disablePadding sx={{ pl: 2 }}>
+                  {cardsPrintingItems.map((item) => {
+                    const isActive = location.pathname === item.path;
+                    return (
+                      <ListItem key={item.text} disablePadding sx={{ mb: 0.25 }}>
+                        <ListItemButton
+                          selected={isActive}
+                          onClick={() => {
+                            navigate(item.path);
+                            if (isMobile) setMobileOpen(false);
+                          }}
+                          sx={{
+                            borderRadius: '6px',
+                            minHeight: '32px',
+                            py: 0.5,
+                            px: 1,
+                            ml: 1,
+                            '&.Mui-selected': {
+                              backgroundColor: '#1976d2',
+                              color: 'white',
+                              '& .MuiListItemIcon-root': { color: 'white' },
+                              '&:hover': { backgroundColor: '#1565c0' },
+                            },
+                            '&:hover': {
+                              backgroundColor: isActive ? '#1565c0' : '#f0f0f0',
+                            },
+                          }}
+                        >
+                          <ListItemIcon sx={{ 
+                            minWidth: '28px',
+                            color: isActive ? 'white' : '#666',
+                            '& .MuiSvgIcon-root': { fontSize: '18px' },
+                          }}>
+                            {item.icon}
+                          </ListItemIcon>
+                          <ListItemText 
+                            primary={item.text} 
+                            primaryTypographyProps={{ 
+                              fontSize: '0.8rem',
+                              fontWeight: isActive ? 500 : 400,
+                              color: isActive ? 'white' : '#333',
+                            }} 
+                          />
+                        </ListItemButton>
+                      </ListItem>
+                    );
+                  })}
+                </List>
+              </Collapse>
+            </>
+          )}
 
-              return (
-                <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
-                  <ListItemButton
-                    selected={isActive}
-                    onClick={() => {
-                      navigate(item.path);
-                      if (isMobile) setMobileOpen(false);
+          <Divider sx={{ my: 1 }} />
+
+          {/* Transactions & Payments Section */}
+          {hasTransactionsAccess && (
+            <>
+              <ListItem disablePadding sx={{ mb: 0.5 }}>
+                <ListItemButton
+                  onClick={handleTransactionsToggle}
+                  sx={{
+                    borderRadius: '6px',
+                    minHeight: '36px',
+                    py: 0.75,
+                    px: 1.5,
+                    '&:hover': { backgroundColor: '#f0f0f0' },
+                  }}
+                >
+                  <ListItemIcon sx={{ 
+                    minWidth: '32px',
+                    color: '#666',
+                    '& .MuiSvgIcon-root': { fontSize: '20px' },
+                  }}>
+                    <Payment />
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary="Transactions & Payments" 
+                    primaryTypographyProps={{ 
+                      fontSize: '0.875rem',
+                      fontWeight: 400,
+                      color: '#333',
                     }}
-                    sx={{
-                      borderRadius: '6px',
-                      minHeight: '36px',
-                      py: 0.75,
-                      px: 1.5,
-                      '&.Mui-selected': {
-                        backgroundColor: '#1976d2',
-                        color: 'white',
-                        '& .MuiListItemIcon-root': { color: 'white' },
-                        '&:hover': { backgroundColor: '#1565c0' },
-                      },
-                      '&:hover': {
-                        backgroundColor: isActive ? '#1565c0' : '#f0f0f0',
-                      },
+                  />
+                  {transactionsExpanded ? <ExpandLess /> : <ExpandMore />}
+                </ListItemButton>
+              </ListItem>
+              
+              <Collapse in={transactionsExpanded} timeout="auto" unmountOnExit>
+                <List component="div" disablePadding sx={{ pl: 2 }}>
+                  {transactionsPaymentsItems.map((item) => {
+                    const isActive = location.pathname === item.path;
+                    return (
+                      <ListItem key={item.text} disablePadding sx={{ mb: 0.25 }}>
+                        <ListItemButton
+                          selected={isActive}
+                          onClick={() => {
+                            navigate(item.path);
+                            if (isMobile) setMobileOpen(false);
+                          }}
+                          sx={{
+                            borderRadius: '6px',
+                            minHeight: '32px',
+                            py: 0.5,
+                            px: 1,
+                            ml: 1,
+                            '&.Mui-selected': {
+                              backgroundColor: '#1976d2',
+                              color: 'white',
+                              '& .MuiListItemIcon-root': { color: 'white' },
+                              '&:hover': { backgroundColor: '#1565c0' },
+                            },
+                            '&:hover': {
+                              backgroundColor: isActive ? '#1565c0' : '#f0f0f0',
+                            },
+                          }}
+                        >
+                          <ListItemIcon sx={{ 
+                            minWidth: '28px',
+                            color: isActive ? 'white' : '#666',
+                            '& .MuiSvgIcon-root': { fontSize: '18px' },
+                          }}>
+                            {item.icon}
+                          </ListItemIcon>
+                          <ListItemText 
+                            primary={item.text} 
+                            primaryTypographyProps={{ 
+                              fontSize: '0.8rem',
+                              fontWeight: isActive ? 500 : 400,
+                              color: isActive ? 'white' : '#333',
+                            }} 
+                          />
+                        </ListItemButton>
+                      </ListItem>
+                    );
+                  })}
+                </List>
+              </Collapse>
+            </>
+          )}
+
+          <Divider sx={{ my: 1 }} />
+
+          {/* Analytics & Reports Section */}
+          {hasAnalyticsAccess && (
+            <>
+              <ListItem disablePadding sx={{ mb: 0.5 }}>
+                <ListItemButton
+                  onClick={handleAnalyticsToggle}
+                  sx={{
+                    borderRadius: '6px',
+                    minHeight: '36px',
+                    py: 0.75,
+                    px: 1.5,
+                    '&:hover': { backgroundColor: '#f0f0f0' },
+                  }}
+                >
+                  <ListItemIcon sx={{ 
+                    minWidth: '32px',
+                    color: '#666',
+                    '& .MuiSvgIcon-root': { fontSize: '20px' },
+                  }}>
+                    <Analytics />
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary="Analytics & Reports" 
+                    primaryTypographyProps={{ 
+                      fontSize: '0.875rem',
+                      fontWeight: 400,
+                      color: '#333',
                     }}
-                  >
-                    <ListItemIcon sx={{ 
-                      minWidth: '32px',
-                      color: isActive ? 'white' : '#666',
-                      '& .MuiSvgIcon-root': { fontSize: '20px' },
-                    }}>
-                      {item.icon}
-                    </ListItemIcon>
-                    <ListItemText 
-                      primary={item.text} 
-                      primaryTypographyProps={{
-                        fontSize: '0.875rem',
-                        fontWeight: isActive ? 500 : 400,
-                        color: isActive ? 'white' : '#333',
-                      }}
-                    />
-                  </ListItemButton>
-                </ListItem>
-              );
-            })}
+                  />
+                  {analyticsExpanded ? <ExpandLess /> : <ExpandMore />}
+                </ListItemButton>
+              </ListItem>
+              
+              <Collapse in={analyticsExpanded} timeout="auto" unmountOnExit>
+                <List component="div" disablePadding sx={{ pl: 2 }}>
+                  {analyticsReportsItems.map((item) => {
+                    const isActive = location.pathname === item.path;
+                    return (
+                      <ListItem key={item.text} disablePadding sx={{ mb: 0.25 }}>
+                        <ListItemButton
+                          selected={isActive}
+                          onClick={() => {
+                            navigate(item.path);
+                            if (isMobile) setMobileOpen(false);
+                          }}
+                          sx={{
+                            borderRadius: '6px',
+                            minHeight: '32px',
+                            py: 0.5,
+                            px: 1,
+                            ml: 1,
+                            '&.Mui-selected': {
+                              backgroundColor: '#1976d2',
+                              color: 'white',
+                              '& .MuiListItemIcon-root': { color: 'white' },
+                              '&:hover': { backgroundColor: '#1565c0' },
+                            },
+                            '&:hover': {
+                              backgroundColor: isActive ? '#1565c0' : '#f0f0f0',
+                            },
+                          }}
+                        >
+                          <ListItemIcon sx={{ 
+                            minWidth: '28px',
+                            color: isActive ? 'white' : '#666',
+                            '& .MuiSvgIcon-root': { fontSize: '18px' },
+                          }}>
+                            {item.icon}
+                          </ListItemIcon>
+                          <ListItemText 
+                            primary={item.text} 
+                            primaryTypographyProps={{ 
+                              fontSize: '0.8rem',
+                              fontWeight: isActive ? 500 : 400,
+                              color: isActive ? 'white' : '#333',
+                            }} 
+                          />
+                        </ListItemButton>
+                      </ListItem>
+                    );
+                  })}
+                </List>
+              </Collapse>
+            </>
+          )}
+
+          <Divider sx={{ my: 1 }} />
+
+          {/* Administration Section */}
+          {hasAdministrationAccess && (
+            <>
+              <ListItem disablePadding sx={{ mb: 0.5 }}>
+                <ListItemButton
+                  onClick={handleAdministrationToggle}
+                  sx={{
+                    borderRadius: '6px',
+                    minHeight: '36px',
+                    py: 0.75,
+                    px: 1.5,
+                    '&:hover': { backgroundColor: '#f0f0f0' },
+                  }}
+                >
+                  <ListItemIcon sx={{ 
+                    minWidth: '32px',
+                    color: '#666',
+                    '& .MuiSvgIcon-root': { fontSize: '20px' },
+                  }}>
+                    <AdminPanelSettings />
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary="Administration" 
+                    primaryTypographyProps={{ 
+                      fontSize: '0.875rem',
+                      fontWeight: 400,
+                      color: '#333',
+                    }}
+                  />
+                  {administrationExpanded ? <ExpandLess /> : <ExpandMore />}
+                </ListItemButton>
+              </ListItem>
+              
+              <Collapse in={administrationExpanded} timeout="auto" unmountOnExit>
+                <List component="div" disablePadding sx={{ pl: 2 }}>
+                  {administrationItems.map((item) => {
+                    const isActive = location.pathname === item.path;
+                    return (
+                      <ListItem key={item.text} disablePadding sx={{ mb: 0.25 }}>
+                        <ListItemButton
+                          selected={isActive}
+                          onClick={() => {
+                            navigate(item.path);
+                            if (isMobile) setMobileOpen(false);
+                          }}
+                          sx={{
+                            borderRadius: '6px',
+                            minHeight: '32px',
+                            py: 0.5,
+                            px: 1,
+                            ml: 1,
+                            '&.Mui-selected': {
+                              backgroundColor: '#1976d2',
+                              color: 'white',
+                              '& .MuiListItemIcon-root': { color: 'white' },
+                              '&:hover': { backgroundColor: '#1565c0' },
+                            },
+                            '&:hover': {
+                              backgroundColor: isActive ? '#1565c0' : '#f0f0f0',
+                            },
+                          }}
+                        >
+                          <ListItemIcon sx={{ 
+                            minWidth: '28px',
+                            color: isActive ? 'white' : '#666',
+                            '& .MuiSvgIcon-root': { fontSize: '18px' },
+                          }}>
+                            {item.icon}
+                          </ListItemIcon>
+                          <ListItemText 
+                            primary={item.text} 
+                            primaryTypographyProps={{ 
+                              fontSize: '0.8rem',
+                              fontWeight: isActive ? 500 : 400,
+                              color: isActive ? 'white' : '#333',
+                            }} 
+                          />
+                        </ListItemButton>
+                      </ListItem>
+                    );
+                  })}
+                </List>
+              </Collapse>
+            </>
+          )}
           </List>
       </Box>
 
