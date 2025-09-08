@@ -62,6 +62,8 @@ import {
   BarChart,
   KeyboardArrowDown,
   NavigateNext,
+  CollectionsBookmark,
+  Delete as DeleteIcon,
 } from '@mui/icons-material';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -139,6 +141,8 @@ const DashboardLayout: React.FC = () => {
       'approval': { text: 'License Approval', icon: <Assessment fontSize="small" /> },
       'cards': { text: 'Cards', icon: <CreditCard fontSize="small" /> },
       'order': { text: 'Order Cards', icon: <Search fontSize="small" /> },
+      'collection': { text: 'Card Collection', icon: <CollectionsBookmark fontSize="small" /> },
+      'destruction': { text: 'Card Destruction', icon: <DeleteIcon fontSize="small" /> },
       'print-queue': { text: 'Print Queue', icon: <Assessment fontSize="small" /> },
       'quality-assurance': { text: 'Quality Assurance', icon: <AdminPanelSettings fontSize="small" /> },
       'transactions': { text: 'Transactions', icon: <Receipt fontSize="small" /> },
@@ -402,6 +406,18 @@ const DashboardLayout: React.FC = () => {
       icon: <Search />,
       path: '/dashboard/cards/order',
       permission: 'printing.create',
+    },
+    {
+      text: 'Card Collection',
+      icon: <CollectionsBookmark />,
+      path: '/dashboard/cards/collection',
+      permission: 'cards.collect',
+    },
+    {
+      text: 'Card Destruction',
+      icon: <DeleteIcon />,
+      path: '/dashboard/cards/destruction',
+      permission: 'cards.destroy',
     },
     {
       text: 'Print Queue',

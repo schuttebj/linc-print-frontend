@@ -75,7 +75,6 @@ interface QASearchResult {
 
 interface QAOutcome {
   outcome: 'PASSED' | 'FAILED_PRINTING' | 'FAILED_DAMAGE';
-  notes: string;
   location_id: string;
 }
 
@@ -88,7 +87,6 @@ const QualityAssurancePage: React.FC = () => {
   const [selectedJob, setSelectedJob] = useState<PrintJobForQA | null>(null);
   const [cardImages, setCardImages] = useState<{front?: string, back?: string}>({});
   const [qaOutcome, setQaOutcome] = useState<'PASSED' | 'FAILED_PRINTING' | 'FAILED_DAMAGE' | ''>('');
-  const [qaNodes, setQaNodes] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -271,7 +269,6 @@ const QualityAssurancePage: React.FC = () => {
     }
     
     setQaOutcome('');
-    setQaNodes('');
   };
 
   const handleProcessQA = async () => {
@@ -294,7 +291,6 @@ const QualityAssurancePage: React.FC = () => {
 
       const qaData: QAOutcome = {
         outcome: qaOutcome,
-        notes: qaNodes,
         location_id: getLocationId()
       };
 
@@ -334,7 +330,6 @@ const QualityAssurancePage: React.FC = () => {
     setSelectedJob(null);
     setCardImages({});
     setQaOutcome('');
-    setQaNodes('');
     setError(null);
     setSuccess(null);
     // Reset location selection for admin users
@@ -744,30 +739,6 @@ const QualityAssurancePage: React.FC = () => {
             </Grid>
           </Grid>
 
-          <TextField
-            fullWidth
-            multiline
-            rows={4}
-            label="QA Notes"
-            value={qaNodes}
-            onChange={(e) => setQaNodes(e.target.value)}
-            margin="normal"
-            size="small"
-            placeholder="Enter quality assessment notes..."
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                '& fieldset': {
-                  borderWidth: '1px',
-                },
-                '&:hover fieldset': {
-                  borderWidth: '1px',
-                },
-                '&.Mui-focused fieldset': {
-                  borderWidth: '1px',
-                },
-              },
-            }}
-          />
         </Paper>
 
         {error && (

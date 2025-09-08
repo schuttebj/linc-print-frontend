@@ -43,6 +43,8 @@ import LicenseApprovalPage from './pages/licenses/LicenseApprovalPage';
 // Card Pages
 import CardListPage from './pages/cards/CardListPage';
 import CardOrderingByIdPage from './pages/cards/CardOrderingByIdPage';
+import CardCollectionPage from './pages/cards/CardCollectionPage';
+import CardDestructionPage from './pages/cards/CardDestructionPage';
 import PrintQueuePage from './pages/cards/PrintQueuePage';
 import PrintJobPrintingPage from './pages/cards/PrintJobPrintingPage';
 import QualityAssurancePage from './pages/cards/QualityAssurancePage';
@@ -325,6 +327,22 @@ function App() {
                 element={
                   <ProtectedRoute requiredPermission="printing.create">
                     <CardOrderingByIdPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="collection" 
+                element={
+                  <ProtectedRoute requiredPermission="cards.collect">
+                    <CardCollectionPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="destruction" 
+                element={
+                  <ProtectedRoute requiredPermission="cards.destroy">
+                    <CardDestructionPage />
                   </ProtectedRoute>
                 } 
               />
