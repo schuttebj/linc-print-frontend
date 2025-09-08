@@ -6,19 +6,12 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box,
-  Card,
-  CardContent,
-  CardHeader,
   Typography,
   Grid,
   Chip,
-  Button,
   IconButton,
-  Tooltip,
   Alert,
   CircularProgress,
-  Stack,
-  Divider,
   Table,
   TableBody,
   TableCell,
@@ -26,39 +19,18 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Badge,
   Tab,
   Tabs,
-
+  Container
 } from '@mui/material';
 import {
   ArrowBack as BackIcon,
-  Edit as EditIcon,
-  Print as PrintIcon,
-  Block as SuspendIcon,
-  CheckCircle as ActivateIcon,
-  Cancel as CancelIcon,
-  Add as AddIcon,
   History as HistoryIcon,
   CreditCard as CardIcon,
   Person as PersonIcon,
-  LocationOn as LocationIcon,
   Security as SecurityIcon,
   Assignment as AssignmentIcon,
-  ExpandMore as ExpandMoreIcon,
-  Refresh as RefreshIcon
+  CheckCircle as CheckCircleIcon
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
@@ -66,14 +38,8 @@ import { format, parseISO } from 'date-fns';
 import licenseService, { 
   LicenseDetail, 
   LicenseCard, 
-  LicenseStatusHistory,
-  LicenseStatusUpdate,
-  LicenseRestrictionsUpdate,
-  CardCreate,
-  CardStatusUpdate
+  LicenseStatusHistory
 } from '../../services/licenseService';
-import cardService from '../../services/cardService';
-import { useAuth } from '../../contexts/AuthContext';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -92,34 +58,12 @@ const TabPanelComponent: React.FC<TabPanelProps> = ({ children, value, index }) 
 const LicenseDetailPage: React.FC = () => {
   const { licenseId } = useParams<{ licenseId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
 
   // State management
   const [license, setLicense] = useState<LicenseDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tabValue, setTabValue] = useState(0);
-
-  // Dialog states
-  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
-  const [restrictionsDialogOpen, setRestrictionsDialogOpen] = useState(false);
-  const [cardDialogOpen, setCardDialogOpen] = useState(false);
-
-  // Form states
-  const [statusUpdate, setStatusUpdate] = useState<LicenseStatusUpdate>({
-    status: '',
-    reason: '',
-    notes: ''
-  });
-  const [restrictionsUpdate, setRestrictionsUpdate] = useState<LicenseRestrictionsUpdate>({
-    restrictions: [],
-    reason: ''
-  });
-  const [newCard, setNewCard] = useState<CardCreate>({
-    license_id: licenseId || '',
-    card_type: 'STANDARD',
-    expiry_years: 5
-  });
 
   // Load license data
   const loadLicense = async () => {
@@ -142,62 +86,6 @@ const LicenseDetailPage: React.FC = () => {
   useEffect(() => {
     loadLicense();
   }, [licenseId]);
-
-  // Handle status update
-  const handleStatusUpdate = async () => {
-    if (!license) return;
-
-    try {
-      await licenseService.updateLicenseStatus(license.id, statusUpdate);
-      setStatusDialogOpen(false);
-      loadLicense(); // Refresh data
-    } catch (err: any) {
-      setError(err.message || 'Failed to update license status');
-    }
-  };
-
-  // Handle restrictions update
-  const handleRestrictionsUpdate = async () => {
-    if (!license) return;
-
-    try {
-      await licenseService.updateLicenseRestrictions(license.id, restrictionsUpdate);
-      setRestrictionsDialogOpen(false);
-      loadLicense(); // Refresh data
-    } catch (err: any) {
-      setError(err.message || 'Failed to update restrictions');
-    }
-  };
-
-  // Handle card creation
-  const handleCardCreate = async () => {
-    try {
-      await licenseService.createCard(newCard);
-      setCardDialogOpen(false);
-      loadLicense(); // Refresh data
-    } catch (err: any) {
-      setError(err.message || 'Failed to create card');
-    }
-  };
-
-  // Handle test card creation
-  const handleCreateTestCard = async () => {
-    if (!license) return;
-
-    try {
-      setError(null);
-      const testCard = await cardService.createTestCard(license.id);
-      
-      // Show success message
-      alert(`Test card created successfully! Card Number: ${testCard.card_number}`);
-      
-      // Refresh license data to show new card
-      loadLicense();
-    } catch (err: any) {
-      setError(err.message || 'Failed to create test card');
-      console.error('Error creating test card:', err);
-    }
-  };
 
   // Format functions
   const formatDate = (dateString: string) => {
@@ -240,628 +128,861 @@ const LicenseDetailPage: React.FC = () => {
     );
   };
 
+  // Helper function to render tab with completion indicator
+  const renderTabLabel = (step: any, index: number) => {
+    const isCurrent = tabValue === index;
+    
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          color: isCurrent ? 'primary.main' : 'text.secondary' 
+        }}>
+          {step.icon}
+        </Box>
+        <Typography 
+          variant="body2" 
+          sx={{ 
+            fontWeight: isCurrent ? 'bold' : 'normal',
+            color: isCurrent ? 'primary.main' : 'text.secondary'
+          }}
+        >
+          {step.label}
+        </Typography>
+      </Box>
+    );
+  };
+
+  const steps = [
+    {
+      label: 'Overview',
+      icon: <AssignmentIcon />
+    },
+    {
+      label: 'Cards',
+      icon: <CardIcon />
+    },
+    {
+      label: 'History',
+      icon: <HistoryIcon />
+    },
+    {
+      label: 'Compliance',
+      icon: <SecurityIcon />
+    },
+    {
+      label: 'Person',
+      icon: <PersonIcon />
+    }
+  ];
+
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
-        <CircularProgress />
-      </Box>
+      <Container maxWidth="lg" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Paper 
+          elevation={0}
+          sx={{ 
+            flexGrow: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            bgcolor: '#f8f9fa',
+            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+            borderRadius: 2,
+            overflow: 'hidden'
+          }}
+        >
+          <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
+            <CircularProgress />
+          </Box>
+        </Paper>
+      </Container>
     );
   }
 
   if (error) {
     return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error">{error}</Alert>
-      </Box>
+      <Container maxWidth="lg" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Paper 
+          elevation={0}
+          sx={{ 
+            flexGrow: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            bgcolor: '#f8f9fa',
+            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+            borderRadius: 2,
+            overflow: 'hidden'
+          }}
+        >
+          <Box sx={{ p: 3 }}>
+            <Alert severity="error">{error}</Alert>
+          </Box>
+        </Paper>
+      </Container>
     );
   }
 
   if (!license) {
     return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="warning">License not found</Alert>
-      </Box>
+      <Container maxWidth="lg" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Paper 
+          elevation={0}
+          sx={{ 
+            flexGrow: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            bgcolor: '#f8f9fa',
+            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+            borderRadius: 2,
+            overflow: 'hidden'
+          }}
+        >
+          <Box sx={{ p: 3 }}>
+            <Alert severity="warning">License not found</Alert>
+          </Box>
+        </Paper>
+      </Container>
     );
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      {/* Header */}
-      <Box sx={{ mb: 3 }}>
-        <Stack direction="row" alignItems="center" spacing={2}>
-          <IconButton onClick={() => navigate('/dashboard/licenses/list')}>
-            <BackIcon />
-          </IconButton>
-          <Typography variant="h4" component="h1">
-            License Details
-          </Typography>
-          <Chip 
-            label={licenseService.formatLicenseId(license.id)}
-            color="primary"
-            variant="outlined"
-            size="medium"
-          />
-          {getStatusChip(license.status)}
-        </Stack>
-      </Box>
+    <Container maxWidth="lg" sx={{ py: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Paper 
+        elevation={0}
+        sx={{ 
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: '#f8f9fa',
+          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+          borderRadius: 2,
+          overflow: 'hidden'
+        }}
+      >
+        {/* Header Section */}
+        <Box sx={{ 
+          bgcolor: 'white', 
+          borderBottom: '1px solid', 
+          borderColor: 'divider',
+          flexShrink: 0,
+          p: 2
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+            <IconButton 
+              onClick={() => navigate('/dashboard/licenses/list')}
+              sx={{ color: 'primary.main' }}
+            >
+              <BackIcon />
+            </IconButton>
+            <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+              License Details - {licenseService.formatLicenseId(license.id)}
+            </Typography>
+            {getStatusChip(license.status)}
+          </Box>
+        </Box>
 
-      {/* Action Buttons */}
-      <Box sx={{ mb: 3 }}>
-        <Stack direction="row" spacing={2}>
-          <Button
-            variant="outlined"
-            startIcon={<RefreshIcon />}
-            onClick={loadLicense}
+        {/* Tab Navigation */}
+        <Box sx={{ 
+          bgcolor: 'white', 
+          borderBottom: '1px solid', 
+          borderColor: 'divider',
+          flexShrink: 0 
+        }}>
+          <Tabs
+            value={tabValue}
+            onChange={(e, newValue) => setTabValue(newValue)}
+            sx={{
+              px: 2,
+              '& .MuiTab-root': {
+                minHeight: 48,
+                textTransform: 'none',
+                fontSize: '0.875rem',
+                color: 'text.secondary',
+                bgcolor: 'grey.100',
+                mx: 0.5,
+                borderRadius: '8px 8px 0 0',
+                '&.Mui-selected': {
+                  bgcolor: 'white',
+                  color: 'text.primary',
+                },
+                '&:hover': {
+                  bgcolor: 'grey.200',
+                  '&.Mui-selected': {
+                    bgcolor: 'white',
+                  }
+                }
+              },
+              '& .MuiTabs-indicator': {
+                display: 'none'
+              }
+            }}
           >
-            Refresh
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<EditIcon />}
-            onClick={() => setStatusDialogOpen(true)}
-          >
-            Update Status
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<SecurityIcon />}
-            onClick={() => setRestrictionsDialogOpen(true)}
-          >
-            Manage Restrictions
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<CardIcon />}
-            onClick={() => setCardDialogOpen(true)}
-          >
-            Order New Card
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<AddIcon />}
-            onClick={handleCreateTestCard}
-            color="warning"
-            sx={{ ml: 1 }}
-          >
-            Create Test Card
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<PersonIcon />}
-            onClick={() => navigate(`/persons/${license.person_id}`)}
-          >
-            View Person
-          </Button>
-        </Stack>
-      </Box>
-
-      {/* Error Display */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-
-      {/* Main Content Tabs */}
-      <Card>
-        <CardHeader
-          title="License Information"
-          subheader={`Issued: ${formatShortDate(license.issue_date)}`}
-        />
-        <CardContent>
-          <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
-            <Tab label="Overview" icon={<AssignmentIcon />} />
-            <Tab label="Cards" icon={<CardIcon />} />
-            <Tab label="History" icon={<HistoryIcon />} />
-            <Tab label="Compliance" icon={<SecurityIcon />} />
+            {steps.map((step, index) => (
+              <Tab
+                key={step.label}
+                label={renderTabLabel(step, index)}
+              />
+            ))}
           </Tabs>
+        </Box>
+
+        {/* Content Area */}
+        <Box sx={{ 
+          flex: 1, 
+          overflow: 'auto',
+          p: 2,
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
 
           {/* Overview Tab */}
           <TabPanelComponent value={tabValue} index={0}>
-            <Grid container spacing={3}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {/* Basic Information */}
-              <Grid item xs={12} md={6}>
-                <Card variant="outlined">
-                  <CardHeader title="Basic Information" />
-                  <CardContent>
-                    <Stack spacing={2}>
-                      <Box>
-                        <Typography variant="subtitle2" color="textSecondary">
-                          License Number
-                        </Typography>
-                        <Typography variant="body1" fontWeight="bold">
-                          {licenseService.formatLicenseId(license.id)}
-                        </Typography>
-                      </Box>
-                      <Box>
-                        <Typography variant="subtitle2" color="textSecondary">
-                          Category
-                        </Typography>
-                        <Chip label={license.category} color="primary" size="small" />
-                      </Box>
-                      <Box>
-                        <Typography variant="subtitle2" color="textSecondary">
-                          Status
-                        </Typography>
-                        {getStatusChip(license.status)}
-                      </Box>
-                      <Box>
-                        <Typography variant="subtitle2" color="textSecondary">
-                          Issue Date
-                        </Typography>
-                        <Typography variant="body1">
-                          {formatShortDate(license.issue_date)}
-                        </Typography>
-                      </Box>
-                      {license.captured_from_license_number && (
-                        <Box>
-                          <Typography variant="subtitle2" color="textSecondary">
-                            Original License Number
-                          </Typography>
-                          <Typography variant="body1">
-                            {license.captured_from_license_number}
-                          </Typography>
-                        </Box>
-                      )}
-                    </Stack>
-                  </CardContent>
-                </Card>
-              </Grid>
+              <Paper 
+                elevation={0}
+                sx={{ 
+                  bgcolor: 'white',
+                  boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                  borderRadius: 2,
+                  p: 2
+                }}
+              >
+                <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600, color: 'primary.main', mb: 2 }}>
+                  Basic Information
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>License Number</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {licenseService.formatLicenseId(license.id)}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Category</Typography>
+                    <Box sx={{ mt: 0.5 }}>
+                      <Chip label={license.category} color="primary" size="small" />
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Status</Typography>
+                    <Box sx={{ mt: 0.5 }}>
+                      {getStatusChip(license.status)}
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Issue Date</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {formatShortDate(license.issue_date)}
+                    </Typography>
+                  </Grid>
+                  {license.captured_from_license_number && (
+                    <Grid item xs={12}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Original License Number</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                        {license.captured_from_license_number}
+                      </Typography>
+                    </Grid>
+                  )}
+                </Grid>
+              </Paper>
 
               {/* Restrictions & Professional Permits */}
-              <Grid item xs={12} md={6}>
-                <Card variant="outlined">
-                  <CardHeader title="Restrictions & Permits" />
-                  <CardContent>
-                    <Stack spacing={2}>
-                      <Box>
-                        <Typography variant="subtitle2" color="textSecondary">
-                          Restrictions
+              <Paper 
+                elevation={0}
+                sx={{ 
+                  bgcolor: 'white',
+                  boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                  borderRadius: 2,
+                  p: 2
+                }}
+              >
+                <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600, color: 'primary.main', mb: 2 }}>
+                  Restrictions & Permits
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Restrictions</Typography>
+                    <Box sx={{ mt: 0.5 }}>
+                      {license.restrictions.length > 0 ? (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          {license.restrictions.map((code) => (
+                            <Chip
+                              key={code}
+                              label={licenseService.getRestrictionDisplayName(code)}
+                              size="small"
+                              variant="outlined"
+                              color="warning"
+                            />
+                          ))}
+                        </Box>
+                      ) : (
+                        <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
+                          No restrictions
                         </Typography>
-                        {license.restrictions.length > 0 ? (
-                          <Stack direction="row" spacing={1} flexWrap="wrap">
-                            {license.restrictions.map((code) => (
-                              <Chip
-                                key={code}
-                                label={licenseService.getRestrictionDisplayName(code)}
-                                size="small"
-                                variant="outlined"
-                                color="warning"
-                              />
-                            ))}
-                          </Stack>
-                        ) : (
-                          <Typography variant="body2" color="textSecondary">
-                            No restrictions
-                          </Typography>
-                        )}
-                      </Box>
-                      <Box>
-                        <Typography variant="subtitle2" color="textSecondary">
-                          Professional Permit
+                      )}
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Professional Permit</Typography>
+                    <Box sx={{ mt: 0.5 }}>
+                      {license.has_professional_permit && license.professional_permit_categories.length > 0 ? (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          {license.professional_permit_categories.map((category) => (
+                            <Chip
+                              key={category}
+                              label={licenseService.getProfessionalPermitDisplayName(category)}
+                              size="small"
+                              variant="outlined"
+                              color="info"
+                            />
+                          ))}
+                        </Box>
+                      ) : (
+                        <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
+                          No professional permit
                         </Typography>
-                        {license.has_professional_permit && license.professional_permit_categories.length > 0 ? (
-                          <Stack direction="row" spacing={1} flexWrap="wrap">
-                            {license.professional_permit_categories.map((category) => (
-                              <Chip
-                                key={category}
-                                label={licenseService.getProfessionalPermitDisplayName(category)}
-                                size="small"
-                                variant="outlined"
-                                color="info"
-                              />
-                            ))}
-                          </Stack>
-                        ) : (
-                          <Typography variant="body2" color="textSecondary">
-                            No professional permit
-                          </Typography>
-                        )}
-                      </Box>
-                    </Stack>
-                  </CardContent>
-                </Card>
-              </Grid>
+                      )}
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Paper>
 
               {/* Current Card */}
-              <Grid item xs={12} md={6}>
-                <Card variant="outlined">
-                  <CardHeader title="Current Card" />
-                  <CardContent>
-                    {license.current_card ? (
-                      <Stack spacing={2}>
-                        <Box>
-                          <Typography variant="subtitle2" color="textSecondary">
-                            Card Number
-                          </Typography>
-                          <Typography variant="body1" fontWeight="bold">
-                            {license.current_card.card_number}
-                          </Typography>
-                        </Box>
-                        <Box>
-                          <Typography variant="subtitle2" color="textSecondary">
-                            Status
-                          </Typography>
-                          {getCardStatusChip(license.current_card.status)}
-                        </Box>
-                        <Box>
-                          <Typography variant="subtitle2" color="textSecondary">
-                            Expiry Date
-                          </Typography>
-                          <Typography variant="body1">
-                            {formatShortDate(license.current_card.expiry_date)}
-                          </Typography>
-                        </Box>
-                        {license.current_card.is_near_expiry && (
-                          <Alert severity="warning">
-                            Card expires in {license.current_card.days_until_expiry} days
-                          </Alert>
-                        )}
-                      </Stack>
-                    ) : (
-                      <Typography variant="body2" color="textSecondary">
-                        No current card
+              <Paper 
+                elevation={0}
+                sx={{ 
+                  bgcolor: 'white',
+                  boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                  borderRadius: 2,
+                  p: 2
+                }}
+              >
+                <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600, color: 'primary.main', mb: 2 }}>
+                  Current Card
+                </Typography>
+                {license.current_card ? (
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Card Number</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                        {license.current_card.card_number}
                       </Typography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Status</Typography>
+                      <Box sx={{ mt: 0.5 }}>
+                        {getCardStatusChip(license.current_card.status)}
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Expiry Date</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                        {formatShortDate(license.current_card.expiry_date)}
+                      </Typography>
+                    </Grid>
+                    {license.current_card.is_near_expiry && (
+                      <Grid item xs={12}>
+                        <Alert severity="warning" sx={{ fontSize: '0.8rem' }}>
+                          Card expires in {license.current_card.days_until_expiry} days
+                        </Alert>
+                      </Grid>
                     )}
-                  </CardContent>
-                </Card>
-              </Grid>
+                  </Grid>
+                ) : (
+                  <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
+                    No current card
+                  </Typography>
+                )}
+              </Paper>
 
               {/* License Statistics */}
-              <Grid item xs={12} md={6}>
-                <Card variant="outlined">
-                  <CardHeader title="License Statistics" />
-                  <CardContent>
-                    <Stack spacing={2}>
-                      <Box>
-                        <Typography variant="subtitle2" color="textSecondary">
-                          Total Cards Issued
-                        </Typography>
-                        <Typography variant="body1">
-                          {license.cards.length}
-                        </Typography>
-                      </Box>
-                      <Box>
-                        <Typography variant="subtitle2" color="textSecondary">
-                          Active Since
-                        </Typography>
-                        <Typography variant="body1">
-                          {formatShortDate(license.created_at)}
-                        </Typography>
-                      </Box>
-                      <Box>
-                        <Typography variant="subtitle2" color="textSecondary">
-                          Last Updated
-                        </Typography>
-                        <Typography variant="body1">
-                          {formatShortDate(license.updated_at)}
-                        </Typography>
-                      </Box>
-                    </Stack>
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
+              <Paper 
+                elevation={0}
+                sx={{ 
+                  bgcolor: 'white',
+                  boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                  borderRadius: 2,
+                  p: 2
+                }}
+              >
+                <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600, color: 'primary.main', mb: 2 }}>
+                  License Statistics
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={4}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Total Cards Issued</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {license.cards.length}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Active Since</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {formatShortDate(license.created_at)}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Last Updated</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {formatShortDate(license.updated_at)}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Paper>
+            </Box>
           </TabPanelComponent>
 
           {/* Cards Tab */}
           <TabPanelComponent value={tabValue} index={1}>
-            <TableContainer component={Paper} variant="outlined">
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Card Number</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Issue Date</TableCell>
-                    <TableCell>Expiry Date</TableCell>
-                    <TableCell>Current</TableCell>
-                    <TableCell>Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {license.cards.map((card) => (
-                    <TableRow key={card.id}>
-                      <TableCell>{card.card_number}</TableCell>
-                      <TableCell>{getCardStatusChip(card.status)}</TableCell>
-                      <TableCell>{formatShortDate(card.issue_date)}</TableCell>
-                      <TableCell>{formatShortDate(card.expiry_date)}</TableCell>
-                      <TableCell>
-                        {card.is_current && (
-                          <Chip label="Current" color="success" size="small" />
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Stack direction="row" spacing={1}>
-                          <Button size="small" variant="outlined">
-                            View
-                          </Button>
-                          {card.status === 'READY_FOR_COLLECTION' && (
-                            <Button 
-                              size="small" 
-                              variant="contained" 
-                              color="success"
-                              sx={{
-                                color: 'white',
-                                '&:hover': {
-                                  color: 'white'
-                                }
-                              }}
-                            >
-                              Mark Collected
-                            </Button>
-                          )}
-                        </Stack>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {license.cards.length === 0 && (
+            <Paper 
+              elevation={0}
+              sx={{ 
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2,
+                overflow: 'hidden'
+              }}
+            >
+              <TableContainer>
+                <Table sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+                  <TableHead>
                     <TableRow>
-                      <TableCell colSpan={6} align="center">
-                        <Typography variant="body2" color="textSecondary">
-                          No cards issued for this license
-                        </Typography>
-                      </TableCell>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}>Card Number</TableCell>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}>Status</TableCell>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}>Issue Date</TableCell>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}>Expiry Date</TableCell>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}>Current</TableCell>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                  </TableHead>
+                  <TableBody>
+                    {license.cards.map((card) => (
+                      <TableRow key={card.id} hover>
+                        <TableCell sx={{ py: 1, px: 2 }}>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 500 }}>
+                            {card.card_number}
+                          </Typography>
+                        </TableCell>
+                        <TableCell sx={{ py: 1, px: 2 }}>
+                          {getCardStatusChip(card.status)}
+                        </TableCell>
+                        <TableCell sx={{ py: 1, px: 2 }}>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                            {formatShortDate(card.issue_date)}
+                          </Typography>
+                        </TableCell>
+                        <TableCell sx={{ py: 1, px: 2 }}>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                            {formatShortDate(card.expiry_date)}
+                          </Typography>
+                        </TableCell>
+                        <TableCell sx={{ py: 1, px: 2 }}>
+                          {card.is_current && (
+                            <Chip 
+                              label="Current" 
+                              color="success" 
+                              size="small" 
+                              sx={{ fontSize: '0.7rem', height: '24px' }}
+                            />
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {license.cards.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} align="center" sx={{ py: 4, px: 2 }}>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
+                            No cards issued for this license
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Paper>
           </TabPanelComponent>
 
           {/* History Tab */}
           <TabPanelComponent value={tabValue} index={2}>
-            <TableContainer component={Paper} variant="outlined">
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Date</TableCell>
-                    <TableCell>From Status</TableCell>
-                    <TableCell>To Status</TableCell>
-                    <TableCell>Reason</TableCell>
-                    <TableCell>Notes</TableCell>
-                    <TableCell>System</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {license.status_history.map((history) => (
-                    <TableRow key={history.id}>
-                      <TableCell>{formatDate(history.changed_at)}</TableCell>
-                      <TableCell>
-                        {history.from_status && getStatusChip(history.from_status)}
-                      </TableCell>
-                      <TableCell>{getStatusChip(history.to_status)}</TableCell>
-                      <TableCell>{history.reason || '-'}</TableCell>
-                      <TableCell>{history.notes || '-'}</TableCell>
-                      <TableCell>
-                        {history.system_initiated ? (
-                          <Chip label="System" color="info" size="small" />
-                        ) : (
-                          <Chip label="Manual" color="default" size="small" />
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {license.status_history.length === 0 && (
+            <Paper 
+              elevation={0}
+              sx={{ 
+                bgcolor: 'white',
+                boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                borderRadius: 2,
+                overflow: 'hidden'
+              }}
+            >
+              <TableContainer>
+                <Table sx={{ '& .MuiTableCell-root': { borderRadius: 0 } }}>
+                  <TableHead>
                     <TableRow>
-                      <TableCell colSpan={6} align="center">
-                        <Typography variant="body2" color="textSecondary">
-                          No status history available
-                        </Typography>
-                      </TableCell>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}>Date</TableCell>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}>From Status</TableCell>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}>To Status</TableCell>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}>Reason</TableCell>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}>Notes</TableCell>
+                      <TableCell sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem',
+                        bgcolor: '#f8f9fa',
+                        py: 1, 
+                        px: 2
+                      }}>System</TableCell>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                  </TableHead>
+                  <TableBody>
+                    {license.status_history.map((history) => (
+                      <TableRow key={history.id} hover>
+                        <TableCell sx={{ py: 1, px: 2 }}>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                            {formatDate(history.changed_at)}
+                          </Typography>
+                        </TableCell>
+                        <TableCell sx={{ py: 1, px: 2 }}>
+                          {history.from_status && getStatusChip(history.from_status)}
+                        </TableCell>
+                        <TableCell sx={{ py: 1, px: 2 }}>
+                          {getStatusChip(history.to_status)}
+                        </TableCell>
+                        <TableCell sx={{ py: 1, px: 2 }}>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                            {history.reason || '-'}
+                          </Typography>
+                        </TableCell>
+                        <TableCell sx={{ py: 1, px: 2 }}>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                            {history.notes || '-'}
+                          </Typography>
+                        </TableCell>
+                        <TableCell sx={{ py: 1, px: 2 }}>
+                          {history.system_initiated ? (
+                            <Chip 
+                              label="System" 
+                              color="info" 
+                              size="small" 
+                              sx={{ fontSize: '0.7rem', height: '24px' }}
+                            />
+                          ) : (
+                            <Chip 
+                              label="Manual" 
+                              color="default" 
+                              size="small" 
+                              sx={{ fontSize: '0.7rem', height: '24px' }}
+                            />
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {license.status_history.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={6} align="center" sx={{ py: 4, px: 2 }}>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
+                            No status history available
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Paper>
           </TabPanelComponent>
 
           {/* Compliance Tab */}
           <TabPanelComponent value={tabValue} index={3}>
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
-                <Card variant="outlined">
-                  <CardHeader title="SADC Compliance" />
-                  <CardContent>
-                    <Stack spacing={2}>
-                      <Box>
-                        <Typography variant="subtitle2" color="textSecondary">
-                          SADC Compliance Verified
-                        </Typography>
-                        <Chip
-                          label={license.sadc_compliance_verified ? 'Verified' : 'Not Verified'}
-                          color={license.sadc_compliance_verified ? 'success' : 'error'}
-                          size="small"
-                        />
-                      </Box>
-                      <Box>
-                        <Typography variant="subtitle2" color="textSecondary">
-                          International Validity
-                        </Typography>
-                        <Chip
-                          label={license.international_validity ? 'Valid' : 'Not Valid'}
-                          color={license.international_validity ? 'success' : 'error'}
-                          size="small"
-                        />
-                      </Box>
-                      <Box>
-                        <Typography variant="subtitle2" color="textSecondary">
-                          Vienna Convention Compliant
-                        </Typography>
-                        <Chip
-                          label={license.vienna_convention_compliant ? 'Compliant' : 'Not Compliant'}
-                          color={license.vienna_convention_compliant ? 'success' : 'error'}
-                          size="small"
-                        />
-                      </Box>
-                    </Stack>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Card variant="outlined">
-                  <CardHeader title="ISO Standards" />
-                  <CardContent>
-                    <Stack spacing={2}>
-                      <Box>
-                        <Typography variant="subtitle2" color="textSecondary">
-                          ISO 18013 Compliance
-                        </Typography>
-                        <Chip
-                          label="ISO 18013-1:2018"
-                          color="info"
-                          size="small"
-                        />
-                      </Box>
-                      <Box>
-                        <Typography variant="subtitle2" color="textSecondary">
-                          Card Template
-                        </Typography>
-                        <Typography variant="body2">
-                          {license.current_card?.card_template || 'No current card'}
-                        </Typography>
-                      </Box>
-                    </Stack>
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {/* SADC Compliance */}
+              <Paper 
+                elevation={0}
+                sx={{ 
+                  bgcolor: 'white',
+                  boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                  borderRadius: 2,
+                  p: 2
+                }}
+              >
+                <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600, color: 'primary.main', mb: 2 }}>
+                  SADC Compliance
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={4}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>SADC Compliance Verified</Typography>
+                    <Box sx={{ mt: 0.5 }}>
+                      <Chip
+                        label={license.sadc_compliance_verified ? 'Verified' : 'Not Verified'}
+                        color={license.sadc_compliance_verified ? 'success' : 'error'}
+                        size="small"
+                        sx={{ fontSize: '0.7rem', height: '24px' }}
+                      />
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>International Validity</Typography>
+                    <Box sx={{ mt: 0.5 }}>
+                      <Chip
+                        label={license.international_validity ? 'Valid' : 'Not Valid'}
+                        color={license.international_validity ? 'success' : 'error'}
+                        size="small"
+                        sx={{ fontSize: '0.7rem', height: '24px' }}
+                      />
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Vienna Convention Compliant</Typography>
+                    <Box sx={{ mt: 0.5 }}>
+                      <Chip
+                        label={license.vienna_convention_compliant ? 'Compliant' : 'Not Compliant'}
+                        color={license.vienna_convention_compliant ? 'success' : 'error'}
+                        size="small"
+                        sx={{ fontSize: '0.7rem', height: '24px' }}
+                      />
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Paper>
+
+              {/* ISO Standards */}
+              <Paper 
+                elevation={0}
+                sx={{ 
+                  bgcolor: 'white',
+                  boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                  borderRadius: 2,
+                  p: 2
+                }}
+              >
+                <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600, color: 'primary.main', mb: 2 }}>
+                  ISO Standards
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>ISO 18013 Compliance</Typography>
+                    <Box sx={{ mt: 0.5 }}>
+                      <Chip
+                        label="ISO 18013-1:2018"
+                        color="info"
+                        size="small"
+                        sx={{ fontSize: '0.7rem', height: '24px' }}
+                      />
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Card Template</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {license.current_card?.card_template || 'No current card'}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Paper>
+            </Box>
           </TabPanelComponent>
-        </CardContent>
-      </Card>
 
-      {/* Status Update Dialog */}
-      <Dialog open={statusDialogOpen} onClose={() => setStatusDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Update License Status</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <FormControl fullWidth>
-              <InputLabel>New Status</InputLabel>
-              <Select
-                value={statusUpdate.status}
-                onChange={(e) => setStatusUpdate(prev => ({ ...prev, status: e.target.value }))}
-                label="New Status"
+          {/* Person Tab */}
+          <TabPanelComponent value={tabValue} index={4}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {/* Basic Person Information */}
+              <Paper 
+                elevation={0}
+                sx={{ 
+                  bgcolor: 'white',
+                  boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                  borderRadius: 2,
+                  p: 2
+                }}
               >
-                <MenuItem value="ACTIVE">Active</MenuItem>
-                <MenuItem value="SUSPENDED">Suspended</MenuItem>
-                <MenuItem value="CANCELLED">Cancelled</MenuItem>
-              </Select>
-            </FormControl>
-            <TextField
-              fullWidth
-              label="Reason"
-              value={statusUpdate.reason}
-              onChange={(e) => setStatusUpdate(prev => ({ ...prev, reason: e.target.value }))}
-              required
-            />
-            <TextField
-              fullWidth
-              label="Additional Notes"
-              value={statusUpdate.notes}
-              onChange={(e) => setStatusUpdate(prev => ({ ...prev, notes: e.target.value }))}
-              multiline
-              rows={3}
-            />
-            {statusUpdate.status === 'SUSPENDED' && (
-              <>
-                <TextField
-                  fullWidth
-                  label="Suspension Start Date"
-                  type="date"
-                  value={statusUpdate.suspension_start_date}
-                  onChange={(e) => setStatusUpdate(prev => ({ ...prev, suspension_start_date: e.target.value }))}
-                  InputLabelProps={{ shrink: true }}
-                />
-                <TextField
-                  fullWidth
-                  label="Suspension End Date"
-                  type="date"
-                  value={statusUpdate.suspension_end_date}
-                  onChange={(e) => setStatusUpdate(prev => ({ ...prev, suspension_end_date: e.target.value }))}
-                  InputLabelProps={{ shrink: true }}
-                />
-              </>
-            )}
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setStatusDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleStatusUpdate} variant="contained" disabled={!statusUpdate.status || !statusUpdate.reason}>
-            Update Status
-          </Button>
-        </DialogActions>
-      </Dialog>
+                <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600, color: 'primary.main', mb: 2 }}>
+                  Person Information
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Full Name</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {`${license.person_name || ''} ${license.person_surname || ''}`.trim() || 'N/A'}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Person ID</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {license.person_id || 'N/A'}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Issuing Location</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {license.issuing_location_name || license.issuing_location_code || 'N/A'}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Application ID</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                      {license.created_from_application_id || 'N/A'}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Paper>
 
-      {/* Restrictions Update Dialog */}
-      <Dialog open={restrictionsDialogOpen} onClose={() => setRestrictionsDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Manage License Restrictions</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <Typography variant="body2" color="textSecondary">
-              Select restrictions that apply to this license
-            </Typography>
-            {/* Restriction checkboxes would go here */}
-            <TextField
-              fullWidth
-              label="Reason for Change"
-              value={restrictionsUpdate.reason}
-              onChange={(e) => setRestrictionsUpdate(prev => ({ ...prev, reason: e.target.value }))}
-              required
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setRestrictionsDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleRestrictionsUpdate} variant="contained" disabled={!restrictionsUpdate.reason}>
-            Update Restrictions
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* New Card Dialog */}
-      <Dialog open={cardDialogOpen} onClose={() => setCardDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Order New Card</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <FormControl fullWidth>
-              <InputLabel>Card Type</InputLabel>
-              <Select
-                value={newCard.card_type}
-                onChange={(e) => setNewCard(prev => ({ ...prev, card_type: e.target.value }))}
-                label="Card Type"
+              {/* License Information */}
+              <Paper 
+                elevation={0}
+                sx={{ 
+                  bgcolor: 'white',
+                  boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                  borderRadius: 2,
+                  p: 2
+                }}
               >
-                <MenuItem value="STANDARD">Standard</MenuItem>
-                <MenuItem value="REPLACEMENT">Replacement</MenuItem>
-                <MenuItem value="DUPLICATE">Duplicate</MenuItem>
-              </Select>
-            </FormControl>
-            <TextField
-              fullWidth
-              label="Card Validity (Years)"
-              type="number"
-              value={newCard.expiry_years}
-              onChange={(e) => setNewCard(prev => ({ ...prev, expiry_years: parseInt(e.target.value) }))}
-              inputProps={{ min: 1, max: 10 }}
-            />
-            {newCard.card_type !== 'STANDARD' && (
-              <TextField
-                fullWidth
-                label="Replacement Reason"
-                value={newCard.replacement_reason}
-                onChange={(e) => setNewCard(prev => ({ ...prev, replacement_reason: e.target.value }))}
-                multiline
-                rows={2}
-              />
-            )}
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCardDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleCardCreate} variant="contained">
-            Order Card
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+                <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600, color: 'primary.main', mb: 2 }}>
+                  License References
+                </Typography>
+                <Grid container spacing={2}>
+                  {license.previous_license_id && (
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Previous License</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                        {license.previous_license_id}
+                      </Typography>
+                    </Grid>
+                  )}
+                  {license.is_upgrade && license.upgrade_from_category && (
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Upgrade From Category</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                        {license.upgrade_from_category}
+                      </Typography>
+                    </Grid>
+                  )}
+                  {license.captured_from_license_number && (
+                    <Grid item xs={12}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Captured From License Number</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                        {license.captured_from_license_number}
+                      </Typography>
+                    </Grid>
+                  )}
+                </Grid>
+              </Paper>
+
+              {/* Status Information */}
+              {(license.is_suspended || license.is_cancelled) && (
+                <Paper 
+                  elevation={0}
+                  sx={{ 
+                    bgcolor: 'white',
+                    boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 2px 0px',
+                    borderRadius: 2,
+                    p: 2
+                  }}
+                >
+                  <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 600, color: 'primary.main', mb: 2 }}>
+                    Status Details
+                  </Typography>
+                  <Grid container spacing={2}>
+                    {license.is_suspended && (
+                      <>
+                        <Grid item xs={12} md={6}>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Suspension Reason</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                            {license.suspension_reason || 'N/A'}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Suspension Period</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                            {license.suspension_start_date && license.suspension_end_date
+                              ? `${formatShortDate(license.suspension_start_date)} - ${formatShortDate(license.suspension_end_date)}`
+                              : 'N/A'}
+                          </Typography>
+                        </Grid>
+                      </>
+                    )}
+                    {license.is_cancelled && (
+                      <>
+                        <Grid item xs={12} md={6}>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Cancellation Reason</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                            {license.cancellation_reason || 'N/A'}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Cancellation Date</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                            {license.cancellation_date ? formatShortDate(license.cancellation_date) : 'N/A'}
+                          </Typography>
+                        </Grid>
+                      </>
+                    )}
+                  </Grid>
+                </Paper>
+              )}
+            </Box>
+          </TabPanelComponent>
+        </Box>
+      </Paper>
+    </Container>
   );
 };
 
