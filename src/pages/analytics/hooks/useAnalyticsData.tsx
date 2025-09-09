@@ -76,23 +76,40 @@ export const useAnalyticsData = (dateRange: string, selectedLocation: string) =>
       console.log('🔍 Fetching analytics data with filters:', filters);
 
       // Fetch data from multiple endpoints in parallel
+      console.log('🔄 Starting parallel API calls...');
+      
       const [
         kpiSummary,
         applicationTrends,
         systemHealth,
         recentActivity
       ] = await Promise.all([
-        analyticsService.getKPISummary(filters),
-        analyticsService.getApplicationTrends(filters),
-        analyticsService.getSystemHealth(),
-        analyticsService.getRecentActivity({ limit: 10 })
+        analyticsService.getKPISummary(filters).catch(err => {
+          console.error('❌ KPI Summary failed:', err);
+          throw err;
+        }),
+        analyticsService.getApplicationTrends(filters).catch(err => {
+          console.error('❌ Application Trends failed:', err);
+          // Return empty data instead of failing completely
+          return { data: [] };
+        }),
+        analyticsService.getSystemHealth().catch(err => {
+          console.error('❌ System Health failed:', err);
+          // Return empty data instead of failing completely
+          return { data: {} };
+        }),
+        analyticsService.getRecentActivity({ limit: 10 }).catch(err => {
+          console.error('❌ Recent Activity failed:', err);
+          // Return empty data instead of failing completely
+          return { data: { activities: [] } };
+        })
       ]);
 
       console.log('✅ Analytics data fetched successfully:', {
-        kpiSummary,
-        applicationTrends,
-        systemHealth,
-        recentActivity
+        kpiSummary: kpiSummary ? 'OK' : 'FAILED',
+        applicationTrends: applicationTrends ? 'OK' : 'FAILED',
+        systemHealth: systemHealth ? 'OK' : 'FAILED',
+        recentActivity: recentActivity ? 'OK' : 'FAILED'
       });
 
       // Transform API data to match our interface

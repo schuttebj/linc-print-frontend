@@ -138,14 +138,24 @@ class AnalyticsService {
     const queryString = this.buildQueryString(filters);
     const url = `${this.BASE_URL}/kpi/summary${queryString ? `?${queryString}` : ''}`;
     
-    console.log('🔍 Analytics KPI Summary call:', { url, filters });
+    console.log('🔍 Analytics KPI Summary call:', { 
+      url, 
+      filters, 
+      baseUrl: this.BASE_URL,
+      fullUrl: `${window.location.origin}${url}`
+    });
     
     try {
       const result = await api.get<KPISummaryResponse>(url);
       console.log('✅ KPI Summary success:', result);
       return result;
-    } catch (error) {
-      console.error('❌ KPI Summary error:', error);
+    } catch (error: any) {
+      console.error('❌ KPI Summary error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        url: url
+      });
       throw error;
     }
   }
