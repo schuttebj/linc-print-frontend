@@ -27,8 +27,7 @@ import {
   Select,
   MenuItem,
   FormHelperText,
-  Backdrop,
-  Snackbar
+  Backdrop
 } from '@mui/material';
 import {
   PersonSearch as PersonSearchIcon,
@@ -41,6 +40,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotification } from '../../contexts/NotificationContext';
 import PersonFormWrapper from '../../components/PersonFormWrapper';
 import LicenseCaptureForm from '../../components/applications/LicenseCaptureForm';
 import { applicationService } from '../../services/applicationService';
@@ -59,6 +59,7 @@ import { useScrollbarDetection } from '../../hooks/useScrollbarDetection';
 
 const LearnerPermitCaptureFormPage: React.FC = () => {
   const { user } = useAuth();
+  const { showSuccess } = useNotification();
   const navigate = useNavigate();
 
   // Form state
@@ -70,8 +71,6 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
   const [availableLocations, setAvailableLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
-  const [success, setSuccess] = useState<string>('');
-  const [showSuccessSnackbar, setShowSuccessSnackbar] = useState(false);
 
   // Person form navigation refs - no longer needed with dual navigation
   // const personNextRef = useRef<() => Promise<boolean>>();
@@ -344,18 +343,15 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
       await applicationService.updateApplicationStatus(application.id, ApplicationStatus.APPROVED);
       await applicationService.updateApplicationStatus(application.id, ApplicationStatus.COMPLETED);
       
-      setSuccess('Learner\'s permit capture completed successfully! License records have been created.');
-      setShowSuccessSnackbar(true);
+      // Show global success notification and navigate immediately
+      showSuccess('Learner\'s permit capture completed successfully! License records have been created.');
       
-      // Navigate to applications dashboard after showing success
-      setTimeout(() => {
-        navigate('/dashboard/applications/dashboard', {
-          state: { 
-            message: 'Learner\'s permit capture completed successfully',
-            application 
-          }
-        });
-      }, 3000);
+      navigate('/dashboard/applications/dashboard', {
+        state: { 
+          message: 'Learner\'s permit capture completed successfully',
+          application 
+        }
+      });
 
     } catch (err: any) {
       console.error('Submission error:', err);
@@ -640,16 +636,10 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
       >
 
 
-        {/* Error/Success Messages */}
+        {/* Error Messages */}
         {error && (
           <Alert severity="error" sx={{ mx: 2, mt: 2 }}>
             {error}
-          </Alert>
-        )}
-        
-        {success && (
-          <Alert severity="success" sx={{ mx: 2, mt: 2 }} icon={<CheckCircleIcon />}>
-            {success}
           </Alert>
         )}
 
@@ -809,32 +799,6 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
           </Typography>
         </Backdrop>
 
-        {/* Success Snackbar */}
-        <Snackbar
-          open={showSuccessSnackbar}
-          autoHideDuration={5000}
-          onClose={() => setShowSuccessSnackbar(false)}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        >
-          <Alert 
-            onClose={() => setShowSuccessSnackbar(false)} 
-            severity="info" 
-            variant="filled"
-            sx={{ 
-              width: '100%',
-              backgroundColor: 'rgb(25, 118, 210)',
-              color: 'white',
-              '& .MuiAlert-icon': {
-                color: 'white'
-              },
-              '& .MuiAlert-action': {
-                color: 'white'
-              }
-            }}
-          >
-            Learner's permit capture completed successfully!
-          </Alert>
-        </Snackbar>
       </Paper>
     </Container>
   );

@@ -31,8 +31,7 @@ import {
   Collapse,
   IconButton,
   CircularProgress,
-  Backdrop,
-  Snackbar
+  Backdrop
 } from '@mui/material';
 import {
   PersonSearch as PersonSearchIcon,
@@ -68,6 +67,7 @@ import {
   requiresMedical60Plus
 } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotification } from '../../contexts/NotificationContext';
 import { applicationService } from '../../services/applicationService';
 import { lookupService } from '../../services/lookupService';
 import type { Location } from '../../services/lookupService';
@@ -100,6 +100,7 @@ const steps = [
 const ForeignConversionApplicationPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { showSuccess } = useNotification();
 
   // Form state
   const [activeStep, setActiveStep] = useState(0);
@@ -123,8 +124,6 @@ const ForeignConversionApplicationPage: React.FC = () => {
   const [showExisting, setShowExisting] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
-  const [success, setSuccess] = useState<string>('');
-  const [showSuccessSnackbar, setShowSuccessSnackbar] = useState(false);
 
   // Scrollbar detection for ForeignLicenseCaptureForm
   const scrollableRef = useRef<HTMLDivElement>(null);
@@ -613,18 +612,15 @@ const ForeignConversionApplicationPage: React.FC = () => {
         }
       }
       
-      setSuccess('Foreign driving license conversion application submitted successfully!');
-      setShowSuccessSnackbar(true);
+      // Show global success notification and navigate immediately
+      showSuccess('Foreign driving license conversion application submitted successfully!');
       
-      // Navigate to applications dashboard after showing success
-      setTimeout(() => {
-        navigate('/dashboard/applications/dashboard', {
-          state: { 
-            message: 'Foreign driving license conversion application submitted successfully',
-            application 
-          }
-        });
-      }, 3000);
+      navigate('/dashboard/applications/dashboard', {
+        state: { 
+          message: 'Foreign driving license conversion application submitted successfully',
+          application 
+        }
+      });
 
     } catch (err: any) {
       console.error('Submission error:', err);
@@ -1095,20 +1091,12 @@ const ForeignConversionApplicationPage: React.FC = () => {
       >
 
 
-        {/* Error/Success Messages */}
-        {(error || success) && (
-          <Box sx={{ p: 2, bgcolor: 'white' }}>
+        {/* Error Messages */}
         {error && (
-              <Alert severity="error" sx={{ mb: 1 }}>
-            {error}
-          </Alert>
-        )}
-        
-        {success && (
-              <Alert severity="success" sx={{ mb: 1 }} icon={<CheckCircleIcon />}>
-            {success}
-          </Alert>
-            )}
+          <Box sx={{ p: 2, bgcolor: 'white' }}>
+            <Alert severity="error" sx={{ mb: 1 }}>
+              {error}
+            </Alert>
           </Box>
         )}
 
@@ -1286,32 +1274,6 @@ const ForeignConversionApplicationPage: React.FC = () => {
           </Typography>
         </Backdrop>
 
-        {/* Success Snackbar */}
-        <Snackbar
-          open={showSuccessSnackbar}
-          autoHideDuration={5000}
-          onClose={() => setShowSuccessSnackbar(false)}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        >
-          <Alert 
-            onClose={() => setShowSuccessSnackbar(false)} 
-            severity="info" 
-            variant="filled"
-            sx={{ 
-              width: '100%',
-              backgroundColor: 'rgb(25, 118, 210)',
-              color: 'white',
-              '& .MuiAlert-icon': {
-                color: 'white'
-              },
-              '& .MuiAlert-action': {
-                color: 'white'
-              }
-            }}
-          >
-            Foreign license conversion application submitted successfully!
-          </Alert>
-        </Snackbar>
       </Paper>
     </Container>
   );

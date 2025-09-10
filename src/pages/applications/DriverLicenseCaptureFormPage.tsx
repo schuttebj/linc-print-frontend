@@ -27,8 +27,7 @@ import {
   Select,
   MenuItem,
   FormHelperText,
-  Backdrop,
-  Snackbar
+  Backdrop
 } from '@mui/material';
 import {
   PersonSearch as PersonSearchIcon,
@@ -41,6 +40,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotification } from '../../contexts/NotificationContext';
 import PersonFormWrapper from '../../components/PersonFormWrapper';
 import LicenseCaptureForm from '../../components/applications/LicenseCaptureForm';
 import { applicationService } from '../../services/applicationService';
@@ -58,6 +58,7 @@ import { API_ENDPOINTS, getAuthToken } from '../../config/api';
 
 const DriverLicenseCaptureFormPage: React.FC = () => {
   const { user } = useAuth();
+  const { showSuccess } = useNotification();
   const navigate = useNavigate();
 
   // Form state
@@ -69,8 +70,6 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
   const [availableLocations, setAvailableLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
-  const [success, setSuccess] = useState<string>('');
-  const [showSuccessSnackbar, setShowSuccessSnackbar] = useState(false);
 
   // Person form validation state
   const [personFormValid, setPersonFormValid] = useState(false);
@@ -323,18 +322,15 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
       await applicationService.updateApplicationStatus(application.id, ApplicationStatus.APPROVED);
       await applicationService.updateApplicationStatus(application.id, ApplicationStatus.COMPLETED);
       
-      setSuccess('Driver\'s license capture completed successfully! License records have been created.');
-      setShowSuccessSnackbar(true);
+      // Show global success notification and navigate immediately
+      showSuccess('Driver\'s license capture completed successfully! License records have been created.');
       
-      // Navigate to applications dashboard after showing success
-      setTimeout(() => {
-        navigate('/dashboard/applications/dashboard', {
-          state: { 
-            message: 'Driver\'s license capture completed successfully',
-            application 
-          }
-        });
-      }, 3000);
+      navigate('/dashboard/applications/dashboard', {
+        state: { 
+          message: 'Driver\'s license capture completed successfully',
+          application 
+        }
+      });
 
     } catch (err: any) {
       console.error('Submission error:', err);
@@ -618,16 +614,10 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
       >
 
 
-        {/* Error/Success Messages */}
+        {/* Error Messages */}
         {error && (
           <Alert severity="error" sx={{ mx: 2, mt: 2 }}>
             {error}
-          </Alert>
-        )}
-        
-        {success && (
-          <Alert severity="success" sx={{ mx: 2, mt: 2 }} icon={<CheckCircleIcon />}>
-            {success}
           </Alert>
         )}
 
@@ -787,32 +777,6 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
           </Typography>
         </Backdrop>
 
-        {/* Success Snackbar */}
-        <Snackbar
-          open={showSuccessSnackbar}
-          autoHideDuration={5000}
-          onClose={() => setShowSuccessSnackbar(false)}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        >
-          <Alert 
-            onClose={() => setShowSuccessSnackbar(false)} 
-            severity="info" 
-            variant="filled"
-            sx={{ 
-              width: '100%',
-              backgroundColor: 'rgb(25, 118, 210)',
-              color: 'white',
-              '& .MuiAlert-icon': {
-                color: 'white'
-              },
-              '& .MuiAlert-action': {
-                color: 'white'
-              }
-            }}
-          >
-            Driver's license capture completed successfully!
-          </Alert>
-        </Snackbar>
       </Paper>
     </Container>
   );

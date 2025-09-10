@@ -35,8 +35,7 @@ import {
   Stack,
   Collapse,
   IconButton,
-  Backdrop,
-  Snackbar
+  Backdrop
 } from '@mui/material';
 import {
   PersonSearch as PersonSearchIcon,
@@ -55,6 +54,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotification } from '../../contexts/NotificationContext';
 import PersonFormWrapper from '../../components/PersonFormWrapper';
 import MedicalInformationSection from '../../components/applications/MedicalInformationSection';
 import BiometricCaptureStep, { BiometricData } from '../../components/applications/BiometricCaptureStep';
@@ -75,6 +75,7 @@ import { API_ENDPOINTS, getAuthToken } from '../../config/api';
 
 const DuplicateLearnersLicensePage: React.FC = () => {
   const { user } = useAuth();
+  const { showSuccess } = useNotification();
   const navigate = useNavigate();
 
   // Form state
@@ -96,8 +97,6 @@ const DuplicateLearnersLicensePage: React.FC = () => {
   const [showExisting, setShowExisting] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
-  const [success, setSuccess] = useState<string>('');
-  const [showSuccessSnackbar, setShowSuccessSnackbar] = useState(false);
 
   // Form validation helper functions
   const getFieldStyling = (fieldName: string, value: any, isRequired: boolean = true) => {
@@ -568,18 +567,15 @@ const DuplicateLearnersLicensePage: React.FC = () => {
 
       const application = await applicationService.createApplication(applicationData);
       
-      setSuccess('Learner\'s permit duplicate submitted successfully!');
-      setShowSuccessSnackbar(true);
+      // Show global success notification and navigate immediately
+      showSuccess('Learner\'s permit duplicate submitted successfully!');
       
-      // Navigate to applications dashboard after showing success
-      setTimeout(() => {
-        navigate('/dashboard/applications/dashboard', {
-          state: { 
-            message: 'Learner\'s permit duplicate submitted successfully',
-            application 
-          }
-        });
-      }, 3000);
+      navigate('/dashboard/applications/dashboard', {
+        state: { 
+          message: 'Learner\'s permit duplicate submitted successfully',
+          application 
+        }
+      });
 
     } catch (err: any) {
       console.error('Submission error:', err);
@@ -1076,20 +1072,12 @@ const DuplicateLearnersLicensePage: React.FC = () => {
       >
 
 
-        {/* Error/Success Messages */}
-        {(error || success) && (
+        {/* Error Messages */}
+        {error && (
           <Box sx={{ p: 2, bgcolor: 'white' }}>
-            {error && (
-              <Alert severity="error" sx={{ mb: 1 }}>
-                {error}
-              </Alert>
-            )}
-            
-            {success && (
-              <Alert severity="success" sx={{ mb: 1 }} icon={<CheckCircleIcon />}>
-                {success}
-              </Alert>
-            )}
+            <Alert severity="error" sx={{ mb: 1 }}>
+              {error}
+            </Alert>
           </Box>
         )}
 
@@ -1290,32 +1278,6 @@ const DuplicateLearnersLicensePage: React.FC = () => {
           </Typography>
         </Backdrop>
 
-        {/* Success Snackbar */}
-        <Snackbar
-          open={showSuccessSnackbar}
-          autoHideDuration={5000}
-          onClose={() => setShowSuccessSnackbar(false)}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        >
-          <Alert 
-            onClose={() => setShowSuccessSnackbar(false)} 
-            severity="info" 
-            variant="filled"
-            sx={{ 
-              width: '100%',
-              backgroundColor: 'rgb(25, 118, 210)',
-              color: 'white',
-              '& .MuiAlert-icon': {
-                color: 'white'
-              },
-              '& .MuiAlert-action': {
-                color: 'white'
-              }
-            }}
-          >
-            Learner's permit duplicate submitted successfully!
-          </Alert>
-        </Snackbar>
       </Paper>
     </Container>
   );

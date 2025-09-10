@@ -3,6 +3,7 @@ import { Box } from '@mui/material';
 
 // Authentication
 import { AuthProvider } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Layouts
@@ -76,7 +77,8 @@ import DocumentTemplatesPage from './pages/admin/DocumentTemplatesPage';
 function App() {
   return (
     <AuthProvider>
-      <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <NotificationProvider>
+        <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         <Routes>
           {/* Public Login Route */}
           <Route path="/login" element={<LoginPage />} />
@@ -527,7 +529,8 @@ function App() {
           {/* Catch all - redirect to dashboard */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
-      </Box>
+        </Box>
+      </NotificationProvider>
     </AuthProvider>
   );
 }
