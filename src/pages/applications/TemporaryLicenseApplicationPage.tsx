@@ -40,8 +40,7 @@ import {
   Stack,
   Collapse,
   IconButton,
-  Backdrop,
-  Snackbar
+  Backdrop
 } from '@mui/material';
 import {
   PersonSearch as PersonSearchIcon,
@@ -79,6 +78,7 @@ import {
   isCommercialLicense
 } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotification } from '../../contexts/NotificationContext';
 import { API_ENDPOINTS, getAuthToken } from '../../config/api';
 
 // Helper function to upload police clearance document
@@ -118,6 +118,7 @@ const uploadPoliceDocument = async (applicationId: string, policeInfo: PoliceInf
 
 const TemporaryLicenseApplicationPage: React.FC = () => {
   const { user } = useAuth();
+  const { showSuccess } = useNotification();
   const navigate = useNavigate();
 
   // Form state
@@ -150,8 +151,6 @@ const TemporaryLicenseApplicationPage: React.FC = () => {
   const [showExisting, setShowExisting] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
-  const [success, setSuccess] = useState<string>('');
-  const [showSuccessSnackbar, setShowSuccessSnackbar] = useState(false);
 
   // Form validation helper functions
   const getFieldStyling = (fieldName: string, value: any, isRequired: boolean = true) => {
@@ -713,18 +712,15 @@ const TemporaryLicenseApplicationPage: React.FC = () => {
         }
       }
       
-      setSuccess('Temporary driving license application submitted successfully!');
-      setShowSuccessSnackbar(true);
+      // Show global success notification and navigate immediately
+      showSuccess('Temporary driving license application submitted successfully!');
       
-      // Navigate to applications dashboard after showing success
-      setTimeout(() => {
-        navigate('/dashboard/applications/dashboard', {
-          state: { 
-            message: 'Temporary driving license application submitted successfully',
-            application 
-          }
-        });
-      }, 3000);
+      navigate('/dashboard/applications/dashboard', {
+        state: { 
+          message: 'Temporary driving license application submitted successfully',
+          application 
+        }
+      });
 
     } catch (err: any) {
       console.error('Submission error:', err);
@@ -1353,20 +1349,12 @@ const TemporaryLicenseApplicationPage: React.FC = () => {
       >
 
 
-        {/* Error/Success Messages */}
-        {(error || success) && (
+        {/* Error Messages */}
+        {error && (
           <Box sx={{ p: 2, bgcolor: 'white' }}>
-            {error && (
-              <Alert severity="error" sx={{ mb: 1 }}>
-                {error}
-              </Alert>
-            )}
-            
-            {success && (
-              <Alert severity="success" sx={{ mb: 1 }} icon={<CheckCircleIcon />}>
-                {success}
-              </Alert>
-            )}
+            <Alert severity="error" sx={{ mb: 1 }}>
+              {error}
+            </Alert>
           </Box>
         )}
 
@@ -1591,32 +1579,6 @@ const TemporaryLicenseApplicationPage: React.FC = () => {
           </Typography>
         </Backdrop>
 
-        {/* Success Snackbar */}
-        <Snackbar
-          open={showSuccessSnackbar}
-          autoHideDuration={5000}
-          onClose={() => setShowSuccessSnackbar(false)}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        >
-          <Alert 
-            onClose={() => setShowSuccessSnackbar(false)} 
-            severity="info" 
-            variant="filled"
-            sx={{ 
-              width: '100%',
-              backgroundColor: 'rgb(25, 118, 210)',
-              color: 'white',
-              '& .MuiAlert-icon': {
-                color: 'white'
-              },
-              '& .MuiAlert-action': {
-                color: 'white'
-              }
-            }}
-          >
-            Temporary license application submitted successfully!
-          </Alert>
-        </Snackbar>
       </Paper>
     </Container>
   );

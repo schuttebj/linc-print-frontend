@@ -114,9 +114,21 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
             sx={{ 
               width: '100%',
               maxWidth: '400px',
+              backgroundColor: '#1976d2', // Material-UI primary blue
+              color: 'white',
               '& .MuiAlert-message': {
                 fontSize: '0.875rem',
                 fontWeight: 500,
+                color: 'white'
+              },
+              '& .MuiAlert-icon': {
+                color: 'white'
+              },
+              '& .MuiAlert-action': {
+                color: 'white',
+                '& .MuiIconButton-root': {
+                  color: 'white'
+                }
               }
             }}
             action={notification.action}
