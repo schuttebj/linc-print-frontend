@@ -81,6 +81,9 @@ export const useAnalyticsData = (dateRange: string, selectedLocation: string) =>
       const [
         kpiSummary,
         applicationTrends,
+        licenseTrends,
+        printingTrends,
+        financialTrends,
         systemHealth,
         recentActivity
       ] = await Promise.all([
@@ -90,17 +93,26 @@ export const useAnalyticsData = (dateRange: string, selectedLocation: string) =>
         }),
         analyticsService.getApplicationTrends(filters).catch(err => {
           console.error('❌ Application Trends failed:', err);
-          // Return empty data instead of failing completely
-          return { data: [] };
+          return { data: [], metadata: {} };
+        }),
+        analyticsService.getLicenseTrends(filters).catch(err => {
+          console.error('❌ License Trends failed:', err);
+          return { data: [], metadata: {} };
+        }),
+        analyticsService.getPrintingTrends(filters).catch(err => {
+          console.error('❌ Printing Trends failed:', err);
+          return { data: [], metadata: {} };
+        }),
+        analyticsService.getFinancialTrends(filters).catch(err => {
+          console.error('❌ Financial Trends failed:', err);
+          return { data: [], metadata: {} };
         }),
         analyticsService.getSystemHealth().catch(err => {
           console.error('❌ System Health failed:', err);
-          // Return empty data instead of failing completely
           return { data: {} };
         }),
         analyticsService.getRecentActivity({ limit: 10 }).catch(err => {
           console.error('❌ Recent Activity failed:', err);
-          // Return empty data instead of failing completely
           return { data: { activities: [] } };
         })
       ]);
@@ -108,6 +120,9 @@ export const useAnalyticsData = (dateRange: string, selectedLocation: string) =>
       console.log('✅ Analytics data fetched successfully:', {
         kpiSummary: kpiSummary ? 'OK' : 'FAILED',
         applicationTrends: applicationTrends ? 'OK' : 'FAILED',
+        licenseTrends: licenseTrends ? 'OK' : 'FAILED',
+        printingTrends: printingTrends ? 'OK' : 'FAILED',
+        financialTrends: financialTrends ? 'OK' : 'FAILED',
         systemHealth: systemHealth ? 'OK' : 'FAILED',
         recentActivity: recentActivity ? 'OK' : 'FAILED'
       });
@@ -134,12 +149,12 @@ export const useAnalyticsData = (dateRange: string, selectedLocation: string) =>
           otherFees: kpiSummary.data.financial.other_fees || 0
         },
         charts: {
-          applications: applicationTrends.data,
-          licenses: [], // Will be populated when endpoint is called
-          printing: [], // Will be populated when endpoint is called
-          financial: [], // Will be populated when endpoint is called
-          system: [], // Will be populated when endpoint is called
-          api: [] // Will be populated when endpoint is called
+          applications: applicationTrends.data || [],
+          licenses: licenseTrends.data || [],
+          printing: printingTrends.data || [],
+          financial: financialTrends.data || [],
+          system: [], // System-level charts would go here
+          api: [] // API performance charts would go here
         },
         systemHealth: systemHealth.data,
         activityFeed: recentActivity.data.activities,

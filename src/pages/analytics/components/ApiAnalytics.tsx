@@ -92,11 +92,14 @@ const ApiAnalytics: React.FC<ApiAnalyticsProps> = ({ dateRange = '24hours' }) =>
       setLoading(true);
       setError(null);
       
-      const response = await api.get<ApiAnalyticsData>(
-        `${API_ENDPOINTS.apiRequestAnalytics}?hours=${hoursFilter}`
+      const response = await api.get<any>(
+        `/api/v1/analytics/api-performance?hours=${hoursFilter}`
       );
       
-      setData(response);
+      // Extract the data from the AnalyticsResponse wrapper
+      const apiAnalyticsData: ApiAnalyticsData = response.data;
+      
+      setData(apiAnalyticsData);
     } catch (err) {
       console.error('Failed to load API analytics:', err);
       setError(err instanceof Error ? err.message : 'Failed to load API analytics');

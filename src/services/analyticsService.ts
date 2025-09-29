@@ -172,6 +172,22 @@ class AnalyticsService {
     return await api.get<AnalyticsResponse<KPIData>>(url);
   }
 
+  async getLicenseTrends(filters: AnalyticsFilters = {}): Promise<ChartDataResponse> {
+    const queryString = this.buildQueryString(filters);
+    const url = `${this.BASE_URL}/charts/licenses/trends${queryString ? `?${queryString}` : ''}`;
+    
+    console.log('🔍 License Trends call:', { url, filters });
+    
+    try {
+      const result = await api.get<ChartDataResponse>(url);
+      console.log('✅ License Trends success:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ License Trends error:', error);
+      throw error;
+    }
+  }
+
   async getPrintingKPI(filters: AnalyticsFilters = {}): Promise<AnalyticsResponse<KPIData>> {
     const queryString = this.buildQueryString(filters);
     const url = `${this.BASE_URL}/kpi/printing${queryString ? `?${queryString}` : ''}`;
@@ -182,6 +198,38 @@ class AnalyticsService {
     const queryString = this.buildQueryString(filters);
     const url = `${this.BASE_URL}/kpi/financial${queryString ? `?${queryString}` : ''}`;
     return await api.get<AnalyticsResponse<KPIData>>(url);
+  }
+
+  async getPrintingTrends(filters: AnalyticsFilters = {}): Promise<ChartDataResponse> {
+    const queryString = this.buildQueryString(filters);
+    const url = `${this.BASE_URL}/charts/printing/trends${queryString ? `?${queryString}` : ''}`;
+    
+    console.log('🔍 Printing Trends call:', { url, filters });
+    
+    try {
+      const result = await api.get<ChartDataResponse>(url);
+      console.log('✅ Printing Trends success:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Printing Trends error:', error);
+      throw error;
+    }
+  }
+
+  async getFinancialTrends(filters: AnalyticsFilters = {}): Promise<ChartDataResponse> {
+    const queryString = this.buildQueryString(filters);
+    const url = `${this.BASE_URL}/charts/financial/trends${queryString ? `?${queryString}` : ''}`;
+    
+    console.log('🔍 Financial Trends call:', { url, filters });
+    
+    try {
+      const result = await api.get<ChartDataResponse>(url);
+      console.log('✅ Financial Trends success:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Financial Trends error:', error);
+      throw error;
+    }
   }
 
   // Chart Data Endpoints
