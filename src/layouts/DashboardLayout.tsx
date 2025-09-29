@@ -74,19 +74,6 @@ const DRAWER_WIDTH = 300;
 const DashboardLayout: React.FC = () => {
   const { user, logout, hasPermission, userDataLoading } = useAuth();
   
-  // Debug logging for permissions
-  React.useEffect(() => {
-    if (user) {
-      console.log('🔍 DEBUG - User permissions:', user.permissions);
-      console.log('🔍 DEBUG - User roles:', user.roles);
-      console.log('🔍 DEBUG - Role details:', user.roles.map(role => ({ name: role.name, display_name: role.display_name })));
-      console.log('🔍 DEBUG - User ID:', user.id);
-      console.log('🔍 DEBUG - Username:', user.username);
-      console.log('🔍 DEBUG - hasPermission("applications.read"):', hasPermission('applications.read'));
-      console.log('🔍 DEBUG - hasPermission("persons.create"):', hasPermission('persons.create'));
-      console.log('🔍 DEBUG - hasPermission("licenses.read"):', hasPermission('licenses.read'));
-    }
-  }, [user, hasPermission]);
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
@@ -690,24 +677,6 @@ const DashboardLayout: React.FC = () => {
   const hasAnalyticsAccess = analyticsReportsItems.length > 0;
   const hasAdministrationAccess = administrationItems.length > 0;
 
-  // Debug logging for menu sections
-  React.useEffect(() => {
-    if (user) {
-      console.log('🎯 DEBUG - Menu access checks:');
-      console.log('  - hasPersonsAccess:', hasPersonsAccess);
-      console.log('  - hasApplicationsAccess:', hasApplicationsAccess);
-      console.log('  - hasLicensesAccess:', hasLicensesAccess);
-      console.log('  - hasCardsPrintingAccess:', hasCardsPrintingAccess);
-      console.log('  - hasTransactionsAccess:', hasTransactionsAccess);
-      console.log('  - applicationsMainItems.length:', applicationsMainItems.length);
-      console.log('  - canCreateApplications:', canCreateApplications);
-      
-      console.log('🔍 DEBUG - Navigation items requirements:');
-      console.log('  - personNavigationItems:', personNavigationItems.map(item => ({ text: item.text, permission: item.permission, hasPermission: item.permission ? hasPermission(item.permission) : true })));
-      console.log('  - applicationNavigationItems:', applicationNavigationItems.map(item => ({ text: item.text, permission: item.permission, hasPermission: item.permission ? hasPermission(item.permission) : true })));
-      console.log('  - licenseNavigationItems:', licenseNavigationItems.map(item => ({ text: item.text, permission: item.permission, hasPermission: item.permission ? hasPermission(item.permission) : true })));
-    }
-  }, [user, hasPersonsAccess, hasApplicationsAccess, hasLicensesAccess, hasCardsPrintingAccess, hasTransactionsAccess, applicationsMainItems.length, canCreateApplications]);
 
   const drawer = (
     <Box sx={{ 
