@@ -79,6 +79,9 @@ const DashboardLayout: React.FC = () => {
     if (user) {
       console.log('🔍 DEBUG - User permissions:', user.permissions);
       console.log('🔍 DEBUG - User roles:', user.roles);
+      console.log('🔍 DEBUG - Role details:', user.roles.map(role => ({ name: role.name, display_name: role.display_name })));
+      console.log('🔍 DEBUG - User ID:', user.id);
+      console.log('🔍 DEBUG - Username:', user.username);
       console.log('🔍 DEBUG - hasPermission("applications.read"):', hasPermission('applications.read'));
       console.log('🔍 DEBUG - hasPermission("persons.create"):', hasPermission('persons.create'));
       console.log('🔍 DEBUG - hasPermission("licenses.read"):', hasPermission('licenses.read'));
