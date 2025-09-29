@@ -822,7 +822,8 @@ const DashboardLayout: React.FC = () => {
               );
             })}
 
-          <Divider sx={{ my: 1 }} />
+          {/* Divider before Persons - only show if Persons section is visible */}
+          {hasPersonsAccess && <Divider sx={{ my: 1 }} />}
 
           {/* Persons Section */}
           {hasPersonsAccess && (
@@ -912,7 +913,8 @@ const DashboardLayout: React.FC = () => {
         </>
       )}
 
-          <Divider sx={{ my: 1 }} />
+          {/* Divider before Applications - only show if Applications section is visible */}
+          {hasApplicationsAccess && <Divider sx={{ my: 1 }} />}
 
           {/* Applications Section */}
           {hasApplicationsAccess && (
@@ -1104,7 +1106,8 @@ const DashboardLayout: React.FC = () => {
         </>
       )}
 
-          <Divider sx={{ my: 1 }} />
+          {/* Divider before Licenses - only show if Licenses section is visible */}
+          {hasLicensesAccess && <Divider sx={{ my: 1 }} />}
 
           {/* Licenses Section */}
           {hasLicensesAccess && (
@@ -1194,7 +1197,8 @@ const DashboardLayout: React.FC = () => {
         </>
       )}
 
-          <Divider sx={{ my: 1 }} />
+          {/* Divider before Cards & Printing - only show if Cards & Printing section is visible */}
+          {hasCardsPrintingAccess && <Divider sx={{ my: 1 }} />}
 
           {/* Cards & Printing Section */}
           {hasCardsPrintingAccess && (
@@ -1282,7 +1286,8 @@ const DashboardLayout: React.FC = () => {
             </>
           )}
 
-          <Divider sx={{ my: 1 }} />
+          {/* Divider before Transactions & Payments - only show if Transactions & Payments section is visible */}
+          {hasTransactionsAccess && <Divider sx={{ my: 1 }} />}
 
           {/* Transactions & Payments Section */}
           {hasTransactionsAccess && (
@@ -1370,7 +1375,8 @@ const DashboardLayout: React.FC = () => {
             </>
           )}
 
-          <Divider sx={{ my: 1 }} />
+          {/* Divider before Analytics & Reports - only show if Analytics & Reports section is visible */}
+          {hasAnalyticsAccess && <Divider sx={{ my: 1 }} />}
 
           {/* Analytics & Reports Section */}
           {hasAnalyticsAccess && (
@@ -1458,7 +1464,8 @@ const DashboardLayout: React.FC = () => {
             </>
           )}
 
-          <Divider sx={{ my: 1 }} />
+          {/* Divider before Administration - only show if Administration section is visible */}
+          {hasAdministrationAccess && <Divider sx={{ my: 1 }} />}
 
           {/* Administration Section */}
           {hasAdministrationAccess && (
