@@ -316,11 +316,14 @@ const DriverLicenseCaptureFormPage: React.FC = () => {
 
       const application = await applicationService.createApplication(applicationData);
       
-      // Authorization workflow for license capture applications
-      // DRAFT → SUBMITTED → APPROVED → COMPLETED
-      await applicationService.updateApplicationStatus(application.id, ApplicationStatus.SUBMITTED);
-      await applicationService.updateApplicationStatus(application.id, ApplicationStatus.APPROVED);
-      await applicationService.updateApplicationStatus(application.id, ApplicationStatus.COMPLETED);
+      // Submit application with automated workflow
+      // System will automatically: SUBMITTED → APPROVED → COMPLETED + Generate License
+      const submitResult = await applicationService.submitApplication(
+        application.id,
+        'Driver\'s license capture submitted for automated processing'
+      );
+      
+      console.log('✅ Submission result:', submitResult);
       
       // Show global success notification and navigate immediately
       showSuccess('Driver\'s license capture completed successfully! License records have been created.');

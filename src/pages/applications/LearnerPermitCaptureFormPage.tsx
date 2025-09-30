@@ -337,11 +337,14 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
 
       const application = await applicationService.createApplication(applicationData);
       
-      // Authorization workflow for learner's permit capture applications
-      // DRAFT → SUBMITTED → APPROVED → COMPLETED
-      await applicationService.updateApplicationStatus(application.id, ApplicationStatus.SUBMITTED);
-      await applicationService.updateApplicationStatus(application.id, ApplicationStatus.APPROVED);
-      await applicationService.updateApplicationStatus(application.id, ApplicationStatus.COMPLETED);
+      // Submit application with automated workflow
+      // System will automatically: SUBMITTED → APPROVED → COMPLETED + Generate License
+      const submitResult = await applicationService.submitApplication(
+        application.id,
+        'Learner\'s permit capture submitted for automated processing'
+      );
+      
+      console.log('✅ Submission result:', submitResult);
       
       // Show global success notification and navigate immediately
       showSuccess('Learner\'s permit capture completed successfully! License records have been created.');

@@ -160,6 +160,63 @@ class ApplicationService {
     return await api.post(url, {});
   }
 
+  // Submit application with automation (for clerks)
+  async submitApplication(
+    id: string,
+    reason?: string,
+    notes?: string
+  ): Promise<{
+    status: string;
+    message: string;
+    application_id: string;
+    current_status: string;
+    automation_triggered: boolean;
+    final_status?: string;
+    license_generated?: boolean;
+    processing_notes?: string[];
+    timestamp: number;
+  }> {
+    const payload: any = {};
+    
+    if (reason) {
+      payload.reason = reason;
+    }
+    
+    if (notes) {
+      payload.notes = notes;
+    }
+    
+    const url = API_ENDPOINTS.applicationSubmit(id);
+    return await api.post(url, payload);
+  }
+
+  // Record test result (for examiners)
+  async recordTestResult(
+    id: string,
+    testResult: 'PASSED' | 'FAILED' | 'ABSENT',
+    notes?: string
+  ): Promise<{
+    status: string;
+    message: string;
+    application_id: string;
+    test_result: string;
+    automation_triggered: boolean;
+    final_status?: string;
+    license_generated?: boolean;
+    processing_notes?: string[];
+  }> {
+    const payload: any = {
+      test_result: testResult
+    };
+    
+    if (notes) {
+      payload.notes = notes;
+    }
+    
+    const url = API_ENDPOINTS.applicationTestResult(id);
+    return await api.post(url, payload);
+  }
+
   // File uploads
   async uploadDocument(
     applicationId: string,
