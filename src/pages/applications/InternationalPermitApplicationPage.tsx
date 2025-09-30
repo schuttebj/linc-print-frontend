@@ -299,7 +299,7 @@ const InternationalPermitApplicationPage: React.FC = () => {
   // Load available locations for admin users
   useEffect(() => {
     const loadLocations = async () => {
-      if (user && !user.primary_location_id) {
+      if (user && user.user_type !== 'LOCATION_USER' && !user.primary_location) {
         try {
           const token = getAuthToken();
           if (!token) return;

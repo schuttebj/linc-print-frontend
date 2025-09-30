@@ -411,7 +411,7 @@ const LearnersLicenseApplicationPage: React.FC = () => {
         return !!selectedPerson && !!selectedPerson.id;
       case 1:
         const hasCategory = !!selectedCategory;
-        const hasLocation = !!user?.primary_location_id || !!selectedLocationId;
+        const hasLocation = !!user?.primary_location?.id || !!selectedLocationId;
         const hasRefusalInfo = neverBeenRefused || !!refusalDetails.trim();
         return hasCategory && hasLocation && hasRefusalInfo && !!selectedPerson && !!selectedPerson.id;
       case 2:
@@ -438,7 +438,7 @@ const LearnersLicenseApplicationPage: React.FC = () => {
 
   // Get location ID to use
   const getLocationId = (): string => {
-    return user?.primary_location_id || selectedLocationId;
+    return user?.primary_location?.id || selectedLocationId;
   };
 
   // PersonFormWrapper callbacks
@@ -630,7 +630,7 @@ const LearnersLicenseApplicationPage: React.FC = () => {
         return (
           <Box>
             {/* Location Selection for Admin Users */}
-            {user && !user.primary_location_id && (
+            {user && user.user_type !== 'LOCATION_USER' && !user.primary_location && (
               <Card 
                 elevation={0}
                 sx={{ 

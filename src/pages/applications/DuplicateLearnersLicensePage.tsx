@@ -307,7 +307,7 @@ const DuplicateLearnersLicensePage: React.FC = () => {
   // Load available locations for admin users
   useEffect(() => {
     const loadLocations = async () => {
-      if (user && !user.primary_location_id) {
+      if (user && user.user_type !== 'LOCATION_USER' && !user.primary_location) {
         try {
           const token = getAuthToken();
           if (!token) return;
@@ -444,7 +444,7 @@ const DuplicateLearnersLicensePage: React.FC = () => {
         return !!selectedPerson && !!selectedPerson.id;
       case 1:
         const hasValidLearnerPermits = existingLicenses.length > 0;
-        const hasLocation = !!user?.primary_location_id || !!selectedLocationId;
+        const hasLocation = !!user?.primary_location?.id || !!selectedLocationId;
         const hasReason = !!replacementReason;
         return hasValidLearnerPermits && hasLocation && hasReason && !!selectedPerson && !!selectedPerson.id;
       case 2:
@@ -471,7 +471,7 @@ const DuplicateLearnersLicensePage: React.FC = () => {
 
   // Get location ID to use
   const getLocationId = (): string => {
-    return user?.primary_location_id || selectedLocationId;
+    return user?.primary_location?.id || selectedLocationId;
   };
 
   // Navigation handlers
@@ -622,7 +622,7 @@ const DuplicateLearnersLicensePage: React.FC = () => {
         return (
           <Box>
             {/* Location Selection for Admin Users */}
-            {user && !user.primary_location_id && (
+            {user && user.user_type !== 'LOCATION_USER' && !user.primary_location && (
               <Card 
                 elevation={0}
                 sx={{ 
