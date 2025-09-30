@@ -489,7 +489,7 @@ const InternationalPermitApplicationPage: React.FC = () => {
 
   // Get location ID to use
   const getLocationId = (): string => {
-    return user?.primary_location_id || selectedLocationId;
+    return user?.primary_location?.id || selectedLocationId;
   };
 
   // Navigation handlers
@@ -657,7 +657,7 @@ const InternationalPermitApplicationPage: React.FC = () => {
         return (
           <Box>
             {/* Location Selection for Admin Users */}
-            {user && !user.primary_location_id && (
+            {user && user.user_type !== 'LOCATION_USER' && !user.primary_location && (
               <Card 
                 elevation={0}
                 sx={{ 

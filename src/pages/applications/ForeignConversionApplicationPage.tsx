@@ -655,7 +655,7 @@ const ForeignConversionApplicationPage: React.FC = () => {
         return (
           <Box>
             {/* Location Selection for Admin Users */}
-            {user && !user.primary_location_id && (
+            {user && user.user_type !== 'LOCATION_USER' && !user.primary_location && (
               <Card 
                 elevation={0}
                 sx={{ 

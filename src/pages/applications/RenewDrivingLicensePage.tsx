@@ -603,7 +603,7 @@ const RenewDrivingLicensePage: React.FC = () => {
 
   // Get location ID to use
   const getLocationId = (): string => {
-    return user?.primary_location_id || selectedLocationId;
+    return user?.primary_location?.id || selectedLocationId;
   };
 
   // Navigation handlers

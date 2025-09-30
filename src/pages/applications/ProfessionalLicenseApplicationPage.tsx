@@ -433,7 +433,7 @@ const ProfessionalLicenseApplicationPage: React.FC = () => {
       case 0: // Person step
         return !!selectedPerson && !!selectedPerson.id;
       case 1: // Professional categories step
-        const locationValid = user?.primary_location_id || selectedLocationId;
+        const locationValid = user?.primary_location?.id || selectedLocationId;
         const hasCategories = selectedCategories.length > 0;
         const hasRefusalInfo = neverBeenRefused || !!refusalDetails.trim();
         return locationValid && hasCategories && hasRefusalInfo;
@@ -467,7 +467,7 @@ const ProfessionalLicenseApplicationPage: React.FC = () => {
 
   // Get location ID to use
   const getLocationId = (): string => {
-    return user?.primary_location_id || selectedLocationId;
+    return user?.primary_location?.id || selectedLocationId;
   };
 
   // PersonFormWrapper callbacks

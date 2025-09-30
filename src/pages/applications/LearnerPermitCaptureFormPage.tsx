@@ -95,7 +95,7 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
   // Load available locations for admin users
   useEffect(() => {
     const loadLocations = async () => {
-      if (user && !user.primary_location_id) {
+      if (user && user.user_type !== 'LOCATION_USER' && !user.primary_location) {
         try {
           const token = getAuthToken();
           if (!token) return;
@@ -147,7 +147,7 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
         const hasValidLicenseData = !!licenseCaptureData && 
           licenseCaptureData.captured_licenses.length > 0 &&
           validateCapturedDataForAuthorization(licenseCaptureData).isValid;
-        const hasLocation = !!user?.primary_location_id || !!selectedLocationId;
+        const hasLocation = !!user?.primary_location?.id || !!selectedLocationId;
         const hasPerson = !!selectedPerson && !!selectedPerson.id;
         
         // Removed excessive validation logging to prevent memory issues
@@ -180,7 +180,7 @@ const LearnerPermitCaptureFormPage: React.FC = () => {
 
   // Get location ID to use
   const getLocationId = (): string => {
-    return user?.primary_location_id || selectedLocationId;
+    return user?.primary_location?.id || selectedLocationId;
   };
 
   // Tab change handler
