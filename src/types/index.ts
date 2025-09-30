@@ -56,7 +56,7 @@ export interface User {
   user_type?: 'SYSTEM_USER' | 'NATIONAL_ADMIN' | 'PROVINCIAL_ADMIN' | 'LOCATION_USER';
   scope_province?: string;
   primary_location_id?: string;
-  primary_location?: string; // Added for UI display
+  primary_location?: Location; // Location object for UI display
   location_name?: string; // Location name for display purposes
   roles: Role[];
   permissions: string[];

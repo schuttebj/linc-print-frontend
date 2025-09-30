@@ -995,8 +995,8 @@ const ProfessionalLicenseApplicationPage: React.FC = () => {
                   <Grid item xs={12}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Location</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
-                      {user?.primary_location_id ? (
-                        `User's assigned location: ${user.primary_location_id}`
+                      {user?.primary_location ? (
+                        `User's assigned location: ${user.primary_location.name}`
                       ) : (
                         availableLocations.find(loc => loc.id === selectedLocationId)?.name || 'No location selected'
                       )}

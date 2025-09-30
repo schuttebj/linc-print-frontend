@@ -927,9 +927,9 @@ const TransactionPOSPage: React.FC = () => {
         </Typography>
         
         {/* Location status for location users */}
-        {user?.primary_location_id ? (
+        {user?.primary_location ? (
           <Alert severity="info" sx={{ mb: 2, fontSize: '0.8rem' }}>
-            Processing payments for location: {user.primary_location_id}
+            Processing payments for location: {user.primary_location.name}
           </Alert>
         ) : selectedLocationId ? (
           <Alert severity="success" sx={{ mb: 2, fontSize: '0.8rem' }}>

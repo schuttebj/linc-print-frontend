@@ -259,7 +259,7 @@ const PrintQueuePage: React.FC = () => {
         // Location users see only their assigned location
         setAccessibleLocations([{
           id: user.primary_location_id,
-          name: user.primary_location || `Location ${user.primary_location_id}`,
+          name: (user.primary_location as any)?.name || `Location ${user.primary_location_id}`,
           current_queue_size: 0
         }]);
         setSelectedLocation(user.primary_location_id);
@@ -1142,7 +1142,7 @@ const PrintQueuePage: React.FC = () => {
             {isLocationUser() && (
               <Box sx={{ p: 1.5, bgcolor: 'primary.50', borderRadius: 1 }}>
                 <Typography variant="body2" color="primary" sx={{ fontSize: '0.8rem' }}>
-                  <strong>Location:</strong> {user?.primary_location || 'Your Location'}
+                  <strong>Location:</strong> {(user?.primary_location as any)?.name || 'Your Location'}
                 </Typography>
               </Box>
             )}
